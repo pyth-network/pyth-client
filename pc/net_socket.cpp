@@ -29,6 +29,7 @@ using namespace pc;
 net_buf_alloc::net_buf_alloc()
 : ptr_( nullptr )
 {
+  static_assert( sizeof( net_buf ) == 1280);
 }
 
 net_buf_alloc::~net_buf_alloc()
@@ -95,31 +96,50 @@ void net_wtr::detach( net_buf *&hd, net_buf *&tl )
   hd_ = tl_ = nullptr;
 }
 
-char *net_wtr::reserve( uint16_t len )
+void net_wtr::alloc()
 {
-  if ( !hd_ ) {
-    hd_ = tl_ = mem_.alloc();
+  net_buf *ptr = mem_.alloc();
+  if ( tl_ ) {
+    tl_->next_ = ptr;
+    tl_ = ptr;
+  } else {
+    hd_ = tl_ = ptr;
   }
-  if ( len > net_buf::len - tl_->size_ ) {
-    tl_->next_ = mem_.alloc();
-    tl_ = tl_->next_;
-  }
-  char *res = &tl_->buf_[tl_->size_];
-  tl_->size_ += len;
-  sz_ += len;
-  return res;
 }
 
 void net_wtr::add( const char *buf, size_t len )
 {
   while( len>0 ) {
-    uint16_t mlen = net_buf::len;
-    if ( hd_ ) mlen -= tl_->size_;
-    if ( len < (size_t)mlen ) mlen = len;
-    __builtin_memcpy( reserve(mlen), buf, mlen );
+    if ( !tl_ || tl_->size_ == net_buf::len ) {
+      alloc();
+    }
+    uint16_t left = net_buf::len - tl_->size_;
+    size_t mlen = std::min( (size_t)left, len );
+    __builtin_memcpy( &tl_->buf_[tl_->size_], buf, mlen );
     buf += mlen;
     len -= mlen;
+    sz_ += mlen;
+    tl_->size_ += mlen;
   }
+}
+
+void net_wtr::add( char val )
+{
+  if ( !tl_ || tl_->size_ == net_buf::len ) {
+    alloc();
+  }
+  ++sz_;
+  tl_->buf_[tl_->size_++] = val;
+}
+
+void net_wtr::add( const char *buf )
+{
+  add( buf, __builtin_strlen( buf ) );
+}
+
+void net_wtr::add( const std::string& buf )
+{
+  add( buf.c_str(), buf.length() );
 }
 
 ///////////////////////////////////////////////////////////////////////////

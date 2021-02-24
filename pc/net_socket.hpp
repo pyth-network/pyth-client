@@ -24,11 +24,13 @@ namespace pc
     ~net_wtr();
     void add( char );
     void add( const char *buf, size_t len );
+    void add( const char *buf );
+    void add( const std::string& buf );
     size_t size() const;
     void detach( net_buf *&hd, net_buf *&tl );
 
   private:
-    char *reserve( uint16_t len );
+    void alloc();
     net_buf *hd_;
     net_buf *tl_;
     size_t   sz_;
@@ -126,11 +128,6 @@ namespace pc
   inline bool net_socket::get_is_send() const
   {
     return whd_ != nullptr;
-  }
-
-  inline void net_wtr::add( char val )
-  {
-    *reserve( 1 ) = val;
   }
 
   inline size_t net_wtr::size() const
