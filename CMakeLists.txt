@@ -21,6 +21,7 @@ set( CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread")
 set( PC_SRC
   pc/encode.cpp;
   pc/mem_map.cpp;
+  pc/net_socket.cpp;
   pc/key_pair.cpp;
   pc/tx.cpp;
   )

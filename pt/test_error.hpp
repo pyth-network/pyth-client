@@ -7,7 +7,7 @@
 
 #define PC_TEST_START  try{
 
-#define PC_TEST_END } catch( lp::test_error& err ) {\
+#define PC_TEST_END } catch( pc::test_error& err ) {\
     std::cerr << err.what() << std::endl;\
     _exit( 1 );\
   } catch ( std::exception& err ) {\
@@ -16,9 +16,9 @@
   }
 
 #define PC_TEST_CHECK(X) \
-if ( !(X) ) { throw lp::test_error( __FILE__, __LINE__); }
+if ( !(X) ) { throw pc::test_error( __FILE__, __LINE__); }
 
-namespace lp
+namespace pc
 {
   class test_error : public std::exception
   {
