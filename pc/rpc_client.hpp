@@ -100,6 +100,10 @@ namespace pc
     void set_id( uint64_t );
     uint64_t get_id() const;
 
+    // error code
+    void set_err_code( int );
+    int get_err_code() const;
+
     // rpc response callback
     void set_sub( rpc_sub * );
     rpc_sub *get_sub() const;
@@ -125,6 +129,7 @@ namespace pc
     rpc_sub    *cb_;
     rpc_client *cp_;
     uint64_t    id_;
+    int         ec_;
   };
 
   class rpc_subscription : public rpc_request

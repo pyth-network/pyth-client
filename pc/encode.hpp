@@ -18,5 +18,7 @@ namespace pc
   // integer to string encoding
   char *uint_to_str( uint64_t val, char *end_ptr );
   uint64_t str_to_uint( const char *str, int len );
+  char *int_to_str( int64_t val, char *end_ptr );
+  int64_t str_to_int( const char *str, int len );
 
 }

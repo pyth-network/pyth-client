@@ -38,6 +38,7 @@ namespace pc
     // get primitive value
     void get_text( uint32_t, const char *&ptr, size_t& sz ) const;
     uint64_t get_uint( uint32_t ) const;
+    int64_t  get_int( uint32_t ) const;
     bool     get_bool( uint32_t ) const;
 
     // find value in object associated with key
@@ -124,6 +125,12 @@ namespace pc
   {
     const node& n = nv_[i];
     return str_to_uint( &buf_[n.p_], n.s_ );
+  }
+
+  inline int64_t jtree::get_int( uint32_t i ) const
+  {
+    const node& n = nv_[i];
+    return str_to_int( &buf_[n.p_], n.s_ );
   }
 
   inline bool jtree::get_bool( uint32_t i) const

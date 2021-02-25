@@ -169,7 +169,8 @@ rpc_sub::~rpc_sub()
 rpc_request::rpc_request()
 : cb_( nullptr ),
   cp_( nullptr ),
-  id_( 0UL )
+  id_( 0UL ),
+  ec_( 0 )
 {
 }
 
@@ -205,6 +206,16 @@ void rpc_request::set_id( uint64_t id )
 uint64_t rpc_request::get_id() const
 {
   return id_;
+}
+
+void rpc_request::set_err_code( int ecode )
+{
+  ec_ = ecode;
+}
+
+int rpc_request::get_err_code() const
+{
+  return ec_;
 }
 
 bool rpc_request::get_is_http() const
@@ -257,6 +268,7 @@ bool rpc_request::on_error( const jtree& jt, T *req )
   jt.get_text( jt.find_val( etok, "message" ), txt, txt_len );
   emsg.assign( txt, txt_len );
   set_err_msg( emsg );
+  set_err_code( jt.get_int( jt.find_val( etok, "code" ) ) );
   on_response( req );
   return true;
 }

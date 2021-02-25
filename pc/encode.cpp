@@ -122,6 +122,44 @@ uint64_t str_to_uint( const char *val, int len )
   return res;
 }
 
+char *int_to_str( int64_t val, char *cptr )
+{
+  if ( val ) {
+    if ( val < 0 ) {
+      *--cptr = '-';
+      val = -val;
+    }
+    while( val ) {
+      *--cptr = '0' + (val%10L);
+      val /= 10L;
+    }
+  } else {
+    *--cptr = '0';
+  }
+  return cptr;
+}
+
+int64_t str_to_int( const char *val, int len )
+{
+  bool is_neg = false;
+  int64_t res = 0L;
+  if ( len ) {
+    const char *cptr = val;
+    const char *end = &val[len];
+    for(; cptr != end; ++cptr ) {
+      if ( isdigit( *cptr ) ) {
+        res = res*10UL + (*cptr-'0');
+      } else if ( *cptr == '-' ) {
+        is_neg = true;
+      } else {
+        res = 0L;
+        break;
+      }
+    }
+  }
+  return is_neg ? -res : res;
+}
+
 //////////////////////////////////////////////////////////////////
 // base64 encode/decode (with some formatting changes) courtesy of
 // Adam Rudd per licence: github.com/adamvr/arduino-base64

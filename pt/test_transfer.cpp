@@ -1,5 +1,6 @@
 #include <pc/rpc_client.hpp>
 #include <iostream>
+#include <unistd.h>
 
 using namespace pc;
 
@@ -23,13 +24,19 @@ public:
     sig_.set_signature( get_signature() );
     conn_->send( &sig_ );
   }
-  void on_response( rpc::transfer * ) {
+  void on_response( rpc::transfer *msg ) {
+    if ( msg->get_is_err() ) {
+      std::cerr << "error: code=" << msg->get_err_code()
+        << ",msg=" << msg->get_err_msg() << std::endl;
+      done_ = true;
+    }
   }
   void on_response( rpc::signature_subscribe *sig ) {
     if ( !sig->get_is_err() ) {
       std::cout << "finished transaction" << std::endl;
     } else {
-      std::cerr << "error:" << sig->get_err_msg() << std::endl;
+      std::cerr << "error: code=" << sig->get_err_code()
+        << ",msg=" << sig->get_err_msg() << std::endl;
     }
     done_ = true;
   }
