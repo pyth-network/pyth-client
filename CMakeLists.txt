@@ -43,5 +43,8 @@ target_link_libraries( test_net pc )
 add_executable( test_rpc pt/test_rpc.cpp )
 target_link_libraries( test_rpc pc crypto )
 
+add_executable( test_transfer pt/test_transfer.cpp )
+target_link_libraries( test_transfer pc crypto )
+
 add_test( test_key test_key )
 add_test( test_net test_net )

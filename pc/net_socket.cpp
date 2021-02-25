@@ -64,6 +64,11 @@ void net_buf_alloc::dealloc( net_buf *ptr )
 
 static net_buf_alloc mem_;
 
+net_buf *net_buf::alloc()
+{
+  return mem_.alloc();
+}
+
 void net_buf::dealloc()
 {
   mem_.dealloc( this );

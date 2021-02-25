@@ -15,6 +15,7 @@ namespace pc
     uint16_t size_;
     char     buf_[len];
     void dealloc();
+    static net_buf *alloc();
   };
 
   // network message writer

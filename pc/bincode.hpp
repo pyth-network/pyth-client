@@ -11,9 +11,11 @@ namespace pc
   class bincode
   {
   public:
+    bincode();
+    bincode( char* );
 
     // attach buffer
-    void attach( uint8_t *buf );
+    void attach( char *buf );
     char *get_buf() const;
     char *get_wtr() const;
     size_t size() const;
@@ -46,9 +48,17 @@ namespace pc
     size_t idx_;
   };
 
-  inline void bincode::attach( uint8_t *buf )
+  inline bincode::bincode()
+  : buf_( nullptr ), idx_( 0 ) {
+  }
+
+  inline bincode::bincode( char *buf )
+  : buf_( buf ), idx_( 0 ) {
+  }
+
+  inline void bincode::attach( char *buf )
   {
-    buf_ = (char*)buf;
+    buf_ = buf;
     idx_ = 0;
   }
 

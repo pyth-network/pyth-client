@@ -72,7 +72,7 @@ void test_tx()
   rhash.dec_base58( (const uint8_t*)htxt, __builtin_strlen( htxt ) );
 
   // serialize transfer instruction
-  uint8_t buf[1024];
+  char buf[1024];
   bincode msg;
   msg.attach( buf );
   long amt = 5000000000L; // 5 SOL
@@ -82,7 +82,7 @@ void test_tx()
   static char restxt[] = "66vcTF2UeCrUG2JrP8igK8KnVnJYxc89w1fWmJDZChTfxAggim9Q3J8riCwtoEFMbL3awWAvR4HkRxLQ6jspD5JJawjPV1GqAojkK5zUjMzGHKujhnsMtyUpFKZp5tY7zkbebdRjbyDpHfQ4K4ujBzJAE1YSUuPUHskeoeWbdAofEpfUxRRqEGSj9dQLidGwd5yq1H5hihDBPg36iSVAw91o6s6uFvZPqN3VTW9Mrx4cVWJ4WXcdedg5aLWs98FZ3Fa5mxpXAWoZxbWH3bkaT3edxBwpLU78azzaj";
   char res[1024];
   int rlen = 1024;
-  int elen = enc_base58( buf, msg.get_pos(), (uint8_t*)res, rlen );
+  int elen = enc_base58( (uint8_t*)buf, msg.get_pos(), (uint8_t*)res, rlen );
   res[elen] = '\0';
   PC_TEST_CHECK( 0 == __builtin_strcmp( restxt, res ) );
 }

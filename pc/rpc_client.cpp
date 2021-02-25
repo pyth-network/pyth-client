@@ -1,7 +1,26 @@
 #include "rpc_client.hpp"
+#include "bincode.hpp"
 #include <iostream>
 
 using namespace pc;
+
+// system program instructions
+enum system_instruction : uint32_t
+{
+  e_create_account,
+  e_assign,
+  e_transfer
+};
+
+static hash gen_sys_id()
+{
+  pc::hash id;
+  id.zero();
+  return id;
+}
+
+// system program id
+static hash sys_id = gen_sys_id();
 
 ///////////////////////////////////////////////////////////////////////////
 // rpc_client
@@ -210,5 +229,89 @@ void rpc::get_recent_block_hash::deserialize( const jtree& jt )
   bhash_.dec_base58( (const uint8_t*)txt, txt_len );
   uint32_t ftok = jt.find_val( vtok, "feeCalculator" );
   fee_per_sig_ = jt.get_uint( jt.find_val( ftok, "lamportsPerSignature" ) );
+  on_response( this );
+}
+
+///////////////////////////////////////////////////////////////////////////
+// transfer
+
+void rpc::transfer::set_block_hash( const hash& bhash )
+{
+  bhash_ = bhash;
+}
+
+void rpc::transfer::set_sender( const key_pair& snd )
+{
+  snd_ = snd;
+}
+
+void rpc::transfer::set_receiver( const pub_key& rcv )
+{
+  rcv_ = rcv;
+}
+
+void rpc::transfer::set_lamports( uint64_t funds )
+{
+  lamports_ = funds;
+}
+
+rpc::transfer::transfer()
+: lamports_( 0UL )
+{
+}
+
+void rpc::transfer::serialize( jwriter& msg )
+{
+  // construct binary transaction
+  net_buf *bptr = net_buf::alloc();
+  bincode tx( bptr->buf_ );
+
+  // signatures section
+  tx.add_len<1>();      // one signature
+  size_t sign_idx = tx.reserve_sign();
+
+  // message header
+  size_t tx_idx = tx.get_pos();
+  tx.add( (uint8_t)1 ); // signing accounts
+  tx.add( (uint8_t)0 ); // read-only signed accounts
+  tx.add( (uint8_t)1 ); // read-only unsigned accounts
+
+  // accounts
+  tx.add_len<3>();      // 3 accounts: sender, receiver, program
+  tx.add( snd_ );       // sender account
+  tx.add( rcv_ );       // receiver account
+  tx.add( sys_id );     // system programid
+
+  // recent block hash
+  tx.add( bhash_ );     // recent block hash
+
+  // instructions section
+  tx.add_len<1>();      // one instruction
+  tx.add( (uint8_t)2);  // program_id index
+  tx.add_len<2>();      // 2 accounts: sender, receiver
+  tx.add( (uint8_t)0 ); // index of sender account
+  tx.add( (uint8_t)1 ); // index of receiver account
+
+  // instruction parameter section
+  tx.add_len<12>();     // size of data array
+  tx.add( (uint32_t)system_instruction::e_transfer );
+  tx.add( (uint64_t)lamports_ );
+
+  // sign message
+  tx.sign( sign_idx, tx_idx, snd_ );
+
+  // encode transaction and add to json params
+  msg.add_key( "method", "sendTransaction" );
+  msg.add_key( "params", jwriter::e_arr );
+  msg.add_val_enc_base64( (const uint8_t*)tx.get_buf(), tx.size() );
+  msg.add_val( jwriter::e_obj );
+  msg.add_key( "encoding", "base64" );
+  msg.pop();
+  msg.pop();
+  bptr->dealloc();
+}
+
+void rpc::transfer::deserialize( const jtree& )
+{
   on_response( this );
 }

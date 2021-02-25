@@ -117,6 +117,7 @@ namespace pc
       bool        is_exec_;
     };
 
+    // recent block hash and fee schedule
     class get_recent_block_hash : public rpc_request
     {
     public:
@@ -133,6 +134,27 @@ namespace pc
       uint64_t  slot_;
       hash      bhash_;
       uint64_t  fee_per_sig_;
+    };
+
+    // transaction to transfer funds between accounts
+    class transfer : public rpc_request
+    {
+    public:
+      // parameters
+      void set_block_hash( const hash& );
+      void set_sender( const key_pair& );
+      void set_receiver( const pub_key& );
+      void set_lamports( uint64_t funds );
+
+      transfer();
+      void serialize( jwriter& ) override;
+      void deserialize( const jtree& ) override;
+
+    private:
+      hash     bhash_;
+      key_pair snd_;
+      pub_key  rcv_;
+      uint64_t lamports_;
     };
 
   }

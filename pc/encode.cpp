@@ -122,4 +122,116 @@ uint64_t str_to_uint( const char *val, int len )
   return res;
 }
 
+//////////////////////////////////////////////////////////////////
+// base64 encode/decode (with some formatting changes) courtesy of
+// Adam Rudd per licence: github.com/adamvr/arduino-base64
+
+static const char b64_alphabet[] =
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+  "abcdefghijklmnopqrstuvwxyz"
+  "0123456789+/";
+
+inline void a3_to_a4(uint8_t* a4, uint8_t* a3)
+{
+  a4[0] = (a3[0] & 0xfc) >> 2;
+  a4[1] = ((a3[0] & 0x03) << 4) + ((a3[1] & 0xf0) >> 4);
+  a4[2] = ((a3[1] & 0x0f) << 2) + ((a3[2] & 0xc0) >> 6);
+  a4[3] = (a3[2] & 0x3f);
+}
+
+inline void a4_to_a3( uint8_t* a3, uint8_t* a4)
+{
+  a3[0] = (a4[0] << 2) + ((a4[1] & 0x30) >> 4);
+  a3[1] = ((a4[1] & 0xf) << 4) + ((a4[2] & 0x3c) >> 2);
+  a3[2] = ((a4[2] & 0x3) << 6) + a4[3];
+}
+
+inline uint8_t b64_lookup(char c)
+{
+  if(c >='A' && c <='Z') return c - 'A';
+  if(c >='a' && c <='z') return c - 71;
+  if(c >='0' && c <='9') return c + 4;
+  if(c == '+') return 62;
+  if(c == '/') return 63;
+  return -1;
+}
+
+int enc_base64_len( int n )
+{
+  return (n + 2 - ((n + 2) % 3)) / 3 * 4;
+}
+
+int enc_base64( const uint8_t *inp, int len, uint8_t *out )
+{
+  int i = 0, j = 0, encLen = 0;
+  uint8_t a3[3];
+  uint8_t a4[4];
+
+  while( len-- ) {
+    a3[i++] = *(inp++);
+    if(i == 3) {
+      a3_to_a4(a4, a3);
+      for(i = 0; i < 4; i++) {
+        out[encLen++] = b64_alphabet[a4[i]];
+      }
+      i = 0;
+    }
+  }
+
+  if(i) {
+    for(j = i; j < 3; j++) {
+      a3[j] = '\0';
+    }
+    a3_to_a4(a4, a3);
+    for(j = 0; j < i + 1; j++) {
+      out[encLen++] = b64_alphabet[a4[j]];
+    }
+
+    while((i++ < 3)) {
+      out[encLen++] = '=';
+    }
+  }
+  return encLen;
+}
+
+int dec_base64( const uint8_t *inp, int len, uint8_t *out )
+{
+  int i = 0, j = 0, decLen = 0;
+  uint8_t a3[3];
+  uint8_t a4[4];
+
+  while ( len-- ) {
+    if(*inp == '=') {
+      break;
+    }
+    a4[i++] = *(inp++);
+    if (i == 4) {
+      for (i = 0; i <4; i++) {
+        a4[i] = b64_lookup(a4[i]);
+      }
+      a4_to_a3(a3,a4);
+      for (i = 0; i < 3; i++) {
+        out[decLen++] = a3[i];
+      }
+      i = 0;
+    }
+  }
+
+  if (i) {
+    for (j = i; j < 4; j++) {
+      a4[j] = '\0';
+    }
+    for (j = 0; j <4; j++) {
+      a4[j] = b64_lookup(a4[j]);
+    }
+    a4_to_a3(a3,a4);
+    for (j = 0; j < i - 1; j++) {
+      out[decLen++] = a3[j];
+    }
+  }
+  return decLen;
+}
+
+
+
 }

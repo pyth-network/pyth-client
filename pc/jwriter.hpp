@@ -39,6 +39,8 @@ namespace pc
     void add_val( uint64_t  );
     void add_val( type_t  );
     void add_val( const hash& );
+    void add_val_enc_base58( const uint8_t *val, size_t val_len );
+    void add_val_enc_base64( const uint8_t *val, size_t val_len );
 
   private:
 
@@ -47,6 +49,7 @@ namespace pc
     void add_key_only( const char *key, size_t key_len );
     void add_obj();
     void add_arr();
+    void add_first();
 
     char      *buf_;
     size_t     wtr_;
