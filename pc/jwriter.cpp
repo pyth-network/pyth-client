@@ -93,6 +93,15 @@ void jwriter::add_key( const char *key, type_t t )
   }
 }
 
+void jwriter::add_key( const char *key, const hash& pk )
+{
+  add_key_only( key, __builtin_strlen(key) );
+  buf_[wtr_++] = '"';
+  wtr_ += enc_base58( pk.data(), hash::len,
+      (uint8_t*)&buf_[wtr_], 3*hash::len );
+  buf_[wtr_++] = '"';
+}
+
 void jwriter::add_val( const char *val, size_t val_len )
 {
   if ( !first_ ) buf_[wtr_++] = ',';

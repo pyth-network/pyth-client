@@ -17,6 +17,8 @@ namespace pc
     jwriter();
     jwriter( char * );
     void attach( char *buf );
+    char *get_buf() const;
+    char *get_wtr() const;
     size_t size() const;
 
     // add or pop new object/array
@@ -29,6 +31,7 @@ namespace pc
     void add_key( const char *key, const char *val );
     void add_key( const char *key, uint64_t val );
     void add_key( const char *key, type_t );
+    void add_key( const char *key, const hash& );
 
     // add array value
     void add_val( const char *val, size_t val_len );
@@ -50,6 +53,16 @@ namespace pc
     bool       first_;
     type_vec_t st_;
   };
+
+  inline char *jwriter::get_buf() const
+  {
+    return buf_;
+  }
+
+  inline char *jwriter::get_wtr() const
+  {
+    return &buf_[wtr_];
+  }
 
   inline size_t jwriter::size() const
   {

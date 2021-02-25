@@ -3,15 +3,20 @@
 
 using namespace pc;
 
-class get_account_info_sub : public rpc_sub,
-                             public rpc_sub_i<rpc::get_account_info>
+class test_rpc_sub : public rpc_sub,
+                     public rpc_sub_i<rpc::get_account_info>,
+                     public rpc_sub_i<rpc::get_recent_block_hash>
 {
 public:
-  get_account_info_sub() : done_( false ) {
+  test_rpc_sub() : cnt_( 0 ) {
+  }
+  void add() {
+    ++cnt_;
   }
   void on_response( rpc::get_account_info *m ) {
     size_t clen = 0;
     const char *cptr;
+    std::cout << "===============> get_account_info" << std::endl;
     std::cout << "slot          = " << m->get_slot() << std::endl;
     std::cout << "lamports      = " << m->get_lamports() << std::endl;
     std::cout << "rent_epoch    = " << m->get_rent_epoch() << std::endl;
@@ -19,14 +24,26 @@ public:
     std::cout << "owner         = ";
     m->get_owner( cptr, clen );
     std::cout.write( cptr, clen );
-    std::cout << std::endl;
-    done_ = true;
+    std::cout << std::endl << std::endl;
+    --cnt_;
   }
-  bool is_done() {
-    return done_;
+  void on_response( rpc::get_recent_block_hash *m ) {
+    std::cout << "===============> get_recent_block_hash" << std::endl;
+    std::cout << "slot              = " << m->get_slot() << std::endl;
+    std::cout << "lamports_per_sig  = "
+              << m->get_lamports_per_signature() << std::endl;
+    hash bhash = m->get_block_hash();
+    std::string hstr;
+    bhash.enc_base58( hstr );
+    std::cout << "recent_block_hash = " << hstr << std::endl;
+    std::cout << std::endl;
+    --cnt_;
+  }
+  bool is_done() const {
+    return cnt_ == 0;
   }
 private:
-  bool done_;
+  int *cnt_;
 };
 
 int main(int,char**)
@@ -50,15 +67,22 @@ int main(int,char**)
   kp.init_from_json( kptxt );
   pub_key pk( kp );
 
-  get_account_info_sub sub;
+  test_rpc_sub sub;
 
-  // construct request
-  rpc::get_account_info req;
-  req.set_account( pk );
-  req.set_sub( &sub );
+  // construct get_account_info request
+  rpc::get_account_info req1;
+  req1.set_account( pk );
+  req1.set_sub( &sub );
+  conn.send( &req1 );
+  sub.add();
+
+  // construct get_recent_block_hash request
+  rpc::get_recent_block_hash req2;
+  req2.set_sub( &sub );
+  conn.send( &req2 );
+  sub.add();
 
   // submit request and poll for result
-  conn.send( &req );
   while( !conn.get_is_err() && !sub.is_done() ) {
     conn.poll();
   }

@@ -116,10 +116,11 @@ namespace pc
   class http_request : public net_wtr
   {
   public:
-    void init( const char *method, const char *endpoint );
+    void init( const char *method="POST", const char *endpoint="/" );
     void add_hdr( const char *hdr, const char *txt, size_t txt_len );
     void add_hdr( const char *hdr, const char *txt  );
     void add_hdr( const char *hdr, uint64_t val );
+    void add_content( const char *, size_t );
     void add_content( net_wtr& );
   };
 

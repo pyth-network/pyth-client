@@ -34,6 +34,7 @@ namespace pc
     char      jb_[1024];
   };
 
+  // rpc response or subscrption callback
   class rpc_sub
   {
   public:
@@ -80,8 +81,12 @@ namespace pc
     }
   }
 
+  /////////////////////////////////////////////////////////////////////////
+  // wrappers for various solana rpc requests
+
   namespace rpc
   {
+    // get account balance, program and meta-data
     class get_account_info : public rpc_request
     {
     public:
@@ -110,6 +115,24 @@ namespace pc
       const char *optr_;
       size_t      olen_;
       bool        is_exec_;
+    };
+
+    class get_recent_block_hash : public rpc_request
+    {
+    public:
+      // results
+      uint64_t get_slot() const;
+      hash     get_block_hash() const;
+      uint64_t get_lamports_per_signature() const;
+
+      get_recent_block_hash();
+      void serialize( jwriter& ) override;
+      void deserialize( const jtree& ) override;
+
+    private:
+      uint64_t  slot_;
+      hash      bhash_;
+      uint64_t  fee_per_sig_;
     };
 
   }

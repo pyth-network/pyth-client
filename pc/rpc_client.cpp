@@ -39,9 +39,7 @@ void rpc_client::send( rpc_request *rptr )
   http_request msg;
   msg.init( "POST", "/" );
   msg.add_hdr( "Content-Type", "application/json" );
-  net_wtr bdy;
-  bdy.add( jb_, jw_.size() );
-  msg.add_content( bdy );
+  msg.add_content( jb_, jw_.size() );
   add_send( msg );
 }
 
@@ -52,6 +50,10 @@ void rpc_client::parse_content( const char *txt, size_t len )
 
   // parse and redirect response to corresponding request
   jp_.parse( txt, len );
+  uint32_t ertok = jp_.find_val( 1, "error" );
+  if ( ertok ) {
+    // TODO: process error
+  }
   uint32_t idtok = jp_.find_val( 1, "id" );
   if ( idtok ) {
     uint64_t id = jp_.get_uint( idtok );
@@ -163,5 +165,50 @@ void rpc::get_account_info::deserialize( const jtree& jt )
   jt.get_text( jt.find_val( vtok, "data" ), dptr_, dlen_ );
   jt.get_text( jt.find_val( vtok, "owner" ), optr_, olen_ );
   rent_epoch_ = jt.get_uint( jt.find_val( vtok, "rentEpoch" ) );
+  on_response( this );
+}
+
+///////////////////////////////////////////////////////////////////////////
+// get_recent_block_hash
+
+uint64_t rpc::get_recent_block_hash::get_slot() const
+{
+  return slot_;
+}
+
+hash rpc::get_recent_block_hash::get_block_hash() const
+{
+  return bhash_;
+}
+
+uint64_t rpc::get_recent_block_hash::get_lamports_per_signature() const
+{
+  return fee_per_sig_;
+}
+
+rpc::get_recent_block_hash::get_recent_block_hash()
+: slot_( 0 ),
+  fee_per_sig_( 0 )
+{
+  bhash_.zero();
+}
+
+void rpc::get_recent_block_hash::serialize( jwriter& msg )
+{
+  msg.add_key( "method", "getRecentBlockhash" );
+}
+
+void rpc::get_recent_block_hash::deserialize( const jtree& jt )
+{
+  uint32_t rtok = jt.find_val( 1, "result" );
+  uint32_t ctok = jt.find_val( rtok, "context" );
+  slot_ = jt.get_uint( jt.find_val( ctok, "slot" ) );
+  uint32_t vtok = jt.find_val( rtok, "value" );
+  size_t txt_len = 0;
+  const char *txt;
+  jt.get_text( jt.find_val( vtok, "blockhash" ), txt, txt_len );
+  bhash_.dec_base58( (const uint8_t*)txt, txt_len );
+  uint32_t ftok = jt.find_val( vtok, "feeCalculator" );
+  fee_per_sig_ = jt.get_uint( jt.find_val( ftok, "lamportsPerSignature" ) );
   on_response( this );
 }

@@ -14,6 +14,9 @@ namespace pc
 
     // attach buffer
     void attach( uint8_t *buf );
+    char *get_buf() const;
+    char *get_wtr() const;
+    size_t size() const;
 
     // get/modify current read/write position
     size_t get_pos() const;
@@ -47,6 +50,21 @@ namespace pc
   {
     buf_ = (char*)buf;
     idx_ = 0;
+  }
+
+  inline char *bincode::get_buf() const
+  {
+    return buf_;
+  }
+
+  inline char *bincode::get_wtr() const
+  {
+    return &buf_[idx_];
+  }
+
+  inline size_t bincode::size() const
+  {
+    return idx_;
   }
 
   inline void bincode::reset_pos()

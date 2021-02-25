@@ -427,6 +427,14 @@ void http_request::add_content( net_wtr& buf )
   add( buf );
 }
 
+void http_request::add_content( const char *buf, size_t len )
+{
+  add_hdr( "Content-Length", len );
+  add( '\r' );
+  add( '\n' );
+  add( buf, len );
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // http_client
 
