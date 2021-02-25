@@ -15,7 +15,10 @@ public:
   }
   void on_response( rpc::get_recent_block_hash *m ) {
     set_block_hash( m->get_block_hash() );
-    conn_->send( this );
+    conn_->send_http( this );
+    std::string buf;
+    enc_signature( buf );
+    std::cout << "txid=" << buf << std::endl;
   }
   void on_response( rpc::transfer * ) {
     done_ = true;
@@ -24,7 +27,7 @@ public:
     return done_;
   }
   void send() {
-    conn_->send( &req_ );
+    conn_->send_http( &req_ );
   }
 private:
   rpc_client *conn_;
@@ -35,17 +38,18 @@ private:
 int main(int,char**)
 {
   // connect to validor node rpc port
-  rpc_client conn;
-  tcp_connect clnt;
-  clnt.set_host( "localhost" );
-  clnt.set_port( 8899 );
-  clnt.set_net_socket( &conn );
-  if ( !clnt.init() ) {
-    std::cerr << "test_transfer : " << clnt.get_err_msg() << std::endl;
+  tcp_connect conn;
+  conn.set_host( "localhost" );
+  conn.set_port( 8899 );
+  if ( !conn.init() ) {
+    std::cerr << "test_transfer : " << conn.get_err_msg() << std::endl;
     return 1;
   }
   conn.set_block( false );
   std::cout << "connected" << std::endl;
+
+  rpc_client clnt;
+  clnt.set_http_conn( &conn );
 
   // get sender, receiver and amount parameters
   static const char sndtxt[] = "[1,255,171,208,173,142,62,253,217,43,175,186,121,205,69,158,81,20,106,216,112,153,91,128,111,144,115,208,226,228,180,230,54,224,118,105,238,95,215,221,52,118,41,49,241,73,160,221,225,36,45,167,11,203,7,232,201,166,138,219,218,113,232,229 ]";
@@ -59,7 +63,7 @@ int main(int,char**)
   long amt = 5000000000L; // 5 SOL
 
   // construct and submit transfer request
-  test_transfer req( &conn );
+  test_transfer req( &clnt );
   req.set_sender( snd );
   req.set_receiver( rcv_pub );
   req.set_lamports( amt );

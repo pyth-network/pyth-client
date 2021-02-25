@@ -26,11 +26,55 @@ static hash sys_id = gen_sys_id();
 // rpc_client
 
 rpc_client::rpc_client()
-: id_( 0UL )
+: hptr_( nullptr ),
+  wptr_( nullptr ),
+  id_( 0UL )
 {
 }
 
-void rpc_client::send( rpc_request *rptr )
+void rpc_client::set_http_conn( net_socket *hptr )
+{
+  hptr_ = hptr;
+  hptr_->set_net_parser( static_cast<http_client*>( this ) );
+}
+
+net_socket *rpc_client::get_http_conn() const
+{
+  return hptr_;
+}
+
+void rpc_client::set_ws_conn( net_socket *wptr )
+{
+  wptr_ = wptr;
+  wptr_->set_net_parser( static_cast<ws_parser*>( this ) );
+  set_net_socket( wptr_ );
+}
+
+net_socket *rpc_client::get_ws_conn() const
+{
+  return wptr_;
+}
+
+void rpc_client::send_http( rpc_request *rptr )
+{
+  add_request( rptr );
+
+  // submit http POST request
+  http_request msg;
+  msg.init( "POST", "/" );
+  msg.add_hdr( "Content-Type", "application/json" );
+  msg.add_content( jb_, jw_.size() );
+  hptr_->add_send( msg );
+}
+
+void rpc_client::send_ws( rpc_request *rptr )
+{
+  add_request( rptr );
+
+  // submit websocket message
+}
+
+void rpc_client::add_request( rpc_request *rptr )
 {
   // get request id
   uint64_t id;
@@ -53,16 +97,19 @@ void rpc_client::send( rpc_request *rptr )
 
   std::cout.write( jb_, jw_.size() );
   std::cout << std::endl;
-
-  // submit http POST request
-  http_request msg;
-  msg.init( "POST", "/" );
-  msg.add_hdr( "Content-Type", "application/json" );
-  msg.add_content( jb_, jw_.size() );
-  add_send( msg );
 }
 
 void rpc_client::parse_content( const char *txt, size_t len )
+{
+  parse_response( txt, len );
+}
+
+void rpc_client::parse_msg( const char *txt, size_t len )
+{
+  parse_response( txt, len );
+}
+
+void rpc_client::parse_response( const char *txt, size_t len )
 {
   std::cout.write( txt, len );
   std::cout << std::endl;
@@ -255,6 +302,17 @@ void rpc::transfer::set_lamports( uint64_t funds )
   lamports_ = funds;
 }
 
+signature rpc::transfer::get_signature() const
+{
+  return sig_;
+}
+
+void rpc::transfer::enc_signature( std::string& sig )
+{
+  sig_.enc_base58( sig );
+}
+
+
 rpc::transfer::transfer()
 : lamports_( 0UL )
 {
@@ -299,6 +357,7 @@ void rpc::transfer::serialize( jwriter& msg )
 
   // sign message
   tx.sign( sign_idx, tx_idx, snd_ );
+  sig_.init_from_buf( (const uint8_t*)(tx.get_buf() + sign_idx) );
 
   // encode transaction and add to json params
   msg.add_key( "method", "sendTransaction" );

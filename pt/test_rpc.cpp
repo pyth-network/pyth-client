@@ -49,17 +49,18 @@ private:
 int main(int,char**)
 {
   // connect to validor node rpc port
-  rpc_client conn;
-  tcp_connect clnt;
-  clnt.set_host( "localhost" );
-  clnt.set_port( 8899 );
-  clnt.set_net_socket( &conn );
-  if ( !clnt.init() ) {
-    std::cerr << "test_http : " << clnt.get_err_msg() << std::endl;
+  tcp_connect conn;
+  conn.set_host( "localhost" );
+  conn.set_port( 8899 );
+  if ( !conn.init() ) {
+    std::cerr << "test_http : " << conn.get_err_msg() << std::endl;
     return 1;
   }
   conn.set_block( false );
   std::cout << "connected" << std::endl;
+
+  rpc_client clnt;
+  clnt.set_http_conn( &conn );
 
   // get account key
   static const char kptxt[] = "[1,255,171,208,173,142,62,253,217,43,175,186,121,205,69,158,81,20,106,216,112,153,91,128,111,144,115,208,226,228,180,230,54,224,118,105,238,95,215,221,52,118,41,49,241,73,160,221,225,36,45,167,11,203,7,232,201,166,138,219,218,113,232,229 ]";
@@ -73,13 +74,13 @@ int main(int,char**)
   rpc::get_account_info req1;
   req1.set_account( pk );
   req1.set_sub( &sub );
-  conn.send( &req1 );
+  clnt.send_http( &req1 );
   sub.add();
 
   // construct get_recent_block_hash request
   rpc::get_recent_block_hash req2;
   req2.set_sub( &sub );
-  conn.send( &req2 );
+  clnt.send_http( &req2 );
   sub.add();
 
   // submit request and poll for result

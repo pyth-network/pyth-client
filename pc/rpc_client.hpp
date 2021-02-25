@@ -11,27 +11,47 @@ namespace pc
   class rpc_request;
 
   // solana rpc REST API client
-  class rpc_client : public http_client
+  class rpc_client : public http_client,
+                     public ws_parser
   {
   public:
 
     rpc_client();
 
-    // submit request (and bundled callback)
-    void send( rpc_request * );
+    // rpc http connection
+    void set_http_conn( net_socket * );
+    net_socket *get_http_conn() const;
+
+    // rpc web socket connection
+    void set_ws_conn( net_socket * );
+    net_socket *get_ws_conn() const;
+
+    // submit rpc http request (and bundled callback)
+    void send_http( rpc_request * );
+
+    // submit rpc websocket request (and bundled callback)
+    void send_ws( rpc_request * );
 
     // parse json payload and invoke callback
     void parse_content( const char *content, size_t content_len ) override;
+    void parse_msg( const char *msg, size_t msg_len ) override;
 
   private:
+
     typedef std::vector<rpc_request*> request_t;
     typedef std::vector<uint64_t>     reuse_t;
-    jtree     jp_; // json parser
-    jwriter   jw_; // json message builder
-    request_t rv_; // waiting requests by id
-    reuse_t   rd_; // reuse id list
-    uint64_t  id_; // next id
-    char      jb_[1024];
+
+    void add_request( rpc_request *rptr );
+    void parse_response( const char *msg, size_t msg_len );
+
+    net_socket *hptr_;
+    net_socket *wptr_;
+    jtree       jp_; // json parser
+    jwriter     jw_; // json message builder
+    request_t   rv_; // waiting requests by id
+    reuse_t     rd_; // reuse id list
+    uint64_t    id_; // next id
+    char        jb_[1024];
   };
 
   // rpc response or subscrption callback
@@ -146,15 +166,20 @@ namespace pc
       void set_receiver( const pub_key& );
       void set_lamports( uint64_t funds );
 
+      // results
+      signature get_signature() const;
+      void enc_signature( std::string& );
+
       transfer();
       void serialize( jwriter& ) override;
       void deserialize( const jtree& ) override;
 
     private:
-      hash     bhash_;
-      key_pair snd_;
-      pub_key  rcv_;
-      uint64_t lamports_;
+      hash      bhash_;
+      key_pair  snd_;
+      pub_key   rcv_;
+      uint64_t  lamports_;
+      signature sig_;
     };
 
   }

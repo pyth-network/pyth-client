@@ -1,5 +1,6 @@
 #include "net_socket.hpp"
 #include "encode.hpp"
+#include "defines.hpp"
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -163,12 +164,17 @@ void net_wtr::add( net_wtr& buf )
 ///////////////////////////////////////////////////////////////////////////
 // net_socket
 
+net_parser::~net_parser()
+{
+}
+
 net_socket::net_socket()
 : fd_(-1),
   whd_( nullptr ),
   wtl_( nullptr ),
   rsz_( 0 ),
-  wsz_( 0 )
+  wsz_( 0 ),
+  np_( nullptr )
 {
 }
 
@@ -180,6 +186,16 @@ int net_socket::get_fd() const
 void net_socket::set_fd( int fd )
 {
   fd_ = fd;
+}
+
+void net_socket::set_net_parser( net_parser *np )
+{
+  np_ = np;
+}
+
+net_parser *net_socket::get_net_parser() const
+{
+  return np_;
 }
 
 void net_socket::close()
@@ -281,7 +297,7 @@ void net_socket::poll_recv()
     // parse content
     for( size_t idx=0; !get_is_err() && rsz_; ) {
       size_t rlen = 0;
-      if ( parse( &rdr_[idx], rsz_, rlen ) ) {
+      if ( np_->parse( &rdr_[idx], rsz_, rlen ) ) {
         idx  += rlen;
         rsz_ -= rlen;
       } else {
@@ -306,8 +322,7 @@ void net_socket::poll_error( bool is_read )
 // tcp_connect
 
 tcp_connect::tcp_connect()
-: port_(-1),
-  conn_( nullptr )
+: port_(-1)
 {
 }
 
@@ -329,16 +344,6 @@ void tcp_connect::set_port( int port )
 int tcp_connect::get_port() const
 {
   return port_;
-}
-
-void tcp_connect::set_net_socket( net_socket *conn )
-{
-  conn_ = conn;
-}
-
-net_socket *tcp_connect::get_net_socket() const
-{
-  return conn_;
 }
 
 static bool get_hname_addr( const std::string& name, sockaddr *saddr )
@@ -371,7 +376,7 @@ static bool get_hname_addr( const std::string& name, sockaddr *saddr )
 
 bool tcp_connect::init()
 {
-  conn_->close();
+  close();
   reset_err();
   int fd = ::socket( AF_INET, SOCK_STREAM, IPPROTO_TCP );
   if ( fd < 0 ) {
@@ -386,8 +391,7 @@ bool tcp_connect::init()
   if ( 0 != ::connect( fd, saddr, sizeof( sockaddr ) ) ) {
     return set_err_msg( "failed to connect to host=" + host_, errno );
   }
-  conn_->reset_err();
-  conn_->set_fd( fd );
+  set_fd( fd );
   return true;
 }
 
@@ -522,5 +526,167 @@ void http_client::parse_header( const char *, size_t,
 }
 
 void http_client::parse_content( const char *, size_t )
+{
+}
+
+///////////////////////////////////////////////////////////////////////////
+// ws_wtr
+
+struct PC_PACKED ws_hdr1
+{
+  uint8_t op_code_:4;
+  uint8_t rsv3_:1;
+  uint8_t rsv2_:1;
+  uint8_t rsv1_:1;
+  uint8_t fin_:1;
+  uint8_t pay_len1_:7;
+  uint8_t mask_:1;
+};
+
+struct PC_PACKED ws_hdr2 : public ws_hdr1
+{
+  uint16_t pay_len2_;
+};
+
+struct PC_PACKED ws_hdr3 : public ws_hdr1
+{
+  uint64_t pay_len3_;
+};
+
+void ws_wtr::commit(
+    uint8_t op_code, const char *payload, size_t pay_len, bool mask )
+{
+  char hdr[32];
+  size_t hdsz = 0;
+  ws_hdr1 *hptr1 = (ws_hdr1*)hdr;
+  hptr1->fin_  = 1;
+  hptr1->rsv1_ = 0;
+  hptr1->rsv2_ = 0;
+  hptr1->rsv3_ = 0;
+  hptr1->mask_ = mask;
+  hptr1->op_code_ = op_code;
+  if ( pay_len < 126 ) {
+    hptr1->pay_len1_ = pay_len;
+    hdsz = sizeof( ws_hdr1 );
+  } else if ( pay_len <= 0xffff ) {
+    hptr1->pay_len1_ = 126;
+    ws_hdr2 *hptr2 = (ws_hdr2*)hd_->buf_;
+    hptr2->pay_len2_ = __builtin_bswap16( (uint16_t)pay_len );
+    hdsz = sizeof( ws_hdr2 );
+  } else {
+    hptr1->pay_len1_ = 127;
+    ws_hdr3 *hptr3 = (ws_hdr3*)hd_->buf_;
+    hptr3->pay_len3_ = __builtin_bswap64( (uint64_t)pay_len );
+    hdsz = sizeof( ws_hdr3 );
+  }
+  // generate mask
+  if ( mask ) {
+    uint32_t mask_key = random();
+    const char *mptr = &hdr[hdsz];
+    ((uint32_t*)mptr)[0] = mask_key;
+    hdsz += sizeof( uint32_t );
+    unsigned i=0;
+    for( char *ibuf = (char*)payload, *ebuf = &ibuf[pay_len];
+         ibuf != ebuf; ++ibuf, ++i ) {
+      *ibuf ^= mptr[i%4];
+    }
+  }
+  add( hdr, hdsz );
+  add( payload, pay_len );
+}
+
+///////////////////////////////////////////////////////////////////////////
+// ws_parser
+
+ws_parser::ws_parser()
+: wptr_( nullptr )
+{
+}
+
+void ws_parser::set_net_socket( net_socket *wptr )
+{
+  wptr_ = wptr;
+}
+
+net_socket *ws_parser::get_net_socket() const
+{
+  return wptr_;
+}
+
+bool ws_parser::parse( const char *ptr, size_t len, size_t& res )
+{
+  if ( len < sizeof( ws_hdr1 ) ) return false;
+  char *payload = (char*)ptr;
+  ws_hdr1 *hptr1 = (ws_hdr1*)ptr;
+  uint64_t pay_len = 0, msk_len = hptr1->mask_ ? 4 : 0;
+  if ( hptr1->pay_len1_ < 126 ) {
+    pay_len = hptr1->pay_len1_;
+    payload += sizeof( ws_hdr1 );
+    if ( len < sizeof( ws_hdr1 ) + pay_len + msk_len ) return false;
+  } else if ( hptr1->pay_len1_ == 126 ) {
+    if ( len < sizeof( ws_hdr2) ) return false;
+    ws_hdr2 *hptr2 = (ws_hdr2*)ptr;
+    payload += sizeof( ws_hdr2 );
+    pay_len = __builtin_bswap16( hptr2->pay_len2_);
+    if ( len < sizeof( ws_hdr2 ) + pay_len + msk_len ) return false;
+  } else {
+    if ( len < sizeof( ws_hdr3) ) return false;
+    ws_hdr3 *hptr3 = (ws_hdr3*)ptr;
+    payload += sizeof( ws_hdr3 );
+    pay_len = __builtin_bswap64( hptr3->pay_len3_ );
+    size_t tot_sz = sizeof( ws_hdr3 ) + pay_len + msk_len;
+    if ( len < tot_sz ) return false;
+  }
+  if ( msk_len ) {
+    const char *mask = payload;
+    payload += msk_len;
+    for(unsigned i=0; i != pay_len;++i ) {
+      payload[i] = payload[i] ^ mask[i%4];
+    }
+  }
+  res = pay_len + ( payload - ptr );
+  switch( hptr1->op_code_ ) {
+    case ws_wtr::text_id:
+    case ws_wtr::binary_id:{
+      if ( hptr1->fin_ ) {
+        parse_msg( payload, pay_len );
+      } else {
+        msg_.insert( msg_.end(), payload, &payload[pay_len] );
+      }
+      break;
+    }
+    case ws_wtr::cont_id:{
+      msg_.insert( msg_.end(), payload, &payload[pay_len] );
+      if ( hptr1->fin_ ) {
+        parse_msg( msg_.data(), msg_.size() );
+        msg_.clear();
+      }
+      break;
+    }
+    case ws_wtr::ping_id:{
+      ws_wtr msg;
+      msg.commit( ws_wtr::pong_id, payload, pay_len, msk_len==0 );
+      wptr_->add_send( msg );
+      break;
+    }
+    case ws_wtr::pong_id:{
+      break;
+    }
+    case ws_wtr::close_id:{
+      ws_wtr msg;
+      msg.commit( ws_wtr::close_id, nullptr, 0, msk_len==0 );
+      wptr_->add_send( msg );
+      break;
+    }
+    default:{
+      set_err_msg( "unknown op_code=" +
+          std::to_string((unsigned)hptr1->op_code_ ) );
+      break;
+    }
+  }
+  return true;
+}
+
+void ws_parser::parse_msg( const char *, size_t )
 {
 }

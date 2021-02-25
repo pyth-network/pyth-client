@@ -32,11 +32,21 @@ namespace pc
     size_t size() const;
     void detach( net_buf *&hd, net_buf *&tl );
 
-  private:
+  protected:
     void alloc();
     net_buf *hd_;
     net_buf *tl_;
     size_t   sz_;
+  };
+
+  // parse inbound fragmented messages from streaming protocols
+  class net_parser : public error
+  {
+  public:
+    virtual ~net_parser();
+
+    // parse inbound message
+    virtual bool parse( const char *buf, size_t sz, size_t& len ) = 0;
   };
 
   // socket-based network source
@@ -48,6 +58,13 @@ namespace pc
     // file descriptor access
     int get_fd() const;
     void set_fd( int );
+
+    // set socket blocking flag
+    bool set_block( bool block );
+
+    // associated parser
+    void set_net_parser( net_parser * );
+    net_parser *get_net_parser() const;
 
     // close connection
     void close();
@@ -63,29 +80,23 @@ namespace pc
     // any messages in the send queue
     bool get_is_send() const;
 
-    // set blocking on file descriptor
-    bool set_block( bool );
-
-    // parse inbound message
-    virtual bool parse( const char *buf, size_t sz, size_t& len ) = 0;
-
-  private:
+  protected:
 
     typedef std::vector<char> buf_t;
     static const size_t buf_len = 2048;
     void poll_error( bool );
 
-    int      fd_;    // socket
-    bool     block_; // blocking flag
-    buf_t    rdr_;   // inbound message read buffer
-    net_buf *whd_;   // head of writer queue
-    net_buf *wtl_;   // tail of writer queue
-    size_t   rsz_;   // current read position
-    uint16_t wsz_;   // current write position
+    int         fd_;  // socket
+    buf_t       rdr_; // inbound message read buffer
+    net_buf    *whd_; // head of writer queue
+    net_buf    *wtl_; // tail of writer queue
+    size_t      rsz_; // current read position
+    uint16_t    wsz_; // current write position
+    net_parser *np_;  // message parser
   };
 
-  // tcp connector base class
-  class tcp_connect : public error
+  // tcp connector or client
+  class tcp_connect : public net_socket
   {
   public:
 
@@ -99,19 +110,13 @@ namespace pc
     void set_port( int port );
     int get_port() const;
 
-    // associated connection
-    void set_net_socket( net_socket * );
-    net_socket *get_net_socket() const;
-
     // (re)connect to host
     bool init();
 
   private:
     int         port_; // connection port
     std::string host_; // connection host
-    net_socket *conn_;
   };
-
 
   // http request message
   class http_request : public net_wtr
@@ -125,8 +130,8 @@ namespace pc
     void add_content( net_wtr& );
   };
 
-  // http client connection
-  class http_client : public net_socket
+  // http client parser
+  class http_client : public net_parser
   {
   public:
     bool parse( const char *buf, size_t sz, size_t& len ) override;
@@ -136,14 +141,46 @@ namespace pc
     virtual void parse_content( const char *content, size_t content_len );
   };
 
-  // websocket client connection
-  class ws_socket : public net_socket
+  // websocket message builder
+  class ws_wtr : public net_wtr
   {
+  public:
+    // websocket op-codes
+    static const uint8_t cont_id   = 0x0;
+    static const uint8_t text_id   = 0x1;
+    static const uint8_t binary_id = 0x2;
+    static const uint8_t close_id  = 0x8;
+    static const uint8_t ping_id   = 0x9;
+    static const uint8_t pong_id   = 0xa;
+
+    void commit( uint8_t opcode, const char *, size_t len, bool mask );
   };
 
-  class ws_client : public net_socket,
-                    public tcp_connect
+  // websocket protocol impl
+  class ws_parser : public net_parser
   {
+  public:
+    ws_parser();
+
+    // connection to send control message replies
+    void set_net_socket( net_socket * );
+    net_socket *get_net_socket() const;
+
+    // parse websocket protocol
+    bool parse( const char *buf, size_t sz, size_t& len ) override;
+
+    // callback on websocket message
+    virtual void parse_msg( const char *buf, size_t sz );
+
+  protected:
+    typedef std::vector<char> buf_t;
+    buf_t       msg_;
+    net_socket *wptr_;
+  };
+
+  class ws_client : public ws_parser
+  {
+  public:
   };
 
   inline bool net_socket::get_is_send() const
