@@ -53,6 +53,7 @@ namespace pc
 
     // initialize from json-format key file used by solana
     bool init_from_file( const std::string& file );
+    bool init_from_json( const char *buf, size_t len );
     bool init_from_json( const std::string& buf );
 
     // get public key part of pair

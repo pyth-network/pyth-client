@@ -1,23 +1,8 @@
 #include "key_pair.hpp"
-#include "json.hpp"
+#include "jtree.hpp"
 #include "mem_map.hpp"
 #include "encode.hpp"
 #include <openssl/evp.h>
-
-namespace pc
-{
-  struct key_handler : public json::handler
-  {
-    key_handler( uint8_t *pk ) : pk_( pk ), idx_( 0 ) {
-    }
-    void parse_number( const char *ptr, const char *end ) {
-      char *eptr[1] = { (char*)end };
-      pk_[idx_++] = (uint8_t)strtol( ptr, eptr, 10 );
-    }
-    uint8_t *pk_;
-    uint32_t idx_;
-  };
-}
 
 using namespace pc;
 
@@ -86,15 +71,22 @@ bool key_pair::init_from_file( const std::string& file )
   if ( !mp.init() ) {
     return false;
   }
-  key_handler kh( pk_ );
-  json::parse( mp.data(), mp.size(), &kh );
-  return true;
+  return init_from_json( mp.data(), mp.size() );
 }
 
 bool key_pair::init_from_json( const std::string& buf )
 {
-  key_handler kh( pk_ );
-  json::parse( buf.c_str(), buf.length(), &kh );
+  return init_from_json( buf.c_str(), buf.length() );
+}
+
+bool key_pair::init_from_json( const char *buf, size_t len )
+{
+  jtree jt;
+  jt.parse( buf, len );
+  uint8_t *pk = pk_;
+  for( uint32_t it = jt.get_first(1); it; it = jt.get_next( it ) ) {
+    *pk++ = (uint8_t)jt.get_uint( it );
+  }
   return true;
 }
 

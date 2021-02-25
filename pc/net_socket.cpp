@@ -1,4 +1,5 @@
 #include "net_socket.hpp"
+#include "encode.hpp"
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -140,6 +141,18 @@ void net_wtr::add( const char *buf )
 void net_wtr::add( const std::string& buf )
 {
   add( buf.c_str(), buf.length() );
+}
+
+void net_wtr::add( net_wtr& buf )
+{
+  net_buf *hd, *tl;
+  buf.detach( hd, tl );
+  if ( tl_ ) {
+    tl_->next_ = hd;
+  } else {
+    hd_ = hd;
+  }
+  tl_ = tl;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -371,4 +384,130 @@ bool tcp_connect::init()
   conn_->reset_err();
   conn_->set_fd( fd );
   return true;
+}
+
+///////////////////////////////////////////////////////////////////////////
+// http_request
+
+void http_request::init( const char *method, const char *endpoint )
+{
+  add( method );
+  add( ' ' );
+  add( endpoint );
+  add( " HTTP/1.1\r\n" );
+}
+
+void http_request::add_hdr( const char *hdr, const char *txt, size_t len )
+{
+  add( hdr );
+  add( ':' );
+  add( ' ' );
+  add( txt, len );
+  add( '\r' );
+  add( '\n' );
+}
+
+void http_request::add_hdr( const char *hdr, const char *txt )
+{
+  add_hdr( hdr, txt, __builtin_strlen( txt ) );
+}
+
+void http_request::add_hdr( const char *hdr, uint64_t val )
+{
+  char buf[32];
+  buf[31] = '\0';
+  add_hdr( hdr, uint_to_str( val, &buf[31] ) );
+}
+
+void http_request::add_content( net_wtr& buf )
+{
+  add_hdr( "Content-Length", buf.size() );
+  add( '\r' );
+  add( '\n' );
+  add( buf );
+}
+
+///////////////////////////////////////////////////////////////////////////
+// http_client
+
+static inline bool find( const char ch, const char *&ptr, const char *end )
+{
+  for(;ptr!=end;++ptr) {
+    if ( *ptr == ch ) return true;
+  }
+  return false;
+}
+
+static inline bool next(char ch,  const char *ptr, const char *end )
+{
+  return ptr != end && *ptr == ch;
+}
+
+bool http_client::parse( const char *ptr, size_t len, size_t& res )
+{
+  const char CR = (char)13;
+  const char LF = (char)10;
+
+  // read status line in response
+  const char *beg = ptr;
+  const char *end = &ptr[len];
+  if ( !find( ' ', ptr, end ) ) return false;
+  const char *stp = ++ptr;
+  if ( !find( ' ', ptr, end ) ) return false;
+  char *eptr[1] = { (char*)ptr };
+  int status = strtol( stp, eptr, 10 );
+  stp = ++ptr;
+  if ( !find( CR, ptr, end ) )  return false;
+  parse_status( status, stp, ptr - stp );
+  if ( !next( LF, ++ptr, end ) )  return false;
+
+  // parse other header lines
+  bool has_len = false;
+  size_t clen = 0;
+  for(++ptr;;++ptr) {
+    if ( ptr <= &end[-2] && ptr[0] == CR && ptr[1] == LF ) {
+      break;
+    }
+    const char *hdr = ptr;
+    if ( !find( ':', ptr, end ) ) return false;
+    const char *hdr_end = ptr;
+    for( ++ptr; ptr != end && isspace(*ptr); ++ptr );
+    const char *val = ptr;
+    if ( !find( CR, ptr, end ) )  return false;
+    if ( has_len || (
+          0 != __builtin_strncmp( "Content-Length", hdr, hdr_end-hdr ) &&
+          0 != __builtin_strncmp( "content-length", hdr, hdr_end-hdr ) ) ) {
+      parse_header( hdr, hdr_end-hdr, val, ptr-val );
+    } else {
+      has_len = true;
+      char *eptr[1] = { (char*)ptr };
+      clen = strtol( val, eptr, 10 );
+    }
+    if ( !next( LF, ++ptr, end ) )  return false;
+  }
+  // parse body
+  ptr += 2;
+  const char *cnt = &ptr[clen];
+  if ( cnt > end ) return false;
+
+  parse_content( ptr, clen );
+  // assign total message size
+  res = cnt - beg;
+  return true;
+}
+
+void http_client::parse_status( int status, const char *txt, size_t len )
+{
+  if ( status != 200 ) {
+    set_err_msg( "http error: " + std::string( txt, len ) );
+  }
+}
+
+void http_client::parse_header( const char *, size_t,
+                                const char *, size_t )
+{
+}
+
+void http_client::parse_content( const char *, size_t )
+{
 }

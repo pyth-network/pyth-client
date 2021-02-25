@@ -1,4 +1,5 @@
 #include "encode.hpp"
+#include <ctype.h>
 
 namespace pc
 {
@@ -88,6 +89,37 @@ int dec_base58( const uint8_t *str, int len, uint8_t *result)
     result[resultlen - i - 1] = k;
   }
   return resultlen;
+}
+
+char *uint_to_str( uint64_t val, char *cptr )
+{
+  if ( val ) {
+    while( val ) {
+      *--cptr = '0' + (val%10L);
+      val /= 10L;
+    }
+  } else {
+    *--cptr = '0';
+  }
+  return cptr;
+}
+
+uint64_t str_to_uint( const char *val, int len )
+{
+  uint64_t res = 0L;
+  if ( len ) {
+    const char *cptr = val;
+    const char *end = &val[len];
+    for(; cptr != end; ++cptr ) {
+      if ( isdigit( *cptr ) ) {
+        res = res*10UL + (*cptr-'0');
+      } else {
+        res = 0L;
+        break;
+      }
+    }
+  }
+  return res;
 }
 
 }

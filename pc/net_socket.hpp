@@ -1,6 +1,7 @@
 #pragma once
 
 #include <pc/error.hpp>
+#include <pc/jtree.hpp>
 #include <vector>
 
 namespace pc
@@ -26,6 +27,7 @@ namespace pc
     void add( const char *buf, size_t len );
     void add( const char *buf );
     void add( const std::string& buf );
+    void add( net_wtr& );
     size_t size() const;
     void detach( net_buf *&hd, net_buf *&tl );
 
@@ -64,7 +66,7 @@ namespace pc
     bool set_block( bool );
 
     // parse inbound message
-    virtual bool parse( char *buf, size_t sz, size_t& len ) = 0;
+    virtual bool parse( const char *buf, size_t sz, size_t& len ) = 0;
 
   private:
 
@@ -109,10 +111,27 @@ namespace pc
     net_socket *conn_;
   };
 
-  // http client connection
-  class http_client : public net_socket,
-                      public tcp_connect
+
+  // http request message
+  class http_request : public net_wtr
   {
+  public:
+    void init( const char *method, const char *endpoint );
+    void add_hdr( const char *hdr, const char *txt, size_t txt_len );
+    void add_hdr( const char *hdr, const char *txt  );
+    void add_hdr( const char *hdr, uint64_t val );
+    void add_content( net_wtr& );
+  };
+
+  // http client connection
+  class http_client : public net_socket
+  {
+  public:
+    bool parse( const char *buf, size_t sz, size_t& len ) override;
+    virtual void parse_status( int, const char *, size_t);
+    virtual void parse_header( const char *hdr, size_t hdr_len,
+                               const char *val, size_t val_len);
+    virtual void parse_content( const char *content, size_t content_len );
   };
 
   // websocket client connection
