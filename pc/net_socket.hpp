@@ -69,6 +69,9 @@ namespace pc
     // close connection
     void close();
 
+    // initialize
+    virtual bool init();
+
     // send/receive polling
     void poll_send();
     void poll_recv();
@@ -111,7 +114,7 @@ namespace pc
     int get_port() const;
 
     // (re)connect to host
-    bool init();
+    bool init() override;
 
   private:
     int         port_; // connection port
@@ -128,6 +131,7 @@ namespace pc
     void add_hdr( const char *hdr, uint64_t val );
     void add_content( const char *, size_t );
     void add_content( net_wtr& );
+    void add_content();
   };
 
   // http client parser
@@ -156,6 +160,21 @@ namespace pc
     void commit( uint8_t opcode, const char *, size_t len, bool mask );
   };
 
+  // websocket
+  class ws_connect : public tcp_connect
+  {
+  public:
+    bool init() override;
+
+  private:
+    struct ws_connect_init : public http_client {
+      void parse_status( int, const char *, size_t) override;
+      ws_connect *cp_;
+      net_parser *tp_;
+    };
+    ws_connect_init init_;
+  };
+
   // websocket protocol impl
   class ws_parser : public net_parser
   {
@@ -176,11 +195,6 @@ namespace pc
     typedef std::vector<char> buf_t;
     buf_t       msg_;
     net_socket *wptr_;
-  };
-
-  class ws_client : public ws_parser
-  {
-  public:
   };
 
   inline bool net_socket::get_is_send() const

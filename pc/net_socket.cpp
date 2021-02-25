@@ -235,6 +235,11 @@ void net_socket::add_send( net_wtr& msg )
   wtl_ = tl;
 }
 
+bool net_socket::init()
+{
+  return true;
+}
+
 void net_socket::poll()
 {
   if ( get_is_send() ) {
@@ -392,6 +397,7 @@ bool tcp_connect::init()
     return set_err_msg( "failed to connect to host=" + host_, errno );
   }
   set_fd( fd );
+  set_block( false );
   return true;
 }
 
@@ -442,6 +448,12 @@ void http_request::add_content( const char *buf, size_t len )
   add( '\r' );
   add( '\n' );
   add( buf, len );
+}
+
+void http_request::add_content()
+{
+  add( '\r' );
+  add( '\n' );
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -513,11 +525,8 @@ bool http_client::parse( const char *ptr, size_t len, size_t& res )
   return true;
 }
 
-void http_client::parse_status( int status, const char *txt, size_t len )
+void http_client::parse_status( int, const char *, size_t )
 {
-  if ( status != 200 ) {
-    set_err_msg( "http error: " + std::string( txt, len ) );
-  }
 }
 
 void http_client::parse_header( const char *, size_t,
@@ -527,6 +536,41 @@ void http_client::parse_header( const char *, size_t,
 
 void http_client::parse_content( const char *, size_t )
 {
+}
+
+///////////////////////////////////////////////////////////////////////////
+// ws_connect
+
+bool ws_connect::init()
+{
+  if ( !tcp_connect::init() ) {
+    return false;
+  }
+  init_.tp_ = get_net_parser();
+  init_.cp_ = this;
+  set_net_parser( &init_ );
+
+  // request upgrade to web-socket
+  http_request msg;
+  msg.init( "GET", "/" );
+  msg.add_hdr( "Connection", "Upgrade" );
+  msg.add_hdr( "Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ==" );
+  msg.add_hdr( "Sec-WebSocket-Version", "13" );
+  msg.add_content();
+  add_send( msg );
+  return true;
+}
+
+void ws_connect::ws_connect_init::parse_status(
+    int status, const char *txt, size_t len)
+{
+  if ( status == 101 ) {
+    cp_->set_net_parser( tp_ );
+  } else {
+    std::string err = "failed to handshake websocket: ";
+    err.append( txt, len );
+    cp_->set_err_msg( err );
+  }
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -570,12 +614,12 @@ void ws_wtr::commit(
     hdsz = sizeof( ws_hdr1 );
   } else if ( pay_len <= 0xffff ) {
     hptr1->pay_len1_ = 126;
-    ws_hdr2 *hptr2 = (ws_hdr2*)hd_->buf_;
+    ws_hdr2 *hptr2 = (ws_hdr2*)hdr;
     hptr2->pay_len2_ = __builtin_bswap16( (uint16_t)pay_len );
     hdsz = sizeof( ws_hdr2 );
   } else {
     hptr1->pay_len1_ = 127;
-    ws_hdr3 *hptr3 = (ws_hdr3*)hd_->buf_;
+    ws_hdr3 *hptr3 = (ws_hdr3*)hdr;
     hptr3->pay_len3_ = __builtin_bswap64( (uint64_t)pay_len );
     hdsz = sizeof( ws_hdr3 );
   }

@@ -30,12 +30,14 @@ rpc_client::rpc_client()
   wptr_( nullptr ),
   id_( 0UL )
 {
+  hp_.cp_ = this;
+  wp_.cp_ = this;
 }
 
 void rpc_client::set_http_conn( net_socket *hptr )
 {
   hptr_ = hptr;
-  hptr_->set_net_parser( static_cast<http_client*>( this ) );
+  hptr_->set_net_parser( &hp_ );
 }
 
 net_socket *rpc_client::get_http_conn() const
@@ -46,8 +48,8 @@ net_socket *rpc_client::get_http_conn() const
 void rpc_client::set_ws_conn( net_socket *wptr )
 {
   wptr_ = wptr;
-  wptr_->set_net_parser( static_cast<ws_parser*>( this ) );
-  set_net_socket( wptr_ );
+  wptr_->set_net_parser( &wp_ );
+  wp_.set_net_socket( wptr_ );
 }
 
 net_socket *rpc_client::get_ws_conn() const
@@ -55,36 +57,38 @@ net_socket *rpc_client::get_ws_conn() const
   return wptr_;
 }
 
-void rpc_client::send_http( rpc_request *rptr )
+void rpc_client::send( rpc_request *rptr )
 {
   add_request( rptr );
 
-  // submit http POST request
-  http_request msg;
-  msg.init( "POST", "/" );
-  msg.add_hdr( "Content-Type", "application/json" );
-  msg.add_content( jb_, jw_.size() );
-  hptr_->add_send( msg );
-}
-
-void rpc_client::send_ws( rpc_request *rptr )
-{
-  add_request( rptr );
-
-  // submit websocket message
+  if ( rptr->get_is_http() ) {
+    // submit http POST request
+    http_request msg;
+    msg.init( "POST", "/" );
+    msg.add_hdr( "Content-Type", "application/json" );
+    msg.add_content( jb_, jw_.size() );
+    hptr_->add_send( msg );
+  } else {
+    // submit websocket message
+    ws_wtr msg;
+    msg.commit( ws_wtr::text_id, jb_, jw_.size(), true );
+    wptr_->add_send( msg );
+  }
 }
 
 void rpc_client::add_request( rpc_request *rptr )
 {
   // get request id
   uint64_t id;
-  if ( !rd_.empty() ) {
-    id = rd_.back();
-    rd_.pop_back();
+  if ( !reuse_.empty() ) {
+    id = reuse_.back();
+    reuse_.pop_back();
   } else {
     id = ++id_;
     rv_.resize( 1 + id, nullptr );
   }
+  rptr->set_id( id );
+  rptr->set_rpc_client( this );
   rv_[id] = rptr;
 
   // construct json message
@@ -92,21 +96,21 @@ void rpc_client::add_request( rpc_request *rptr )
   jw_.add_val( jwriter::e_obj );
   jw_.add_key( "jsonrpc", "2.0" );
   jw_.add_key( "id", id );
-  rptr->serialize( jw_ );
+  rptr->request( jw_ );
   jw_.pop();
 
   std::cout.write( jb_, jw_.size() );
   std::cout << std::endl;
 }
 
-void rpc_client::parse_content( const char *txt, size_t len )
+void rpc_client::rpc_http::parse_content( const char *txt, size_t len )
 {
-  parse_response( txt, len );
+  cp_->parse_response( txt, len );
 }
 
-void rpc_client::parse_msg( const char *txt, size_t len )
+void rpc_client::rpc_ws::parse_msg( const char *txt, size_t len )
 {
-  parse_response( txt, len );
+  cp_->parse_response( txt, len );
 }
 
 void rpc_client::parse_response( const char *txt, size_t len )
@@ -126,11 +130,39 @@ void rpc_client::parse_response( const char *txt, size_t len )
     if ( id < rv_.size() ) {
       rpc_request *rptr = rv_[id];
       if ( rptr ) {
-        rptr->deserialize( jp_ );
         rv_[id] = nullptr;
-        rd_.push_back( id );
+        reuse_.push_back( id );
+        rptr->response( jp_ );
       }
     }
+  } else {
+    uint32_t ptok = jp_.find_val( 1, "params" );
+    uint32_t stok = jp_.find_val( ptok, "subscription" );
+    if ( stok ) {
+      uint64_t id = jp_.get_uint( stok );
+      sub_map_t::iterator i = smap_.find( id );
+      if ( i != smap_.end() ) {
+        if ( (*i).second->notify( jp_ ) ) {
+          smap_.erase( i );
+        }
+      }
+    }
+  }
+}
+
+void rpc_client::add_notify( rpc_request *rptr )
+{
+  uint32_t rtok  = jp_.find_val( 1, "result" );
+  uint64_t subid = jp_.get_uint( rtok );
+  rptr->set_id( subid );
+  smap_[subid] = rptr;
+}
+
+void rpc_client::remove_notify( rpc_request *rptr )
+{
+  sub_map_t::iterator i = smap_.find( rptr->get_id() );
+  if ( i != smap_.end() ) {
+    smap_.erase( i );
   }
 }
 
@@ -142,7 +174,9 @@ rpc_sub::~rpc_sub()
 }
 
 rpc_request::rpc_request()
-: cb_( nullptr )
+: cb_( nullptr ),
+  cp_( nullptr ),
+  id_( 0UL )
 {
 }
 
@@ -158,6 +192,51 @@ void rpc_request::set_sub( rpc_sub *cb )
 rpc_sub *rpc_request::get_sub() const
 {
   return cb_;
+}
+
+void rpc_request::set_rpc_client( rpc_client *cptr )
+{
+  cp_ = cptr;
+}
+
+rpc_client *rpc_request::get_rpc_client() const
+{
+  return cp_;
+}
+
+void rpc_request::set_id( uint64_t id )
+{
+  id_ = id;
+}
+
+uint64_t rpc_request::get_id() const
+{
+  return id_;
+}
+
+bool rpc_request::get_is_http() const
+{
+  return true;
+}
+
+bool rpc_request::notify( const jtree& )
+{
+  return true;
+}
+
+bool rpc_subscription::get_is_http() const
+{
+  return false;
+}
+
+void rpc_subscription::add_notify()
+{
+  get_rpc_client()->add_notify( this );
+}
+
+void rpc_subscription::remove_notify()
+{
+  get_rpc_client()->remove_notify( this );
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -212,7 +291,7 @@ rpc::get_account_info::get_account_info()
 {
 }
 
-void rpc::get_account_info::serialize( jwriter& msg )
+void rpc::get_account_info::request( jwriter& msg )
 {
   msg.add_key( "method", "getAccountInfo" );
   msg.add_key( "params", jwriter::e_arr );
@@ -220,7 +299,7 @@ void rpc::get_account_info::serialize( jwriter& msg )
   msg.pop();
 }
 
-void rpc::get_account_info::deserialize( const jtree& jt )
+void rpc::get_account_info::response( const jtree& jt )
 {
   uint32_t rtok = jt.find_val( 1, "result" );
   uint32_t ctok = jt.find_val( rtok, "context" );
@@ -259,12 +338,12 @@ rpc::get_recent_block_hash::get_recent_block_hash()
   bhash_.zero();
 }
 
-void rpc::get_recent_block_hash::serialize( jwriter& msg )
+void rpc::get_recent_block_hash::request( jwriter& msg )
 {
   msg.add_key( "method", "getRecentBlockhash" );
 }
 
-void rpc::get_recent_block_hash::deserialize( const jtree& jt )
+void rpc::get_recent_block_hash::response( const jtree& jt )
 {
   uint32_t rtok = jt.find_val( 1, "result" );
   uint32_t ctok = jt.find_val( rtok, "context" );
@@ -318,7 +397,7 @@ rpc::transfer::transfer()
 {
 }
 
-void rpc::transfer::serialize( jwriter& msg )
+void rpc::transfer::request( jwriter& msg )
 {
   // construct binary transaction
   net_buf *bptr = net_buf::alloc();
@@ -370,7 +449,35 @@ void rpc::transfer::serialize( jwriter& msg )
   bptr->dealloc();
 }
 
-void rpc::transfer::deserialize( const jtree& )
+void rpc::transfer::response( const jtree& )
 {
   on_response( this );
+}
+
+///////////////////////////////////////////////////////////////////////////
+// signature_subscribe
+
+void rpc::signature_subscribe::set_signature( const signature& sig )
+{
+  sig_ = sig;
+}
+
+void rpc::signature_subscribe::request( jwriter& msg )
+{
+  msg.add_key( "method", "signatureSubscribe" );
+  msg.add_key( "params", jwriter::e_arr );
+  msg.add_val( sig_ );
+  msg.pop();
+}
+
+void rpc::signature_subscribe::response( const jtree& )
+{
+  // add to notification list
+  add_notify();
+}
+
+bool rpc::signature_subscribe::notify( const jtree& )
+{
+  on_response( this );
+  return true;  // remove notification
 }

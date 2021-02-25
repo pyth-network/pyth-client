@@ -4,6 +4,7 @@
 #include <pc/jwriter.hpp>
 #include <pc/jtree.hpp>
 #include <pc/key_pair.hpp>
+#include <unordered_map>
 
 namespace pc
 {
@@ -11,8 +12,7 @@ namespace pc
   class rpc_request;
 
   // solana rpc REST API client
-  class rpc_client : public http_client,
-                     public ws_parser
+  class rpc_client : public error
   {
   public:
 
@@ -26,31 +26,46 @@ namespace pc
     void set_ws_conn( net_socket * );
     net_socket *get_ws_conn() const;
 
-    // submit rpc http request (and bundled callback)
-    void send_http( rpc_request * );
+    // submit rpc request (and bundled callback)
+    void send( rpc_request * );
 
-    // submit rpc websocket request (and bundled callback)
-    void send_ws( rpc_request * );
+  public:
 
     // parse json payload and invoke callback
-    void parse_content( const char *content, size_t content_len ) override;
-    void parse_msg( const char *msg, size_t msg_len ) override;
+    void parse_response( const char *msg, size_t msg_len );
+
+    // add/remove request from notification map
+    void add_notify( rpc_request * );
+    void remove_notify( rpc_request * );
 
   private:
 
-    typedef std::vector<rpc_request*> request_t;
-    typedef std::vector<uint64_t>     reuse_t;
+    struct rpc_http : public http_client {
+      void parse_content( const char *, size_t ) override;
+      rpc_client *cp_;
+    };
+
+    struct rpc_ws : public ws_parser {
+      void parse_msg( const char *msg, size_t msg_len ) override;
+      rpc_client *cp_;
+    };
+
+    typedef std::vector<rpc_request*>    request_t;
+    typedef std::vector<uint64_t>        id_vec_t;
+    typedef std::unordered_map<uint64_t,rpc_request*> sub_map_t;
 
     void add_request( rpc_request *rptr );
-    void parse_response( const char *msg, size_t msg_len );
 
     net_socket *hptr_;
     net_socket *wptr_;
-    jtree       jp_; // json parser
-    jwriter     jw_; // json message builder
-    request_t   rv_; // waiting requests by id
-    reuse_t     rd_; // reuse id list
-    uint64_t    id_; // next id
+    rpc_http    hp_;    // http parser wrapper
+    rpc_ws      wp_;    // websocket parser wrapper
+    jtree       jp_;    // json parser
+    jwriter     jw_;    // json message builder
+    request_t   rv_;    // waiting requests by id
+    id_vec_t    reuse_; // reuse id list
+    sub_map_t   smap_;  // subscription map
+    uint64_t    id_;    // next request id
     char        jb_[1024];
   };
 
@@ -77,19 +92,46 @@ namespace pc
     rpc_request();
     virtual ~rpc_request();
 
+    // corresponding rpc_client
+    void set_rpc_client( rpc_client * );
+    rpc_client *get_rpc_client() const;
+
+    // request or subscription id
+    void set_id( uint64_t );
+    uint64_t get_id() const;
+
     // rpc response callback
     void set_sub( rpc_sub * );
     rpc_sub *get_sub() const;
     template<class T> void on_response( T * );
 
+    // is this message http or websocket bound
+    virtual bool get_is_http() const;
+
     // request builder
-    virtual void serialize( jwriter& ) = 0;
+    virtual void request( jwriter& ) = 0;
 
     // response parsing and callback
-    virtual void deserialize( const jtree& ) = 0;
+    virtual void response( const jtree& ) = 0;
+
+    // notification subscription update
+    virtual bool notify( const jtree& );
 
   private:
-    rpc_sub *cb_;
+    rpc_sub    *cb_;
+    rpc_client *cp_;
+    uint64_t    id_;
+  };
+
+  class rpc_subscription : public rpc_request
+  {
+  public:
+    // subscriptions are only available on websockets
+    virtual bool get_is_http() const;
+
+    // add/remove this request to notification list
+    void add_notify();
+    void remove_notify();
   };
 
   template<class T>
@@ -106,7 +148,7 @@ namespace pc
 
   namespace rpc
   {
-    // get account balance, program and meta-data
+    // get account balance, program data and account meta-data
     class get_account_info : public rpc_request
     {
     public:
@@ -122,8 +164,8 @@ namespace pc
       void     get_data( const char *&, size_t& ) const;
 
       get_account_info();
-      void serialize( jwriter& ) override;
-      void deserialize( const jtree& ) override;
+      void request( jwriter& ) override;
+      void response( const jtree& ) override;
 
     private:
       pub_key     acc_;
@@ -147,13 +189,28 @@ namespace pc
       uint64_t get_lamports_per_signature() const;
 
       get_recent_block_hash();
-      void serialize( jwriter& ) override;
-      void deserialize( const jtree& ) override;
+      void request( jwriter& ) override;
+      void response( const jtree& ) override;
 
     private:
       uint64_t  slot_;
       hash      bhash_;
       uint64_t  fee_per_sig_;
+    };
+
+    // signature (transaction) subscription for tx acknowledgement
+    class signature_subscribe : public rpc_subscription
+    {
+    public:
+      // parameters
+      void set_signature( const signature& );
+
+      void request( jwriter& ) override;
+      void response( const jtree& ) override;
+      bool notify( const jtree& ) override;
+
+    private:
+      signature sig_;
     };
 
     // transaction to transfer funds between accounts
@@ -171,8 +228,8 @@ namespace pc
       void enc_signature( std::string& );
 
       transfer();
-      void serialize( jwriter& ) override;
-      void deserialize( const jtree& ) override;
+      void request( jwriter& ) override;
+      void response( const jtree& ) override;
 
     private:
       hash      bhash_;

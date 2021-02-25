@@ -126,6 +126,11 @@ void jwriter::add_val( const hash& pk )
   add_val_enc_base58( pk.data(), hash::len );
 }
 
+void jwriter::add_val( const signature& sig )
+{
+  add_val_enc_base58( sig.data(), signature::len );
+}
+
 void jwriter::add_val( uint64_t ival )
 {
   add_first();
