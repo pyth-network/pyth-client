@@ -5,7 +5,8 @@ using namespace pc;
 
 class test_rpc_sub : public rpc_sub,
                      public rpc_sub_i<rpc::get_account_info>,
-                     public rpc_sub_i<rpc::get_recent_block_hash>
+                     public rpc_sub_i<rpc::get_recent_block_hash>,
+                     public rpc_sub_i<rpc::get_health>
 {
 public:
   test_rpc_sub() : cnt_( 0 ) {
@@ -37,6 +38,15 @@ public:
     bhash.enc_base58( hstr );
     std::cout << "recent_block_hash = " << hstr << std::endl;
     std::cout << std::endl;
+    --cnt_;
+  }
+  void on_response( rpc::get_health *m ) {
+    if ( !m->get_is_err() ) {
+      std::cout << "===============> get_health" << std::endl;
+    } else {
+      std::cerr << "error: code=" << m->get_err_code()
+        << ",msg=" << m->get_err_msg() << std::endl;
+    }
     --cnt_;
   }
   bool is_done() const {
@@ -81,6 +91,12 @@ int main(int,char**)
   rpc::get_recent_block_hash req2;
   req2.set_sub( &sub );
   clnt.send( &req2 );
+  sub.add();
+
+  // request health check
+  rpc::get_health req3;
+  req3.set_sub( &sub );
+  clnt.send( &req3 );
   sub.add();
 
   // submit request and poll for result

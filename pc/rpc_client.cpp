@@ -395,6 +395,20 @@ void rpc::get_recent_block_hash::response( const jtree& jt )
 }
 
 ///////////////////////////////////////////////////////////////////////////
+// get_health
+
+void rpc::get_health::request( jwriter& msg )
+{
+  msg.add_key( "method", "getHealth" );
+}
+
+void rpc::get_health::response( const jtree& jt )
+{
+  if ( on_error( jt, this ) ) return;
+  on_response( this );
+}
+
+///////////////////////////////////////////////////////////////////////////
 // transfer
 
 void rpc::transfer::set_block_hash( const hash& bhash )

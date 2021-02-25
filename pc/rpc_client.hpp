@@ -198,6 +198,14 @@ namespace pc
       uint64_t  fee_per_sig_;
     };
 
+    // get validator node health
+    class get_health : public rpc_request
+    {
+    public:
+      void request( jwriter& ) override;
+      void response( const jtree& ) override;
+    };
+
     // signature (transaction) subscription for tx acknowledgement
     class signature_subscribe : public rpc_subscription
     {
