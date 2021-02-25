@@ -25,8 +25,12 @@ public:
   }
   void on_response( rpc::transfer * ) {
   }
-  void on_response( rpc::signature_subscribe * ) {
-    std::cout << "finished transaction" << std::endl;
+  void on_response( rpc::signature_subscribe *sig ) {
+    if ( !sig->get_is_err() ) {
+      std::cout << "finished transaction" << std::endl;
+    } else {
+      std::cerr << "error:" << sig->get_err_msg() << std::endl;
+    }
     done_ = true;
   }
   bool is_done() const {

@@ -120,12 +120,9 @@ void rpc_client::parse_response( const char *txt, size_t len )
 
   // parse and redirect response to corresponding request
   jp_.parse( txt, len );
-  uint32_t ertok = jp_.find_val( 1, "error" );
-  if ( ertok ) {
-    // TODO: process error
-  }
   uint32_t idtok = jp_.find_val( 1, "id" );
   if ( idtok ) {
+    // response to http request
     uint64_t id = jp_.get_uint( idtok );
     if ( id < rv_.size() ) {
       rpc_request *rptr = rv_[id];
@@ -136,15 +133,14 @@ void rpc_client::parse_response( const char *txt, size_t len )
       }
     }
   } else {
+    // websocket notification
     uint32_t ptok = jp_.find_val( 1, "params" );
     uint32_t stok = jp_.find_val( ptok, "subscription" );
     if ( stok ) {
       uint64_t id = jp_.get_uint( stok );
       sub_map_t::iterator i = smap_.find( id );
-      if ( i != smap_.end() ) {
-        if ( (*i).second->notify( jp_ ) ) {
+      if ( i != smap_.end() && (*i).second->notify( jp_ ) ) {
           smap_.erase( i );
-        }
       }
     }
   }
@@ -152,10 +148,7 @@ void rpc_client::parse_response( const char *txt, size_t len )
 
 void rpc_client::add_notify( rpc_request *rptr )
 {
-  uint32_t rtok  = jp_.find_val( 1, "result" );
-  uint64_t subid = jp_.get_uint( rtok );
-  rptr->set_id( subid );
-  smap_[subid] = rptr;
+  smap_[rptr->get_id()] = rptr;
 }
 
 void rpc_client::remove_notify( rpc_request *rptr )
@@ -229,14 +222,43 @@ bool rpc_subscription::get_is_http() const
   return false;
 }
 
-void rpc_subscription::add_notify()
+void rpc_subscription::add_notify( const jtree& jp )
 {
-  get_rpc_client()->add_notify( this );
+  uint32_t rtok  = jp.find_val( 1, "result" );
+  uint64_t subid = jp.get_uint( rtok );
+  if ( subid ) {
+    set_id( subid );
+    get_rpc_client()->add_notify( this );
+  }
 }
 
 void rpc_subscription::remove_notify()
 {
   get_rpc_client()->remove_notify( this );
+}
+
+template<class T>
+void rpc_request::on_response( T *req )
+{
+  rpc_sub_i<T> *iptr = dynamic_cast<rpc_sub_i<T>*>( req->get_sub() );
+  if ( iptr ) {
+    iptr->on_response( req );
+  }
+}
+
+template<class T>
+bool rpc_request::on_error( const jtree& jt, T *req )
+{
+  uint32_t etok = jt.find_val( 1, "error" );
+  if ( etok == 0 ) return false;
+  const char *txt = nullptr;
+  size_t txt_len = 0;
+  std::string emsg;
+  jt.get_text( jt.find_val( etok, "message" ), txt, txt_len );
+  emsg.assign( txt, txt_len );
+  set_err_msg( emsg );
+  on_response( req );
+  return true;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -301,6 +323,7 @@ void rpc::get_account_info::request( jwriter& msg )
 
 void rpc::get_account_info::response( const jtree& jt )
 {
+  if ( on_error( jt, this ) ) return;
   uint32_t rtok = jt.find_val( 1, "result" );
   uint32_t ctok = jt.find_val( rtok, "context" );
   slot_ = jt.get_uint( jt.find_val( ctok, "slot" ) );
@@ -345,6 +368,7 @@ void rpc::get_recent_block_hash::request( jwriter& msg )
 
 void rpc::get_recent_block_hash::response( const jtree& jt )
 {
+  if ( on_error( jt, this ) ) return;
   uint32_t rtok = jt.find_val( 1, "result" );
   uint32_t ctok = jt.find_val( rtok, "context" );
   slot_ = jt.get_uint( jt.find_val( ctok, "slot" ) );
@@ -449,8 +473,9 @@ void rpc::transfer::request( jwriter& msg )
   bptr->dealloc();
 }
 
-void rpc::transfer::response( const jtree& )
+void rpc::transfer::response( const jtree& jt )
 {
+  if ( on_error( jt, this ) ) return;
   on_response( this );
 }
 
@@ -470,14 +495,18 @@ void rpc::signature_subscribe::request( jwriter& msg )
   msg.pop();
 }
 
-void rpc::signature_subscribe::response( const jtree& )
+void rpc::signature_subscribe::response( const jtree& jt )
 {
+  if ( on_error( jt, this ) ) return;
+
   // add to notification list
-  add_notify();
+  add_notify( jt );
 }
 
-bool rpc::signature_subscribe::notify( const jtree& )
+bool rpc::signature_subscribe::notify( const jtree& jt )
 {
+  if ( on_error( jt, this ) ) return true;
+
   on_response( this );
   return true;  // remove notification
 }

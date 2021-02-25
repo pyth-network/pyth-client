@@ -86,7 +86,7 @@ namespace pc
   };
 
   // base-class rpc request message
-  class rpc_request
+  class rpc_request : public error
   {
   public:
     rpc_request();
@@ -103,7 +103,6 @@ namespace pc
     // rpc response callback
     void set_sub( rpc_sub * );
     rpc_sub *get_sub() const;
-    template<class T> void on_response( T * );
 
     // is this message http or websocket bound
     virtual bool get_is_http() const;
@@ -116,6 +115,11 @@ namespace pc
 
     // notification subscription update
     virtual bool notify( const jtree& );
+
+  protected:
+
+    template<class T> void on_response( T * );
+    template<class T> bool on_error( const jtree&, T * );
 
   private:
     rpc_sub    *cb_;
@@ -130,18 +134,9 @@ namespace pc
     virtual bool get_is_http() const;
 
     // add/remove this request to notification list
-    void add_notify();
+    void add_notify( const jtree& );
     void remove_notify();
   };
-
-  template<class T>
-  void rpc_request::on_response( T *req )
-  {
-    rpc_sub_i<T> *iptr = dynamic_cast<rpc_sub_i<T>*>( req->get_sub() );
-    if ( iptr ) {
-      iptr->on_response( req );
-    }
-  }
 
   /////////////////////////////////////////////////////////////////////////
   // wrappers for various solana rpc requests
