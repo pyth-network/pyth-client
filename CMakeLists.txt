@@ -26,7 +26,6 @@ set( PC_SRC
   pc/net_socket.cpp;
   pc/key_pair.cpp;
   pc/rpc_client.cpp;
-  pc/tx.cpp;
   )
 
 add_library( pc STATIC ${PC_SRC} )

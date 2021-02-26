@@ -6,6 +6,16 @@
 #include <pc/key_pair.hpp>
 #include <unordered_map>
 
+#define PC_RPC_ERROR_BLOCK_CLEANED_UP          -32001
+#define PC_RPC_ERROR_SEND_TX_PREFLIGHT_FAIL    -32002
+#define PC_RPC_ERROR_TX_SIG_VERIFY_FAILURE     -32003
+#define PC_RPC_ERROR_BLOCK_NOT_AVAILABLE       -32004
+#define PC_RPC_ERROR_NODE_UNHEALTHY            -32005
+#define PC_RPC_ERROR_TX_PRECOMPILE_VERIFY_FAIL -32006
+#define PC_RPC_ERROR_SLOT_SKIPPED              -32007
+#define PC_RPC_ERROR_NO_SNAPSHOT               -32008
+#define PC_RPC_ERROR_LONG_TERM_SLOT_SKIPPED    -32009
+
 namespace pc
 {
 
