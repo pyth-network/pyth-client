@@ -77,6 +77,9 @@ namespace pc
     // accept new pyth client apps
     void accept( int fd );
 
+    // shut-down server
+    void teardown();
+
   private:
     typedef dbl_list<pyth_client> clnt_list_t;
 

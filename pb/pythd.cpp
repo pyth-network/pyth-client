@@ -1,5 +1,6 @@
 #include <pc/pyth_client.hpp>
 #include <unistd.h>
+#include <signal.h>
 #include <iostream>
 
 // pyth daemon service
@@ -20,6 +21,13 @@ int usage()
   return 1;
 }
 
+bool do_run = true;
+
+void sig_handle( int )
+{
+  do_run = false;
+}
+
 int main(int argc, char **argv)
 {
   // command-line parsing
@@ -35,6 +43,12 @@ int main(int argc, char **argv)
       default: return usage();
     }
   }
+
+  // set up signal handing
+  signal( SIGINT, sig_handle );
+  signal( SIGHUP, sig_handle );
+  signal( SIGTERM, sig_handle );
+  signal( SIGPIPE, SIG_IGN );
 
   // construct and initialize pyth_server
   tcp_connect hconn,wconn;
@@ -52,10 +66,10 @@ int main(int argc, char **argv)
     std::cerr << "pythd: " << psvr.get_err_msg() << std::endl;
     return 1;
   }
-  // TODO: add signal handling
-  for(;;) {
+  while( do_run ) {
     psvr.poll();
   }
+  psvr.teardown();
 
   return 0;
 }

@@ -53,6 +53,27 @@ pyth_server::pyth_server()
 {
 }
 
+void pyth_server::teardown()
+{
+  // shutdown listener
+  lptr_->close();
+
+  // destroy any open clients
+  for(;;) {
+    pyth_client *clnt = olist_.first();
+    if ( clnt ) {
+      clnt->close();
+      olist_.del( clnt );
+      delete clnt;
+    } else {
+      break;
+    }
+  }
+  // destory rpc connections
+  get_rpc_http_conn()->close();
+  get_rpc_ws_conn()->close();
+}
+
 void pyth_server::set_rpc_http_conn( net_connect * hptr )
 {
   clnt_.set_http_conn( hptr );
