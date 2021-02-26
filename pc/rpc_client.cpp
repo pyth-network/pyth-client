@@ -236,8 +236,8 @@ bool rpc_subscription::get_is_http() const
 void rpc_subscription::add_notify( const jtree& jp )
 {
   uint32_t rtok  = jp.find_val( 1, "result" );
-  uint64_t subid = jp.get_uint( rtok );
-  if ( subid ) {
+  if ( rtok ) {
+    uint64_t subid = jp.get_uint( rtok );
     set_id( subid );
     get_rpc_client()->add_notify( this );
   }
