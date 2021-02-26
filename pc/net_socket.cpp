@@ -182,9 +182,10 @@ void net_loop::add( net_socket *eptr, int events )
   int evop = EPOLL_CTL_ADD;
   if ( eptr->get_in_loop() ) {
     evop = EPOLL_CTL_MOD;
+  } else {
+    eptr->set_in_loop( true );
   }
   epoll_ctl( fd_, evop, eptr->get_fd(), ev_ );
-  eptr->set_in_loop( true );
 }
 
 void net_loop::del( net_socket *eptr )
@@ -770,6 +771,26 @@ http_server::http_server()
 {
 }
 
+void http_server::set_net_connect( net_connect *np )
+{
+  np_ = np;
+}
+
+net_connect *http_server::get_net_connect() const
+{
+  return np_;
+}
+
+void http_server::set_ws_parser( ws_parser *wp )
+{
+  wp_ = wp;
+}
+
+ws_parser *http_server::get_ws_parser() const
+{
+  return wp_;
+}
+
 inline http_server::str::str()
 : txt_( nullptr ), len_( 0 )
 {
@@ -797,7 +818,7 @@ bool http_server::get_header_val(
   for(unsigned i=0; i != hnms_.size(); ++i ) {
     const str& h = hnms_[i];
     if ( 0 == __builtin_strncmp( key, h.txt_, h.len_ ) ) {
-      h.get( txt, len );
+      hval_[i].get( txt, len );
       return true;
     }
   }
@@ -839,9 +860,11 @@ bool http_server::parse( const char *ptr, size_t len, size_t& res )
         0 != __builtin_strncmp( "content-length", hdr, hlen ) ) ) {
       hnms_.push_back( str( hdr, hlen ) );
       hval_.push_back( str( val, ptr-val ) );
-      has_upgrade = wp_ != nullptr &&
-        0 == __builtin_strncmp( "Upgrade", hdr, hlen ) &&
-        0 == __builtin_strncmp( "websocket", hdr, hlen );
+      if ( wp_ && !has_upgrade ) {
+        has_upgrade =
+          0 == __builtin_strncmp( "Upgrade", hdr, hlen ) &&
+          0 == __builtin_strncmp( "websocket", val, ptr-val );
+      }
     } else {
       has_len = true;
       clen = str_to_uint( val, ptr - val );
@@ -883,7 +906,8 @@ void http_server::upgrade_ws()
   SHA1_Update( cx, magic_id, __builtin_strlen( magic_id ) );
   SHA1_Final( (uint8_t*)skey, cx );
   char bkey[SHA_DIGEST_LENGTH+SHA_DIGEST_LENGTH];
-  size_t blen = enc_base64((const uint8_t*)skey, key_len, (uint8_t*)bkey );
+  size_t blen = enc_base64(
+      (const uint8_t*)skey, SHA_DIGEST_LENGTH, (uint8_t*)bkey );
 
   // submit switch protocols message
   http_response msg;

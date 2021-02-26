@@ -35,6 +35,13 @@ add_library( pc STATIC ${PC_SRC} )
 set( PC_DEP pc ssl crypto )
 
 #
+# applications
+#
+
+add_executable( pythd pb/pythd.cpp )
+target_link_libraries( pythd ${PC_DEP} )
+
+#
 # test programs
 #
 

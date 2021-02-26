@@ -18,6 +18,7 @@ pyth_client::pyth_client()
   hsvr_.ptr_ = this;
   hsvr_.set_net_connect( this );
   hsvr_.set_ws_parser( this );
+  set_net_parser( &hsvr_ );
 }
 
 void pyth_client::set_rpc_client( rpc_client *rptr )
@@ -41,7 +42,6 @@ void pyth_client::parse_msg( const char *, size_t )
 void pyth_client::teardown()
 {
   // remove self from server list
-  close();
   sptr_->del_client( this );
 }
 
@@ -113,11 +113,16 @@ void pyth_server::poll()
   // poll for any socket events
   nl_.poll( 1 );
 
-  // destory any clients scheduled for deletion
-  for( pyth_client *clnt = dlist_.first(); clnt; ) {
-    pyth_client *nxt = clnt->get_next();
-    delete clnt;
-    clnt = nxt;
+  // destroy any clients scheduled for deletion
+  for(;;) {
+    pyth_client *clnt = dlist_.first();
+    if ( clnt ) {
+      clnt->close();
+      dlist_.del( clnt );
+      delete clnt;
+    } else {
+      break;
+    }
   }
 }
 
@@ -129,6 +134,7 @@ void pyth_server::accept( int fd )
   clnt->set_net_loop( &nl_ );
   clnt->set_pyth_server( this );
   clnt->set_fd( fd );
+  clnt->set_block( false );
   if ( clnt->init() ) {
     olist_.add( clnt );
   } else {
@@ -141,5 +147,5 @@ void pyth_server::del_client( pyth_client *clnt )
 {
   // move clnt from open clist to delete list
   olist_.del( clnt );
-  dlist_.del( clnt );
+  dlist_.add( clnt );
 }
