@@ -25,6 +25,7 @@ set( PC_SRC
   pc/mem_map.cpp;
   pc/net_socket.cpp;
   pc/key_pair.cpp;
+  pc/pyth_client.cpp;
   pc/rpc_client.cpp;
   )
 

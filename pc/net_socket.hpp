@@ -81,6 +81,7 @@ namespace pc
   public:
 
     net_socket();
+    virtual ~net_socket();
 
     // file descriptor access
     int get_fd() const;
@@ -150,11 +151,23 @@ namespace pc
     net_parser *np_;  // message parser
   };
 
-  // listening server
-  class net_server : public net_socket
+  // new client acceptor for net_listen
+  class net_accept
   {
   public:
-    net_server();
+    virtual ~net_accept();
+    virtual void accept( int fd ) = 0;
+  };
+
+  // listening server
+  class net_listen : public net_socket
+  {
+  public:
+    net_listen();
+
+    // new client acceptor
+    void set_net_accept( net_accept * );
+    net_accept *get_net_accept() const;
 
     // connection backlog
     void set_backlog( int );
@@ -166,13 +179,11 @@ namespace pc
     // accept new clients
     void poll() override;
 
-    // create new client connection
-    virtual void add_client( int ) = 0;
-
   private:
     static const int default_backlog = 8;
 
-    int backlog_;
+    int         backlog_;
+    net_accept *ap_;
   };
 
   // tcp connector or client
@@ -199,10 +210,10 @@ namespace pc
   };
 
   // listening tcp server
-  class tcp_server : public net_server
+  class tcp_listen : public net_listen
   {
   public:
-    tcp_server();
+    tcp_listen();
 
     // listening port
     void set_port( int port );

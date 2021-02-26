@@ -223,6 +223,10 @@ net_parser::~net_parser()
 {
 }
 
+net_socket::~net_socket()
+{
+}
+
 net_socket::net_socket()
 : fd_(-1),
   inl_( false ),
@@ -434,24 +438,39 @@ void net_connect::poll_error( bool is_read )
 }
 
 ///////////////////////////////////////////////////////////////////////////
-// net_server
+// net_listen
 
-net_server::net_server()
-: backlog_( default_backlog )
+net_accept::~net_accept()
 {
 }
 
-void net_server::set_backlog( int backlog )
+net_listen::net_listen()
+: backlog_( default_backlog ),
+  ap_( nullptr )
+{
+}
+
+void net_listen::set_net_accept( net_accept *ap )
+{
+  ap_ = ap;
+}
+
+net_accept *net_listen::get_net_accept() const
+{
+  return ap_;
+}
+
+void net_listen::set_backlog( int backlog )
 {
   backlog_ = backlog;
 }
 
-int net_server::get_backlog() const
+int net_listen::get_backlog() const
 {
   return backlog_;
 }
 
-bool net_server::init()
+bool net_listen::init()
 {
   if ( 0 > ::listen( get_fd(), backlog_ ) ) {
     return set_err_msg( "failed to listen", errno );
@@ -459,14 +478,14 @@ bool net_server::init()
   return set_block( false ) && net_socket::init();
 }
 
-void net_server::poll()
+void net_listen::poll()
 {
   struct sockaddr addr[1];
   socklen_t addrlen[1] = { 0 };
   for(;;) {
     int nfd = ::accept( get_fd(), addr, addrlen );
     if ( nfd>0 ) {
-      add_client( nfd );
+      ap_->accept( nfd );
     } else {
       if ( errno != EAGAIN ) {
         set_err_msg( "failed to accept new client", errno );
@@ -555,24 +574,24 @@ bool tcp_connect::init()
 }
 
 ///////////////////////////////////////////////////////////////////////////
-// tcp_server
+// tcp_listen
 
-tcp_server::tcp_server()
+tcp_listen::tcp_listen()
 : port_( -1 )
 {
 }
 
-void tcp_server::set_port( int port )
+void tcp_listen::set_port( int port )
 {
   port_ = port;
 }
 
-int tcp_server::get_port() const
+int tcp_listen::get_port() const
 {
   return port_;
 }
 
-bool tcp_server::init()
+bool tcp_listen::init()
 {
   close();
   reset_err();
@@ -601,7 +620,7 @@ bool tcp_server::init()
     port_ = htons( iaddr->sin_port );
   }
   set_fd( fd );
-  return net_server::init();
+  return net_listen::init();
 }
 
 ///////////////////////////////////////////////////////////////////////////
