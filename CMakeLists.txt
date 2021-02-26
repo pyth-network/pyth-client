@@ -30,20 +30,23 @@ set( PC_SRC
 
 add_library( pc STATIC ${PC_SRC} )
 
+# dependencies
+set( PC_DEP pc ssl crypto )
+
 #
 # test programs
 #
 
 enable_testing()
 add_executable( test_key pt/test_key.cpp )
-target_link_libraries( test_key pc crypto )
+target_link_libraries( test_key ${PC_DEP} )
 add_executable( test_net pt/test_net.cpp )
-target_link_libraries( test_net pc )
+target_link_libraries( test_net ${PC_DEP} )
 add_executable( test_rpc pt/test_rpc.cpp )
-target_link_libraries( test_rpc pc crypto )
+target_link_libraries( test_rpc ${PC_DEP} )
 
 add_executable( test_transfer pt/test_transfer.cpp )
-target_link_libraries( test_transfer pc crypto )
+target_link_libraries( test_transfer ${PC_DEP} )
 
 add_test( test_key test_key )
 add_test( test_net test_net )

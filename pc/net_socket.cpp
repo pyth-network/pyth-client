@@ -1,11 +1,14 @@
 #include "net_socket.hpp"
 #include "encode.hpp"
 #include "defines.hpp"
+#include <openssl/sha.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <netdb.h>
+
+#define PC_EPOLL_FLAGS (EPOLLIN|EPOLLET|EPOLLRDHUP|EPOLLHUP|EPOLLERR)
 
 namespace pc
 {
@@ -81,8 +84,7 @@ void net_buf::dealloc()
 
 net_wtr::net_wtr()
 : hd_( nullptr ),
-  tl_( nullptr ),
-  sz_( 0 )
+  tl_( nullptr )
 {
 }
 
@@ -99,7 +101,6 @@ void net_wtr::detach( net_buf *&hd, net_buf *&tl )
 {
   hd  = hd_;
   tl  = tl_;
-  sz_ = 0;
   hd_ = tl_ = nullptr;
 }
 
@@ -125,7 +126,6 @@ void net_wtr::add( const char *buf, size_t len )
     __builtin_memcpy( &tl_->buf_[tl_->size_], buf, mlen );
     buf += mlen;
     len -= mlen;
-    sz_ += mlen;
     tl_->size_ += mlen;
   }
 }
@@ -135,7 +135,6 @@ void net_wtr::add( char val )
   if ( !tl_ || tl_->size_ == net_buf::len ) {
     alloc();
   }
-  ++sz_;
   tl_->buf_[tl_->size_++] = val;
 }
 
@@ -149,16 +148,72 @@ void net_wtr::add( const std::string& buf )
   add( buf.c_str(), buf.length() );
 }
 
-void net_wtr::add( net_wtr& buf )
+///////////////////////////////////////////////////////////////////////////
+// net_loop
+
+net_loop::net_loop()
+: fd_(-1)
 {
-  net_buf *hd, *tl;
-  buf.detach( hd, tl );
-  if ( tl_ ) {
-    tl_->next_ = hd;
-  } else {
-    hd_ = hd;
+  __builtin_memset( ev_, 0, sizeof( ev_ ) );
+  __builtin_memset( evarr_, 0, sizeof( evarr_ ) );
+}
+
+net_loop::~net_loop()
+{
+  if ( fd_ > 0 ) {
+    ::close( fd_ );
+    fd_ = -1;
   }
-  tl_ = tl;
+}
+
+bool net_loop::init()
+{
+  fd_ = ::epoll_create( 1 );
+  if ( fd_ < 0 ) {
+    return set_err_msg( "failed to create epoll", errno );
+  }
+  return true;
+}
+
+void net_loop::add( net_socket *eptr, int events )
+{
+  ev_->events   = events;
+  ev_->data.ptr = eptr;
+  int evop = EPOLL_CTL_ADD;
+  if ( eptr->get_in_loop() ) {
+    evop = EPOLL_CTL_MOD;
+  }
+  epoll_ctl( fd_, evop, eptr->get_fd(), ev_ );
+  eptr->set_in_loop( true );
+}
+
+void net_loop::del( net_socket *eptr )
+{
+  if ( eptr->get_in_loop() ) {
+    ev_->events   = 0;
+    ev_->data.ptr = eptr;
+    epoll_ctl( fd_, EPOLL_CTL_DEL, eptr->get_fd(), ev_ );
+    eptr->set_in_loop( false );
+  }
+}
+
+bool net_loop::poll( int timeout )
+{
+  int nfds = epoll_wait( fd_, evarr_, max_events_, timeout );
+  if ( nfds > 0 ) {
+    for(int i=0; i != nfds; ++i ) {
+      epoll_event& ev = evarr_[i];
+      net_socket *sp = static_cast<net_socket*>( ev.data.ptr );
+      sp->poll();
+      if ( sp->get_is_err() ) {
+        del( sp );
+        sp->teardown();
+      }
+    }
+    return true;
+  } else {
+    return false;
+  }
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -170,11 +225,8 @@ net_parser::~net_parser()
 
 net_socket::net_socket()
 : fd_(-1),
-  whd_( nullptr ),
-  wtl_( nullptr ),
-  rsz_( 0 ),
-  wsz_( 0 ),
-  np_( nullptr )
+  inl_( false ),
+  lp_( nullptr )
 {
 }
 
@@ -188,22 +240,44 @@ void net_socket::set_fd( int fd )
   fd_ = fd;
 }
 
-void net_socket::set_net_parser( net_parser *np )
+void net_socket::set_net_loop( net_loop *lp )
 {
-  np_ = np;
+  lp_ = lp;
 }
 
-net_parser *net_socket::get_net_parser() const
+net_loop *net_socket::get_net_loop() const
 {
-  return np_;
+  return lp_;
+}
+
+void net_socket::set_in_loop( bool inl )
+{
+  inl_ = inl;
+}
+
+bool net_socket::get_in_loop() const
+{
+  return inl_;
 }
 
 void net_socket::close()
 {
   if ( fd_ > 0 ) {
+    if ( lp_ ) {
+      lp_->del( this );
+    }
     ::close( fd_ );
     fd_ = -1;
   }
+}
+
+void net_socket::poll()
+{
+}
+
+void net_socket::teardown()
+{
+  close();
 }
 
 bool net_socket::set_block( bool block )
@@ -223,7 +297,42 @@ bool net_socket::set_block( bool block )
   return true;
 }
 
-void net_socket::add_send( net_wtr& msg )
+bool net_socket::init()
+{
+  if ( lp_ ) {
+    lp_->add( this, PC_EPOLL_FLAGS );
+  }
+  return true;
+}
+
+///////////////////////////////////////////////////////////////////////////
+// net_connect
+
+net_connect::net_connect()
+: whd_( nullptr ),
+  wtl_( nullptr ),
+  rsz_( 0 ),
+  wsz_( 0 ),
+  np_( nullptr )
+{
+}
+
+void net_connect::set_net_parser( net_parser *np )
+{
+  np_ = np;
+}
+
+net_parser *net_connect::get_net_parser() const
+{
+  return np_;
+}
+
+bool net_connect::get_is_send() const
+{
+  return whd_ != nullptr;
+}
+
+void net_connect::add_send( net_wtr& msg )
 {
   net_buf *hd, *tl;
   msg.detach( hd, tl );
@@ -231,16 +340,14 @@ void net_socket::add_send( net_wtr& msg )
     wtl_->next_ = hd;
   } else {
     whd_ = hd;
+    if ( get_net_loop() ) {
+      get_net_loop()->add( this, PC_EPOLL_FLAGS | EPOLLOUT );
+    }
   }
   wtl_ = tl;
 }
 
-bool net_socket::init()
-{
-  return true;
-}
-
-void net_socket::poll()
+void net_connect::poll()
 {
   if ( get_is_send() ) {
     poll_send();
@@ -248,7 +355,7 @@ void net_socket::poll()
   poll_recv();
 }
 
-void net_socket::poll_send()
+void net_connect::poll_send()
 {
   if ( !whd_ || get_is_err() ) {
     return;
@@ -257,7 +364,7 @@ void net_socket::poll_send()
     // write current buffer to ssl socket
     char *ptr = &whd_->buf_[wsz_];
     uint16_t len = whd_->size_ - wsz_;
-    int rc = ::send( fd_, ptr, len, MSG_NOSIGNAL );
+    int rc = ::send( get_fd(), ptr, len, MSG_NOSIGNAL );
     if ( rc > 0 ) {
       wsz_ += rc;
 
@@ -268,6 +375,9 @@ void net_socket::poll_send()
         wsz_ = 0;
         if ( ! ( whd_ = nxt ) ) {
           wtl_ = nullptr;
+          if ( get_net_loop() ) {
+            get_net_loop()->add( this, PC_EPOLL_FLAGS );
+          }
           break;
         }
       }
@@ -281,7 +391,7 @@ void net_socket::poll_send()
   }
 }
 
-void net_socket::poll_recv()
+void net_connect::poll_recv()
 {
   while( !get_is_err() ) {
     // extend read buffer as required
@@ -290,7 +400,7 @@ void net_socket::poll_recv()
       rdr_.resize( rdr_.size() + buf_len );
     }
     // read up to buf_len at a time
-    ssize_t rc = ::recv( fd_, &rdr_[rsz_], buf_len, MSG_NOSIGNAL );
+    ssize_t rc = ::recv( get_fd(), &rdr_[rsz_], buf_len, MSG_NOSIGNAL );
     if ( rc > 0 ) {
       rsz_ += rc;
     } else {
@@ -316,11 +426,54 @@ void net_socket::poll_recv()
   }
 }
 
-void net_socket::poll_error( bool is_read )
+void net_connect::poll_error( bool is_read )
 {
   std::string emsg = "fail to ";
   emsg += is_read?"read":"write";
   set_err_msg( emsg, errno );
+}
+
+///////////////////////////////////////////////////////////////////////////
+// net_server
+
+net_server::net_server()
+: backlog_( default_backlog )
+{
+}
+
+void net_server::set_backlog( int backlog )
+{
+  backlog_ = backlog;
+}
+
+int net_server::get_backlog() const
+{
+  return backlog_;
+}
+
+bool net_server::init()
+{
+  if ( 0 > ::listen( get_fd(), backlog_ ) ) {
+    return set_err_msg( "failed to listen", errno );
+  }
+  return set_block( false ) && net_socket::init();
+}
+
+void net_server::poll()
+{
+  struct sockaddr addr[1];
+  socklen_t addrlen[1] = { 0 };
+  for(;;) {
+    int nfd = ::accept( get_fd(), addr, addrlen );
+    if ( nfd>0 ) {
+      add_client( nfd );
+    } else {
+      if ( errno != EAGAIN ) {
+        set_err_msg( "failed to accept new client", errno );
+      }
+      break;
+    }
+  }
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -398,7 +551,57 @@ bool tcp_connect::init()
   }
   set_fd( fd );
   set_block( false );
-  return true;
+  return net_socket::init();
+}
+
+///////////////////////////////////////////////////////////////////////////
+// tcp_server
+
+tcp_server::tcp_server()
+: port_( -1 )
+{
+}
+
+void tcp_server::set_port( int port )
+{
+  port_ = port;
+}
+
+int tcp_server::get_port() const
+{
+  return port_;
+}
+
+bool tcp_server::init()
+{
+  close();
+  reset_err();
+  int fd = ::socket( AF_INET, SOCK_STREAM, IPPROTO_TCP );
+  if ( fd < 0 ) {
+    return set_err_msg( "failed to construct tcp socket", errno );
+  }
+  int reuse[1] = { 1 };
+  if ( 0 > ::setsockopt(
+        fd, SOL_SOCKET, SO_REUSEADDR, reuse, sizeof( reuse ) ) ) {
+    ::close( fd );
+    return set_err_msg( "failed to set socket reuse address", errno );
+  }
+  sockaddr saddr[1];
+  memset( saddr, 0, sizeof( sockaddr ) );
+  sockaddr_in *iaddr = (sockaddr_in*)saddr;
+  iaddr->sin_port = htons( (uint16_t)port_ );
+  if ( 0> ::bind( fd, saddr, sizeof( sockaddr ) ) ) {
+    ::close( fd );
+    return set_err_msg(
+        "failed to bind to port=" + std::to_string(port_), errno );
+  }
+  if ( port_ == 0 ) {
+    socklen_t slen[1] = { sizeof( saddr ) };
+    getsockname( fd, saddr, slen );
+    port_ = htons( iaddr->sin_port );
+  }
+  set_fd( fd );
+  return net_server::init();
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -432,14 +635,6 @@ void http_request::add_hdr( const char *hdr, uint64_t val )
   char buf[32];
   buf[31] = '\0';
   add_hdr( hdr, uint_to_str( val, &buf[31] ) );
-}
-
-void http_request::add_content( net_wtr& buf )
-{
-  add_hdr( "Content-Length", buf.size() );
-  add( '\r' );
-  add( '\n' );
-  add( buf );
 }
 
 void http_request::add_content( const char *buf, size_t len )
@@ -509,8 +704,7 @@ bool http_client::parse( const char *ptr, size_t len, size_t& res )
       parse_header( hdr, hdr_end-hdr, val, ptr-val );
     } else {
       has_len = true;
-      char *eptr[1] = { (char*)ptr };
-      clen = strtol( val, eptr, 10 );
+      clen = str_to_uint( val, ptr - val );
     }
     if ( !next( LF, ++ptr, end ) )  return false;
   }
@@ -535,6 +729,158 @@ void http_client::parse_header( const char *, size_t,
 }
 
 void http_client::parse_content( const char *, size_t )
+{
+}
+
+///////////////////////////////////////////////////////////////////////////
+// http_server
+
+void http_response::init( const char *code, const char *msg )
+{
+  add( "HTTP/1.1 " );
+  add( code );
+  add( ' ' );
+  add( msg );
+  add( '\r' );
+  add( '\n' );
+}
+
+http_server::http_server()
+: wp_( nullptr ),
+  np_( nullptr )
+{
+}
+
+inline http_server::str::str()
+: txt_( nullptr ), len_( 0 )
+{
+}
+
+inline http_server::str::str( const char *txt, size_t len )
+: txt_( txt ), len_( len ) {
+}
+
+inline void http_server::str::set( const char *txt, size_t len )
+{
+  txt_ = txt;
+  len_ = len;
+}
+
+inline void http_server::str::get( const char *&txt, size_t& len ) const
+{
+  txt = txt_;
+  len = len_;
+}
+
+bool http_server::get_header_val(
+    const char *key, const char *&txt, size_t&len ) const
+{
+  for(unsigned i=0; i != hnms_.size(); ++i ) {
+    const str& h = hnms_[i];
+    if ( 0 == __builtin_strncmp( key, h.txt_, h.len_ ) ) {
+      h.get( txt, len );
+      return true;
+    }
+  }
+  return false;
+}
+
+bool http_server::parse( const char *ptr, size_t len, size_t& res )
+{
+  const char CR = (char)13;
+  const char LF = (char)10;
+
+  // read request line
+  const char *beg = ptr;
+  const char *end = &ptr[len];
+  if ( !find( ' ', ptr, end ) ) return false;
+  const char *path = ++ptr;
+  if ( !find( ' ', ptr, end ) ) return false;
+  size_t path_len = ptr - path;
+  if ( !find( CR, ptr, end ) )  return false;
+  path_.set( path, path_len );
+  if ( !next( LF, ++ptr, end ) )  return false;
+
+  // parse other header lines
+  bool has_len = false, has_upgrade = false;;
+  size_t clen = 0;
+  for(++ptr;;++ptr) {
+    if ( ptr <= &end[-2] && ptr[0] == CR && ptr[1] == LF ) {
+      break;
+    }
+    const char *hdr = ptr;
+    if ( !find( ':', ptr, end ) ) return false;
+    const char *hdr_end = ptr;
+    for( ++ptr; ptr != end && isspace(*ptr); ++ptr );
+    const char *val = ptr;
+    if ( !find( CR, ptr, end ) )  return false;
+    size_t hlen = hdr_end-hdr;
+    if ( has_len || (
+        0 != __builtin_strncmp( "Content-Length", hdr, hlen ) &&
+        0 != __builtin_strncmp( "content-length", hdr, hlen ) ) ) {
+      hnms_.push_back( str( hdr, hlen ) );
+      hval_.push_back( str( val, ptr-val ) );
+      has_upgrade = wp_ != nullptr &&
+        0 == __builtin_strncmp( "Upgrade", hdr, hlen ) &&
+        0 == __builtin_strncmp( "websocket", hdr, hlen );
+    } else {
+      has_len = true;
+      clen = str_to_uint( val, ptr - val );
+    }
+    if ( !next( LF, ++ptr, end ) )  return false;
+  }
+  // parse body
+  ptr += 2;
+  const char *cnt = &ptr[clen];
+  if ( cnt > end ) return false;
+
+  // assign total message size
+  res = cnt - beg;
+
+  // upgrade or parse request
+  if ( !has_upgrade ) {
+    parse_content( ptr, clen );
+  } else {
+    upgrade_ws();
+  }
+
+  // downstream parsing
+  return true;
+}
+
+void http_server::upgrade_ws()
+{
+  size_t key_len;
+  const char *key;
+  if ( !get_header_val( "Sec-WebSocket-Key", key, key_len ) ) {
+    return;
+  }
+  const char *magic_id = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+  char skey[SHA_DIGEST_LENGTH];
+  __builtin_memset( skey, 0, SHA_DIGEST_LENGTH );
+  SHA_CTX cx[1];
+  SHA1_Init( cx );
+  SHA1_Update( cx, key, key_len );
+  SHA1_Update( cx, magic_id, __builtin_strlen( magic_id ) );
+  SHA1_Final( (uint8_t*)skey, cx );
+  char bkey[SHA_DIGEST_LENGTH+SHA_DIGEST_LENGTH];
+  size_t blen = enc_base64((const uint8_t*)skey, key_len, (uint8_t*)bkey );
+
+  // submit switch protocols message
+  http_response msg;
+  msg.init( "101", "Switching Protocols" );
+  msg.add_hdr( "Connection", "Upgrade" );
+  msg.add_hdr( "Upgrade", "websocket" );
+  msg.add_hdr( "Sec-WebSocket-Accept", bkey, blen );
+  msg.add_content();
+  np_->add_send( msg );
+
+  // switch parser
+  np_->set_net_parser( wp_ );
+  wp_->set_net_connect( np_ );
+}
+
+void http_server::parse_content( const char *, size_t )
 {
 }
 
@@ -647,12 +993,12 @@ ws_parser::ws_parser()
 {
 }
 
-void ws_parser::set_net_socket( net_socket *wptr )
+void ws_parser::set_net_connect( net_connect *wptr )
 {
   wptr_ = wptr;
 }
 
-net_socket *ws_parser::get_net_socket() const
+net_connect *ws_parser::get_net_connect() const
 {
   return wptr_;
 }

@@ -10,11 +10,6 @@ void test_net_buf()
   {
     net_wtr msg;
     msg.add( "hello" );
-    PC_TEST_CHECK( msg.size() == 5 );
-  }
-  {
-    net_wtr msg;
-    msg.add( "hello" );
     net_buf *hd, *tl;
     msg.detach( hd, tl );
     PC_TEST_CHECK( hd==tl );
@@ -27,7 +22,6 @@ void test_net_buf()
     char buf[1460];
     __builtin_memset( buf, 1, 1460 );
     msg.add( buf, 1460 );
-    PC_TEST_CHECK( msg.size() == 1460 );
     net_buf *hd, *tl;
     msg.detach( hd, tl );
     PC_TEST_CHECK( hd->next_==tl );
@@ -41,7 +35,6 @@ void test_net_buf()
     msg.add( 'H' );
     msg.add( 'e' );
     msg.add( "llo" );
-    PC_TEST_CHECK( msg.size() == 5 );
     net_buf *hd, *tl;
     msg.detach( hd, tl );
     PC_TEST_CHECK( hd==tl );

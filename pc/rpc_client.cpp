@@ -34,25 +34,25 @@ rpc_client::rpc_client()
   wp_.cp_ = this;
 }
 
-void rpc_client::set_http_conn( net_socket *hptr )
+void rpc_client::set_http_conn( net_connect *hptr )
 {
   hptr_ = hptr;
   hptr_->set_net_parser( &hp_ );
 }
 
-net_socket *rpc_client::get_http_conn() const
+net_connect *rpc_client::get_http_conn() const
 {
   return hptr_;
 }
 
-void rpc_client::set_ws_conn( net_socket *wptr )
+void rpc_client::set_ws_conn( net_connect *wptr )
 {
   wptr_ = wptr;
   wptr_->set_net_parser( &wp_ );
-  wp_.set_net_socket( wptr_ );
+  wp_.set_net_connect( wptr_ );
 }
 
-net_socket *rpc_client::get_ws_conn() const
+net_connect *rpc_client::get_ws_conn() const
 {
   return wptr_;
 }

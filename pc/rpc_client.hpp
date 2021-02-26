@@ -29,12 +29,12 @@ namespace pc
     rpc_client();
 
     // rpc http connection
-    void set_http_conn( net_socket * );
-    net_socket *get_http_conn() const;
+    void set_http_conn( net_connect * );
+    net_connect *get_http_conn() const;
 
     // rpc web socket connection
-    void set_ws_conn( net_socket * );
-    net_socket *get_ws_conn() const;
+    void set_ws_conn( net_connect * );
+    net_connect *get_ws_conn() const;
 
     // submit rpc request (and bundled callback)
     void send( rpc_request * );
@@ -66,17 +66,17 @@ namespace pc
 
     void add_request( rpc_request *rptr );
 
-    net_socket *hptr_;
-    net_socket *wptr_;
-    rpc_http    hp_;    // http parser wrapper
-    rpc_ws      wp_;    // websocket parser wrapper
-    jtree       jp_;    // json parser
-    jwriter     jw_;    // json message builder
-    request_t   rv_;    // waiting requests by id
-    id_vec_t    reuse_; // reuse id list
-    sub_map_t   smap_;  // subscription map
-    uint64_t    id_;    // next request id
-    char        jb_[1024];
+    net_connect *hptr_;
+    net_connect *wptr_;
+    rpc_http     hp_;    // http parser wrapper
+    rpc_ws       wp_;    // websocket parser wrapper
+    jtree        jp_;    // json parser
+    jwriter      jw_;    // json message builder
+    request_t    rv_;    // waiting requests by id
+    id_vec_t     reuse_; // reuse id list
+    sub_map_t    smap_;  // subscription map
+    uint64_t     id_;    // next request id
+    char         jb_[1024];
   };
 
   // rpc response or subscrption callback
