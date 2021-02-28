@@ -9,6 +9,7 @@ namespace pc
   {
   public:
     dbl_list();
+    bool empty() const;
     void add( T * );
     void del( T * );
     T *first() const;
@@ -22,6 +23,12 @@ namespace pc
   : hd_( nullptr ),
     tl_( nullptr )
   {
+  }
+
+  template<class T>
+  bool dbl_list<T>::empty() const
+  {
+    return hd_ == nullptr;
   }
 
   template<class T>

@@ -32,9 +32,7 @@ int main(int argc, char **argv)
 {
   // command-line parsing
   std::string rpc_host = "localhost";
-  int rpc_http_port = 8899;
-  int rpc_ws_port   = 8900;
-  int pyth_port     = 8910;
+  int pyth_port = 8910;
   int opt = 0;
   while( (opt = ::getopt(argc,argv, "r:l:p:k:dh" )) != -1 ) {
     switch(opt) {
@@ -51,17 +49,9 @@ int main(int argc, char **argv)
   signal( SIGPIPE, SIG_IGN );
 
   // construct and initialize pyth_server
-  tcp_connect hconn,wconn;
-  tcp_listen  tsvr;
   pyth_server psvr;
-  hconn.set_host( rpc_host );
-  hconn.set_port( rpc_http_port );
-  wconn.set_host( rpc_host );
-  wconn.set_port( rpc_ws_port );
-  tsvr.set_port( pyth_port );
-  psvr.set_rpc_http_conn( &hconn );
-  psvr.set_rpc_ws_conn( &wconn );
-  psvr.set_listen( &tsvr );
+  psvr.set_rpc_host( rpc_host );
+  psvr.set_listen_port( pyth_port );
   if ( !psvr.init() ) {
     std::cerr << "pythd: " << psvr.get_err_msg() << std::endl;
     return 1;

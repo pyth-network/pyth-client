@@ -55,17 +55,14 @@ namespace pc
     pyth_server();
 
     // solana rpc http connection
-    void set_rpc_http_conn( net_connect * );
-    net_connect *get_rpc_http_conn() const;
+    void set_rpc_host( const std::string& );
+    std::string get_rpc_host() const;
 
-    // solana rpc websocket connection
-    void set_rpc_ws_conn( net_connect * );
-    net_connect *get_rpc_ws_conn() const;
+    // server listening port
+    void set_listen_port( int port );
+    int get_listen_port() const;
 
-    // pyth server listener
-    void set_listen( net_listen * );
-
-    // teardown client
+    // schedule client for termination
     void del_client( pyth_client * );
 
     // initialize server and loop
@@ -81,13 +78,18 @@ namespace pc
     void teardown();
 
   private:
+
     typedef dbl_list<pyth_client> clnt_list_t;
+    void teardown_clients();
 
     net_loop    nl_;    // epoll loop
-    net_listen *lptr_;  // listening socket
+    tcp_connect hconn_; // rpc http connection
+    tcp_connect wconn_; // rpc websocket sonnection
+    tcp_listen  lsvr_;  // listening socket
     rpc_client  clnt_;  // rpc api
     clnt_list_t olist_; // open clients list
     clnt_list_t dlist_; // to-be-deleted client list
+    std::string rhost_; // rpc host
   };
 
 }

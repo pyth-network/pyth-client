@@ -2,6 +2,9 @@
 
 using namespace pc;
 
+#define PC_RPC_HTTP_PORT      8899
+#define PC_RPC_WEBSOCKET_PORT 8900
+
 ///////////////////////////////////////////////////////////////////////////
 // pyth_client
 
@@ -49,54 +52,45 @@ void pyth_client::teardown()
 // pyth_server
 
 pyth_server::pyth_server()
-: lptr_( nullptr )
 {
+}
+
+void pyth_server::set_rpc_host( const std::string& rhost )
+{
+  rhost_ = rhost;
+}
+
+std::string pyth_server::get_rpc_host() const
+{
+  return rhost_;
+}
+
+void pyth_server::set_listen_port( int port )
+{
+  lsvr_.set_port( port );
+}
+
+int pyth_server::get_listen_port() const
+{
+  return lsvr_.get_port();
 }
 
 void pyth_server::teardown()
 {
   // shutdown listener
-  lptr_->close();
+  lsvr_.close();
 
   // destroy any open clients
-  for(;;) {
+  while( !olist_.empty() ) {
     pyth_client *clnt = olist_.first();
-    if ( clnt ) {
-      clnt->close();
-      olist_.del( clnt );
-      delete clnt;
-    } else {
-      break;
-    }
+    olist_.del( clnt );
+    dlist_.add( clnt );
   }
+  teardown_clients();
+
   // destory rpc connections
-  get_rpc_http_conn()->close();
-  get_rpc_ws_conn()->close();
-}
-
-void pyth_server::set_rpc_http_conn( net_connect * hptr )
-{
-  clnt_.set_http_conn( hptr );
-}
-
-net_connect *pyth_server::get_rpc_http_conn() const
-{
-  return clnt_.get_http_conn();
-}
-
-void pyth_server::set_rpc_ws_conn( net_connect *wptr )
-{
-  clnt_.set_ws_conn( wptr );
-}
-
-net_connect *pyth_server::get_rpc_ws_conn() const
-{
-  return clnt_.get_ws_conn();
-}
-
-void pyth_server::set_listen( net_listen *lptr )
-{
-  lptr_ = lptr;
+  hconn_.close();
+  wconn_.close();
 }
 
 bool pyth_server::init()
@@ -106,24 +100,30 @@ bool pyth_server::init()
     return set_err_msg( nl_.get_err_msg() );
   }
 
-  // add rpc_client connections to net_loop and initialize
-  net_connect *hptr = get_rpc_http_conn();
-  hptr->set_net_loop( &nl_ );
-  if ( !hptr->init() ) {
-    return set_err_msg( hptr->get_err_msg() );
+  // add rpc_client connection to net_loop and initialize
+  hconn_.set_port( PC_RPC_HTTP_PORT );
+  hconn_.set_host( rhost_ );
+  hconn_.set_net_loop( &nl_ );
+  clnt_.set_http_conn( &hconn_ );
+  if ( !hconn_.init() ) {
+    return set_err_msg( hconn_.get_err_msg() );
   }
-  net_connect *wptr = get_rpc_http_conn();
-  wptr->set_net_loop( &nl_ );
-  if ( !wptr->init() ) {
-    return set_err_msg( wptr->get_err_msg() );
+
+  // add rpc_client websocket connection to net_loop and initialize
+  wconn_.set_port( PC_RPC_WEBSOCKET_PORT );
+  wconn_.set_host( rhost_ );
+  wconn_.set_net_loop( &nl_ );
+  clnt_.set_ws_conn( &wconn_ );
+  if ( !wconn_.init() ) {
+    return set_err_msg( wconn_.get_err_msg() );
   }
 
   // finally initialize listeniing port
   // dont listen for new clients until we've connected to rpc
-  lptr_->set_net_accept( this );
-  lptr_->set_net_loop( &nl_ );
-  if ( !lptr_->init() ) {
-    return set_err_msg( lptr_->get_err_msg() );
+  lsvr_.set_net_accept( this );
+  lsvr_.set_net_loop( &nl_ );
+  if ( !lsvr_.init() ) {
+    return set_err_msg( lsvr_.get_err_msg() );
   }
 
   return true;
@@ -134,16 +134,18 @@ void pyth_server::poll()
   // poll for any socket events
   nl_.poll( 1 );
 
+  // TODO: check if we need to reconnect rpc connections
+
   // destroy any clients scheduled for deletion
-  for(;;) {
+  teardown_clients();
+}
+
+void pyth_server::teardown_clients()
+{
+  while( !dlist_.empty() ) {
     pyth_client *clnt = dlist_.first();
-    if ( clnt ) {
-      clnt->close();
-      dlist_.del( clnt );
-      delete clnt;
-    } else {
-      break;
-    }
+    clnt->close();
+    dlist_.del( clnt );
   }
 }
 
