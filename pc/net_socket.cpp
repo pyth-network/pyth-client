@@ -1,12 +1,12 @@
 #include "net_socket.hpp"
-#include "encode.hpp"
-#include "defines.hpp"
+#include "misc.hpp"
 #include <openssl/sha.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <netdb.h>
+#include <iostream>
 
 #define PC_EPOLL_FLAGS (EPOLLIN|EPOLLET|EPOLLRDHUP|EPOLLHUP|EPOLLERR)
 
@@ -83,8 +83,9 @@ void net_buf::dealloc()
 
 
 net_wtr::net_wtr()
-: hd_( nullptr ),
-  tl_( nullptr )
+: hd_( mem_.alloc() ),
+  tl_( hd_ ),
+  sz_( 0 )
 {
 }
 
@@ -102,50 +103,96 @@ void net_wtr::detach( net_buf *&hd, net_buf *&tl )
   hd  = hd_;
   tl  = tl_;
   hd_ = tl_ = nullptr;
+  sz_ = 0UL;
 }
 
 void net_wtr::alloc()
 {
   net_buf *ptr = mem_.alloc();
-  if ( tl_ ) {
-    tl_->next_ = ptr;
-    tl_ = ptr;
-  } else {
-    hd_ = tl_ = ptr;
-  }
+  tl_->next_ = ptr;
+  sz_ += tl_->size_;
+  tl_ = ptr;
 }
 
-void net_wtr::add( const char *buf, size_t len )
+void net_wtr::add( net_str str )
 {
-  while( len>0 ) {
-    if ( !tl_ || tl_->size_ == net_buf::len ) {
-      alloc();
-    }
-    uint16_t left = net_buf::len - tl_->size_;
-    size_t mlen = std::min( (size_t)left, len );
-    __builtin_memcpy( &tl_->buf_[tl_->size_], buf, mlen );
-    buf += mlen;
-    len -= mlen;
-    tl_->size_ += mlen;
+  size_t nlen = tl_->size_ + str.len_;
+  if ( nlen <= net_buf::len ) {
+    __builtin_memcpy( &tl_->buf_[tl_->size_], str.str_, str.len_ );
+    tl_->size_ = nlen;
+  } else {
+    add_alloc( str );
   }
 }
 
 void net_wtr::add( char val )
 {
-  if ( !tl_ || tl_->size_ == net_buf::len ) {
+  if ( PC_UNLIKELY( tl_->size_ == net_buf::len ) ) {
     alloc();
   }
   tl_->buf_[tl_->size_++] = val;
 }
 
-void net_wtr::add( const char *buf )
+void net_wtr::add( net_wtr& buf )
 {
-  add( buf, __builtin_strlen( buf ) );
+  net_buf *hd, *tl;
+  sz_ += tl_->size_ + buf.size();
+  buf.detach( hd, tl );
+  if ( tl_->size_ + hd->size_ <= net_buf::len ) {
+    __builtin_memcpy( &tl_->buf_[tl_->size_], hd->buf_, hd->size_ );
+    tl_->next_ = hd->next_;
+    tl_->size_ += hd->size_;
+    if ( hd != tl ) {
+      tl_ = tl;
+    }
+    hd->dealloc();
+  } else {
+    tl_->next_ = hd;
+    tl_ = tl;
+  }
+  sz_ -= tl->size_;
 }
 
-void net_wtr::add( const std::string& buf )
+void net_wtr::add_alloc( net_str str )
 {
-  add( buf.c_str(), buf.length() );
+  while( str.len_ >0 ) {
+    if ( tl_->size_ == net_buf::len ) {
+      alloc();
+    }
+    size_t left = net_buf::len - tl_->size_;
+    size_t mlen = std::min( left, str.len_ );
+    __builtin_memcpy( &tl_->buf_[tl_->size_], str.str_, mlen );
+    tl_->size_ += mlen;
+    str.str_ += mlen;
+    str.len_ -= mlen;
+  }
+}
+
+char *net_wtr::reserve( size_t len )
+{
+  size_t nlen = tl_->size_ + len;
+  if ( nlen > net_buf::len ) {
+    alloc();
+  }
+  return &tl_->buf_[tl_->size_];
+}
+
+void net_wtr::advance( size_t len )
+{
+  tl_->size_ += len;
+}
+
+size_t net_wtr::size() const
+{
+  return sz_ + tl_->size_;
+}
+
+void net_wtr::print() const
+{
+  for( net_buf *ptr=hd_; ptr; ptr = ptr->next_ ) {
+    std::cout.write( ptr->buf_, ptr->size_ );
+  }
+  std::cout << std::endl;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -562,12 +609,12 @@ bool tcp_connect::init()
   }
   sockaddr saddr[1];
   if ( !get_hname_addr( host_, saddr ) ) {
-    return set_err_msg( "failed to resolve host=" + host_ );
+    return set_err_msg( "failed to resolve host" );
   }
   sockaddr_in *iaddr = (sockaddr_in*)saddr;
   iaddr->sin_port = htons( (uint16_t)port_ );
   if ( 0 != ::connect( fd, saddr, sizeof( sockaddr ) ) ) {
-    return set_err_msg( "failed to connect to host=" + host_, errno );
+    return set_err_msg( "failed to connect", errno );
   }
   set_fd( fd );
   set_block( false );
@@ -640,7 +687,7 @@ void http_request::add_hdr( const char *hdr, const char *txt, size_t len )
   add( hdr );
   add( ':' );
   add( ' ' );
-  add( txt, len );
+  add( net_str( txt, len ) );
   add( '\r' );
   add( '\n' );
 }
@@ -650,23 +697,31 @@ void http_request::add_hdr( const char *hdr, const char *txt )
   add_hdr( hdr, txt, __builtin_strlen( txt ) );
 }
 
-void http_request::add_hdr( const char *hdr, uint64_t val )
+void http_request::add_hdr( const char *hdr, uint64_t ival )
 {
-  char buf[32];
-  buf[31] = '\0';
-  add_hdr( hdr, uint_to_str( val, &buf[31] ) );
-}
-
-void http_request::add_content( const char *buf, size_t len )
-{
-  add_hdr( "Content-Length", len );
+  add( hdr );
+  add( ':' );
+  add( ' ' );
+  char *buf = reserve( 32 ), *end = &buf[31];
+  char *val = uint_to_str( ival, end );
+  size_t val_len = end - val;
+  __builtin_memmove( buf, val, val_len );
+  advance( val_len );
   add( '\r' );
   add( '\n' );
-  add( buf, len );
 }
 
-void http_request::add_content()
+void http_request::commit( net_wtr& buf )
 {
+  add_hdr( "Content-Length", buf.size() );
+  add( '\r' );
+  add( '\n' );
+  add( buf );
+}
+
+void http_request::commit()
+{
+  add_hdr( "Content-Length", "0" );
   add( '\r' );
   add( '\n' );
 }
@@ -915,7 +970,7 @@ void http_server::upgrade_ws()
   msg.add_hdr( "Connection", "Upgrade" );
   msg.add_hdr( "Upgrade", "websocket" );
   msg.add_hdr( "Sec-WebSocket-Accept", bkey, blen );
-  msg.add_content();
+  msg.commit();
   np_->add_send( msg );
 
   // switch parser
@@ -945,7 +1000,7 @@ bool ws_connect::init()
   msg.add_hdr( "Connection", "Upgrade" );
   msg.add_hdr( "Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ==" );
   msg.add_hdr( "Sec-WebSocket-Version", "13" );
-  msg.add_content();
+  msg.commit();
   add_send( msg );
   return true;
 }
@@ -986,10 +1041,10 @@ struct PC_PACKED ws_hdr3 : public ws_hdr1
   uint64_t pay_len3_;
 };
 
-void ws_wtr::commit(
-    uint8_t op_code, const char *payload, size_t pay_len, bool mask )
+void ws_wtr::commit( uint8_t op_code, net_wtr& buf, bool mask )
 {
-  char hdr[32];
+  size_t pay_len = buf.size();
+  char *hdr = reserve( sizeof( ws_hdr3 ) + sizeof( uint32_t ) );
   size_t hdsz = 0;
   ws_hdr1 *hptr1 = (ws_hdr1*)hdr;
   hptr1->fin_  = 1;
@@ -1018,14 +1073,20 @@ void ws_wtr::commit(
     const char *mptr = &hdr[hdsz];
     ((uint32_t*)mptr)[0] = mask_key;
     hdsz += sizeof( uint32_t );
+    advance( hdsz );
+    add( buf );
     unsigned i=0;
-    for( char *ibuf = (char*)payload, *ebuf = &ibuf[pay_len];
-         ibuf != ebuf; ++ibuf, ++i ) {
-      *ibuf ^= mptr[i%4];
+    for( net_buf *ptr = hd_; ptr; ptr = ptr->next_ ) {
+      for( char *ibuf = &ptr->buf_[hdsz], *ebuf = &ptr->buf_[ptr->size_];
+           ibuf != ebuf; ++ibuf, ++i ) {
+        *ibuf ^= mptr[i%4];
+      }
+      hdsz = 0;
     }
+  } else {
+    advance( hdsz );
+    add( buf );
   }
-  add( hdr, hdsz );
-  add( payload, pay_len );
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -1097,8 +1158,10 @@ bool ws_parser::parse( const char *ptr, size_t len, size_t& res )
       break;
     }
     case ws_wtr::ping_id:{
+      net_wtr ping;
+      ping.add( net_str( payload, pay_len ) );
       ws_wtr msg;
-      msg.commit( ws_wtr::pong_id, payload, pay_len, msk_len==0 );
+      msg.commit( ws_wtr::pong_id, ping, msk_len==0 );
       wptr_->add_send( msg );
       break;
     }
@@ -1106,8 +1169,9 @@ bool ws_parser::parse( const char *ptr, size_t len, size_t& res )
       break;
     }
     case ws_wtr::close_id:{
+      net_wtr cmsg;
       ws_wtr msg;
-      msg.commit( ws_wtr::close_id, nullptr, 0, msk_len==0 );
+      msg.commit( ws_wtr::close_id, cmsg, msk_len==0 );
       wptr_->add_send( msg );
       break;
     }
@@ -1122,4 +1186,169 @@ bool ws_parser::parse( const char *ptr, size_t len, size_t& res )
 
 void ws_parser::parse_msg( const char *, size_t )
 {
+}
+
+///////////////////////////////////////////////////////////////////////////
+// json_wtr
+
+json_wtr::json_wtr()
+: first_( true )
+{
+}
+
+void json_wtr::reset()
+{
+  first_ = true;
+  st_.clear();
+}
+
+void json_wtr::add_obj()
+{
+  add( '{' );
+  first_ = true;
+  st_.push_back( e_obj );
+}
+
+void json_wtr::add_arr()
+{
+  add( '[' );
+  first_ = true;
+  st_.push_back( e_arr );
+}
+
+void json_wtr::pop()
+{
+  add( st_.back() == e_obj ? '}' : ']' );
+  st_.pop_back();
+  first_ = false;
+}
+
+void json_wtr::add_first()
+{
+  if ( !first_ ) add( ',' );
+  first_ = false;
+}
+
+void json_wtr::add_key_only( net_str key )
+{
+  add_first();
+  add_text( key );
+  add( ':' );
+}
+
+void json_wtr::add_key( net_str key, net_str val )
+{
+  add_key_only( key );
+  add_text( val );
+}
+
+void json_wtr::add_key( net_str key, uint64_t ival )
+{
+  add_key_only( key );
+  add_uint( ival );
+}
+
+void json_wtr::add_key( net_str key, type_t t )
+{
+  add_key_only( key );
+  if ( t == e_obj ) {
+    add_obj();
+  } else {
+    add_arr();
+  }
+}
+
+void json_wtr::add_val( const key_pair& kp )
+{
+  add_val( e_arr );
+  for( unsigned i=0; i!=key_pair::len; ++i ) {
+    add_val( (uint64_t)kp.data()[i] );
+  }
+  pop();
+}
+
+void json_wtr::add_key( net_str key, const hash& pk )
+{
+  add_key_only( key );
+  add_enc_base58( net_str( pk.data(), hash::len ) );
+}
+
+void json_wtr::add_val( net_str val )
+{
+  add_first();
+  add_text( val );
+}
+
+void json_wtr::add_val( const hash& pk )
+{
+  add_val_enc_base58( net_str( pk.data(), hash::len ) );
+}
+
+void json_wtr::add_val( const signature& sig )
+{
+  add_val_enc_base58( net_str( sig.data(), signature::len ) );
+}
+
+void json_wtr::add_val( uint64_t ival )
+{
+  add_first();
+  add_uint( ival );
+}
+
+void json_wtr::add_val( type_t t )
+{
+  add_first();
+  if ( t == e_obj ) {
+    add_obj();
+  } else {
+    add_arr();
+  }
+}
+
+void json_wtr::add_val_enc_base58( net_str val )
+{
+  add_first();
+  add_enc_base58( val );
+}
+
+void json_wtr::add_val_enc_base64( net_str val )
+{
+  add_first();
+  add_enc_base64( val );
+}
+
+void json_wtr::add_uint( uint64_t ival )
+{
+  char *buf = reserve( 32 ), *end = &buf[31];
+  char *val = uint_to_str( ival, end );
+  size_t val_len = end - val;
+  __builtin_memmove( buf, val, val_len );
+  advance( val_len );
+}
+
+void json_wtr::add_enc_base58( net_str val )
+{
+  add( '"' );
+  size_t rsv_len = val.len_ + val.len_;
+  char *tgt = reserve( rsv_len );
+  advance( enc_base58( (const uint8_t*)val.str_,
+        val.len_, (uint8_t*)tgt, rsv_len ) );
+  add( '"' );
+}
+
+void json_wtr::add_enc_base64( net_str val )
+{
+  add( '"' );
+  size_t rsv_len = enc_base64_len( val.len_ );
+  char *tgt = reserve( rsv_len );
+  advance( enc_base64( (const uint8_t*)val.str_,
+        val.len_, (uint8_t*)tgt ) );
+  add( '"' );
+}
+
+void json_wtr::add_text( net_str val )
+{
+  add( '"' );
+  add( val );
+  add( '"' );
 }

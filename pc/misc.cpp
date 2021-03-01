@@ -1,5 +1,6 @@
-#include "encode.hpp"
+#include "misc.hpp"
 #include <ctype.h>
+#include <time.h>
 
 namespace pc
 {
@@ -270,6 +271,60 @@ int dec_base64( const uint8_t *inp, int len, uint8_t *out )
   return decLen;
 }
 
+int64_t get_now()
+{
+  struct timespec ts[1];
+  clock_gettime( CLOCK_REALTIME, ts );
+  int64_t res = ts->tv_sec;
+  res *= 1000000000UL;
+  res += ts->tv_nsec;
+  return res;
+}
 
+void uint_to_str6( char *cptr, int64_t val )
+{
+  cptr[5] = '0' + (val%10L); val/=10L;
+  cptr[4] = '0' + (val%10L); val/=10L;
+  cptr[3] = '0' + (val%10L); val/=10L;
+  cptr[2] = '0' + (val%10L); val/=10L;
+  cptr[1] = '0' + (val%10L); val/=10L;
+  cptr[0] = '0' + (val%10L);
+}
+
+void uint_to_str4( char *cptr, int64_t val )
+{
+  cptr[3] = '0' + (val%10L); val/=10L;
+  cptr[2] = '0' + (val%10L); val/=10L;
+  cptr[1] = '0' + (val%10L); val/=10L;
+  cptr[0] = '0' + (val%10L);
+}
+
+void uint_to_str2( char *cptr, int64_t val )
+{
+  cptr[1] = '0' + (val%10L); val/=10L;
+  cptr[0] = '0' + (val%10L);
+}
+
+char *nsecs_to_utc6( int64_t ts, char *cptr )
+{
+  int64_t nsecs = ts%PC_NSECS_IN_SEC;
+  ts /= PC_NSECS_IN_SEC;
+  struct tm t[1];
+  gmtime_r( &ts, t );
+  uint_to_str4( &cptr[0], t->tm_year + 1900 );
+  uint_to_str2( &cptr[5], t->tm_mon + 1 );
+  uint_to_str2( &cptr[8], t->tm_mday );
+  uint_to_str2( &cptr[11], t->tm_hour );
+  uint_to_str2( &cptr[14], t->tm_min );
+  uint_to_str2( &cptr[17], t->tm_sec );
+  uint_to_str6( &cptr[20], nsecs/1000L );
+  cptr[4] = cptr[7] = '-';
+  cptr[10] = 'T';
+  cptr[13] = cptr[16] = ':';
+  cptr[19] = '.';
+  cptr[26] = 'Z';
+  cptr[27] = '\0';
+  return cptr;
+}
 
 }

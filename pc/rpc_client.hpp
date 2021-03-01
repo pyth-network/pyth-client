@@ -1,7 +1,6 @@
 #pragma once
 
 #include <pc/net_socket.hpp>
-#include <pc/jwriter.hpp>
 #include <pc/jtree.hpp>
 #include <pc/key_pair.hpp>
 #include <unordered_map>
@@ -64,19 +63,15 @@ namespace pc
     typedef std::vector<uint64_t>        id_vec_t;
     typedef std::unordered_map<uint64_t,rpc_request*> sub_map_t;
 
-    void add_request( rpc_request *rptr );
-
     net_connect *hptr_;
     net_connect *wptr_;
     rpc_http     hp_;    // http parser wrapper
     rpc_ws       wp_;    // websocket parser wrapper
     jtree        jp_;    // json parser
-    jwriter      jw_;    // json message builder
     request_t    rv_;    // waiting requests by id
     id_vec_t     reuse_; // reuse id list
     sub_map_t    smap_;  // subscription map
     uint64_t     id_;    // next request id
-    char         jb_[1024];
   };
 
   // rpc response or subscrption callback
@@ -114,6 +109,17 @@ namespace pc
     void set_err_code( int );
     int get_err_code() const;
 
+    // time sent
+    void set_sent_time( int64_t );
+    int64_t get_sent_time() const;
+
+    // time received reply
+    void set_recv_time( int64_t );
+    int64_t get_recv_time() const;
+
+    // have we received a reply
+    bool get_is_recv() const;
+
     // rpc response callback
     void set_sub( rpc_sub * );
     rpc_sub *get_sub() const;
@@ -122,7 +128,7 @@ namespace pc
     virtual bool get_is_http() const;
 
     // request builder
-    virtual void request( jwriter& ) = 0;
+    virtual void request( json_wtr& ) = 0;
 
     // response parsing and callback
     virtual void response( const jtree& ) = 0;
@@ -140,6 +146,8 @@ namespace pc
     rpc_client *cp_;
     uint64_t    id_;
     int         ec_;
+    int64_t     sent_ts_;
+    int64_t     recv_ts_;
   };
 
   class rpc_subscription : public rpc_request
@@ -174,7 +182,7 @@ namespace pc
       void     get_data( const char *&, size_t& ) const;
 
       get_account_info();
-      void request( jwriter& ) override;
+      void request( json_wtr& ) override;
       void response( const jtree& ) override;
 
     private:
@@ -199,7 +207,7 @@ namespace pc
       uint64_t get_lamports_per_signature() const;
 
       get_recent_block_hash();
-      void request( jwriter& ) override;
+      void request( json_wtr& ) override;
       void response( const jtree& ) override;
 
     private:
@@ -212,7 +220,7 @@ namespace pc
     class get_health : public rpc_request
     {
     public:
-      void request( jwriter& ) override;
+      void request( json_wtr& ) override;
       void response( const jtree& ) override;
     };
 
@@ -223,7 +231,7 @@ namespace pc
       // parameters
       void set_signature( const signature& );
 
-      void request( jwriter& ) override;
+      void request( json_wtr& ) override;
       void response( const jtree& ) override;
       bool notify( const jtree& ) override;
 
@@ -246,7 +254,7 @@ namespace pc
       void enc_signature( std::string& );
 
       transfer();
-      void request( jwriter& ) override;
+      void request( json_wtr& ) override;
       void response( const jtree& ) override;
 
     private:
@@ -255,6 +263,39 @@ namespace pc
       pub_key   rcv_;
       uint64_t  lamports_;
       signature sig_;
+    };
+
+    // create new account and assign ownership to some (program) key
+    class create_account : public rpc_request
+    {
+    public:
+      // parameters
+      void set_block_hash( const hash& );
+      void set_sender( const key_pair& );
+      void set_account( const key_pair& );
+      void set_owner( const pub_key& );
+      void set_lamports( uint64_t funds );
+      void set_space( uint64_t num_bytes );
+
+      // results
+      signature get_fund_signature() const;
+      void enc_fund_signature( std::string& );
+      signature get_acct_signature() const;
+      void enc_acct_signature( std::string& );
+
+      create_account();
+      void request( json_wtr& ) override;
+      void response( const jtree& ) override;
+
+    private:
+      hash      bhash_;
+      key_pair  snd_;
+      key_pair  account_;
+      pub_key   owner_;
+      uint64_t  lamports_;
+      uint64_t  space_;
+      signature fund_sig_;
+      signature acct_sig_;
     };
 
   }

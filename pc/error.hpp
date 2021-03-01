@@ -47,10 +47,11 @@ namespace pc
   inline bool error::set_err_msg( const std::string& err_msg, int errcode )
   {
     err_msg_ = err_msg;
-    err_msg_ += " errno=";
+    err_msg_ += " [";
     err_msg_ += std::to_string( errcode );
-    err_msg_ += ",errstr=";
+    err_msg_ += ' ';
     err_msg_ += strerror( errcode);
+    err_msg_ += ']';
     is_err_ = true;
     return false;
   }

@@ -1,7 +1,7 @@
 #include "key_pair.hpp"
 #include "jtree.hpp"
 #include "mem_map.hpp"
-#include "encode.hpp"
+#include "misc.hpp"
 #include <openssl/evp.h>
 
 using namespace pc;
@@ -64,6 +64,24 @@ pub_key::pub_key( const key_pair& kp )
   kp.get_pub_key( *this );
 }
 
+void key_pair::gen()
+{
+  EVP_PKEY *pkey = NULL;
+  EVP_PKEY_CTX *pctx = EVP_PKEY_CTX_new_id(EVP_PKEY_ED25519, NULL);
+  EVP_PKEY_keygen_init(pctx);
+  EVP_PKEY_keygen(pctx, &pkey);
+  EVP_PKEY_CTX_free(pctx);
+  size_t len[] = { pub_key::len };
+  EVP_PKEY_get_raw_private_key( pkey, pk_, len );
+  EVP_PKEY_get_raw_public_key( pkey, &pk_[pub_key::len], len );
+  EVP_PKEY_free( pkey );
+}
+
+void key_pair::zero()
+{
+  __builtin_memset( pk_, 0, len );
+}
+
 bool key_pair::init_from_file( const std::string& file )
 {
   mem_map mp;
@@ -87,7 +105,7 @@ bool key_pair::init_from_json( const char *buf, size_t len )
   for( uint32_t it = jt.get_first(1); it; it = jt.get_next( it ) ) {
     *pk++ = (uint8_t)jt.get_uint( it );
   }
-  return true;
+  return key_pair::len == (size_t)(pk - pk_);
 }
 
 void key_pair::get_pub_key( pub_key& pk ) const
@@ -155,3 +173,4 @@ bool signature::verify(
   EVP_PKEY_free( pkey );
   return rc != 0;
 }
+

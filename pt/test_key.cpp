@@ -1,5 +1,6 @@
 #include <pc/key_pair.hpp>
-#include <pc/encode.hpp>
+#include <pc/misc.hpp>
+#include <pc/log.hpp>
 #include "test_error.hpp"
 #include <iostream>
 #include <vector>
@@ -50,12 +51,41 @@ void test_key()
     sig.init_from_text( sigtxt );
     PC_TEST_CHECK( sig.verify( (const uint8_t*)msg, msglen, pk ) );
   }
+
+  // check key generation
+  {
+    key_pair gk;
+    gk.gen();
+    std::string res;
+    signature sig;
+    PC_TEST_CHECK( sig.sign( (const uint8_t*)msg, msglen, gk ) );
+    pub_key gp( gk );
+    PC_TEST_CHECK( sig.verify( (const uint8_t*)msg, msglen, gp ) );
+  }
+}
+
+void test_log()
+{
+  log::set_level( PC_LOG_DBG_LVL );
+  PC_LOG_DBG( "example" )
+    .add( "hello", "world" )
+    .add( "ival", 42L )
+    .add( "fval", 3.14159 )
+    .end();
+  log::set_level( PC_LOG_INF_LVL );
+  PC_LOG_DBG( "example2" )
+    .add( "hello", "world2" )
+    .end();
+  PC_LOG_INF( "example3" )
+    .add( "hello", "world3" )
+    .end();
 }
 
 int main(int,char**)
 {
   PC_TEST_START
   test_key();
+  test_log();
   PC_TEST_END
   return 0;
 }

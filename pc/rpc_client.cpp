@@ -59,25 +59,6 @@ net_connect *rpc_client::get_ws_conn() const
 
 void rpc_client::send( rpc_request *rptr )
 {
-  add_request( rptr );
-
-  if ( rptr->get_is_http() ) {
-    // submit http POST request
-    http_request msg;
-    msg.init( "POST", "/" );
-    msg.add_hdr( "Content-Type", "application/json" );
-    msg.add_content( jb_, jw_.size() );
-    hptr_->add_send( msg );
-  } else {
-    // submit websocket message
-    ws_wtr msg;
-    msg.commit( ws_wtr::text_id, jb_, jw_.size(), true );
-    wptr_->add_send( msg );
-  }
-}
-
-void rpc_client::add_request( rpc_request *rptr )
-{
   // get request id
   uint64_t id;
   if ( !reuse_.empty() ) {
@@ -89,18 +70,30 @@ void rpc_client::add_request( rpc_request *rptr )
   }
   rptr->set_id( id );
   rptr->set_rpc_client( this );
+  rptr->set_sent_time( get_now() );
   rv_[id] = rptr;
 
   // construct json message
-  jw_.attach( jb_ );
-  jw_.add_val( jwriter::e_obj );
-  jw_.add_key( "jsonrpc", "2.0" );
-  jw_.add_key( "id", id );
-  rptr->request( jw_ );
-  jw_.pop();
-
-  std::cout.write( jb_, jw_.size() );
-  std::cout << std::endl;
+  json_wtr jw;
+  jw.add_val( json_wtr::e_obj );
+  jw.add_key( "jsonrpc", "2.0" );
+  jw.add_key( "id", id );
+  rptr->request( jw );
+  jw.pop();
+  if ( rptr->get_is_http() ) {
+    // submit http POST request
+    http_request msg;
+    msg.init( "POST", "/" );
+    msg.add_hdr( "Content-Type", "application/json" );
+    msg.commit( jw );
+    msg.print();
+    hptr_->add_send( msg );
+  } else {
+    // submit websocket message
+    ws_wtr msg;
+    msg.commit( ws_wtr::text_id, jw, true );
+    wptr_->add_send( msg );
+  }
 }
 
 void rpc_client::rpc_http::parse_content( const char *txt, size_t len )
@@ -170,7 +163,9 @@ rpc_request::rpc_request()
 : cb_( nullptr ),
   cp_( nullptr ),
   id_( 0UL ),
-  ec_( 0 )
+  ec_( 0 ),
+  sent_ts_( 0L ),
+  recv_ts_( 0L )
 {
 }
 
@@ -218,6 +213,31 @@ int rpc_request::get_err_code() const
   return ec_;
 }
 
+void rpc_request::set_sent_time( int64_t sent_ts )
+{
+  sent_ts_ = sent_ts;
+}
+
+int64_t rpc_request::get_sent_time() const
+{
+  return sent_ts_;
+}
+
+void rpc_request::set_recv_time( int64_t recv_ts )
+{
+  recv_ts_ = recv_ts;
+}
+
+int64_t rpc_request::get_recv_time() const
+{
+  return recv_ts_;
+}
+
+bool rpc_request::get_is_recv() const
+{
+  return recv_ts_ >= sent_ts_;
+}
+
 bool rpc_request::get_is_http() const
 {
   return true;
@@ -251,6 +271,7 @@ void rpc_subscription::remove_notify()
 template<class T>
 void rpc_request::on_response( T *req )
 {
+  req->set_recv_time( get_now() );
   rpc_sub_i<T> *iptr = dynamic_cast<rpc_sub_i<T>*>( req->get_sub() );
   if ( iptr ) {
     iptr->on_response( req );
@@ -325,10 +346,10 @@ rpc::get_account_info::get_account_info()
 {
 }
 
-void rpc::get_account_info::request( jwriter& msg )
+void rpc::get_account_info::request( json_wtr& msg )
 {
   msg.add_key( "method", "getAccountInfo" );
-  msg.add_key( "params", jwriter::e_arr );
+  msg.add_key( "params", json_wtr::e_arr );
   msg.add_val( acc_ );
   msg.pop();
 }
@@ -373,7 +394,7 @@ rpc::get_recent_block_hash::get_recent_block_hash()
   bhash_.zero();
 }
 
-void rpc::get_recent_block_hash::request( jwriter& msg )
+void rpc::get_recent_block_hash::request( json_wtr& msg )
 {
   msg.add_key( "method", "getRecentBlockhash" );
 }
@@ -397,7 +418,7 @@ void rpc::get_recent_block_hash::response( const jtree& jt )
 ///////////////////////////////////////////////////////////////////////////
 // get_health
 
-void rpc::get_health::request( jwriter& msg )
+void rpc::get_health::request( json_wtr& msg )
 {
   msg.add_key( "method", "getHealth" );
 }
@@ -447,7 +468,7 @@ rpc::transfer::transfer()
 {
 }
 
-void rpc::transfer::request( jwriter& msg )
+void rpc::transfer::request( json_wtr& msg )
 {
   // construct binary transaction
   net_buf *bptr = net_buf::alloc();
@@ -490,9 +511,9 @@ void rpc::transfer::request( jwriter& msg )
 
   // encode transaction and add to json params
   msg.add_key( "method", "sendTransaction" );
-  msg.add_key( "params", jwriter::e_arr );
-  msg.add_val_enc_base64( (const uint8_t*)tx.get_buf(), tx.size() );
-  msg.add_val( jwriter::e_obj );
+  msg.add_key( "params", json_wtr::e_arr );
+  msg.add_val_enc_base64( net_str( tx.get_buf(), tx.size() ) );
+  msg.add_val( json_wtr::e_obj );
   msg.add_key( "encoding", "base64" );
   msg.pop();
   msg.pop();
@@ -513,10 +534,10 @@ void rpc::signature_subscribe::set_signature( const signature& sig )
   sig_ = sig;
 }
 
-void rpc::signature_subscribe::request( jwriter& msg )
+void rpc::signature_subscribe::request( json_wtr& msg )
 {
   msg.add_key( "method", "signatureSubscribe" );
-  msg.add_key( "params", jwriter::e_arr );
+  msg.add_key( "params", json_wtr::e_arr );
   msg.add_val( sig_ );
   msg.pop();
 }
@@ -535,4 +556,116 @@ bool rpc::signature_subscribe::notify( const jtree& jt )
 
   on_response( this );
   return true;  // remove notification
+}
+
+///////////////////////////////////////////////////////////////////////////
+// create_account
+
+void rpc::create_account::set_block_hash( const hash& bhash )
+{
+  bhash_ = bhash;
+}
+
+void rpc::create_account::set_sender( const key_pair& snd )
+{
+  snd_ = snd;
+}
+
+void rpc::create_account::set_account( const key_pair& acc )
+{
+  account_ = acc;
+}
+
+void rpc::create_account::set_owner( const pub_key& owner )
+{
+  owner_ = owner;
+}
+
+void rpc::create_account::set_lamports( uint64_t funds )
+{
+  lamports_ = funds;
+}
+
+void rpc::create_account::set_space( uint64_t num_bytes )
+{
+  space_ = num_bytes;
+}
+
+signature rpc::create_account::get_fund_signature() const
+{
+  return fund_sig_;
+}
+
+void rpc::create_account::enc_fund_signature( std::string& sig )
+{
+  fund_sig_.enc_base58( sig );
+}
+
+rpc::create_account::create_account()
+: lamports_( 0L ),
+  space_( 0L )
+{
+}
+
+void rpc::create_account::request( json_wtr& msg )
+{
+  // construct binary transaction
+  net_buf *bptr = net_buf::alloc();
+  bincode tx( bptr->buf_ );
+
+  // signatures section
+  tx.add_len<2>();      // two signatures (funding and account)
+  size_t fund_idx = tx.reserve_sign();
+  size_t acct_idx = tx.reserve_sign();
+
+  // message header
+  size_t tx_idx = tx.get_pos();
+  tx.add( (uint8_t)2 ); // funding and new account are signing accounts
+  tx.add( (uint8_t)0 ); // read-only signed accounts
+  tx.add( (uint8_t)1 ); // program-id are read-only unsigned accounts
+
+  // accounts
+  tx.add_len<3>();      // 3 accounts: sender, account, program
+  tx.add( snd_ );       // sender/funding account
+  tx.add( account_ );   // account being created
+  tx.add( sys_id );     // system programid
+
+  // recent block hash
+  tx.add( bhash_ );     // recent block hash
+
+  // instructions section
+  tx.add_len<1>();      // one instruction
+  tx.add( (uint8_t)2);  // program_id index
+  tx.add_len<2>();      // 2 accounts: sender, new account
+  tx.add( (uint8_t)0 ); // index of sender account
+  tx.add( (uint8_t)1 ); // index of new account
+
+  // instruction parameter section
+  tx.add_len<52>();     // size of data array
+  tx.add( (uint32_t)system_instruction::e_create_account );
+  tx.add( (uint64_t)lamports_ );
+  tx.add( (uint64_t)space_ );
+  tx.add( owner_ );
+
+  // both funding and new account sign message
+  tx.sign( fund_idx, tx_idx, snd_ );
+  fund_sig_.init_from_buf( (const uint8_t*)(tx.get_buf() + fund_idx) );
+  tx.sign( acct_idx, tx_idx, account_ );
+  acct_sig_.init_from_buf( (const uint8_t*)(tx.get_buf() + acct_idx) );
+
+  // encode transaction and add to json params
+  msg.add_key( "method", "sendTransaction" );
+  msg.add_key( "params", json_wtr::e_arr );
+  msg.add_val_enc_base64( net_str( tx.get_buf(), tx.size() ) );
+  msg.add_val( json_wtr::e_obj );
+  msg.add_key( "encoding", "base64" );
+  msg.pop();
+  msg.pop();
+  bptr->dealloc();
+}
+
+void rpc::create_account::response( const jtree& jt )
+{
+  if ( on_error( jt, this ) ) return;
+  on_response( this );
 }

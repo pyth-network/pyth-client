@@ -1,12 +1,22 @@
 #pragma once
 
 #include <pc/error.hpp>
-#include <pc/jtree.hpp>
+#include <pc/key_pair.hpp>
 #include <sys/epoll.h>
 #include <vector>
 
 namespace pc
 {
+
+  struct net_str
+  {
+    net_str( const char * );
+    net_str( const char *, size_t );
+    net_str( const uint8_t *, size_t );
+    net_str( const std::string& );
+    const char *str_;
+    size_t      len_;
+  };
 
   // network message buffer
   struct net_buf
@@ -26,15 +36,20 @@ namespace pc
     net_wtr();
     ~net_wtr();
     void add( char );
-    void add( const char *buf, size_t len );
-    void add( const char *buf );
-    void add( const std::string& buf );
+    void add( net_str );
+    void add( net_wtr& );
     void detach( net_buf *&hd, net_buf *&tl );
+    size_t size() const;
+    void print() const;
 
   protected:
+    void add_alloc( net_str );
     void alloc();
+    void advance( size_t len );
+    char *reserve( size_t len );
     net_buf *hd_;
     net_buf *tl_;
+    size_t   sz_;
   };
 
   // parse inbound fragmented messages from streaming protocols
@@ -233,8 +248,8 @@ namespace pc
     void add_hdr( const char *hdr, const char *txt, size_t txt_len );
     void add_hdr( const char *hdr, const char *txt  );
     void add_hdr( const char *hdr, uint64_t val );
-    void add_content( const char *, size_t );
-    void add_content();
+    void commit( net_wtr& );
+    void commit();
   };
 
   // http client parser
@@ -317,7 +332,7 @@ namespace pc
     static const uint8_t ping_id   = 0x9;
     static const uint8_t pong_id   = 0xa;
 
-    void commit( uint8_t opcode, const char *, size_t len, bool mask );
+    void commit( uint8_t opcode, net_wtr&, bool mask );
   };
 
   // websocket client connection
@@ -356,6 +371,70 @@ namespace pc
     buf_t        msg_;
     net_connect *wptr_;
   };
+
+  class json_wtr : public net_wtr
+  {
+  public:
+
+    typedef enum { e_obj = 0, e_arr } type_t;
+
+    json_wtr();
+    void reset();
+
+    // pop latest object/array
+    void pop();
+
+    // add key/value pair in object
+    void add_key( net_str key, net_str val );
+    void add_key( net_str key, uint64_t val );
+    void add_key( net_str key, type_t );
+    void add_key( net_str key, const hash& );
+
+    // add array value
+    void add_val( net_str val );
+    void add_val( uint64_t  );
+    void add_val( type_t  );
+    void add_val( const key_pair& );
+    void add_val( const hash& );
+    void add_val( const signature& );
+    void add_val_enc_base58( net_str val );
+    void add_val_enc_base64( net_str val );
+
+  private:
+
+    typedef std::vector<type_t> type_vec_t;
+
+    void add_key_only( net_str key );
+    void add_obj();
+    void add_arr();
+    void add_first();
+    void add_uint( uint64_t ival );
+    void add_enc_base58( net_str );
+    void add_enc_base64( net_str );
+    void add_text( net_str );
+
+    bool       first_;
+    type_vec_t st_;
+  };
+
+  /////////////////////////////////////////////////////////////////////////
+  // inline impl.
+
+  inline net_str::net_str( const char *str )
+  : str_( str ), len_( __builtin_strlen( str ) ) {
+  }
+
+  inline net_str::net_str( const char *str, size_t len )
+  : str_( str ), len_( len ) {
+  }
+
+  inline net_str::net_str( const uint8_t *str, size_t len )
+  : str_( (const char*)str ), len_( len ) {
+  }
+
+  inline net_str::net_str( const std::string& str )
+  : str_( str.c_str() ), len_( str.length() ) {
+  }
 
   inline unsigned http_server::get_num_header() const
   {
