@@ -4,15 +4,39 @@
 #include "misc.hpp"
 #include <openssl/evp.h>
 
+#define PC_SYMBOL_SPACES 0x2020202020202020
+
 using namespace pc;
 
 hash::hash()
 {
 }
 
+hash::hash( const hash& obj )
+{
+  *this = obj;
+}
+
+hash& hash::operator=( const hash& obj )
+{
+  i_[0] = obj.i_[0];
+  i_[1] = obj.i_[1];
+  i_[2] = obj.i_[2];
+  i_[3] = obj.i_[3];
+  return *this;
+}
+
+bool hash::operator==( const hash& obj) const
+{
+  return i_[0] == obj.i_[0] &&
+    i_[1] == obj.i_[1] &&
+    i_[2] == obj.i_[2] &&
+    i_[3] == obj.i_[3];
+}
+
 void hash::zero()
 {
-  __builtin_memset( pk_, 0, len );
+  i_[0] = i_[1] = i_[2] = i_[3] = 0UL;
 }
 
 bool hash::init_from_file( const std::string& file )
@@ -37,12 +61,12 @@ void hash::init_from_buf( const uint8_t *pk )
   __builtin_memcpy( pk_, pk, len );
 }
 
-int hash::enc_base58( uint8_t *buf, uint32_t buflen )
+int hash::enc_base58( uint8_t *buf, uint32_t buflen ) const
 {
   return pc::enc_base58( pk_, len, buf, buflen );
 }
 
-int hash::enc_base58( std::string& res )
+int hash::enc_base58( std::string& res ) const
 {
   char buf[64];
   int n = enc_base58( (uint8_t*)buf, 64 );
@@ -55,13 +79,67 @@ int hash::dec_base58( const uint8_t *buf, uint32_t buflen )
   return pc::dec_base58( buf, buflen, pk_ );
 }
 
+symbol::symbol()
+{
+  i_[0] = i_[1] = PC_SYMBOL_SPACES;
+}
+
+symbol::symbol( const symbol& obj )
+{
+  *this = obj;
+}
+
+symbol::symbol( const char *sym )
+{
+  i_[0] = i_[1] = PC_SYMBOL_SPACES;
+  __builtin_memcpy( c_, sym, std::min(16UL,__builtin_strlen( sym )) );
+}
+
+symbol::symbol( str sval )
+{
+  i_[0] = i_[1] = PC_SYMBOL_SPACES;
+  __builtin_memcpy( c_, sval.str_, std::min(16UL,sval.len_) );
+}
+
+symbol& symbol::operator=( const symbol& obj )
+{
+  i_[0] = obj.i_[0];
+  i_[1] = obj.i_[1];
+  return *this;
+}
+
+bool symbol::operator==( const symbol& obj ) const
+{
+  return i_[0] == obj.i_[0] && i_[1] == obj.i_[1];
+}
+
+uint64_t symbol::hash() const
+{
+  return i_[0];
+}
+
+const char *symbol::data() const
+{
+  return c_;
+}
+
 pub_key::pub_key()
+{
+}
+
+pub_key::pub_key( const pub_key& obj )
+: hash( obj )
 {
 }
 
 pub_key::pub_key( const key_pair& kp )
 {
   kp.get_pub_key( *this );
+}
+
+pub_key& pub_key::operator=( const pub_key& pk )
+{
+  return (pub_key&)hash::operator=( pk );
 }
 
 void key_pair::gen()
@@ -174,3 +252,21 @@ bool signature::verify(
   return rc != 0;
 }
 
+static const char *commitment_str[] = {
+  "processed",
+  "confirmed",
+  "finalized"
+};
+
+namespace pc
+{
+  const char *commitment_to_str( commitment val )
+  {
+    unsigned iv = (unsigned)val;
+    if ( iv >= (unsigned)commitment::e_last_commitment ) {
+      iv = 0;
+    }
+    return commitment_str[iv];
+  }
+
+}

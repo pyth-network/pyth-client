@@ -31,7 +31,7 @@ int main(int,char**)
   pyth_server psvr;
   psvr.set_rpc_host( "localhost" );
   psvr.set_listen_port( 8910 );
-  psvr.set_key_file( "/home/richard/test_key_1.json" );
+  psvr.set_dir( "/home/richard/key_store" );
   if ( !psvr.init() ) {
     std::cerr << "pythd: " << psvr.get_err_msg() << std::endl;
     return 1;

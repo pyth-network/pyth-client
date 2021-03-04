@@ -35,8 +35,11 @@ namespace pc
     void add( uint8_t );
     void add( uint32_t );
     void add( uint64_t );
+    void add( int32_t );
+    void add( int64_t );
     void add( const pub_key& );
     void add( const hash& );
+    void add( const symbol& );
 
     // add (fixed) array length encoding
     template<unsigned N> void add_len();
@@ -123,6 +126,16 @@ namespace pc
     add_val_T( val );
   }
 
+  inline void bincode::add( int32_t val )
+  {
+    add_val_T( val );
+  }
+
+  inline void bincode::add( int64_t val )
+  {
+    add_val_T( val );
+  }
+
   inline void bincode::add( const pub_key& pk )
   {
     add( (const hash&)pk );
@@ -132,6 +145,12 @@ namespace pc
   {
     __builtin_memcpy( &buf_[idx_], pk.data(), hash::len );
     idx_ += hash::len;
+  }
+
+  inline void bincode::add( const symbol& sym )
+  {
+    __builtin_memcpy( &buf_[idx_], sym.data(), symbol::len );
+    idx_ += symbol::len;
   }
 
   template<unsigned N> void bincode::add_len()

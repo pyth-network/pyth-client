@@ -21,15 +21,18 @@ namespace pc
   class log_line
   {
   public:
-    log_line& add( net_str key, net_str val );
-    log_line& add( net_str key, int );
-    log_line& add( net_str key, int64_t );
-    log_line& add( net_str key, double );
+    log_line& add( str key, str val );
+    log_line& add( str key, const pub_key& val );
+    log_line& add( str key, const symbol& val );
+    log_line& add( str key, int );
+    log_line& add( str key, int64_t );
+    log_line& add( str key, uint64_t );
+    log_line& add( str key, double );
     void end();
     friend class log;
   private:
-    log_line( net_str, int lvl );
-    void add_key( net_str );
+    log_line( str, int lvl );
+    void add_key( str );
     bool is_first_;
   };
 
@@ -41,7 +44,7 @@ namespace pc
 
     static void set_level( int level );
     static bool has_level( int level );
-    static log_line add( net_str topic, int level );
+    static log_line add( str topic, int level );
   private:
     static int level_;
   };

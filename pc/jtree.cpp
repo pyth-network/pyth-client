@@ -91,6 +91,11 @@ void jtree::parse( const char *cptr, size_t sz )
   }
 }
 
+bool jtree::is_valid() const
+{
+  return nv_.size()>1 && st_.empty();
+}
+
 uint32_t jtree::new_node(type_t t, uint32_t i, uint32_t j )
 {
   uint32_t nxt = nv_.size();

@@ -33,9 +33,9 @@ public:
     std::cout << "slot              = " << m->get_slot() << std::endl;
     std::cout << "lamports_per_sig  = "
               << m->get_lamports_per_signature() << std::endl;
-    hash bhash = m->get_block_hash();
+    hash *bhash = m->get_block_hash();
     std::string hstr;
-    bhash.enc_base58( hstr );
+    bhash->enc_base58( hstr );
     std::cout << "recent_block_hash = " << hstr << std::endl;
     std::cout << std::endl;
     --cnt_;
@@ -82,7 +82,7 @@ int main(int,char**)
 
   // construct get_account_info request
   rpc::get_account_info req1;
-  req1.set_account( pk );
+  req1.set_account( &pk );
   req1.set_sub( &sub );
   clnt.send( &req1 );
   sub.add();

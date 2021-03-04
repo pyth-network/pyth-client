@@ -22,6 +22,7 @@ namespace pc
 
     // parse message
     void parse( const char *, size_t );
+    bool is_valid() const;
 
     // get first element in tree
     type_t   get_type( uint32_t ) const;
@@ -40,6 +41,7 @@ namespace pc
     uint64_t get_uint( uint32_t ) const;
     int64_t  get_int( uint32_t ) const;
     bool     get_bool( uint32_t ) const;
+    str      get_str( uint32_t ) const;
 
     // find value in object associated with key
     uint32_t find_val( uint32_t obj, const char *key ) const;
@@ -119,6 +121,12 @@ namespace pc
     const node& n = nv_[i];
     ptr = &buf_[n.p_];
     sz  = n.s_;
+  }
+
+  inline str jtree::get_str( uint32_t i ) const
+  {
+    const node& n = nv_[i];
+    return str( &buf_[n.p_], n.s_ );
   }
 
   inline uint64_t jtree::get_uint( uint32_t i ) const

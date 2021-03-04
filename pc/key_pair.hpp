@@ -1,7 +1,6 @@
 #pragma once
 
-#include <string>
-#include <stdint.h>
+#include <pc/misc.hpp>
 
 namespace pc
 {
@@ -13,6 +12,9 @@ namespace pc
   public:
     static const size_t len = 32;
     hash();
+    hash( const hash& );
+    hash& operator=( const hash& );
+    bool operator==( const hash& )const;
     void zero();
 
     // initialize from base58 encoded file or text
@@ -21,28 +23,41 @@ namespace pc
     void init_from_buf( const uint8_t * );
 
     // encode to text buffer
-    int enc_base58( uint8_t *buf, uint32_t buflen );
-    int enc_base58( std::string& );
+    int enc_base58( uint8_t *buf, uint32_t buflen ) const;
+    int enc_base58( std::string& ) const;
     int dec_base58( const uint8_t *buf, uint32_t buflen );
 
     // get underlying bytes
     const uint8_t *data() const;
 
   protected:
-    uint8_t pk_[len];
+    union{ uint64_t i_[4]; uint8_t pk_[len]; };
   };
 
+  class symbol
+  {
+  public:
+    static const size_t len = 16;
+    symbol();
+    symbol( const symbol& );
+    symbol( const char * );
+    symbol( str );
+    symbol& operator=( const symbol& );
+    bool operator==( const symbol& )const;
+    uint64_t hash() const;
+    const char *data() const;
+  private:
+    union { uint64_t i_[2]; char c_[len];};
+  };
   // public key
+
   class pub_key : public hash
   {
   public:
     pub_key();
+    pub_key( const pub_key& );
     pub_key( const key_pair& );
-  };
-
-  // program id
-  class prog_id : public hash
-  {
+    pub_key& operator=( const pub_key& );
   };
 
   // private/public key pair
@@ -100,6 +115,17 @@ namespace pc
   private:
     uint8_t sig_[len];
   };
+
+  // commitment status
+  enum commitment
+  {
+    e_processed = 0,
+    e_confirmed,
+    e_finalized,
+    e_last_commitment
+  };
+
+  const char *commitment_to_str( commitment );
 
   inline const uint8_t *hash::data() const
   {

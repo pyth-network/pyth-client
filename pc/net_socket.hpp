@@ -2,21 +2,12 @@
 
 #include <pc/error.hpp>
 #include <pc/key_pair.hpp>
+#include <pc/misc.hpp>
 #include <sys/epoll.h>
 #include <vector>
 
 namespace pc
 {
-
-  struct net_str
-  {
-    net_str( const char * );
-    net_str( const char *, size_t );
-    net_str( const uint8_t *, size_t );
-    net_str( const std::string& );
-    const char *str_;
-    size_t      len_;
-  };
 
   // network message buffer
   struct net_buf
@@ -36,15 +27,17 @@ namespace pc
     net_wtr();
     ~net_wtr();
     void add( char );
-    void add( net_str );
+    void add( str );
     void add( net_wtr& );
     void detach( net_buf *&hd, net_buf *&tl );
     size_t size() const;
     void print() const;
+    void reset();
 
   protected:
-    void add_alloc( net_str );
+    void add_alloc( str );
     void alloc();
+    void dealloc();
     void advance( size_t len );
     char *reserve( size_t len );
     net_buf *hd_;
@@ -378,6 +371,8 @@ namespace pc
 
     typedef enum { e_obj = 0, e_arr } type_t;
 
+    struct null {};
+
     json_wtr();
     void reset();
 
@@ -385,33 +380,38 @@ namespace pc
     void pop();
 
     // add key/value pair in object
-    void add_key( net_str key, net_str val );
-    void add_key( net_str key, uint64_t val );
-    void add_key( net_str key, type_t );
-    void add_key( net_str key, const hash& );
+    void add_key( str key, str val );
+    void add_key( str key, int64_t val );
+    void add_key( str key, uint64_t val );
+    void add_key( str key, type_t );
+    void add_key( str key, const hash& );
+    void add_key( str key, null );
+    void add_key_verbatim( str key, str );
 
     // add array value
-    void add_val( net_str val );
-    void add_val( uint64_t  );
-    void add_val( type_t  );
+    void add_val( str val );
+    void add_val( uint64_t );
+    void add_val( int64_t );
+    void add_val( type_t );
     void add_val( const key_pair& );
     void add_val( const hash& );
     void add_val( const signature& );
-    void add_val_enc_base58( net_str val );
-    void add_val_enc_base64( net_str val );
+    void add_val_enc_base58( str val );
+    void add_val_enc_base64( str val );
 
   private:
 
     typedef std::vector<type_t> type_vec_t;
 
-    void add_key_only( net_str key );
+    void add_key_only( str key );
     void add_obj();
     void add_arr();
     void add_first();
+    void add_int( int64_t ival );
     void add_uint( uint64_t ival );
-    void add_enc_base58( net_str );
-    void add_enc_base64( net_str );
-    void add_text( net_str );
+    void add_enc_base58( str );
+    void add_enc_base64( str );
+    void add_text( str );
 
     bool       first_;
     type_vec_t st_;
@@ -419,22 +419,6 @@ namespace pc
 
   /////////////////////////////////////////////////////////////////////////
   // inline impl.
-
-  inline net_str::net_str( const char *str )
-  : str_( str ), len_( __builtin_strlen( str ) ) {
-  }
-
-  inline net_str::net_str( const char *str, size_t len )
-  : str_( str ), len_( len ) {
-  }
-
-  inline net_str::net_str( const uint8_t *str, size_t len )
-  : str_( (const char*)str ), len_( len ) {
-  }
-
-  inline net_str::net_str( const std::string& str )
-  : str_( str.c_str() ), len_( str.length() ) {
-  }
 
   inline unsigned http_server::get_num_header() const
   {

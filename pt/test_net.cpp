@@ -1,6 +1,7 @@
 #include "test_error.hpp"
 #include <pc/net_socket.hpp>
 #include <pc/net_socket.hpp>
+#include <pc/misc.hpp>
 #include <iostream>
 
 using namespace pc;
@@ -22,7 +23,7 @@ void test_net_buf()
     net_wtr msg;
     char buf[1460];
     __builtin_memset( buf, 1, 1460 );
-    msg.add( net_str( buf, 1460 ) );
+    msg.add( str( buf, 1460 ) );
     net_buf *hd, *tl;
     msg.detach( hd, tl );
     PC_TEST_CHECK( hd->next_==tl );
@@ -113,11 +114,22 @@ void test_json_wtr()
   }
 }
 
+void test_enc()
+{
+  PC_TEST_CHECK( 1L == str_to_dec( "1", 0 ) );
+  PC_TEST_CHECK( 0L == str_to_dec( "0", 0 ) );
+  PC_TEST_CHECK( 10L == str_to_dec( "1", -1 ) );
+  PC_TEST_CHECK( 300L == str_to_dec( "0.03", -4 ) );
+  PC_TEST_CHECK( 18L == str_to_dec( "1.83", -1 ) );
+  PC_TEST_CHECK( -954 == str_to_dec( "-0.000954000", -6 ) );
+}
+
 int main(int,char**)
 {
   PC_TEST_START
   test_net_buf();
   test_json_wtr();
+  test_enc();
   PC_TEST_END
   return 0;
 }

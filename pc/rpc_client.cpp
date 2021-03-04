@@ -1,5 +1,6 @@
 #include "rpc_client.hpp"
 #include "bincode.hpp"
+#include <program/src/oracle/oracle.h>
 #include <iostream>
 
 using namespace pc;
@@ -21,6 +22,18 @@ static hash gen_sys_id()
 
 // system program id
 static hash sys_id = gen_sys_id();
+
+// generate json for sendTransaction
+static void send_transaction( json_wtr& msg, bincode& tx )
+{
+  msg.add_key( "method", "sendTransaction" );
+  msg.add_key( "params", json_wtr::e_arr );
+  msg.add_val_enc_base64( str( tx.get_buf(), tx.size() ) );
+  msg.add_val( json_wtr::e_obj );
+  msg.add_key( "encoding", "base64" );
+  msg.pop();
+  msg.pop();
+}
 
 ///////////////////////////////////////////////////////////////////////////
 // rpc_client
@@ -80,13 +93,13 @@ void rpc_client::send( rpc_request *rptr )
   jw.add_key( "id", id );
   rptr->request( jw );
   jw.pop();
+  jw.print();
   if ( rptr->get_is_http() ) {
     // submit http POST request
     http_request msg;
     msg.init( "POST", "/" );
     msg.add_hdr( "Content-Type", "application/json" );
     msg.commit( jw );
-    msg.print();
     hptr_->add_send( msg );
   } else {
     // submit websocket message
@@ -133,7 +146,7 @@ void rpc_client::parse_response( const char *txt, size_t len )
       uint64_t id = jp_.get_uint( stok );
       sub_map_t::iterator i = smap_.find( id );
       if ( i != smap_.end() && (*i).second->notify( jp_ ) ) {
-          smap_.erase( i );
+        smap_.erase( i );
       }
     }
   }
@@ -297,9 +310,14 @@ bool rpc_request::on_error( const jtree& jt, T *req )
 ///////////////////////////////////////////////////////////////////////////
 // get_account_info
 
-void rpc::get_account_info::set_account( const pub_key& acc )
+void rpc::get_account_info::set_account( pub_key *acc )
 {
   acc_ = acc;
+}
+
+void rpc::get_account_info::set_commitment( commitment val )
+{
+  cmt_ = val;
 }
 
 uint64_t rpc::get_account_info::get_slot() const
@@ -328,12 +346,6 @@ void rpc::get_account_info::get_owner( const char *&optr, size_t& olen) const
   olen = olen_;
 }
 
-void rpc::get_account_info::get_data( const char *&dptr, size_t& dlen) const
-{
-  dptr = dptr_;
-  dlen = dlen_;
-}
-
 rpc::get_account_info::get_account_info()
 : slot_(0),
   lamports_( 0 ),
@@ -342,7 +354,8 @@ rpc::get_account_info::get_account_info()
   dlen_( 0 ),
   optr_( nullptr ),
   olen_( 0 ),
-  is_exec_( false )
+  is_exec_( false ),
+  cmt_( commitment::e_finalized )
 {
 }
 
@@ -350,7 +363,11 @@ void rpc::get_account_info::request( json_wtr& msg )
 {
   msg.add_key( "method", "getAccountInfo" );
   msg.add_key( "params", json_wtr::e_arr );
-  msg.add_val( acc_ );
+  msg.add_val( *acc_ );
+  msg.add_val( json_wtr::e_obj );
+  msg.add_key( "encoding", "base64" );
+  msg.add_key( "commitment", commitment_to_str( cmt_ ) );
+  msg.pop();
   msg.pop();
 }
 
@@ -363,7 +380,8 @@ void rpc::get_account_info::response( const jtree& jt )
   uint32_t vtok = jt.find_val( rtok, "value" );
   is_exec_ = jt.get_bool( jt.find_val( vtok, "executable" ) );
   lamports_ = jt.get_uint( jt.find_val( vtok, "lamports" ) );
-  jt.get_text( jt.find_val( vtok, "data" ), dptr_, dlen_ );
+  uint32_t dtok = jt.find_val( vtok, "data" );
+  jt.get_text( jt.get_first( dtok ), dptr_, dlen_ );
   jt.get_text( jt.find_val( vtok, "owner" ), optr_, olen_ );
   rent_epoch_ = jt.get_uint( jt.find_val( vtok, "rentEpoch" ) );
   on_response( this );
@@ -377,9 +395,9 @@ uint64_t rpc::get_recent_block_hash::get_slot() const
   return slot_;
 }
 
-hash rpc::get_recent_block_hash::get_block_hash() const
+hash *rpc::get_recent_block_hash::get_block_hash()
 {
-  return bhash_;
+  return &bhash_;
 }
 
 uint64_t rpc::get_recent_block_hash::get_lamports_per_signature() const
@@ -432,17 +450,17 @@ void rpc::get_health::response( const jtree& jt )
 ///////////////////////////////////////////////////////////////////////////
 // transfer
 
-void rpc::transfer::set_block_hash( const hash& bhash )
+void rpc::transfer::set_block_hash( hash *bhash )
 {
   bhash_ = bhash;
 }
 
-void rpc::transfer::set_sender( const key_pair& snd )
+void rpc::transfer::set_sender( key_pair *snd )
 {
   snd_ = snd;
 }
 
-void rpc::transfer::set_receiver( const pub_key& rcv )
+void rpc::transfer::set_receiver( pub_key *rcv )
 {
   rcv_ = rcv;
 }
@@ -452,9 +470,9 @@ void rpc::transfer::set_lamports( uint64_t funds )
   lamports_ = funds;
 }
 
-signature rpc::transfer::get_signature() const
+signature *rpc::transfer::get_signature()
 {
-  return sig_;
+  return &sig_;
 }
 
 void rpc::transfer::enc_signature( std::string& sig )
@@ -486,12 +504,12 @@ void rpc::transfer::request( json_wtr& msg )
 
   // accounts
   tx.add_len<3>();      // 3 accounts: sender, receiver, program
-  tx.add( snd_ );       // sender account
-  tx.add( rcv_ );       // receiver account
+  tx.add( *snd_ );      // sender account
+  tx.add( *rcv_ );      // receiver account
   tx.add( sys_id );     // system programid
 
   // recent block hash
-  tx.add( bhash_ );     // recent block hash
+  tx.add( *bhash_ );    // recent block hash
 
   // instructions section
   tx.add_len<1>();      // one instruction
@@ -506,13 +524,13 @@ void rpc::transfer::request( json_wtr& msg )
   tx.add( (uint64_t)lamports_ );
 
   // sign message
-  tx.sign( sign_idx, tx_idx, snd_ );
+  tx.sign( sign_idx, tx_idx, *snd_ );
   sig_.init_from_buf( (const uint8_t*)(tx.get_buf() + sign_idx) );
 
   // encode transaction and add to json params
   msg.add_key( "method", "sendTransaction" );
   msg.add_key( "params", json_wtr::e_arr );
-  msg.add_val_enc_base64( net_str( tx.get_buf(), tx.size() ) );
+  msg.add_val_enc_base64( str( tx.get_buf(), tx.size() ) );
   msg.add_val( json_wtr::e_obj );
   msg.add_key( "encoding", "base64" );
   msg.pop();
@@ -527,18 +545,100 @@ void rpc::transfer::response( const jtree& jt )
 }
 
 ///////////////////////////////////////////////////////////////////////////
+// account_subscribe
+
+rpc::account_subscribe::account_subscribe()
+: slot_( 0L ),
+  lamports_( 0L ),
+  dlen_( 0 ),
+  dptr_( nullptr ),
+  cmt_( commitment::e_finalized )
+{
+}
+
+void rpc::account_subscribe::set_account( pub_key *pkey )
+{
+  acc_ = pkey;
+}
+
+void rpc::account_subscribe::set_commitment( commitment val )
+{
+  cmt_ = val;
+}
+
+uint64_t rpc::account_subscribe::get_slot() const
+{
+  return slot_;
+}
+
+uint64_t rpc::account_subscribe::get_lamports() const
+{
+  return lamports_;
+}
+
+void rpc::account_subscribe::request( json_wtr& msg )
+{
+  msg.add_key( "method", "accountSubscribe" );
+  msg.add_key( "params", json_wtr::e_arr );
+  msg.add_val( *acc_ );
+  msg.add_val( json_wtr::e_obj );
+  msg.add_key( "encoding", "base64" );
+  msg.add_key( "commitment", commitment_to_str( cmt_ ) );
+  msg.pop();
+  msg.pop();
+}
+
+void rpc::account_subscribe::response( const jtree& jt )
+{
+  if ( on_error( jt, this ) ) return;
+
+  // add to notification list
+  add_notify( jt );
+}
+
+bool rpc::account_subscribe::notify( const jtree& jt )
+{
+  if ( on_error( jt, this ) ) return true;
+
+  uint32_t ptok = jt.find_val( 1, "params" );
+  uint32_t rtok = jt.find_val( ptok, "result" );
+  uint32_t ctok = jt.find_val( rtok, "context" );
+  slot_ = jt.get_uint( jt.find_val( ctok, "slot" ) );
+  uint32_t vtok = jt.find_val( rtok, "value" );
+  uint32_t dtok = jt.find_val( vtok, "data" );
+  jt.get_text( jt.get_first( dtok ), dptr_, dlen_ );
+  lamports_ = jt.get_uint( jt.find_val( vtok, "lamports" ) );
+
+  on_response( this );
+  return false;  // keep notification
+}
+
+///////////////////////////////////////////////////////////////////////////
 // signature_subscribe
 
-void rpc::signature_subscribe::set_signature( const signature& sig )
+rpc::signature_subscribe::signature_subscribe()
+: cmt_( commitment::e_finalized )
+{
+}
+
+void rpc::signature_subscribe::set_signature( signature *sig )
 {
   sig_ = sig;
+}
+
+void rpc::signature_subscribe::set_commitment( commitment val )
+{
+  cmt_ = val;
 }
 
 void rpc::signature_subscribe::request( json_wtr& msg )
 {
   msg.add_key( "method", "signatureSubscribe" );
   msg.add_key( "params", json_wtr::e_arr );
-  msg.add_val( sig_ );
+  msg.add_val( *sig_ );
+  msg.add_val( json_wtr::e_obj );
+  msg.add_key( "commitment", commitment_to_str( cmt_ ) );
+  msg.pop();
   msg.pop();
 }
 
@@ -561,22 +661,22 @@ bool rpc::signature_subscribe::notify( const jtree& jt )
 ///////////////////////////////////////////////////////////////////////////
 // create_account
 
-void rpc::create_account::set_block_hash( const hash& bhash )
+void rpc::create_account::set_block_hash( hash *bhash )
 {
   bhash_ = bhash;
 }
 
-void rpc::create_account::set_sender( const key_pair& snd )
+void rpc::create_account::set_sender( key_pair *snd )
 {
   snd_ = snd;
 }
 
-void rpc::create_account::set_account( const key_pair& acc )
+void rpc::create_account::set_account( key_pair *acc )
 {
   account_ = acc;
 }
 
-void rpc::create_account::set_owner( const pub_key& owner )
+void rpc::create_account::set_owner( pub_key *owner )
 {
   owner_ = owner;
 }
@@ -591,14 +691,9 @@ void rpc::create_account::set_space( uint64_t num_bytes )
   space_ = num_bytes;
 }
 
-signature rpc::create_account::get_fund_signature() const
+signature *rpc::create_account::get_signature()
 {
-  return fund_sig_;
-}
-
-void rpc::create_account::enc_fund_signature( std::string& sig )
-{
-  fund_sig_.enc_base58( sig );
+  return &sig_;
 }
 
 rpc::create_account::create_account()
@@ -626,12 +721,12 @@ void rpc::create_account::request( json_wtr& msg )
 
   // accounts
   tx.add_len<3>();      // 3 accounts: sender, account, program
-  tx.add( snd_ );       // sender/funding account
-  tx.add( account_ );   // account being created
+  tx.add( *snd_ );      // sender/funding account
+  tx.add( *account_ );  // account being created
   tx.add( sys_id );     // system programid
 
   // recent block hash
-  tx.add( bhash_ );     // recent block hash
+  tx.add( *bhash_ );    // recent block hash
 
   // instructions section
   tx.add_len<1>();      // one instruction
@@ -645,26 +740,410 @@ void rpc::create_account::request( json_wtr& msg )
   tx.add( (uint32_t)system_instruction::e_create_account );
   tx.add( (uint64_t)lamports_ );
   tx.add( (uint64_t)space_ );
-  tx.add( owner_ );
+  tx.add( *owner_ );
 
   // both funding and new account sign message
-  tx.sign( fund_idx, tx_idx, snd_ );
-  fund_sig_.init_from_buf( (const uint8_t*)(tx.get_buf() + fund_idx) );
-  tx.sign( acct_idx, tx_idx, account_ );
-  acct_sig_.init_from_buf( (const uint8_t*)(tx.get_buf() + acct_idx) );
+  tx.sign( fund_idx, tx_idx, *snd_ );
+  sig_.init_from_buf( (const uint8_t*)(tx.get_buf() + fund_idx) );
+  tx.sign( acct_idx, tx_idx, *account_ );
 
   // encode transaction and add to json params
-  msg.add_key( "method", "sendTransaction" );
-  msg.add_key( "params", json_wtr::e_arr );
-  msg.add_val_enc_base64( net_str( tx.get_buf(), tx.size() ) );
-  msg.add_val( json_wtr::e_obj );
-  msg.add_key( "encoding", "base64" );
-  msg.pop();
-  msg.pop();
+  send_transaction( msg, tx );
   bptr->dealloc();
 }
 
 void rpc::create_account::response( const jtree& jt )
+{
+  if ( on_error( jt, this ) ) return;
+  on_response( this );
+}
+
+///////////////////////////////////////////////////////////////////////////
+// add_symbol
+
+void rpc::add_symbol::set_symbol( const symbol& sym )
+{
+  sym_ = sym;
+}
+
+symbol *rpc::add_symbol::get_symbol()
+{
+  return &sym_;
+}
+
+void rpc::add_symbol::set_exponent( int32_t expo )
+{
+  expo_ = expo;
+}
+
+void rpc::add_symbol::set_program( pub_key *gkey )
+{
+  gkey_ = gkey;
+}
+
+void rpc::add_symbol::set_block_hash( hash *bhash )
+{
+  bhash_ = bhash;
+}
+
+void rpc::add_symbol::set_publish( key_pair *pkey )
+{
+  pkey_ = pkey;
+}
+
+void rpc::add_symbol::set_account( key_pair *akey )
+{
+  akey_ = akey;
+}
+
+void rpc::add_symbol::set_mapping( key_pair *mkey )
+{
+  mkey_ = mkey;
+}
+
+signature *rpc::add_symbol::get_signature()
+{
+  return &sig_;
+}
+
+rpc::add_symbol::add_symbol()
+: num_( 0 ), expo_( 0 )
+{
+}
+
+void rpc::add_symbol::request( json_wtr& msg )
+{
+  // construct binary transaction
+  net_buf *bptr = net_buf::alloc();
+  bincode tx( bptr->buf_ );
+
+  // signatures section
+  tx.add_len<3>();      // three signatures (publish, symbol, mapping)
+  size_t pub_idx = tx.reserve_sign();
+  size_t map_idx = tx.reserve_sign();
+  size_t sym_idx = tx.reserve_sign();
+
+  // message header
+  size_t tx_idx = tx.get_pos();
+  tx.add( (uint8_t)3 ); // pub, symbol and mapping are signing accounts
+  tx.add( (uint8_t)0 ); // read-only signed accounts
+  tx.add( (uint8_t)1 ); // program-id are read-only unsigned accounts
+
+  // accounts
+  tx.add_len<4>();      // 4 accounts: publish, symbol, mapping*, program
+  tx.add( *pkey_ );     // publish account
+  tx.add( *mkey_ );     // mapping account
+  tx.add( *akey_ );     // symbol account
+  tx.add( *gkey_ );     // programid
+
+  // recent block hash
+  tx.add( *bhash_ );    // recent block hash
+
+  // instructions section
+  tx.add_len<1>();      // one instruction
+  tx.add( (uint8_t)3);  // program_id index
+  tx.add_len<3>();      // 3 accounts: publish, symbol, mapping
+  tx.add( (uint8_t)0 ); // index of publish account
+  tx.add( (uint8_t)1 ); // index of mapping account
+  tx.add( (uint8_t)2 ); // index of symbol account
+
+  // instruction parameter section
+  tx.add_len<sizeof(cmd_add_symbol)>();
+  tx.add( (int32_t)e_cmd_add_symbol );
+  tx.add( (int32_t)expo_ );
+  tx.add( sym_ );
+
+  // all accounts need to sign transaction
+  tx.sign( pub_idx, tx_idx, *pkey_ );
+  sig_.init_from_buf( (const uint8_t*)(tx.get_buf() + pub_idx) );
+  tx.sign( map_idx, tx_idx, *mkey_ );
+  tx.sign( sym_idx, tx_idx, *akey_ );
+
+  // encode transaction and add to json params
+  send_transaction( msg, tx );
+  bptr->dealloc();
+}
+
+void rpc::add_symbol::response( const jtree& jt )
+{
+  if ( on_error( jt, this ) ) return;
+  on_response( this );
+}
+
+///////////////////////////////////////////////////////////////////////////
+// init_mapping
+
+void rpc::init_mapping::set_block_hash( hash* bhash )
+{
+  bhash_ = bhash;
+}
+
+void rpc::init_mapping::set_publish( key_pair *kp )
+{
+  pkey_ = kp;
+}
+
+void rpc::init_mapping::set_mapping( key_pair *kp )
+{
+  mkey_ = kp;
+}
+
+void rpc::init_mapping::set_program( pub_key *gkey )
+{
+  gkey_ = gkey;
+}
+
+signature *rpc::init_mapping::get_signature()
+{
+  return &sig_;
+}
+
+void rpc::init_mapping::request( json_wtr& msg )
+{
+  // construct binary transaction
+  net_buf *bptr = net_buf::alloc();
+  bincode tx( bptr->buf_ );
+
+  // signatures section
+  tx.add_len<2>();      // two signatures (funding and account)
+  size_t pub_idx = tx.reserve_sign();
+  size_t map_idx = tx.reserve_sign();
+
+  // message header
+  size_t tx_idx = tx.get_pos();
+  tx.add( (uint8_t)2 ); // funding and mapping account are signing accounts
+  tx.add( (uint8_t)0 ); // read-only signed accounts
+  tx.add( (uint8_t)1 ); // program-id are read-only unsigned accounts
+
+  // accounts
+  tx.add_len<3>();      // 3 accounts: publish, mapping, program
+  tx.add( *pkey_ );     // publish account
+  tx.add( *mkey_ );     // mapping account
+  tx.add( *gkey_ );     // programid
+
+  // recent block hash
+  tx.add( *bhash_ );     // recent block hash
+
+  // instructions section
+  tx.add_len<1>();      // one instruction
+  tx.add( (uint8_t)2);  // program_id index
+  tx.add_len<2>();      // 2 accounts: mapping, publish
+  tx.add( (uint8_t)0 ); // index of publish account
+  tx.add( (uint8_t)1 ); // index of mapping account
+
+  // instruction parameter section
+  tx.add_len<4>();     // size of data array
+  tx.add( (uint32_t)e_cmd_init_mapping );
+
+  // both publish and mapping sign message
+  tx.sign( pub_idx, tx_idx, *pkey_ );
+  sig_.init_from_buf( (const uint8_t*)(tx.get_buf() + pub_idx) );
+  tx.sign( map_idx, tx_idx, *mkey_ );
+
+  // encode transaction and add to json params
+  send_transaction( msg, tx );
+  bptr->dealloc();
+}
+
+void rpc::init_mapping::response( const jtree& jt )
+{
+  if ( on_error( jt, this ) ) return;
+  on_response( this );
+}
+
+///////////////////////////////////////////////////////////////////////////
+// add_publisher
+
+void rpc::add_publisher::set_symbol( const symbol& sym )
+{
+  sym_= sym;
+}
+
+void rpc::add_publisher::set_program( pub_key *gkey )
+{
+  gkey_ = gkey;
+}
+
+void rpc::add_publisher::set_block_hash( hash *bhash )
+{
+  bhash_ = bhash;
+}
+
+void rpc::add_publisher::set_publish( key_pair *pkey )
+{
+  pkey_ = pkey;
+}
+
+void rpc::add_publisher::set_account( key_pair *akey )
+{
+  akey_ = akey;
+}
+
+void rpc::add_publisher::set_publisher( const pub_key& nkey )
+{
+  nkey_ = nkey;
+}
+
+symbol *rpc::add_publisher::get_symbol()
+{
+  return &sym_;
+}
+
+pub_key *rpc::add_publisher::get_publisher()
+{
+  return &nkey_;
+}
+
+signature *rpc::add_publisher::get_signature()
+{
+  return &sig_;
+}
+
+void rpc::add_publisher::request( json_wtr& msg )
+{
+  // construct binary transaction
+  net_buf *bptr = net_buf::alloc();
+  bincode tx( bptr->buf_ );
+
+  // signatures section
+  tx.add_len<2>();      // two signatures (publish, symbol )
+  size_t pub_idx = tx.reserve_sign();
+  size_t sym_idx = tx.reserve_sign();
+
+  // message header
+  size_t tx_idx = tx.get_pos();
+  tx.add( (uint8_t)2 ); // pub and  symbol are signing accounts
+  tx.add( (uint8_t)0 ); // read-only signed accounts
+  tx.add( (uint8_t)1 ); // program-id are read-only unsigned accounts
+
+  // accounts
+  tx.add_len<3>();      // 3 accounts: publish, symbol, program
+  tx.add( *pkey_ );     // publish account
+  tx.add( *akey_ );     // symbol account
+  tx.add( *gkey_ );     // programid
+
+  // recent block hash
+  tx.add( *bhash_ );    // recent block hash
+
+  // instructions section
+  tx.add_len<1>();      // one instruction
+  tx.add( (uint8_t)2);  // program_id index
+  tx.add_len<2>();      // 2 accounts: publish, symbol
+  tx.add( (uint8_t)0 ); // index of publish account
+  tx.add( (uint8_t)1 ); // index of symbol account
+
+  // instruction parameter section
+  tx.add_len<sizeof(cmd_add_publisher)>();
+  tx.add( (int32_t)e_cmd_add_publisher );
+  tx.add( (int32_t)0 );
+  tx.add( sym_ );
+  tx.add( nkey_ );
+
+  // all accounts need to sign transaction
+  tx.sign( pub_idx, tx_idx, *pkey_ );
+  sig_.init_from_buf( (const uint8_t*)(tx.get_buf() + pub_idx) );
+  tx.sign( sym_idx, tx_idx, *akey_ );
+
+  // encode transaction and add to json params
+  send_transaction( msg, tx );
+  bptr->dealloc();
+}
+
+void rpc::add_publisher::response( const jtree& jt )
+{
+  if ( on_error( jt, this ) ) return;
+  on_response( this );
+}
+
+///////////////////////////////////////////////////////////////////////////
+// upd_price
+
+void rpc::upd_price::set_symbol( symbol *sym )
+{
+  sym_ = sym;
+}
+
+void rpc::upd_price::set_publish( key_pair *pk )
+{
+  pkey_ = pk;
+}
+
+void rpc::upd_price::set_account( pub_key *akey )
+{
+  akey_ = akey;
+}
+
+void rpc::upd_price::set_program( pub_key *gkey )
+{
+  gkey_ = gkey;
+}
+
+void rpc::upd_price::set_block_hash( hash *bhash )
+{
+  bhash_ = bhash;
+}
+
+signature *rpc::upd_price::get_signature()
+{
+  return &sig_;
+}
+
+void rpc::upd_price::set_price( int64_t px, uint64_t conf )
+{
+  price_ = px;
+  conf_ = conf;
+}
+
+void rpc::upd_price::request( json_wtr& msg )
+{
+  // construct binary transaction
+  net_buf *bptr = net_buf::alloc();
+  bincode tx( bptr->buf_ );
+
+  // signatures section
+  tx.add_len<1>();      // one signature (publish)
+  size_t pub_idx = tx.reserve_sign();
+
+  // message header
+  size_t tx_idx = tx.get_pos();
+  tx.add( (uint8_t)1 ); // pub is only signing account
+  tx.add( (uint8_t)0 ); // read-only signed accounts
+  tx.add( (uint8_t)1 ); // program-id are read-only unsigned accounts
+
+  // accounts
+  tx.add_len<3>();      // 3 accounts: publish, symbol, program
+  tx.add( *pkey_ );     // publish account
+  tx.add( *akey_ );     // symbol account
+  tx.add( *gkey_ );     // programid
+
+  // recent block hash
+  tx.add( *bhash_ );    // recent block hash
+
+  // instructions section
+  tx.add_len<1>();      // one instruction
+  tx.add( (uint8_t)2);  // program_id index
+  tx.add_len<2>();      // 2 accounts: publish, symbol
+  tx.add( (uint8_t)0 ); // index of publish account
+  tx.add( (uint8_t)1 ); // index of symbol account
+
+  // instruction parameter section
+  tx.add_len<sizeof(cmd_upd_price)>();
+  tx.add( (int32_t)e_cmd_upd_price );
+  tx.add( (int32_t)0 );
+  tx.add( *sym_ );
+  tx.add( price_ );
+  tx.add( conf_ );
+
+  // all accounts need to sign transaction
+  tx.sign( pub_idx, tx_idx, *pkey_ );
+  sig_.init_from_buf( (const uint8_t*)(tx.get_buf() + pub_idx) );
+
+  // encode transaction and add to json params
+  send_transaction( msg, tx );
+  bptr->dealloc();
+}
+
+void rpc::upd_price::response( const jtree& jt )
 {
   if ( on_error( jt, this ) ) return;
   on_response( this );

@@ -136,6 +136,9 @@ namespace pc
     // notification subscription update
     virtual bool notify( const jtree& );
 
+    template<class T>
+    static bool get_data( const char *, size_t len, T * );
+
   protected:
 
     template<class T> void on_response( T * );
@@ -164,6 +167,17 @@ namespace pc
   /////////////////////////////////////////////////////////////////////////
   // wrappers for various solana rpc requests
 
+  template<class T>
+  bool rpc_request::get_data( const char *dptr, size_t dlen, T *ptr )
+  {
+    if ( dlen == (size_t)enc_base64_len( sizeof( T ) ) ) {
+      dec_base64( (const uint8_t*)dptr, dlen, (uint8_t*)ptr );
+      return true;
+    } else {
+      return false;
+    }
+  }
+
   namespace rpc
   {
     // get account balance, program data and account meta-data
@@ -171,7 +185,8 @@ namespace pc
     {
     public:
       // parameters
-      void set_account( const pub_key& );
+      void set_account( pub_key * );
+      void set_commitment( commitment );
 
       // results
       uint64_t get_slot() const;
@@ -179,14 +194,14 @@ namespace pc
       uint64_t get_rent_epoch() const;
       bool     get_is_executable() const;
       void     get_owner( const char *&, size_t& ) const;
-      void     get_data( const char *&, size_t& ) const;
+      template<class T> bool get_data( T * ) const;
 
       get_account_info();
       void request( json_wtr& ) override;
       void response( const jtree& ) override;
 
     private:
-      pub_key     acc_;
+      pub_key    *acc_;
       uint64_t    slot_;
       uint64_t    lamports_;
       uint64_t    rent_epoch_;
@@ -195,7 +210,13 @@ namespace pc
       const char *optr_;
       size_t      olen_;
       bool        is_exec_;
+      commitment  cmt_;
     };
+
+    template<class T> bool get_account_info::get_data( T *res ) const
+    {
+      return rpc_request::get_data( dptr_, dlen_, res );
+    }
 
     // recent block hash and fee schedule
     class get_recent_block_hash : public rpc_request
@@ -203,7 +224,7 @@ namespace pc
     public:
       // results
       uint64_t get_slot() const;
-      hash     get_block_hash() const;
+      hash    *get_block_hash();
       uint64_t get_lamports_per_signature() const;
 
       get_recent_block_hash();
@@ -229,28 +250,63 @@ namespace pc
     {
     public:
       // parameters
-      void set_signature( const signature& );
+      void set_signature( signature * );
+      void set_commitment( commitment );
 
+      signature_subscribe();
       void request( json_wtr& ) override;
       void response( const jtree& ) override;
       bool notify( const jtree& ) override;
 
     private:
-      signature sig_;
+      signature  *sig_;
+      commitment  cmt_;
     };
+
+    // account data subscription
+    class account_subscribe : public rpc_subscription
+    {
+    public:
+      // parameters
+      void set_account( pub_key * );
+      void set_commitment( commitment );
+
+      // results
+      uint64_t get_slot() const;
+      uint64_t get_lamports() const;
+      template<class T> bool get_data( T * ) const;
+
+      account_subscribe();
+      void request( json_wtr& ) override;
+      void response( const jtree& ) override;
+      bool notify( const jtree& ) override;
+
+    private:
+      pub_key    *acc_;
+      uint64_t    slot_;
+      uint64_t    lamports_;
+      size_t      dlen_;
+      const char *dptr_;
+      commitment  cmt_;
+    };
+
+    template<class T> bool account_subscribe::get_data( T *res ) const
+    {
+      return rpc_request::get_data( dptr_, dlen_, res );
+    }
 
     // transaction to transfer funds between accounts
     class transfer : public rpc_request
     {
     public:
       // parameters
-      void set_block_hash( const hash& );
-      void set_sender( const key_pair& );
-      void set_receiver( const pub_key& );
+      void set_block_hash( hash * );
+      void set_sender( key_pair * );
+      void set_receiver( pub_key * );
       void set_lamports( uint64_t funds );
 
       // results
-      signature get_signature() const;
+      signature *get_signature();
       void enc_signature( std::string& );
 
       transfer();
@@ -258,9 +314,9 @@ namespace pc
       void response( const jtree& ) override;
 
     private:
-      hash      bhash_;
-      key_pair  snd_;
-      pub_key   rcv_;
+      hash     *bhash_;
+      key_pair *snd_;
+      pub_key  *rcv_;
       uint64_t  lamports_;
       signature sig_;
     };
@@ -270,32 +326,140 @@ namespace pc
     {
     public:
       // parameters
-      void set_block_hash( const hash& );
-      void set_sender( const key_pair& );
-      void set_account( const key_pair& );
-      void set_owner( const pub_key& );
+      void set_block_hash( hash * );
+      void set_sender( key_pair * );
+      void set_account( key_pair * );
+      void set_owner( pub_key * );
       void set_lamports( uint64_t funds );
       void set_space( uint64_t num_bytes );
 
       // results
-      signature get_fund_signature() const;
-      void enc_fund_signature( std::string& );
-      signature get_acct_signature() const;
-      void enc_acct_signature( std::string& );
+      signature *get_signature();
 
       create_account();
       void request( json_wtr& ) override;
       void response( const jtree& ) override;
 
     private:
-      hash      bhash_;
-      key_pair  snd_;
-      key_pair  account_;
-      pub_key   owner_;
+      hash     *bhash_;
+      key_pair *snd_;
+      key_pair *account_;
+      pub_key  *owner_;
       uint64_t  lamports_;
       uint64_t  space_;
-      signature fund_sig_;
-      signature acct_sig_;
+      signature sig_;
+    };
+
+    // initialize mapping account
+    class init_mapping : public rpc_request
+    {
+    public:
+      // parameters
+      void set_block_hash( hash * );
+      void set_publish( key_pair * );
+      void set_mapping( key_pair * );
+      void set_program( pub_key * );
+
+      // results
+      signature *get_signature();
+
+      void request( json_wtr& ) override;
+      void response( const jtree& ) override;
+
+    private:
+      hash     *bhash_;
+      key_pair *pkey_;
+      key_pair *mkey_;
+      pub_key  *gkey_;
+      signature sig_;
+    };
+
+    // add new symbol to mapping account
+    class add_symbol: public rpc_request
+    {
+    public:
+      void set_symbol( const symbol& );
+      void set_exponent( int32_t );
+      void set_program( pub_key * );
+      void set_block_hash( hash * );
+      void set_publish( key_pair * );
+      void set_account( key_pair * );
+      void set_mapping( key_pair * );
+      symbol *get_symbol();
+
+      // results
+      signature *get_signature();
+
+      add_symbol();
+      void request( json_wtr& ) override;
+      void response( const jtree& ) override;
+
+    private:
+      unsigned  num_;
+      int32_t   expo_;
+      symbol    sym_;
+      hash     *bhash_;
+      key_pair *pkey_;
+      pub_key  *gkey_;
+      key_pair *akey_;
+      key_pair *mkey_;
+      signature sig_;
+    };
+
+    // add new price publisher to symbol account
+    class add_publisher : public rpc_request
+    {
+    public:
+      void set_symbol( const symbol& );
+      void set_publisher( const pub_key& );
+      void set_program( pub_key * );
+      void set_block_hash( hash * );
+      void set_publish( key_pair * );
+      void set_account( key_pair * );
+      symbol  *get_symbol();
+      pub_key *get_publisher();
+
+      // results
+      signature *get_signature();
+
+      void request( json_wtr& ) override;
+      void response( const jtree& ) override;
+
+    private:
+      symbol    sym_;
+      pub_key   nkey_;
+      hash     *bhash_;
+      key_pair *pkey_;
+      pub_key  *gkey_;
+      key_pair *akey_;
+      signature sig_;
+    };
+
+    // set new component price
+    class upd_price : public rpc_request
+    {
+    public:
+      void set_symbol( symbol * );
+      void set_publish( key_pair * );
+      void set_account( pub_key * );
+      void set_program( pub_key * );
+      void set_block_hash( hash * );
+      void set_price( int64_t px, uint64_t conf );
+
+      // results
+      signature *get_signature();
+
+      void request( json_wtr& ) override;
+      void response( const jtree& ) override;
+    private:
+      symbol   *sym_;
+      hash     *bhash_;
+      key_pair *pkey_;
+      pub_key  *gkey_;
+      pub_key  *akey_;
+      int64_t   price_;
+      uint64_t  conf_;
+      signature sig_;
     };
 
   }

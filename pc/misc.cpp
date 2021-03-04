@@ -126,13 +126,16 @@ uint64_t str_to_uint( const char *val, int len )
 char *int_to_str( int64_t val, char *cptr )
 {
   if ( val ) {
-    if ( val < 0 ) {
-      *--cptr = '-';
+    bool is_neg = val<0;
+    if ( is_neg ) {
       val = -val;
     }
     while( val ) {
       *--cptr = '0' + (val%10L);
       val /= 10L;
+    }
+    if ( is_neg ) {
+      *--cptr = '-';
     }
   } else {
     *--cptr = '0';
@@ -325,6 +328,49 @@ char *nsecs_to_utc6( int64_t ts, char *cptr )
   cptr[26] = 'Z';
   cptr[27] = '\0';
   return cptr;
+}
+
+int64_t str_to_dec( const char *val, int len, int texpo )
+{
+  if ( len == 0 ) {
+    return 0L;
+  }
+  long mant = 0L;
+  int  expo = -1;
+  bool is_neg = false;
+  const char *end  = &val[len];
+  const char *cptr = val;
+  for(; cptr != end; ++cptr ) {
+    if ( !isspace( *cptr ) ) {
+      if ( *cptr == '-' ) {
+        is_neg = true;
+        ++cptr;
+      }
+      break;
+    }
+  }
+  for(; cptr != end; ++cptr ) {
+    if ( isdigit( *cptr ) ) {
+      mant = mant*10 + (*cptr - '0');
+    } else if ( *cptr == '.' ) {
+      // strip trailing zeroes
+      const char *zend = &end[-1];
+      for( ;cptr != zend && *zend =='0'; --zend );
+      end = &zend[1];
+      expo = 1 + (cptr-val);
+    } else {
+      return 0L;
+    }
+  }
+  expo = expo < 0 ? 0 : expo-(cptr-val);
+  for( ;expo > texpo; --expo ) mant *= 10;
+  for( ;expo < texpo; ++expo ) mant /= 10;
+  return is_neg?-mant:mant;
+}
+
+int64_t str_to_dec( const char *val, int texpo )
+{
+  return str_to_dec( val, __builtin_strlen( val ), texpo );
 }
 
 }

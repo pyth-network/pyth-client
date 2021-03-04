@@ -1,5 +1,4 @@
 #include "net_socket.hpp"
-#include "misc.hpp"
 #include <openssl/sha.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -91,11 +90,24 @@ net_wtr::net_wtr()
 
 net_wtr::~net_wtr()
 {
+  dealloc();
+}
+
+void net_wtr::reset()
+{
+  dealloc();
+  hd_ = tl_ = mem_.alloc();
+  sz_ = 0;
+}
+
+void net_wtr::dealloc()
+{
   for( net_buf *ptr = hd_; ptr; ) {
     net_buf *nxt = ptr->next_;
     ptr->dealloc();
     ptr = nxt;
   }
+
 }
 
 void net_wtr::detach( net_buf *&hd, net_buf *&tl )
@@ -114,7 +126,7 @@ void net_wtr::alloc()
   tl_ = ptr;
 }
 
-void net_wtr::add( net_str str )
+void net_wtr::add( str str )
 {
   size_t nlen = tl_->size_ + str.len_;
   if ( nlen <= net_buf::len ) {
@@ -153,7 +165,7 @@ void net_wtr::add( net_wtr& buf )
   sz_ -= tl->size_;
 }
 
-void net_wtr::add_alloc( net_str str )
+void net_wtr::add_alloc( str str )
 {
   while( str.len_ >0 ) {
     if ( tl_->size_ == net_buf::len ) {
@@ -687,7 +699,7 @@ void http_request::add_hdr( const char *hdr, const char *txt, size_t len )
   add( hdr );
   add( ':' );
   add( ' ' );
-  add( net_str( txt, len ) );
+  add( str( txt, len ) );
   add( '\r' );
   add( '\n' );
 }
@@ -1159,7 +1171,7 @@ bool ws_parser::parse( const char *ptr, size_t len, size_t& res )
     }
     case ws_wtr::ping_id:{
       net_wtr ping;
-      ping.add( net_str( payload, pay_len ) );
+      ping.add( str( payload, pay_len ) );
       ws_wtr msg;
       msg.commit( ws_wtr::pong_id, ping, msk_len==0 );
       wptr_->add_send( msg );
@@ -1198,6 +1210,7 @@ json_wtr::json_wtr()
 
 void json_wtr::reset()
 {
+  net_wtr::reset();
   first_ = true;
   st_.clear();
 }
@@ -1229,26 +1242,44 @@ void json_wtr::add_first()
   first_ = false;
 }
 
-void json_wtr::add_key_only( net_str key )
+void json_wtr::add_key_only( str key )
 {
   add_first();
   add_text( key );
   add( ':' );
 }
 
-void json_wtr::add_key( net_str key, net_str val )
+void json_wtr::add_key( str key, str val )
 {
   add_key_only( key );
   add_text( val );
 }
 
-void json_wtr::add_key( net_str key, uint64_t ival )
+void json_wtr::add_key( str key, int64_t ival )
+{
+  add_key_only( key );
+  add_int( ival );
+}
+
+void json_wtr::add_key( str key, uint64_t ival )
 {
   add_key_only( key );
   add_uint( ival );
 }
 
-void json_wtr::add_key( net_str key, type_t t )
+void json_wtr::add_key( str key, null )
+{
+  add_key_only( key );
+  add( "null" );
+}
+
+void json_wtr::add_key_verbatim( str key, str val )
+{
+  add_key_only( key );
+  add( val );
+}
+
+void json_wtr::add_key( str key, type_t t )
 {
   add_key_only( key );
   if ( t == e_obj ) {
@@ -1267,13 +1298,13 @@ void json_wtr::add_val( const key_pair& kp )
   pop();
 }
 
-void json_wtr::add_key( net_str key, const hash& pk )
+void json_wtr::add_key( str key, const hash& pk )
 {
   add_key_only( key );
-  add_enc_base58( net_str( pk.data(), hash::len ) );
+  add_enc_base58( str( pk.data(), hash::len ) );
 }
 
-void json_wtr::add_val( net_str val )
+void json_wtr::add_val( str val )
 {
   add_first();
   add_text( val );
@@ -1281,12 +1312,12 @@ void json_wtr::add_val( net_str val )
 
 void json_wtr::add_val( const hash& pk )
 {
-  add_val_enc_base58( net_str( pk.data(), hash::len ) );
+  add_val_enc_base58( str( pk.data(), hash::len ) );
 }
 
 void json_wtr::add_val( const signature& sig )
 {
-  add_val_enc_base58( net_str( sig.data(), signature::len ) );
+  add_val_enc_base58( str( sig.data(), signature::len ) );
 }
 
 void json_wtr::add_val( uint64_t ival )
@@ -1305,13 +1336,13 @@ void json_wtr::add_val( type_t t )
   }
 }
 
-void json_wtr::add_val_enc_base58( net_str val )
+void json_wtr::add_val_enc_base58( str val )
 {
   add_first();
   add_enc_base58( val );
 }
 
-void json_wtr::add_val_enc_base64( net_str val )
+void json_wtr::add_val_enc_base64( str val )
 {
   add_first();
   add_enc_base64( val );
@@ -1326,7 +1357,16 @@ void json_wtr::add_uint( uint64_t ival )
   advance( val_len );
 }
 
-void json_wtr::add_enc_base58( net_str val )
+void json_wtr::add_int( int64_t ival )
+{
+  char *buf = reserve( 32 ), *end = &buf[31];
+  char *val = int_to_str( ival, end );
+  size_t val_len = end - val;
+  __builtin_memmove( buf, val, val_len );
+  advance( val_len );
+}
+
+void json_wtr::add_enc_base58( str val )
 {
   add( '"' );
   size_t rsv_len = val.len_ + val.len_;
@@ -1336,7 +1376,7 @@ void json_wtr::add_enc_base58( net_str val )
   add( '"' );
 }
 
-void json_wtr::add_enc_base64( net_str val )
+void json_wtr::add_enc_base64( str val )
 {
   add( '"' );
   size_t rsv_len = enc_base64_len( val.len_ );
@@ -1346,7 +1386,7 @@ void json_wtr::add_enc_base64( net_str val )
   add( '"' );
 }
 
-void json_wtr::add_text( net_str val )
+void json_wtr::add_text( str val )
 {
   add( '"' );
   add( val );

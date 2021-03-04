@@ -68,17 +68,22 @@ void test_log()
 {
   log::set_level( PC_LOG_DBG_LVL );
   PC_LOG_DBG( "example" )
-    .add( "hello", "world" )
+    .add( "hello", str( "world" ) )
     .add( "ival", 42L )
     .add( "fval", 3.14159 )
     .end();
   log::set_level( PC_LOG_INF_LVL );
   PC_LOG_DBG( "example2" )
-    .add( "hello", "world2" )
+    .add( "hello", str( "world2") )
     .end();
   PC_LOG_INF( "example3" )
-    .add( "hello", "world3" )
+    .add( "hello", str( "world3" ))
     .end();
+}
+
+void test_key_store()
+{
+
 }
 
 int main(int,char**)
@@ -86,6 +91,7 @@ int main(int,char**)
   PC_TEST_START
   test_key();
   test_log();
+  test_key_store();
   PC_TEST_END
   return 0;
 }
