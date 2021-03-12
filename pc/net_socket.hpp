@@ -338,7 +338,7 @@ namespace pc
     struct ws_connect_init : public http_client {
       void parse_status( int, const char *, size_t) override;
       ws_connect *cp_;
-      net_parser *tp_;
+      bool        hs_;
     };
     ws_connect_init init_;
   };

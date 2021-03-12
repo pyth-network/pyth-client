@@ -181,14 +181,15 @@ void jtree::parse_keyword( const char *txt, const char *end)
   parse_string( txt, end );
 }
 
-uint32_t jtree::find_val( uint32_t obj, const char *key ) const
+uint32_t jtree::find_val( uint32_t obj, str key ) const
 {
-  const char *txt;
-  size_t txt_len = 0;
   for(uint32_t it=get_first(obj); it; it = get_next(it) ) {
-    get_text( get_key( it ), txt, txt_len );
-    if ( 0 == __builtin_strncmp( key, txt, txt_len ) ) {
-      return get_val( it );
+    if ( e_keyval == get_type( it ) ) {
+      if ( key == get_str( get_key( it ) ) ) {
+        return get_val( it );
+      }
+    } else {
+      break;
     }
   }
   return 0;

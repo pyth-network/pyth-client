@@ -44,7 +44,7 @@ namespace pc
     str      get_str( uint32_t ) const;
 
     // find value in object associated with key
-    uint32_t find_val( uint32_t obj, const char *key ) const;
+    uint32_t find_val( uint32_t obj, str key ) const;
 
   public:
 

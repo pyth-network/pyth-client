@@ -113,9 +113,11 @@ bool symbol::operator==( const symbol& obj ) const
   return i_[0] == obj.i_[0] && i_[1] == obj.i_[1];
 }
 
-uint64_t symbol::hash() const
+str symbol::as_str() const
 {
-  return i_[0];
+  str res( c_, len );
+  for( ;res.len_ != 0 && res.str_[res.len_-1] == 0x20; --res.len_ );
+  return res;
 }
 
 const char *symbol::data() const
@@ -250,23 +252,4 @@ bool signature::verify(
   EVP_MD_CTX_free( mctx );
   EVP_PKEY_free( pkey );
   return rc != 0;
-}
-
-static const char *commitment_str[] = {
-  "processed",
-  "confirmed",
-  "finalized"
-};
-
-namespace pc
-{
-  const char *commitment_to_str( commitment val )
-  {
-    unsigned iv = (unsigned)val;
-    if ( iv >= (unsigned)commitment::e_last_commitment ) {
-      iv = 0;
-    }
-    return commitment_str[iv];
-  }
-
 }

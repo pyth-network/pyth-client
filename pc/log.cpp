@@ -68,7 +68,7 @@ log_line& log_line::add( str key, str val )
   return *this;
 }
 
-log_line& log_line::add( str key, int val )
+log_line& log_line::add( str key, int32_t val )
 {
   add_key( key );
   std::cerr << val;
@@ -83,6 +83,13 @@ log_line& log_line::add( str key, int64_t val )
 }
 
 log_line& log_line::add( str key, uint64_t val )
+{
+  add_key( key );
+  std::cerr << val;
+  return *this;
+}
+
+log_line& log_line::add( str key, uint32_t val )
 {
   add_key( key );
   std::cerr << val;

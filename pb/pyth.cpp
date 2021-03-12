@@ -1,4 +1,4 @@
-#include <pc/pyth_client.hpp>
+#include <pc/manager.hpp>
 #include <pc/log.hpp>
 #include <pc/misc.hpp>
 #include <unistd.h>
@@ -29,61 +29,66 @@ int usage()
 {
   std::cerr << "usage: pyth " << std::endl;
   std::cerr << "  init_key       [options]" << std::endl;
+  std::cerr << "  init_program   [options]" << std::endl;
   std::cerr << "  init_mapping   <amount> [options]" << std::endl;
   std::cerr << "  add_mapping    <amount> [options]" << std::endl;
-  std::cerr << "  add_symbol     <symbol> <amount> "
+  std::cerr << "  add_symbol     <symbol> <price_type> <amount> "
             << "[-e <price_exponent (default " << get_exponent()
             << ")>] [options]" << std::endl;
-  std::cerr << "  add_publisher  <pub_key> <symbol> [options]" << std::endl;
+  std::cerr << "  add_publisher  <pub_key> <symbol> <price_type> [options]"
+            << std::endl;
+  std::cerr << "  pub_key        <key_pair_file>" << std::endl;
   std::cerr << std::endl;
+
   std::cerr << "options include:" << std::endl;
   std::cerr << "  -r <rpc_host (default " << get_rpc_host() << ")>"
              << std::endl;
   std::cerr << "  -k <key_store_directory (default "
-            << get_key_store() << ">]" << std::endl;
+            << get_key_store() << ">" << std::endl;
+  std::cerr << "  -c <commitment_level (default confirmed)>" << std::endl;
   return 1;
 }
 
 int submit_request( const std::string& rpc_host,
                     const std::string& key_dir,
-                    pyth_request *req )
+                    request *req )
 {
   // initialize connection to block-chain
-  pyth_client clnt;
-  clnt.set_rpc_host( rpc_host );
-  clnt.set_dir( key_dir );
-  if ( !clnt.init() ) {
-    std::cerr << "pyth: " << clnt.get_err_msg() << std::endl;
+  manager mgr;
+  mgr.set_rpc_host( rpc_host );
+  mgr.set_dir( key_dir );
+  if ( !mgr.init() ) {
+    std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
     return 1;
   }
   // submit request and poll for completion or error
-  clnt.submit( req );
+  mgr.submit( req );
   while( !req->get_is_done() &&
          !req->get_is_err() &&
-         !clnt.get_is_err() ) {
-    clnt.poll();
+         !mgr.get_is_err() ) {
+    mgr.poll();
   }
-  clnt.teardown();
   if ( req->get_is_err() ) {
     std::cerr << "pyth: " << req->get_err_msg() << std::endl;
     return 1;
   }
-  if ( clnt.get_is_err() ) {
-    std::cerr << "pyth: " << clnt.get_err_msg() << std::endl;
+  if ( mgr.get_is_err() ) {
+    std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
     return 1;
   }
   return 0;
 }
 
-int init_key( int argc, char **argv )
+int on_init_key( int argc, char **argv )
 {
   int opt = 0;
   std::string rpc_host = get_rpc_host();
   std::string key_dir  = get_key_store();
-  while( (opt = ::getopt(argc,argv, "r:k:h" )) != -1 ) {
+  while( (opt = ::getopt(argc,argv, "r:k:c:h" )) != -1 ) {
     switch(opt) {
       case 'r': rpc_host = optarg; break;
       case 'k': key_dir = optarg; break;
+      case 'c': break;
       default: return usage();
     }
   }
@@ -108,7 +113,41 @@ int init_key( int argc, char **argv )
   return 0;
 }
 
-int init_mapping( int argc, char **argv )
+int on_init_program( int argc, char **argv )
+{
+  int opt = 0;
+  std::string rpc_host = get_rpc_host();
+  std::string key_dir  = get_key_store();
+  while( (opt = ::getopt(argc,argv, "r:k:c:h" )) != -1 ) {
+    switch(opt) {
+      case 'r': rpc_host = optarg; break;
+      case 'k': key_dir = optarg; break;
+      case 'c': break;
+      default: return usage();
+    }
+  }
+  key_store kst;
+  kst.set_dir( key_dir );
+  if ( !kst.init() ) {
+    std::cerr << "pyth: " << kst.get_err_msg() << std::endl;
+    return 1;
+  }
+  if ( kst.get_program_key_pair() ) {
+    std::cerr << "pyth: program key pair already exists ["
+      << kst.get_program_key_pair_file() << "]" << std::endl;
+    return 1;
+  }
+  if ( !kst.create_program_key_pair() ) {
+    std::cerr << "pyth: failed to create program key pair ["
+      << kst.get_program_key_pair_file() << "]" << std::endl;
+    std::cerr << "pyth: " << kst.get_err_msg() << std::endl;
+    return 1;
+  }
+
+  return 0;
+}
+
+int on_init_mapping( int argc, char **argv )
 {
   // get input parameters
   if ( argc < 2 ) {
@@ -121,37 +160,50 @@ int init_mapping( int argc, char **argv )
   --argc;
   ++argv;
   int opt = 0;
+  commitment cmt = commitment::e_confirmed;
   std::string rpc_host = get_rpc_host();
   std::string key_dir  = get_key_store();
-  while( (opt = ::getopt(argc,argv, "r:k:h" )) != -1 ) {
+  while( (opt = ::getopt(argc,argv, "r:k:c:h" )) != -1 ) {
     switch(opt) {
       case 'r': rpc_host = optarg; break;
       case 'k': key_dir = optarg; break;
+      case 'c': cmt = str_to_commitment(optarg); break;
       default: return usage();
     }
   }
+  if ( cmt == commitment::e_unknown ) {
+    std::cerr << "pyth: unknown commitment level" << std::endl;
+    return usage();
+  }
 
   // submit request
-  pyth_init_mapping req[1];
+  init_mapping req[1];
   req->set_lamports( lamports );
+  req->set_commitment( cmt );
   return submit_request( rpc_host, key_dir, req );
 }
 
-int add_symbol( int argc, char **argv )
+int on_add_symbol( int argc, char **argv )
 {
   // get input parameters
-  if ( argc < 3 ) {
+  if ( argc < 4 ) {
     return usage();
   }
-  if ( __builtin_strlen(argv[1]) > symbol::len ) {
+  str sym_s( argv[1] );
+  if ( sym_s.len_ > symbol::len ) {
     std::cerr << "pyth: symbol length too long" << std::endl;
     return usage();
   }
-  symbol sym( argv[1] );
-  if ( !*sym.data() ) {
+  symbol sym( sym_s );
+  if ( sym.data()[0] == 0x20 ) {
     return usage();
   }
-  int64_t lamports = str_to_dec( argv[2], -9 );
+  price_type ptype = str_to_price_type( argv[2] );
+  if ( ptype == price_type::e_unknown ) {
+    std::cerr << "pyth: unknown price_type=" << argv[3] << std::endl;
+    return usage();
+  }
+  int64_t lamports = str_to_dec( argv[3], -9 );
   if ( lamports <= 0 ) {
     return usage();
   }
@@ -160,22 +212,33 @@ int add_symbol( int argc, char **argv )
   int opt = 0, exponent = get_exponent();
   std::string rpc_host = get_rpc_host();
   std::string key_dir  = get_key_store();
-  while( (opt = ::getopt(argc,argv, "e:r:k:h" )) != -1 ) {
+  commitment cmt = commitment::e_confirmed;
+  while( (opt = ::getopt(argc,argv, "e:r:k:c:h" )) != -1 ) {
     switch(opt) {
       case 'r': rpc_host = optarg; break;
       case 'k': key_dir = optarg; break;
+      case 'c': cmt = str_to_commitment(optarg); break;
       case 'e': exponent = ::atoi( optarg ); break;
       default: return usage();
     }
   }
+  if ( cmt == commitment::e_unknown ) {
+    std::cerr << "pyth: unknown commitment level" << std::endl;
+    return usage();
+  }
+
   // are you sure prompt
+  str pstr = price_type_to_str( ptype );
   std::cout << "adding new symbol account:" << std::endl;
-  std::cout << "  symbol  : ";
+  std::cout << "  symbol     : ";
   std::cout.write( sym.data(), symbol::len );
+  std::cout << std::endl;
+  std::cout << "  price_type : ";
+  std::cout.write( pstr.str_, pstr.len_ );
   std::cout << std::endl
-            << "  amount  : " << lamports/1e9 << std::endl
-            << "  exponent: " << exponent
-            << std::endl;
+            << "  version    : " << PC_VERSION << std::endl
+            << "  exponent   : " << exponent << std::endl
+            << "  amount     : " << lamports/1e9 << std::endl;
   std::cout << "are you sure? [y/n] ";
   char ch;
   std::cin >> ch;
@@ -184,47 +247,66 @@ int add_symbol( int argc, char **argv )
   }
 
   // submit request
-  pyth_add_symbol req[1];
+  add_symbol req[1];
   req->set_symbol( sym );
   req->set_exponent( exponent );
+  req->set_price_type( ptype );
   req->set_lamports( lamports );
+  req->set_commitment( cmt );
   return submit_request( rpc_host, key_dir, req );
 }
 
-int add_publisher( int argc, char **argv )
+int on_add_publisher( int argc, char **argv )
 {
   // get input parameters
-  if ( argc < 3 ) {
+  if ( argc < 4 ) {
     return usage();
   }
-  if ( __builtin_strlen(argv[2]) > symbol::len ) {
+  str sym_s( argv[2] );
+  if ( sym_s.len_ > symbol::len ) {
     std::cerr << "pyth: symbol length too long" << std::endl;
     return usage();
   }
   pub_key pub;
   pub.init_from_text( argv[1] );
-  symbol  sym( argv[2] );
-
-  argc -= 2;
-  argv += 2;
+  symbol  sym( sym_s );
+  price_type ptype = str_to_price_type( argv[3] );
+  if ( ptype == price_type::e_unknown ) {
+    std::cerr << "pyth: unknown price_type=" << argv[3] << std::endl;
+    return usage();
+  }
+  argc -= 3;
+  argv += 3;
   int opt = 0;
   std::string rpc_host = get_rpc_host();
   std::string key_dir  = get_key_store();
-  while( (opt = ::getopt(argc,argv, "e:r:k:h" )) != -1 ) {
+  commitment cmt = commitment::e_confirmed;
+  while( (opt = ::getopt(argc,argv, "e:r:k:c:h" )) != -1 ) {
     switch(opt) {
       case 'r': rpc_host = optarg; break;
       case 'k': key_dir = optarg; break;
+      case 'c': cmt = str_to_commitment(optarg); break;
       default: return usage();
     }
   }
+  if ( cmt == commitment::e_unknown ) {
+    std::cerr << "pyth: unknown commitment level" << std::endl;
+    return usage();
+  }
+
   // are you sure prompt
   std::string pnm;
   pub.enc_base58( pnm );
+  str pstr = price_type_to_str( ptype );
   std::cout << "adding new symbol publisher:" << std::endl;
-  std::cout << "  symbol   : ";
+  std::cout << "  symbol    : ";
   std::cout.write( sym.data(), symbol::len );
   std::cout << std::endl;
-  std::cout << "  publisher: " << pnm << std::endl;
+  std::cout << "  price_type: ";
+  std::cout.write( pstr.str_, pstr.len_ );
+  std::cout << std::endl;
+  std::cout << "  version   : " << PC_VERSION << std::endl;
+  std::cout << "  publisher : " << pnm << std::endl;
   std::cout << "are you sure? [y/n] ";
   char ch;
   std::cin >> ch;
@@ -233,10 +315,30 @@ int add_publisher( int argc, char **argv )
   }
 
   // submit request
-  pyth_add_publisher req[1];
+  add_publisher req[1];
   req->set_symbol( sym );
   req->set_publisher( pub );
+  req->set_price_type( ptype );
+  req->set_commitment( cmt );
   return submit_request( rpc_host, key_dir, req );
+}
+
+int on_show_pub_key( int argc, char **argv )
+{
+  if ( argc < 2 ) {
+    return usage();
+  }
+  key_pair kp;
+  if ( !kp.init_from_file( argv[1] ) ) {
+    std::cerr << "pyth: failed to init key_pair from " << argv[1]
+              << std::endl;
+    return 1;
+  }
+  pub_key pk( kp );
+  std::string pnm;
+  pk.enc_base58( pnm );
+  std::cout << pnm << std::endl;
+  return 0;
 }
 
 int main(int argc, char **argv)
@@ -252,17 +354,22 @@ int main(int argc, char **argv)
   log::set_level( PC_LOG_INF_LVL );
 
   // dispatch by command
-  const char *cmd = argv[0];
+  str cmd( argv[0] );
   int rc = 0;
-  if ( 0 == __builtin_strcmp( cmd, "init_key" ) ) {
-    rc = init_key( argc, argv );
-  } else if ( 0 == __builtin_strcmp( cmd, "init_mapping" ) ) {
-    rc = init_mapping( argc, argv );
-  } else if ( 0 == __builtin_strcmp( cmd, "add_symbol" ) ) {
-    rc = add_symbol( argc, argv );
-  } else if ( 0 == __builtin_strcmp( cmd, "add_publisher" ) ) {
-    rc = add_publisher( argc, argv );
+  if ( cmd == "init_key" ) {
+    rc = on_init_key( argc, argv );
+  } else if ( cmd == "init_program" ) {
+    rc = on_init_program( argc, argv );
+  } else if ( cmd == "init_mapping" ) {
+    rc = on_init_mapping( argc, argv );
+  } else if ( cmd == "add_symbol" ) {
+    rc = on_add_symbol( argc, argv );
+  } else if ( cmd == "add_publisher" ) {
+    rc = on_add_publisher( argc, argv );
+  } else if ( cmd == "pub_key" ) {
+    rc = on_show_pub_key( argc, argv );
   } else {
+    std::cerr << "pyth: unknown command" << std::endl;
     rc = usage();
   }
   return rc;

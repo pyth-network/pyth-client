@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <netdb.h>
+#include <poll.h>
 #include <iostream>
 
 #define PC_EPOLL_FLAGS (EPOLLIN|EPOLLET|EPOLLRDHUP|EPOLLHUP|EPOLLERR)
@@ -1002,8 +1003,9 @@ bool ws_connect::init()
   if ( !tcp_connect::init() ) {
     return false;
   }
-  init_.tp_ = get_net_parser();
+  net_parser *np = get_net_parser();
   init_.cp_ = this;
+  init_.hs_ = false;
   set_net_parser( &init_ );
 
   // request upgrade to web-socket
@@ -1014,6 +1016,22 @@ bool ws_connect::init()
   msg.add_hdr( "Sec-WebSocket-Version", "13" );
   msg.commit();
   add_send( msg );
+
+  // wait for handshake response
+  while( !init_.hs_ && !get_is_err() ) {
+    poll();
+    // use poll to wait for handshake result
+    struct pollfd pfd[1];
+    pfd->fd = get_fd();
+    pfd->events = POLLIN | POLLERR | POLLHUP;
+    if ( get_is_send() ) pfd->events |= POLLOUT;
+    pfd->revents = 0;
+    ::poll( pfd, 1, 1 );
+  }
+
+  // switch parser back
+  set_net_parser( np );
+
   return true;
 }
 
@@ -1021,7 +1039,7 @@ void ws_connect::ws_connect_init::parse_status(
     int status, const char *txt, size_t len)
 {
   if ( status == 101 ) {
-    cp_->set_net_parser( tp_ );
+    hs_ = true;
   } else {
     std::string err = "failed to handshake websocket: ";
     err.append( txt, len );
@@ -1324,6 +1342,12 @@ void json_wtr::add_val( uint64_t ival )
 {
   add_first();
   add_uint( ival );
+}
+
+void json_wtr::add_val( int64_t ival )
+{
+  add_first();
+  add_int( ival );
 }
 
 void json_wtr::add_val( type_t t )

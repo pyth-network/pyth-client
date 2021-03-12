@@ -3,7 +3,8 @@
 #include <pc/net_socket.hpp>
 #include <pc/jtree.hpp>
 #include <pc/key_pair.hpp>
-#include <unordered_map>
+#include <program/src/oracle/oracle.h>
+#include <pc/hash_map.hpp>
 
 #define PC_RPC_ERROR_BLOCK_CLEANED_UP          -32001
 #define PC_RPC_ERROR_SEND_TX_PREFLIGHT_FAIL    -32002
@@ -17,6 +18,45 @@
 
 namespace pc
 {
+
+  // type of "price" calculation represented by account
+  enum class price_type
+  {
+    e_unknown = PC_PTYPE_UNKNOWN,
+    e_price   = PC_PTYPE_PRICE,
+    e_twap    = PC_PTYPE_TWAP,
+
+    e_last_price_type
+  };
+
+  price_type str_to_price_type( str );
+  str price_type_to_str( price_type );
+
+  // current symbol trading status
+  enum class symbol_status
+  {
+    e_unknown = PC_STATUS_UNKNOWN,
+    e_trading = PC_STATUS_TRADING,
+    e_halted  = PC_STATUS_HALTED,
+
+    e_last_symbol_status
+  };
+
+  symbol_status str_to_symbol_status( str );
+  str symbol_status_to_str( symbol_status );
+
+  // commitment status of account on blockchain
+  enum commitment
+  {
+    e_unknown = 0,
+    e_processed,
+    e_confirmed,
+    e_finalized,
+    e_last_commitment
+  };
+
+  str commitment_to_str( commitment );
+  commitment str_to_commitment( str );
 
   class rpc_request;
 
@@ -47,6 +87,13 @@ namespace pc
     void add_notify( rpc_request * );
     void remove_notify( rpc_request * );
 
+    // decode into buffer and return pointer
+    template<class T>
+    bool get_data( const char *dptr, size_t dlen, T *&ptr );
+
+    // reset state
+    void reset();
+
   private:
 
     struct rpc_http : public http_client {
@@ -59,9 +106,21 @@ namespace pc
       rpc_client *cp_;
     };
 
-    typedef std::vector<rpc_request*>    request_t;
-    typedef std::vector<uint64_t>        id_vec_t;
-    typedef std::unordered_map<uint64_t,rpc_request*> sub_map_t;
+    struct trait {
+      static const size_t hsize_ = 8363UL;
+      typedef uint32_t     idx_t;
+      typedef uint64_t     key_t;
+      typedef uint64_t     keyref_t;
+      typedef rpc_request *val_t;
+      struct hash_t {
+        idx_t operator() ( keyref_t id ) { return (idx_t)id; }
+      };
+    };
+
+    typedef std::vector<rpc_request*> request_t;
+    typedef std::vector<uint64_t>     id_vec_t;
+    typedef std::vector<char>         acc_buf_t;
+    typedef hash_map<trait>           sub_map_t;
 
     net_connect *hptr_;
     net_connect *wptr_;
@@ -71,6 +130,7 @@ namespace pc
     request_t    rv_;    // waiting requests by id
     id_vec_t     reuse_; // reuse id list
     sub_map_t    smap_;  // subscription map
+    acc_buf_t    abuf_;  // account decode buffer
     uint64_t     id_;    // next request id
   };
 
@@ -136,9 +196,6 @@ namespace pc
     // notification subscription update
     virtual bool notify( const jtree& );
 
-    template<class T>
-    static bool get_data( const char *, size_t len, T * );
-
   protected:
 
     template<class T> void on_response( T * );
@@ -168,10 +225,12 @@ namespace pc
   // wrappers for various solana rpc requests
 
   template<class T>
-  bool rpc_request::get_data( const char *dptr, size_t dlen, T *ptr )
+  bool rpc_client::get_data( const char *dptr, size_t dlen, T *&ptr )
   {
-    if ( dlen == (size_t)enc_base64_len( sizeof( T ) ) ) {
-      dec_base64( (const uint8_t*)dptr, dlen, (uint8_t*)ptr );
+    if ( dlen >= (size_t)enc_base64_len( sizeof( T ) ) ) {
+      abuf_.resize( dlen );
+      dec_base64( (const uint8_t*)dptr, dlen, (uint8_t*)&abuf_[0] );
+      ptr = (T*)&abuf_[0];
       return true;
     } else {
       return false;
@@ -194,7 +253,7 @@ namespace pc
       uint64_t get_rent_epoch() const;
       bool     get_is_executable() const;
       void     get_owner( const char *&, size_t& ) const;
-      template<class T> bool get_data( T * ) const;
+      template<class T> bool get_data( T *& ) const;
 
       get_account_info();
       void request( json_wtr& ) override;
@@ -213,9 +272,9 @@ namespace pc
       commitment  cmt_;
     };
 
-    template<class T> bool get_account_info::get_data( T *res ) const
+    template<class T> bool get_account_info::get_data( T *&res ) const
     {
-      return rpc_request::get_data( dptr_, dlen_, res );
+      return get_rpc_client()->get_data( dptr_, dlen_, res );
     }
 
     // recent block hash and fee schedule
@@ -243,6 +302,18 @@ namespace pc
     public:
       void request( json_wtr& ) override;
       void response( const jtree& ) override;
+    };
+
+    // find out when slots update
+    class slot_subscribe : public rpc_subscription
+    {
+    public:
+      uint64_t get_slot() const;
+      void request( json_wtr& ) override;
+      void response( const jtree& ) override;
+      bool notify( const jtree& ) override;
+    private:
+      uint64_t slot_;
     };
 
     // signature (transaction) subscription for tx acknowledgement
@@ -274,7 +345,7 @@ namespace pc
       // results
       uint64_t get_slot() const;
       uint64_t get_lamports() const;
-      template<class T> bool get_data( T * ) const;
+      template<class T> bool get_data( T *& ) const;
 
       account_subscribe();
       void request( json_wtr& ) override;
@@ -290,9 +361,9 @@ namespace pc
       commitment  cmt_;
     };
 
-    template<class T> bool account_subscribe::get_data( T *res ) const
+    template<class T> bool account_subscribe::get_data( T *&res ) const
     {
-      return rpc_request::get_data( dptr_, dlen_, res );
+      return get_rpc_client()->get_data( dptr_, dlen_, res );
     }
 
     // transaction to transfer funds between accounts
@@ -380,12 +451,14 @@ namespace pc
     public:
       void set_symbol( const symbol& );
       void set_exponent( int32_t );
+      void set_price_type( price_type );
       void set_program( pub_key * );
       void set_block_hash( hash * );
       void set_publish( key_pair * );
       void set_account( key_pair * );
       void set_mapping( key_pair * );
-      symbol *get_symbol();
+      symbol    *get_symbol();
+      price_type get_price_type() const;
 
       // results
       signature *get_signature();
@@ -395,15 +468,16 @@ namespace pc
       void response( const jtree& ) override;
 
     private:
-      unsigned  num_;
-      int32_t   expo_;
-      symbol    sym_;
-      hash     *bhash_;
-      key_pair *pkey_;
-      pub_key  *gkey_;
-      key_pair *akey_;
-      key_pair *mkey_;
-      signature sig_;
+      unsigned   num_;
+      int32_t    expo_;
+      price_type ptype_;
+      symbol     sym_;
+      hash      *bhash_;
+      key_pair  *pkey_;
+      pub_key   *gkey_;
+      key_pair  *akey_;
+      key_pair  *mkey_;
+      signature  sig_;
     };
 
     // add new price publisher to symbol account
@@ -416,8 +490,10 @@ namespace pc
       void set_block_hash( hash * );
       void set_publish( key_pair * );
       void set_account( key_pair * );
+      void set_price_type( price_type );
       symbol  *get_symbol();
       pub_key *get_publisher();
+      price_type get_price_type() const;
 
       // results
       signature *get_signature();
@@ -426,13 +502,14 @@ namespace pc
       void response( const jtree& ) override;
 
     private:
-      symbol    sym_;
-      pub_key   nkey_;
-      hash     *bhash_;
-      key_pair *pkey_;
-      pub_key  *gkey_;
-      key_pair *akey_;
-      signature sig_;
+      symbol     sym_;
+      pub_key    nkey_;
+      hash      *bhash_;
+      key_pair  *pkey_;
+      pub_key   *gkey_;
+      key_pair  *akey_;
+      price_type ptype_;
+      signature  sig_;
     };
 
     // set new component price
@@ -440,11 +517,13 @@ namespace pc
     {
     public:
       void set_symbol( symbol * );
+      void set_symbol_status( symbol_status );
+      void set_price_type( price_type );
       void set_publish( key_pair * );
       void set_account( pub_key * );
       void set_program( pub_key * );
       void set_block_hash( hash * );
-      void set_price( int64_t px, uint64_t conf );
+      void set_price( int64_t px, uint64_t conf, symbol_status );
 
       // results
       signature *get_signature();
@@ -452,14 +531,16 @@ namespace pc
       void request( json_wtr& ) override;
       void response( const jtree& ) override;
     private:
-      symbol   *sym_;
-      hash     *bhash_;
-      key_pair *pkey_;
-      pub_key  *gkey_;
-      pub_key  *akey_;
-      int64_t   price_;
-      uint64_t  conf_;
-      signature sig_;
+      symbol       *sym_;
+      hash         *bhash_;
+      key_pair     *pkey_;
+      pub_key      *gkey_;
+      pub_key      *akey_;
+      int64_t       price_;
+      uint64_t      conf_;
+      price_type    pt_;
+      symbol_status st_;
+      signature     sig_;
     };
 
   }

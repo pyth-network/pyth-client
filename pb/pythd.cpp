@@ -1,4 +1,4 @@
-#include <pc/pyth_client.hpp>
+#include <pc/manager.hpp>
 #include <pc/log.hpp>
 #include <unistd.h>
 #include <signal.h>
@@ -19,13 +19,22 @@ std::string get_key_store()
   return dir + "/.pythd/";
 }
 
+int get_port()
+{
+  return 8910;
+}
+
 int usage()
 {
-  std::cerr << "usage: pythd:"
-            << " [-r <rpc_host>]"     // remote (or local) validator node
-            << " [-p <listen_port>]"  // tcp listening port
-            << " [-k <key_directory>]"// key store directory
-            << " [-d]"                // daemonize
+  std::cerr << "usage: pythd [options]" << std::endl << std::endl;
+  std::cerr << "options include:" << std::endl;
+  std::cerr << "  -r <rpc_host (default " << get_rpc_host() << ")>"
+            << std::endl;
+  std::cerr << "  -k <key_store_directory (default " << get_key_store()
+            << ")>]" << std::endl;
+  std::cerr << "  -p <listening_port (default " << get_port() << ">"
+            << std::endl;
+  std::cerr << "  -d"
             << std::endl;
   return 1;
 }
@@ -52,7 +61,7 @@ int main(int argc, char **argv)
   // command-line parsing
   std::string rpc_host = get_rpc_host();
   std::string key_dir  = get_key_store();
-  int pyth_port = 8910;
+  int pyth_port = get_port();
   int opt = 0;
   while( (opt = ::getopt(argc,argv, "r:p:k:dh" )) != -1 ) {
     switch(opt) {
@@ -71,24 +80,27 @@ int main(int argc, char **argv)
   signal( SIGUSR1, sig_toggle );
   log::set_level( PC_LOG_INF_LVL );
 
-  // construct and initialize pyth_client
-  pyth_client clnt;
-  clnt.set_rpc_host( rpc_host );
-  clnt.set_listen_port( pyth_port );
-  clnt.set_dir( key_dir );
-  if ( !clnt.init() ) {
-    std::cerr << "pythd: " << clnt.get_err_msg() << std::endl;
+  // construct and initialize pyth-client manager
+  manager mgr;
+  mgr.set_rpc_host( rpc_host );
+  mgr.set_listen_port( pyth_port );
+  mgr.set_dir( key_dir );
+  if ( !mgr.init() ) {
+    std::cerr << "pythd: " << mgr.get_err_msg() << std::endl;
     return 1;
   }
-  if ( !clnt.get_mapping_pub_key() ) {
+  if ( !mgr.get_mapping_pub_key() ) {
     std::cerr << "pythd: missing mapping account key ["
-      << clnt.get_mapping_pub_key_file() << "]" << std::endl;
+      << mgr.get_mapping_pub_key_file() << "]" << std::endl;
     return 1;
   }
-  while( do_run ) {
-    clnt.poll();
+  while( do_run && !mgr.get_is_err() ) {
+    mgr.poll();
   }
-  clnt.teardown();
-
-  return 0;
+  int retcode = 0;
+  if ( mgr.get_is_err() ) {
+    std::cerr << "pythd: " << mgr.get_err_msg() << std::endl;
+    retcode = 1;
+  }
+  return retcode;
 }

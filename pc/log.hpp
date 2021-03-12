@@ -24,9 +24,10 @@ namespace pc
     log_line& add( str key, str val );
     log_line& add( str key, const pub_key& val );
     log_line& add( str key, const symbol& val );
-    log_line& add( str key, int );
+    log_line& add( str key, int32_t );
     log_line& add( str key, int64_t );
     log_line& add( str key, uint64_t );
+    log_line& add( str key, uint32_t );
     log_line& add( str key, double );
     void end();
     friend class log;

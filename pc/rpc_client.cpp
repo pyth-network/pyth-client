@@ -1,7 +1,8 @@
 #include "rpc_client.hpp"
 #include "bincode.hpp"
-#include <program/src/oracle/oracle.h>
 #include <iostream>
+
+#include "log.hpp"
 
 using namespace pc;
 
@@ -18,6 +19,88 @@ static hash gen_sys_id()
   pc::hash id;
   id.zero();
   return id;
+}
+
+// price_types
+const char *price_type_str[] = {
+  "unknown",
+  "price",
+  "twap"
+};
+
+// symbol_status
+const char *symbol_status_str[] = {
+  "unknown",
+  "trading",
+  "halted"
+};
+
+// block(slot) commitment
+static const char *commitment_str[] = {
+  "unknown",
+  "processed",
+  "confirmed",
+  "finalized"
+};
+
+namespace pc
+{
+  price_type str_to_price_type( str s )
+  {
+    for( unsigned i=0; i != (unsigned)price_type::e_last_price_type; ++i ) {
+      if ( s == price_type_str[i] ) {
+        return (price_type)i;
+      }
+    }
+    return price_type::e_unknown;
+  }
+
+  str price_type_to_str( price_type ptype )
+  {
+    unsigned iptype = (unsigned)ptype;
+    return price_type_str[iptype<(unsigned)price_type::e_last_price_type?
+      iptype: 0 ];
+  }
+
+  symbol_status str_to_symbol_status( str s )
+  {
+    for( unsigned i=0;
+         i != (unsigned)symbol_status::e_last_symbol_status; ++i ) {
+      if ( s == symbol_status_str[i] ) {
+        return (symbol_status)i;
+      }
+    }
+    return symbol_status::e_unknown;
+  }
+
+  str symbol_status_to_str( symbol_status st )
+  {
+    unsigned ist = (unsigned)st;
+    return symbol_status_str[
+      ist<(unsigned)symbol_status::e_last_symbol_status? ist: 0 ];
+  }
+
+  str commitment_to_str( commitment val )
+  {
+    unsigned iv = (unsigned)val;
+    if ( iv >= (unsigned)commitment::e_last_commitment ) {
+      iv = 0;
+    }
+    return commitment_str[iv];
+  }
+
+  commitment str_to_commitment( str s )
+  {
+    for( unsigned i=0;
+         i != (unsigned)commitment::e_last_commitment; ++i ) {
+      if ( s == commitment_str[i] ) {
+        return (commitment)i;
+      }
+    }
+    return commitment::e_unknown;
+  }
+
+
 }
 
 // system program id
@@ -70,6 +153,14 @@ net_connect *rpc_client::get_ws_conn() const
   return wptr_;
 }
 
+void rpc_client::reset()
+{
+  rv_.clear();
+  smap_.clear();
+  reuse_.clear();
+  id_ = 0;
+}
+
 void rpc_client::send( rpc_request *rptr )
 {
   // get request id
@@ -93,7 +184,7 @@ void rpc_client::send( rpc_request *rptr )
   jw.add_key( "id", id );
   rptr->request( jw );
   jw.pop();
-  jw.print();
+//  jw.print();
   if ( rptr->get_is_http() ) {
     // submit http POST request
     http_request msg;
@@ -121,8 +212,8 @@ void rpc_client::rpc_ws::parse_msg( const char *txt, size_t len )
 
 void rpc_client::parse_response( const char *txt, size_t len )
 {
-  std::cout.write( txt, len );
-  std::cout << std::endl;
+//  std::cout.write( txt, len );
+//  std::cout << std::endl;
 
   // parse and redirect response to corresponding request
   jp_.parse( txt, len );
@@ -144,9 +235,9 @@ void rpc_client::parse_response( const char *txt, size_t len )
     uint32_t stok = jp_.find_val( ptok, "subscription" );
     if ( stok ) {
       uint64_t id = jp_.get_uint( stok );
-      sub_map_t::iterator i = smap_.find( id );
-      if ( i != smap_.end() && (*i).second->notify( jp_ ) ) {
-        smap_.erase( i );
+      sub_map_t::iter_t i = smap_.find( id );
+      if ( i  && smap_.obj(i)->notify( jp_ ) ) {
+        smap_.del( i );
       }
     }
   }
@@ -154,14 +245,14 @@ void rpc_client::parse_response( const char *txt, size_t len )
 
 void rpc_client::add_notify( rpc_request *rptr )
 {
-  smap_[rptr->get_id()] = rptr;
+  smap_.ref( smap_.add( rptr->get_id() ) ) = rptr;
 }
 
 void rpc_client::remove_notify( rpc_request *rptr )
 {
-  sub_map_t::iterator i = smap_.find( rptr->get_id() );
-  if ( i != smap_.end() ) {
-    smap_.erase( i );
+  sub_map_t::iter_t i = smap_.find( rptr->get_id() );
+  if ( i ) {
+    smap_.del( i );
   }
 }
 
@@ -355,7 +446,7 @@ rpc::get_account_info::get_account_info()
   optr_( nullptr ),
   olen_( 0 ),
   is_exec_( false ),
-  cmt_( commitment::e_finalized )
+  cmt_( commitment::e_confirmed )
 {
 }
 
@@ -552,7 +643,7 @@ rpc::account_subscribe::account_subscribe()
   lamports_( 0L ),
   dlen_( 0 ),
   dptr_( nullptr ),
-  cmt_( commitment::e_finalized )
+  cmt_( commitment::e_confirmed )
 {
 }
 
@@ -611,6 +702,36 @@ bool rpc::account_subscribe::notify( const jtree& jt )
 
   on_response( this );
   return false;  // keep notification
+}
+
+///////////////////////////////////////////////////////////////////////////
+// slot_subscribe
+
+uint64_t rpc::slot_subscribe::get_slot() const
+{
+  return slot_;
+}
+
+void rpc::slot_subscribe::request( json_wtr& msg )
+{
+  msg.add_key( "method", "slotSubscribe" );
+}
+
+void rpc::slot_subscribe::response( const jtree& jt )
+{
+  if ( on_error( jt, this ) ) return;
+  // add to notification list
+  add_notify( jt );
+}
+
+bool rpc::slot_subscribe::notify( const jtree& jt )
+{
+  if ( on_error( jt, this ) ) return true;
+  uint32_t ptok = jt.find_val( 1, "params" );
+  uint32_t rtok = jt.find_val( ptok, "result" );
+  slot_ = jt.get_uint( jt.find_val( rtok, "slot" ) );
+  on_response( this );
+  return false; // keep notification
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -771,9 +892,19 @@ symbol *rpc::add_symbol::get_symbol()
   return &sym_;
 }
 
+price_type rpc::add_symbol::get_price_type() const
+{
+  return ptype_;
+}
+
 void rpc::add_symbol::set_exponent( int32_t expo )
 {
   expo_ = expo;
+}
+
+void rpc::add_symbol::set_price_type( price_type ptype )
+{
+  ptype_ = ptype;
 }
 
 void rpc::add_symbol::set_program( pub_key *gkey )
@@ -807,7 +938,14 @@ signature *rpc::add_symbol::get_signature()
 }
 
 rpc::add_symbol::add_symbol()
-: num_( 0 ), expo_( 0 )
+: num_( 0 ),
+  expo_( 0 ),
+  ptype_( price_type::e_price ),
+  bhash_( nullptr ),
+  pkey_( nullptr ),
+  gkey_( nullptr ),
+  akey_( nullptr ),
+  mkey_( nullptr )
 {
 }
 
@@ -849,8 +987,10 @@ void rpc::add_symbol::request( json_wtr& msg )
 
   // instruction parameter section
   tx.add_len<sizeof(cmd_add_symbol)>();
+  tx.add( (uint32_t)PC_VERSION );
   tx.add( (int32_t)e_cmd_add_symbol );
   tx.add( (int32_t)expo_ );
+  tx.add( (uint32_t)ptype_ );
   tx.add( sym_ );
 
   // all accounts need to sign transaction
@@ -932,7 +1072,8 @@ void rpc::init_mapping::request( json_wtr& msg )
   tx.add( (uint8_t)1 ); // index of mapping account
 
   // instruction parameter section
-  tx.add_len<4>();     // size of data array
+  tx.add_len<sizeof(cmd_hdr)>();     // size of data array
+  tx.add( (uint32_t)PC_VERSION );
   tx.add( (uint32_t)e_cmd_init_mapping );
 
   // both publish and mapping sign message
@@ -984,6 +1125,11 @@ void rpc::add_publisher::set_publisher( const pub_key& nkey )
   nkey_ = nkey;
 }
 
+void rpc::add_publisher::set_price_type( price_type ptype )
+{
+  ptype_ = ptype;
+}
+
 symbol *rpc::add_publisher::get_symbol()
 {
   return &sym_;
@@ -992,6 +1138,11 @@ symbol *rpc::add_publisher::get_symbol()
 pub_key *rpc::add_publisher::get_publisher()
 {
   return &nkey_;
+}
+
+price_type rpc::add_publisher::get_price_type() const
+{
+  return ptype_;
 }
 
 signature *rpc::add_publisher::get_signature()
@@ -1034,8 +1185,10 @@ void rpc::add_publisher::request( json_wtr& msg )
 
   // instruction parameter section
   tx.add_len<sizeof(cmd_add_publisher)>();
+  tx.add( (uint32_t)PC_VERSION );
   tx.add( (int32_t)e_cmd_add_publisher );
-  tx.add( (int32_t)0 );
+  tx.add( (uint32_t)ptype_ );
+  tx.add( (uint32_t)0 );
   tx.add( sym_ );
   tx.add( nkey_ );
 
@@ -1063,6 +1216,16 @@ void rpc::upd_price::set_symbol( symbol *sym )
   sym_ = sym;
 }
 
+void rpc::upd_price::set_symbol_status( symbol_status st )
+{
+  st_ = st;
+}
+
+void rpc::upd_price::set_price_type( price_type pt )
+{
+  pt_ = pt;
+}
+
 void rpc::upd_price::set_publish( key_pair *pk )
 {
   pkey_ = pk;
@@ -1088,10 +1251,11 @@ signature *rpc::upd_price::get_signature()
   return &sig_;
 }
 
-void rpc::upd_price::set_price( int64_t px, uint64_t conf )
+void rpc::upd_price::set_price( int64_t px, uint64_t conf, symbol_status st)
 {
   price_ = px;
-  conf_ = conf;
+  conf_  = conf;
+  st_    = st;
 }
 
 void rpc::upd_price::request( json_wtr& msg )
@@ -1108,12 +1272,14 @@ void rpc::upd_price::request( json_wtr& msg )
   size_t tx_idx = tx.get_pos();
   tx.add( (uint8_t)1 ); // pub is only signing account
   tx.add( (uint8_t)0 ); // read-only signed accounts
-  tx.add( (uint8_t)1 ); // program-id are read-only unsigned accounts
+  tx.add( (uint8_t)2 ); // sysvar and program-id are read-only
+                        // unsigned accounts
 
   // accounts
-  tx.add_len<3>();      // 3 accounts: publish, symbol, program
+  tx.add_len<4>();      // 3 accounts: publish, symbol, sysvar, program
   tx.add( *pkey_ );     // publish account
   tx.add( *akey_ );     // symbol account
+  tx.add( *(pub_key*)sysvar_clock );
   tx.add( *gkey_ );     // programid
 
   // recent block hash
@@ -1121,15 +1287,18 @@ void rpc::upd_price::request( json_wtr& msg )
 
   // instructions section
   tx.add_len<1>();      // one instruction
-  tx.add( (uint8_t)2);  // program_id index
-  tx.add_len<2>();      // 2 accounts: publish, symbol
+  tx.add( (uint8_t)3);  // program_id index
+  tx.add_len<3>();      // 3 accounts: publish, symbol
   tx.add( (uint8_t)0 ); // index of publish account
   tx.add( (uint8_t)1 ); // index of symbol account
+  tx.add( (uint8_t)2 ); // index of sysvar account
 
   // instruction parameter section
   tx.add_len<sizeof(cmd_upd_price)>();
+  tx.add( (uint32_t)PC_VERSION );
   tx.add( (int32_t)e_cmd_upd_price );
-  tx.add( (int32_t)0 );
+  tx.add( (int32_t)pt_ );
+  tx.add( (int32_t)st_ );
   tx.add( *sym_ );
   tx.add( price_ );
   tx.add( conf_ );

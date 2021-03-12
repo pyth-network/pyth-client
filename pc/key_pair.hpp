@@ -44,7 +44,7 @@ namespace pc
     symbol( str );
     symbol& operator=( const symbol& );
     bool operator==( const symbol& )const;
-    uint64_t hash() const;
+    str as_str() const;
     const char *data() const;
   private:
     union { uint64_t i_[2]; char c_[len];};
@@ -115,17 +115,6 @@ namespace pc
   private:
     uint8_t sig_[len];
   };
-
-  // commitment status
-  enum commitment
-  {
-    e_processed = 0,
-    e_confirmed,
-    e_finalized,
-    e_last_commitment
-  };
-
-  const char *commitment_to_str( commitment );
 
   inline const uint8_t *hash::data() const
   {
