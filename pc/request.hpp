@@ -9,35 +9,6 @@ namespace pc
   class manager;
   class request;
 
-  // timer callback
-  class timer
-  {
-  public:
-    virtual ~timer();
-
-    // fire timer with current time
-    virtual void on_timer( int64_t ts ) = 0;
-  };
-
-  // maintain set of timers
-  class timer_set
-  {
-  public:
-
-    // add timer callback and schedule to fire at ts
-    void add_timer( int64_t ts, timer *cb );
-
-    // fire any timers
-    void poll_timer( int64_t );
-
-  private:
-    struct sched { int64_t ts_; timer  *cb_; };
-    struct sched_cmp {
-      bool operator() ( const sched&, const sched& ) const; };
-    typedef std::vector<sched> sched_t;
-    sched_t svec_;
-  };
-
   // pyth request subscriber
   class request_sub
   {
@@ -261,8 +232,7 @@ namespace pc
   class price;
 
   // price submission schedule
-  class price_sched : public request,
-                      public timer
+  class price_sched : public request
   {
   public:
     price_sched( price * );
@@ -271,10 +241,13 @@ namespace pc
     price *get_price() const;
 
   public:
+    static const uint64_t fraction = 997UL;
+    static const uint64_t period   = 1097UL;
 
     bool get_is_ready() override;
-    void on_timer( int64_t ) override;
     void submit() override;
+    uint64_t get_hash() const;
+    void schedule();
 
   private:
     price   *ptr_;

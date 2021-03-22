@@ -72,12 +72,8 @@ int main(int argc, char **argv)
     }
   }
 
-  // set up signal handing
-  signal( SIGINT, sig_handle );
-  signal( SIGHUP, sig_handle );
-  signal( SIGTERM, sig_handle );
+  // set up logging and disable SIGPIPE
   signal( SIGPIPE, SIG_IGN );
-  signal( SIGUSR1, sig_toggle );
   log::set_level( PC_LOG_INF_LVL );
 
   // construct and initialize pyth-client manager
@@ -94,6 +90,11 @@ int main(int argc, char **argv)
       << mgr.get_mapping_pub_key_file() << "]" << std::endl;
     return 1;
   }
+  // set up signal handing
+  signal( SIGINT, sig_handle );
+  signal( SIGHUP, sig_handle );
+  signal( SIGTERM, sig_handle );
+  signal( SIGUSR1, sig_toggle );
   while( do_run && !mgr.get_is_err() ) {
     mgr.poll();
   }

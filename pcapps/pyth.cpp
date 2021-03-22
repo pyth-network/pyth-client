@@ -94,6 +94,10 @@ int on_init_key( int argc, char **argv )
   }
   key_store kst;
   kst.set_dir( key_dir );
+  if ( !kst.create() ) {
+    std::cerr << "pyth: " << kst.get_err_msg() << std::endl;
+    return 1;
+  }
   if ( !kst.init() ) {
     std::cerr << "pyth: " << kst.get_err_msg() << std::endl;
     return 1;

@@ -44,9 +44,9 @@ set( PC_DEP pc ssl crypto )
 # applications
 #
 
-add_executable( pythd pb/pythd.cpp )
+add_executable( pythd pcapps/pythd.cpp )
 target_link_libraries( pythd ${PC_DEP} )
-add_executable( pyth pb/pyth.cpp )
+add_executable( pyth pcapps/pyth.cpp )
 target_link_libraries( pyth ${PC_DEP} )
 
 #
@@ -54,16 +54,12 @@ target_link_libraries( pyth ${PC_DEP} )
 #
 
 enable_testing()
-add_executable( test_unit pt/test_unit.cpp )
+add_executable( test_unit pctest/test_unit.cpp )
 target_link_libraries( test_unit ${PC_DEP} )
-add_executable( test_net pt/test_net.cpp )
+add_executable( test_net pctest/test_net.cpp )
 target_link_libraries( test_net ${PC_DEP} )
-
-add_executable( test_publish pt/test_publish.cpp )
+add_executable( test_publish pctest/test_publish.cpp )
 target_link_libraries( test_publish ${PC_DEP} )
-
-add_executable( test_rpc pt/test_rpc.cpp )
-target_link_libraries( test_rpc ${PC_DEP} )
 
 add_test( test_unit test_unit )
 add_test( test_net test_net )

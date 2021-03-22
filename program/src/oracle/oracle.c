@@ -37,73 +37,6 @@ static bool valid_readable_account( SolParameters *prm,
          ka->data_len >= dlen;
 }
 
-/*
-// update aggregate price
-static void pc_price_node_upd_agg_price( pc_price_node_t *sptr )
-{
-  // create sorted permutation array
-  uint32_t numa = 0;
-  uint32_t aidx[PC_COMP_SIZE];
-  for(uint32_t i=0; i != sptr->num_; ++i ) {
-    pc_price_t *iptr = &sptr->comp_[i];
-    if ( iptr->price_ != PC_INVALID_PRICE ) {
-      aidx[numa] = i;
-      for(uint32_t j=numa++; j != 0; --j ) {
-        if ( sptr->comp_[aidx[j]].price_ <
-             sptr->comp_[aidx[j-1]].price_ ) {
-          uint32_t t = aidx[j];
-          aidx[j] = aidx[j-1];
-          aidx[j-1] = t;
-        }
-      }
-    }
-  }
-
-  // check for zero contributors
-  pc_price_t *aptr = &sptr->agg_;
-  if ( numa == 0 ) {
-    aptr->price_ = PC_INVALID_PRICE;
-    return;
-  }
-
-  // pick median value
-  uint32_t midx = aidx[numa/2];
-  int64_t apx = sptr->comp_[midx].price_;
-  if ( numa%2==0 ) {
-    apx += sptr->comp_[midx-1].price_;
-    apx /= 2;
-  }
-  aptr->price_ = apx;
-}
-
-// remove publisher from price node
-static uint64_t pc_price_node_del_publisher( pc_price_node_t *nptr,
-                                             pc_pub_key_t *pub )
-{
-  for(uint32_t i=0; i != PC_COMP_SIZE; ++i ) {
-    pc_price_t *iptr = &nptr->comp_[i];
-    if ( pc_pub_key_equal( pub, &iptr->pub_ ) ) {
-      for( unsigned j=i+1; j != nptr->num_; ++j ) {
-        pc_price_t *jptr = &nptr->comp_[j];
-        pc_pub_key_assign( &iptr->pub_, &jptr->pub_ );
-        iptr->price_ = jptr->price_;
-        iptr->conf_  = jptr->conf_;
-        iptr = jptr;
-      }
-      --nptr->num_;
-      iptr = &nptr->comp_[nptr->num_];
-      pc_pub_key_set_zero( &iptr->pub_ );
-      iptr->price_ = 0L;
-      iptr->conf_  = 0UL;
-      // update aggregate price
-//      pc_price_node_upd_agg_price( nptr );
-      return SUCCESS;
-    }
-  }
-  return PC_RETURN_PUBKEY_NOT_EXISTS;
-}
-*/
-
 static uint64_t init_mapping( SolParameters *prm, SolAccountInfo *ka )
 {
   // Verify that the new account is signed and writable, with correct
@@ -239,6 +172,7 @@ static uint64_t add_publisher( SolParameters *prm, SolAccountInfo *ka )
   // Validate command parameters
   cmd_add_publisher_t *cptr = (cmd_add_publisher_t*)prm->data;
   if ( prm->data_len != sizeof( cmd_add_publisher_t ) ||
+       cptr->ptype_ == PC_PTYPE_UNKNOWN ||
        pc_symbol_is_zero( &cptr->sym_ ) ||
        pc_pub_key_is_zero( &cptr->pub_ ) ) {
     return ERROR_INVALID_ARGUMENT;
@@ -279,6 +213,54 @@ static uint64_t add_publisher( SolParameters *prm, SolAccountInfo *ka )
   return SUCCESS;
 }
 
+// remove publisher from price node
+static uint64_t del_publisher( SolParameters *prm, SolAccountInfo *ka )
+{
+  // Validate command parameters
+  cmd_del_publisher_t *cptr = (cmd_del_publisher_t*)prm->data;
+  if ( prm->data_len != sizeof( cmd_del_publisher_t ) ||
+       cptr->ptype_ == PC_PTYPE_UNKNOWN ||
+       pc_symbol_is_zero( &cptr->sym_ ) ||
+       pc_pub_key_is_zero( &cptr->pub_ ) ) {
+    return ERROR_INVALID_ARGUMENT;
+  }
+
+  // Account (1) is the price account
+  // Verify that this is signed, writable with correct ownership
+  // and size
+  if ( prm->ka_num < 2 ||
+       !valid_funding_account( &ka[0] ) ||
+       !valid_signable_account( prm, &ka[1], sizeof( pc_price_t ) ) ) {
+    return ERROR_INVALID_ARGUMENT;
+  }
+
+  // Verify that symbol account is initialized and corresponds to the
+  // same symbol and price-type in the instruction parameters
+  pc_price_t *sptr = (pc_price_t*)ka[1].data;
+  if ( sptr->magic_ != PC_MAGIC ||
+       sptr->ver_ != cptr->ver_ ||
+       sptr->ptype_ != cptr->ptype_ ||
+       !pc_symbol_equal( &sptr->sym_, &cptr->sym_ ) ) {
+    return ERROR_INVALID_ARGUMENT;
+  }
+
+  // try to remove publisher
+  for(uint32_t i=0; i != sptr->num_; ++i ) {
+    pc_price_comp_t *iptr = &sptr->comp_[i];
+    if ( pc_pub_key_equal( &iptr->pub_, &cptr->pub_ ) ) {
+      for( unsigned j=i+1; j != sptr->num_; ++j ) {
+        pc_price_comp_t *jptr = &sptr->comp_[j];
+        iptr[0] = jptr[0];
+        iptr = jptr;
+      }
+      --sptr->num_;
+      sol_memset( iptr, 0, sizeof( pc_price_comp_t ) );
+      return SUCCESS;
+    }
+  }
+  return ERROR_INVALID_ARGUMENT;
+}
+
 // update aggregate price
 static void upd_aggregate( pc_price_t *ptr,
                            pc_pub_key_t *kptr,
@@ -293,14 +275,41 @@ static void upd_aggregate( pc_price_t *ptr,
   ptr->valid_slot_ = ptr->curr_slot_; // valid slot-time of agg. price
   ptr->curr_slot_ = slot;             // new accumulating slot-time
   pc_pub_key_assign( &ptr->agg_pub_, kptr );
-  for( unsigned i=0; i != ptr->num_; ++i ) {
+  int32_t  numa = 0;
+  uint32_t aidx[PC_COMP_SIZE];
+  for( uint32_t i=0; i != ptr->num_; ++i ) {
     pc_price_comp_t *iptr = &ptr->comp_[i];
+    // copy contributing price to aggregate snapshot
     iptr->agg_ = iptr->latest_;
+    // add valid price to sorted permutation arry
+    if ( iptr->agg_.status_ == PC_STATUS_TRADING ) {
+      int64_t ipx = iptr->agg_.price_;
+      uint32_t j = numa++;
+      for( ; j > 0 && ptr->comp_[aidx[j-1]].agg_.price_ > ipx; --j ) {
+        aidx[j] = aidx[j-1];
+      }
+      aidx[j] = i;
+    }
   }
-  // TODO: compute aggregate price from component prices
-  ptr->agg_.price_  = ptr->comp_[0].agg_.price_;
-  ptr->agg_.conf_   = ptr->comp_[0].agg_.conf_;
-  ptr->agg_.status_ = ptr->comp_[0].agg_.status_;
+  // check for zero contributors
+  if ( numa == 0 ) {
+    ptr->agg_.status_ = PC_STATUS_UNKNOWN;
+    return;
+  }
+
+  // pick median value
+  uint32_t midx  = numa/2;
+  pc_price_info_t *mptr = &ptr->comp_[aidx[midx]].agg_;
+  int64_t  apx = mptr->price_;
+  uint64_t acf = mptr->conf_;
+  if ( midx && numa%2==0 ) {
+    mptr = &ptr->comp_[aidx[midx-1]].agg_;
+    apx = ( apx + mptr->price_ ) / 2;
+    acf = ( acf + mptr->conf_ ) / 2;
+  }
+  ptr->agg_.price_  = apx;
+  ptr->agg_.conf_   = acf;
+  ptr->agg_.status_ = PC_STATUS_TRADING;
 }
 
 static uint64_t upd_price( SolParameters *prm, SolAccountInfo *ka )
@@ -386,6 +395,10 @@ static uint64_t dispatch_1( SolParameters *prm, SolAccountInfo *ka )
     }
     case e_cmd_add_publisher:{
       res = add_publisher( prm, ka );
+      break;
+    }
+    case e_cmd_del_publisher:{
+      res = del_publisher( prm, ka );
       break;
     }
     default: break;

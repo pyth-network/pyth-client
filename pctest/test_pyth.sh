@@ -3,8 +3,10 @@
 PYTH=./pyth
 PYTHD=./pythd
 SOLANA=../../solana/target/release/solana
-SOL_OPT="-u d --commitment finalized"
-RPC="-r devnet.solana.com"
+#SOL_OPT="-u d --commitment finalized"
+#RPC="-r devnet.solana.com"
+SOL_OPT="-u localhost --commitment finalized"
+RPC="-r localhost"
 FINAL="-c finalized"
 
 check()
@@ -63,7 +65,7 @@ setup_pub()
   check "$SOLANA airdrop 5 -k $DIR/publish_key_pair.json $SOL_OPT"
 
   # get program public key
-  prog_id=$($PYTH pub_key $ADM/publish_key_pair.json)
+  prog_id=$($PYTH pub_key $ADM/program_key_pair.json)
   echo $prog_id > $DIR/program_key.json
   chmod 0400 $DIR/program_key.json
 
@@ -142,7 +144,7 @@ wait_log "$dirP/pythd.log"
 
 # run websocket integration tests
 echo "running websocket tests"
-../pt/test_pyth.py
+../pctest/test_pyth.py
 RC=$?
 
 # cleanup

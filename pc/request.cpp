@@ -6,35 +6,6 @@
 using namespace pc;
 
 ///////////////////////////////////////////////////////////////////////////
-// timer/timer_set
-
-timer::~timer()
-{
-}
-
-inline bool timer_set::sched_cmp::operator() (
-    const sched& lhs, const sched& rhs ) const
-{
-  return lhs.ts_ > rhs.ts_;
-}
-
-void timer_set::add_timer( int64_t ts, timer *cb )
-{
-  svec_.push_back( sched{ ts, cb } );
-  std::push_heap( svec_.begin(), svec_.end(), sched_cmp() );
-}
-
-void timer_set::poll_timer( int64_t ts )
-{
-  while ( !svec_.empty() && ts >= svec_[0].ts_ ) {
-    timer *cb = svec_[0].cb_;
-    std::pop_heap( svec_.begin(), svec_.end(), sched_cmp() );
-    svec_.pop_back();
-    cb->on_timer( ts );
-  }
-}
-
-///////////////////////////////////////////////////////////////////////////
 // request_sub
 
 request_sub::~request_sub()
@@ -908,6 +879,11 @@ price *price_sched::get_price() const
   return ptr_;
 }
 
+uint64_t price_sched::get_hash() const
+{
+  return shash_;
+}
+
 bool price_sched::get_is_ready()
 {
   manager *cptr = get_manager();
@@ -918,21 +894,13 @@ bool price_sched::get_is_ready()
 
 void price_sched::submit()
 {
-  if ( PC_UNLIKELY( shash_ == 0UL ) ) {
-    uint64_t *iptr = (uint64_t*)ptr_->get_symbol()->data();
-    shash_ = ( iptr[1] << 3 ) | (uint64_t)ptr_->get_price_type();
-    shash_ = shash_ % 997L;
-  }
-  manager *cptr = get_manager();
-  int64_t sts  = cptr->get_slot_time();
-  int64_t sint = cptr->get_slot_interval();
-  int64_t offset = ( sint * ( shash_ )) / 997L;
-  int64_t start = sts + sint + offset;
-  cptr->add_timer( start, this );
+  uint64_t *iptr = (uint64_t*)ptr_->get_symbol()->data();
+  shash_ = ((iptr[0]^iptr[1])<<3) |(uint64_t)ptr_->get_price_type();
+  shash_ = shash_ % fraction;
+  get_manager()->schedule( this );
 }
 
-void price_sched::on_timer( int64_t )
+void price_sched::schedule()
 {
   on_response_sub( this );
-  get_manager()->submit( this );
 }

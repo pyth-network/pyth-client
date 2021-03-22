@@ -398,3 +398,142 @@ Test( oracle, upd_price ) {
   cr_assert( sptr->valid_slot_ == 1 );
   cr_assert( sptr->curr_slot_ == 3 );
 }
+
+Test(oracle, upd_aggregate ) {
+  pc_pub_key_t pub[1];
+  pub->k8_[0] = 11;
+  pc_price_t px[1];
+  sol_memset( px, 0, sizeof( pc_price_t ) );
+  pc_price_info_t p1 = { .price_=100, .conf_=10,
+    .status_ = PC_STATUS_TRADING, .pub_slot_ = 42 };
+  pc_price_info_t p2 = { .price_=200, .conf_=20,
+    .status_ = PC_STATUS_TRADING, .pub_slot_ = 42 };
+  pc_price_info_t p3 = { .price_=300, .conf_=30,
+    .status_ = PC_STATUS_TRADING, .pub_slot_ = 42 };
+  pc_price_info_t p4 = { .price_=400, .conf_=40,
+    .status_ = PC_STATUS_TRADING, .pub_slot_ = 42 };
+
+
+  // single publisher
+  px->num_ = 1;
+  px->curr_slot_ = 1000;
+  px->comp_[0].latest_ = p1;
+  upd_aggregate( px, pub, 1001 );
+  cr_assert( px->agg_.price_ == 100 );
+  cr_assert( px->agg_.conf_ == 10 );
+
+  // two publishers
+  px->num_ = 0;
+  px->curr_slot_ = 1000;
+  px->comp_[px->num_++].latest_ = p2;
+  px->comp_[px->num_++].latest_ = p1;
+  upd_aggregate( px, pub, 1001 );
+  cr_assert( px->agg_.price_ == 150 );
+  cr_assert( px->agg_.conf_ == 15 );
+
+  // three publishers
+  px->num_ = 0;
+  px->curr_slot_ = 1000;
+  px->comp_[px->num_++].latest_ = p2;
+  px->comp_[px->num_++].latest_ = p1;
+  px->comp_[px->num_++].latest_ = p3;
+  upd_aggregate( px, pub, 1001 );
+  cr_assert( px->agg_.price_ == 200 );
+  cr_assert( px->agg_.conf_ == 20 );
+
+  // four publishers
+  px->num_ = 0;
+  px->curr_slot_ = 1000;
+  px->comp_[px->num_++].latest_ = p3;
+  px->comp_[px->num_++].latest_ = p1;
+  px->comp_[px->num_++].latest_ = p4;
+  px->comp_[px->num_++].latest_ = p2;
+  upd_aggregate( px, pub, 1001 );
+  cr_assert( px->agg_.price_ == 250 );
+  cr_assert( px->agg_.conf_ == 25 );
+}
+
+Test( oracle, del_publisher ) {
+  pc_price_info_t p1 = { .price_=100, .conf_=10,
+    .status_ = PC_STATUS_TRADING, .pub_slot_ = 42 };
+  pc_price_info_t p2 = { .price_=200, .conf_=20,
+    .status_ = PC_STATUS_TRADING, .pub_slot_ = 42 };
+  pc_price_info_t p3 = { .price_=300, .conf_=30,
+    .status_ = PC_STATUS_TRADING, .pub_slot_ = 42 };
+
+  // start with perfect inputs
+  pc_pub_key_t p_id = { .k8_ = { 1, 2, 3, 4 } };
+  pc_pub_key_t p_id2= { .k8_ = { 2, 3, 4, 5 } };
+  pc_pub_key_t p_id3= { .k8_ = { 3, 4, 5, 6 } };
+  cmd_add_publisher_t idata = {
+    .ver_   = PC_VERSION,
+    .cmd_   = e_cmd_del_publisher,
+    .ptype_ = PC_PTYPE_PRICE,
+    .sym_   = { .k8_ = { 1UL, 2UL } },
+    .pub_   = p_id2
+  };
+  SolPubkey pkey = {.x = { 1, }};
+  SolPubkey skey = {.x = { 3, }};
+  uint64_t pqty = 100, sqty = 200;
+  pc_price_t sptr[1];
+  sol_memset( sptr, 0, sizeof( pc_price_t ) );
+  sptr->magic_ = PC_MAGIC;
+  sptr->ver_ = PC_VERSION;
+  sptr->ptype_ = PC_PTYPE_PRICE;
+  pc_symbol_assign( &sptr->sym_, &idata.sym_ );
+  sptr->num_ = 1;
+  sptr->comp_[0].latest_ = p1;
+  pc_pub_key_assign( &sptr->comp_[0].pub_, (pc_pub_key_t*)&p_id2 );
+
+  SolAccountInfo acc[] = {{
+      .key         = &pkey,
+      .lamports    = &pqty,
+      .data_len    = 0,
+      .data        = NULL,
+      .owner       = NULL,
+      .rent_epoch  = 0,
+      .is_signer   = true,
+      .is_writable = true,
+      .executable  = false
+  },{
+      .key         = &skey,
+      .lamports    = &sqty,
+      .data_len    = sizeof( pc_price_t ),
+      .data        = (uint8_t*)sptr,
+      .owner       = (SolPubkey*)&p_id,
+      .rent_epoch  = 0,
+      .is_signer   = true,
+      .is_writable = true,
+      .executable  = false
+  } };
+  SolParameters prm = {
+    .ka         = acc,
+    .ka_num     = 2,
+    .data       = (const uint8_t*)&idata,
+    .data_len   = sizeof( idata ),
+    .program_id = (SolPubkey*)&p_id
+  };
+  cr_assert( SUCCESS == dispatch( &prm, acc ) );
+  cr_assert( sptr->num_ == 0 );
+  cr_assert( sptr->comp_[0].latest_.status_ == 0 );
+
+  sptr->num_ = 2;
+  sptr->comp_[0].latest_ = p1;
+  sptr->comp_[1].latest_ = p2;
+  pc_pub_key_assign( &sptr->comp_[0].pub_, (pc_pub_key_t*)&p_id2 );
+  pc_pub_key_assign( &sptr->comp_[1].pub_, (pc_pub_key_t*)&p_id3 );
+  cr_assert( SUCCESS == dispatch( &prm, acc ) );
+  cr_assert( sptr->num_ == 1 );
+  cr_assert( sptr->comp_[0].latest_.price_ == p2.price_ );
+  cr_assert( sptr->comp_[1].latest_.status_ == 0 );
+
+  sptr->num_ = 2;
+  sptr->comp_[0].latest_ = p1;
+  sptr->comp_[1].latest_ = p2;
+  pc_pub_key_assign( &sptr->comp_[0].pub_, (pc_pub_key_t*)&p_id3 );
+  pc_pub_key_assign( &sptr->comp_[1].pub_, (pc_pub_key_t*)&p_id2 );
+  cr_assert( SUCCESS == dispatch( &prm, acc ) );
+  cr_assert( sptr->num_ == 1 );
+  cr_assert( sptr->comp_[0].latest_.price_ == p1.price_ );
+  cr_assert( sptr->comp_[1].latest_.status_ == 0 );
+}

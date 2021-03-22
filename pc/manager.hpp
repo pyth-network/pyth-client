@@ -19,7 +19,6 @@ namespace pc
   // pyth-client connection management and event loop
   class manager : public key_store,
                   public net_accept,
-                  public timer_set,
                   public rpc_sub,
                   public rpc_sub_i<rpc::slot_subscribe>,
                   public rpc_sub_i<rpc::get_recent_block_hash>
@@ -46,6 +45,9 @@ namespace pc
 
     // recent block hash stuff
     hash *get_recent_block_hash();
+
+    // get most recently processed slot
+    uint64_t get_slot() const;
 
     // slot start time esitimate
     int64_t get_slot_time() const;
@@ -91,6 +93,7 @@ namespace pc
     // mapping subscription count tracking
     void add_map_sub();
     void del_map_sub();
+    void schedule( price_sched* );
 
     // rpc callbacks
     void on_response( rpc::slot_subscribe * );
@@ -116,7 +119,7 @@ namespace pc
       struct hash_t {
         idx_t operator() ( keyref_t s ) {
           uint64_t *i = (uint64_t*)s.sym_.data();
-          return ( i[1] << 3 ) | (uint64_t)s.ptype_;
+          return ( (i[0]^i[1]) << 3 ) | (uint64_t)s.ptype_;
         }
       };
     };
@@ -139,6 +142,7 @@ namespace pc
     typedef dbl_list<request>         req_list_t;
     typedef std::vector<get_mapping*> map_vec_t;
     typedef std::vector<price*>       spx_vec_t;
+    typedef std::vector<price_sched*> kpx_vec_t;
     typedef hash_map<trait_symbol>    sym_map_t;
     typedef hash_map<trait_account>   acc_map_t;
 
@@ -163,11 +167,15 @@ namespace pc
     int          status_;   // status bitmap
     int          num_sub_;  // number of in-flight mapping subscriptions
     uint32_t     version_;  // account version subscription
+    uint32_t     kidx_;     // schedule index
     int64_t      cts_;      // (re)connect timestamp
     int64_t      ctimeout_; // connection timeout
     int64_t      slot_ts_;  // slot start time estimate
     int64_t      slot_int_; // slot interval
+    int64_t      slot_min_; // slot minimum interval
+    uint64_t     slot_;     // current slot
     uint64_t     slot_cnt_; // slot count
+    kpx_vec_t    kvec_;     // symbol price scheduling
 
     // requests
     rpc::slot_subscribe        sreq_[1]; // slot subscription

@@ -15,11 +15,14 @@ manager::manager()
 : status_( 0 ),
   num_sub_( 0 ),
   version_( PC_VERSION ),
+  kidx_( 0 ),
   cts_( 0L ),
   ctimeout_( PC_NSECS_IN_SEC ),
   slot_ts_( 0L ),
   slot_int_( 0L ),
-  slot_cnt_( 0L )
+  slot_min_( 0L ),
+  slot_( 0UL ),
+  slot_cnt_( 0UL )
 {
   breq_->set_sub( this );
   sreq_->set_sub( this );
@@ -74,6 +77,11 @@ int manager::get_listen_port() const
 hash *manager::get_recent_block_hash()
 {
   return breq_->get_block_hash();
+}
+
+uint64_t manager::get_slot() const
+{
+  return slot_;
 }
 
 int64_t manager::get_slot_time() const
@@ -225,9 +233,19 @@ void manager::poll()
     return;
   }
 
-  // periodically submit recent block hash request
+  // schedule next price update
   int64_t ts = get_now();
-  poll_timer( ts );
+  while ( kidx_ < kvec_.size() ) {
+    price_sched *kptr = kvec_[kidx_];
+    int64_t pub_ts = slot_ts_ + ( slot_min_ * kptr->get_hash() ) /
+      price_sched::period;
+    if ( ts > pub_ts ) {
+      kptr->schedule();
+      ++kidx_;
+    } else {
+      break;
+    }
+  }
 
   // destroy any users scheduled for deletion
   teardown_users();
@@ -334,18 +352,43 @@ void manager::del_user( user *usr )
   dlist_.add( usr );
 }
 
+void manager::schedule( price_sched *kptr )
+{
+  kvec_.push_back( kptr );
+  for( unsigned i = kvec_.size()-1; i; --i ) {
+    if ( kvec_[i]->get_hash() < kvec_[i-1]->get_hash() ) {
+      std::swap( kvec_[i], kvec_[i-1] );
+    }
+  }
+}
+
 void manager::on_response( rpc::slot_subscribe *res )
 {
   if ( !slot_ts_ ) {
     slot_ts_ = res->get_recv_time();
-  } else {
-    slot_int_ = res->get_recv_time() - slot_ts_;
-    slot_ts_ = res->get_recv_time();
-    if ( slot_cnt_++ % PC_BLOCKHASH_TIMEOUT == 0 ) {
-      // submit block hash every N slots
-      clnt_.send( breq_ );
-    }
+    return;
   }
+  slot_ = res->get_slot();
+  slot_int_ = res->get_recv_time() - slot_ts_;
+  slot_ts_ = res->get_recv_time();
+  if ( slot_cnt_++ % PC_BLOCKHASH_TIMEOUT == 0 ) {
+    // submit block hash every N slots
+    clnt_.send( breq_ );
+  }
+  // reset scheduler
+  kidx_ = 0;
+
+  // derive minimum slot interval
+  if ( slot_min_ ) {
+    slot_min_ = std::min( slot_int_, slot_min_ );
+  } else {
+    slot_min_ = slot_int_;
+  }
+  PC_LOG_DBG( "receive slot" )
+   .add( "slot_num", res->get_slot() )
+   .add( "slot_int", 1e-6*slot_int_ )
+   .add( "slot_min", 1e-6*slot_min_ )
+   .end();
 }
 
 void manager::on_response( rpc::get_recent_block_hash *m )

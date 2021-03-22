@@ -55,6 +55,21 @@ std::string key_store::get_dir() const
   return dir_;
 }
 
+bool key_store::create()
+{
+  struct stat fst[1];
+  if ( 0 == ::stat( dir_.c_str(), fst ) ) {
+    if ( 0 != chmod( dir_.c_str(), 0700 ) ) {
+      return set_err_msg( "failed to chmod key_store directory", errno );
+    }
+  } else {
+    if ( 0 != mkdir( dir_.c_str(), 0700 ) ) {
+      return set_err_msg( "failed to create key_store directory", errno );
+    }
+  }
+  return true;
+}
+
 bool key_store::init()
 {
   has_pkey_ = has_mkey_ = has_mpub_ = has_gkey_ = has_gpub_ = false;

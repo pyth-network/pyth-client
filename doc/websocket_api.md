@@ -1,12 +1,10 @@
 # pyth-client websocket API
-The pythd daemon supports a websocket interface based on the jsoni-rpc 2.0 standard
+The pythd daemon supports a websocket interface based on the jsoni-rpc 2.0 standard.  Methods include:
 
-- get_symbol_list
-- update_price
-- subscribe_price
-- subscribe_price_sched
-
-A batch request containing both get_price and subscribe_price is guaranteed not to miss any intervening price updates.
+- [get_symbol_list](#get_symbol_list)
+- [update_price](#update_price)
+- [subscribe_price](#subscribe_price)
+- [subscribe_price_sched](#subscribe_price_sched)
 
 Batch requests are processed in the order the requests appear within the batch.
 
@@ -64,8 +62,7 @@ Request looks like:
 }
 ```
 
-The params section is an array of length 5 containing (in order) the symbol,
-price type, price,  confidence interval and status. The price and confidence interval is expressed as a fixed-point integer with an implied exponent defined in the symbol account. The price type is a string with one of the following values: "price" or "twap". The symbol status is a string with one of the following values: "trading" or "halted".
+The price and confidence interval (conf) attributes are expressed as integers with an implied decimal point given by the the price_exponent defined by symbol. The price type is a string with one of the following values: "price" or "twap". The symbol status is a string with one of the following values: "trading" or "halted".
 
 A successful response looks like:
 ```
@@ -76,7 +73,7 @@ A successful response looks like:
 }
 ```
 
-# subscribe_price
+## subscribe_price
 
 Subscribe to symbol price updates.
 
@@ -106,7 +103,8 @@ A successful response looks like:
 }
 ```
 
-Where the result is an integer corresponding to a subscription identifier. All subsequent notifications for this subscription correspond to this identifier.
+The subscription identifier in the result is used in all subsequent notifications for this subscription. An example notification (with the same subscription id) looks like:
+
 
 ```
 {
@@ -127,9 +125,11 @@ Where the result is an integer corresponding to a subscription identifier. All s
 
 Results include the most recent aggregate price, confidence interval and symbol status. pythd will submit a `notify_price` message immediately upon subscription with the latest price instead of waiting for an update.
 
+Results also include two slot numbers. `valid_slot` corresponds to the slot containing the prices that were used to compute the aggregate price. `pub_slot` corresponds to the slot in which the aggregation price was published.
+
 ## subscribe_price_sched
 
-Subscribe to price update schedule. pythd will notify the client whenever it should submit the next price update for a subscribed symbol.
+Subscribe to price update schedule. pythd will notify the client whenever it should submit the next price for a subscribed symbol.
 
 Request looks like:
 
@@ -168,5 +168,3 @@ Where the result is an integer corresponding to a subscription identifier. All s
   }
 }
 ```
-
-

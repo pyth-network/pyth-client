@@ -175,54 +175,12 @@ void test_request_sub()
   PC_TEST_CHECK( sub1.check( "r1", p1_3 ) );
 }
 
-class test_timer : public timer
-{
-public:
-  test_timer( const std::string& val, std::ostream&strm )
-   : val_( val ), strm_( strm ) {
-  }
-  void on_timer( int64_t ts ) {
-    strm_ << "fire: val=" << val_ << ",ts=" << ts << std::endl;
-  }
-  std::string   val_;
-  std::ostream& strm_;
-};
-
-void test_timer_set()
-{
-  std::ostringstream strm;
-  test_timer t1( "t1", strm ), t2("t2", strm ), t3("t3",strm);
-  timer_set tset;
-  tset.poll_timer( 50 );
-  tset.add_timer( 100, &t1 );
-  tset.add_timer( 80, &t2 );
-  tset.add_timer( 100, &t3 );
-  tset.add_timer( 90, &t3 );
-  tset.poll_timer( 50 );
-  tset.poll_timer( 80 );
-  tset.poll_timer( 85 );
-  tset.poll_timer( 90 );
-  tset.poll_timer( 95 );
-  tset.add_timer( 110, &t2 );
-  tset.poll_timer( 100 );
-  tset.poll_timer( 105 );
-  tset.poll_timer( 110 );
-  std::string exp=
-    "fire: val=t2,ts=80\n"
-    "fire: val=t3,ts=90\n"
-    "fire: val=t1,ts=100\n"
-    "fire: val=t3,ts=100\n"
-    "fire: val=t2,ts=110\n";
-  PC_TEST_CHECK( exp == strm.str() );
-}
-
 int main(int,char**)
 {
   PC_TEST_START
   test_key();
   test_log();
   test_request_sub();
-  test_timer_set();
   PC_TEST_END
   return 0;
 }

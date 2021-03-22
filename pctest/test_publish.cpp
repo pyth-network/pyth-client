@@ -60,7 +60,9 @@ void test_publish::on_response( pc::price *sym, uint64_t sub_id )
     .add( "price_type", pc::price_type_to_str( sym->get_price_type() ) )
     .add( "agg_price", price )
     .add( "agg_spread", spread )
-    .add( "subscription", sub_id )
+    .add( "valid_slot", sym->get_valid_slot() )
+    .add( "pub_slot", sym->get_pub_slot() )
+    .add( "sub_id", sub_id )
     .end();
 }
 
@@ -81,7 +83,8 @@ void test_publish::on_response( pc::price_sched *ptr, uint64_t sub_id )
       .add( "price_type", pc::price_type_to_str( sym->get_price_type() ) )
       .add( "price", price )
       .add( "spread", spread )
-      .add( "subscription", sub_id )
+      .add( "slot", sym->get_manager()->get_slot() )
+      .add( "sub_id", sub_id )
       .end();
     // increase price
     px_ += sprd_;
@@ -129,12 +132,6 @@ int main(int argc, char** argv)
       default: return usage();
     }
   }
-  // set up signal handing (ignore SIGPIPE - its evil)
-  signal( SIGPIPE, SIG_IGN );
-  signal( SIGINT, sig_handle );
-  signal( SIGHUP, sig_handle );
-  signal( SIGTERM, sig_handle );
-
   // set logging level
   pc::log::set_level( PC_LOG_INF_LVL );
 
@@ -146,6 +143,12 @@ int main(int argc, char** argv)
     std::cerr << "test_publish: " << mgr.get_err_msg() << std::endl;
     return 1;
   }
+
+  // set up signal handing (ignore SIGPIPE - its evil)
+  signal( SIGPIPE, SIG_IGN );
+  signal( SIGINT, sig_handle );
+  signal( SIGHUP, sig_handle );
+  signal( SIGTERM, sig_handle );
 
   // get two symbols that we want to publish/subscribe
   pc::price *sym1 = mgr.get_symbol(
@@ -173,7 +176,7 @@ int main(int argc, char** argv)
   // report any errors on exit
   int retcode = 0;
   if ( mgr.get_is_err() ) {
-    std::cerr << "test_public: " << mgr.get_err_msg() << std::endl;
+    std::cerr << "test_publish: " << mgr.get_err_msg() << std::endl;
     retcode = 1;
   }
   return retcode;

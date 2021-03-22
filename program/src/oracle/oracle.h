@@ -178,6 +178,8 @@ typedef struct cmd_del_publisher
 {
   uint32_t     ver_;
   int32_t      cmd_;
+  uint32_t     ptype_;
+  uint32_t     unused_;
   pc_symbol_t  sym_;
   pc_pub_key_t pub_;
 } cmd_del_publisher_t;

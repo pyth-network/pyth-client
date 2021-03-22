@@ -13,6 +13,9 @@ namespace pc
 
     key_store();
 
+    // create/chmod key_store directory
+    bool create();
+
     // initialize
     bool init();
 
