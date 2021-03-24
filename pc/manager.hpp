@@ -80,7 +80,7 @@ namespace pc
     bool init();
 
     // poll for socket updates
-    void poll();
+    void poll( bool do_wait = true);
 
     // accept new pyth client apps
     void accept( int fd );

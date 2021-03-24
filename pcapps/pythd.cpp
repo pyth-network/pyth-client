@@ -34,8 +34,8 @@ int usage()
             << ")>]" << std::endl;
   std::cerr << "  -p <listening_port (default " << get_port() << ">"
             << std::endl;
-  std::cerr << "  -d"
-            << std::endl;
+  std::cerr << "  -n" << std::endl;
+  std::cerr << "  -d" << std::endl;
   return 1;
 }
 
@@ -63,11 +63,13 @@ int main(int argc, char **argv)
   std::string key_dir  = get_key_store();
   int pyth_port = get_port();
   int opt = 0;
-  while( (opt = ::getopt(argc,argv, "r:p:k:dh" )) != -1 ) {
+  bool do_wait = true;
+  while( (opt = ::getopt(argc,argv, "r:p:k:dnh" )) != -1 ) {
     switch(opt) {
       case 'r': rpc_host = optarg; break;
       case 'p': pyth_port = ::atoi(optarg); break;
       case 'k': key_dir = optarg; break;
+      case 'n': do_wait = false; break;
       default: return usage();
     }
   }
@@ -96,7 +98,7 @@ int main(int argc, char **argv)
   signal( SIGTERM, sig_handle );
   signal( SIGUSR1, sig_toggle );
   while( do_run && !mgr.get_is_err() ) {
-    mgr.poll();
+    mgr.poll( do_wait );
   }
   int retcode = 0;
   if ( mgr.get_is_err() ) {

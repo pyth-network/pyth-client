@@ -52,6 +52,12 @@ test_publish::~test_publish()
 
 void test_publish::on_response( pc::price *sym, uint64_t sub_id )
 {
+  if ( sym->get_is_err() ) {
+    PC_LOG_ERR( "error receiving aggregate price" )
+      .add( "err", sym->get_err_msg() )
+      .end();
+    return;
+  }
   // received aggregate price update for this symbol
   double price  = expo_ * (double)sym->get_price();
   double spread = expo_ * (double)sym->get_conf();
@@ -116,6 +122,7 @@ int usage()
              << std::endl;
   std::cerr << "  [-k <key_store_directory (default "
             << get_key_store() << ">]" << std::endl;
+  std::cerr << "  [-n]" << std::endl;
   return 1;
 }
 
@@ -123,17 +130,20 @@ int main(int argc, char** argv)
 {
   // unpack options
   int opt = 0;
+  bool do_wait = true;
   std::string rpc_host = get_rpc_host();
   std::string key_dir  = get_key_store();
-  while( (opt = ::getopt(argc,argv, "r:k:h" )) != -1 ) {
+  while( (opt = ::getopt(argc,argv, "r:k:nh" )) != -1 ) {
     switch(opt) {
       case 'r': rpc_host = optarg; break;
       case 'k': key_dir = optarg; break;
+      case 'n': do_wait = false; break;
       default: return usage();
     }
   }
   // set logging level
   pc::log::set_level( PC_LOG_INF_LVL );
+  signal( SIGPIPE, SIG_IGN );
 
   // initialize connection to solana validator and bootstrap symbol list
   pc::manager mgr;
@@ -145,7 +155,6 @@ int main(int argc, char** argv)
   }
 
   // set up signal handing (ignore SIGPIPE - its evil)
-  signal( SIGPIPE, SIG_IGN );
   signal( SIGINT, sig_handle );
   signal( SIGHUP, sig_handle );
   signal( SIGTERM, sig_handle );
@@ -170,10 +179,11 @@ int main(int argc, char** argv)
 
   // run event loop and wait for price updates and requests to submit price
   while( do_run && !mgr.get_is_err() ) {
-    mgr.poll();
+    mgr.poll( do_wait );
   }
 
   // report any errors on exit
+  // please note that manager exits in error if error submitting price
   int retcode = 0;
   if ( mgr.get_is_err() ) {
     std::cerr << "test_publish: " << mgr.get_err_msg() << std::endl;

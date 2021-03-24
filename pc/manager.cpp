@@ -211,10 +211,23 @@ void manager::reset_status( int status )
   status_ &= ~status;
 }
 
-void manager::poll()
+void manager::poll( bool do_wait )
 {
   // poll for any socket events
-  nl_.poll( 1 );
+  if ( do_wait ) {
+    nl_.poll( 1 );
+  } else {
+    hconn_.poll();
+    wconn_.poll();
+    if ( lsvr_.get_port() ) {
+      lsvr_.poll();
+      for( user *uptr = olist_.first(); uptr; ) {
+        user *nptr = uptr->get_next();
+        uptr->poll();
+        uptr = nptr;
+      }
+    }
+  }
 
   // submit pending requests
   for( request *rptr =plist_.first(); rptr; ) {
