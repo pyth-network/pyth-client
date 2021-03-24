@@ -3,7 +3,7 @@
 #include <pc/net_socket.hpp>
 #include <pc/jtree.hpp>
 #include <pc/key_pair.hpp>
-#include <program/src/oracle/oracle.h>
+#include <oracle/oracle.h>
 #include <pc/hash_map.hpp>
 
 #define PC_RPC_ERROR_BLOCK_CLEANED_UP          -32001

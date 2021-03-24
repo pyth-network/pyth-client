@@ -12,7 +12,7 @@ endif()
 set( CMAKE_INCLUDE_CURRENT_DIR ON )
 
 # find oracle header files
-include_directories( program/src/oracle )
+include_directories( program/src/ )
 
 # gcc compiler/linker flags
 add_compile_options( -ggdb -Wall -Wextra -Werror -mavx2 -std=c++17 -m64 )
@@ -35,6 +35,21 @@ set( PC_SRC
   pc/user.cpp;
   )
 
+set( PC_HDR
+  pc/dbl_list.hpp;
+  pc/error.hpp;
+  pc/jtree.hpp;
+  pc/key_pair.hpp;
+  pc/key_store.hpp;
+  pc/hash_map.hpp;
+  pc/log.hpp;
+  pc/manager.hpp;
+  pc/misc.hpp;
+  pc/net_socket.hpp;
+  pc/request.hpp;
+  pc/rpc_client.hpp
+  pc/user.hpp )
+
 add_library( pc STATIC ${PC_SRC} )
 
 # dependencies
@@ -48,6 +63,15 @@ add_executable( pythd pcapps/pythd.cpp )
 target_link_libraries( pythd ${PC_DEP} )
 add_executable( pyth pcapps/pyth.cpp )
 target_link_libraries( pyth ${PC_DEP} )
+
+#
+# install
+#
+
+install( TARGETS pc DESTINATION lib )
+install( TARGETS pyth pythd DESTINATION bin )
+install( FILES ${PC_HDR} DESTINATION include/pc )
+install( FILES program/src/oracle/oracle.h DESTINATION include/oracle )
 
 #
 # test programs
