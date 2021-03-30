@@ -145,6 +145,9 @@ namespace pc
     // any messages in the send queue
     bool get_is_send() const;
 
+    // drop all outbound messages
+    void teardown() override;
+
   protected:
 
     typedef std::vector<char> buf_t;
@@ -209,12 +212,28 @@ namespace pc
     void set_port( int port );
     int get_port() const;
 
+    // timeout trying to connect
+    void set_timeout( int64_t );
+    int64_t get_timeout() const;
+
     // (re)connect to host
     bool init() override;
 
+    // teardown connection
+    void teardown() override;
+
+    // check connection status
+    virtual void check();
+
+    // are we waiting to connect
+    virtual bool get_is_wait();
+
   private:
     int         port_; // connection port
+    bool        wait_; // is waiting to connect
     std::string host_; // connection host
+    int64_t     sts_;  // start connect time
+    int64_t     timeout_;
   };
 
   // listening tcp server
@@ -332,12 +351,16 @@ namespace pc
   class ws_connect : public tcp_connect
   {
   public:
+    ws_connect();
     bool init() override;
+    void check() override;
+    bool get_is_wait() override;
 
   private:
     struct ws_connect_init : public http_client {
       void parse_status( int, const char *, size_t) override;
       ws_connect *cp_;
+      net_parser *np_;
       bool        hs_;
     };
     ws_connect_init init_;

@@ -4,7 +4,32 @@
 #include <signal.h>
 #include <iostream>
 
-// subscriber//callback implementation
+// system-wide notification events
+class test_connect : public pc::manager_sub
+{
+public:
+  test_connect();
+
+  // on connection to (but not initialization) solana validator
+  void on_connect( pc::manager * ) override;
+
+  // on disconnect from solana validator
+  void on_disconnect( pc::manager * ) override;
+
+  // on completion of (re)bootstrap of accounts following (re)connect
+  void on_init( pc::manager * ) override;
+
+  // on addition of new symbols
+  void on_add_symbol( pc::manager *, pc::price * ) override;
+
+  // have we received an on_init() callback yet
+  bool get_is_init() const;
+
+private:
+  bool is_init_;
+};
+
+// subscriber callback implementation
 class test_publish : public pc::request_sub,
                      public pc::request_sub_i<pc::price>,
                      public pc::request_sub_i<pc::price_sched>
@@ -14,10 +39,10 @@ public:
   ~test_publish();
 
   // callback for on-chain aggregate price update
-  void on_response( pc::price*, uint64_t );
+  void on_response( pc::price*, uint64_t ) override;
 
   // callback for when to submit new price on-chain
-  void on_response( pc::price_sched *, uint64_t );
+  void on_response( pc::price_sched *, uint64_t ) override;
 
 private:
   pc::request_sub_set sub_;   // request subscriptions for this object
@@ -43,6 +68,41 @@ test_publish::test_publish( pc::price *sym, int64_t px, uint64_t sprd )
   int64_t expo = sym->get_price_exponent();
   for( expo_ = 1.; expo <0.; expo_ *= 0.1, expo++ );
 }
+
+test_connect::test_connect()
+: is_init_( false )
+{
+}
+
+void test_connect::on_connect( pc::manager * )
+{
+  PC_LOG_INF( "test_connect: connected" ).end();
+}
+
+void test_connect::on_disconnect( pc::manager * )
+{
+  PC_LOG_INF( "test_connect: disconnected" ).end();
+}
+
+void test_connect::on_init( pc::manager * )
+{
+  PC_LOG_INF( "test_connect: initialized" ).end();
+  is_init_ = true;
+}
+
+void test_connect::on_add_symbol( pc::manager *, pc::price *sym )
+{
+  PC_LOG_INF( "test_connect: new symbol added" )
+    .add( "symbol", *sym->get_symbol() )
+    .add( "price_type", pc::price_type_to_str( sym->get_price_type() ) )
+    .end();
+}
+
+bool test_connect::get_is_init() const
+{
+  return is_init_;
+}
+
 
 test_publish::~test_publish()
 {
@@ -143,21 +203,34 @@ int main(int argc, char** argv)
   }
   // set logging level
   pc::log::set_level( PC_LOG_INF_LVL );
+
+  // set up signal handing (ignore SIGPIPE - its evil)
   signal( SIGPIPE, SIG_IGN );
+  signal( SIGINT, sig_handle );
+  signal( SIGHUP, sig_handle );
+  signal( SIGTERM, sig_handle );
+
+  // callback fror system-wide events
+  test_connect sub;
 
   // initialize connection to solana validator and bootstrap symbol list
   pc::manager mgr;
   mgr.set_rpc_host( rpc_host );
   mgr.set_dir( key_dir );
+  mgr.set_manager_sub( &sub );
   if ( !mgr.init() ) {
     std::cerr << "test_publish: " << mgr.get_err_msg() << std::endl;
     return 1;
   }
 
-  // set up signal handing (ignore SIGPIPE - its evil)
-  signal( SIGINT, sig_handle );
-  signal( SIGHUP, sig_handle );
-  signal( SIGTERM, sig_handle );
+  // wait to initialize
+  while( do_run && !mgr.get_is_err() && !sub.get_is_init() ) {
+    mgr.poll( do_wait );
+  }
+  if ( mgr.get_is_err() || !do_run ) {
+    std::cerr << "test_publish: " << mgr.get_err_msg() << std::endl;
+    return 1;
+  }
 
   // get two symbols that we want to publish/subscribe
   pc::price *sym1 = mgr.get_symbol(

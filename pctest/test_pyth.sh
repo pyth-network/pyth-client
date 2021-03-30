@@ -90,7 +90,7 @@ wait_log()
 }
 
 #dirA=/home/richard/kadmin
-#dirP=/home/richard/kpub1
+#dirP=/home/richard/kpub
 dirA=$(mktemp -d)
 dirP=$(mktemp -d)
 popt="$RPC $FINAL"

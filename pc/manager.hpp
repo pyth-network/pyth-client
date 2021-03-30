@@ -15,6 +15,26 @@
 
 namespace pc
 {
+  class manager;
+
+  // manager event notification events
+  class manager_sub
+  {
+  public:
+    virtual ~manager_sub();
+
+    // on connection to (but not initialization) solana validator
+    virtual void on_connect( manager * );
+
+    // on disconnect from solana validator
+    virtual void on_disconnect( manager * );
+
+    // on completion of (re)bootstrap of accounts following (re)connect
+    virtual void on_init( manager * );
+
+    // on addition of new symbols
+    virtual void on_add_symbol( manager *, price * );
+  };
 
   // pyth-client connection management and event loop
   class manager : public key_store,
@@ -39,6 +59,10 @@ namespace pc
     // server subscription version
     void set_version( uint32_t );
     uint32_t get_version() const;
+
+    // event subscription callback
+    void set_manager_sub( manager_sub * );
+    manager_sub *get_manager_sub() const;
 
     // rpc client interface
     rpc_client *get_rpc_client();
@@ -164,6 +188,7 @@ namespace pc
     acc_map_t    amap_;     // account to symbol pricing info
     spx_vec_t    svec_;     // symbol price subscriber/publishers
     std::string  rhost_;    // rpc host
+    manager_sub *sub_;      // subscription callback
     int          status_;   // status bitmap
     int          num_sub_;  // number of in-flight mapping subscriptions
     uint32_t     version_;  // account version subscription
@@ -176,6 +201,7 @@ namespace pc
     uint64_t     slot_;     // current slot
     uint64_t     slot_cnt_; // slot count
     kpx_vec_t    kvec_;     // symbol price scheduling
+    bool         wait_conn_;// waiting on connection
 
     // requests
     rpc::slot_subscribe        sreq_[1]; // slot subscription

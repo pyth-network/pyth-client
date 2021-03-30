@@ -68,7 +68,6 @@ namespace pc
     void add_parse_error();
     void add_invalid_request( uint32_t id = 0 );
     void add_invalid_params( uint32_t id );
-    void add_invalid_publisher( uint32_t id );
     void add_unknown_symbol( uint32_t id );
     void add_error( uint32_t id, int err, str );
 

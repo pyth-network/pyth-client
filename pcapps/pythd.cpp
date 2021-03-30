@@ -63,20 +63,21 @@ int main(int argc, char **argv)
   std::string key_dir  = get_key_store();
   int pyth_port = get_port();
   int opt = 0;
-  bool do_wait = true;
+  bool do_wait = true, do_debug = false;
   while( (opt = ::getopt(argc,argv, "r:p:k:dnh" )) != -1 ) {
     switch(opt) {
       case 'r': rpc_host = optarg; break;
       case 'p': pyth_port = ::atoi(optarg); break;
       case 'k': key_dir = optarg; break;
       case 'n': do_wait = false; break;
+      case 'd': do_debug = true; break;
       default: return usage();
     }
   }
 
   // set up logging and disable SIGPIPE
   signal( SIGPIPE, SIG_IGN );
-  log::set_level( PC_LOG_INF_LVL );
+  log::set_level( do_debug ? PC_LOG_DBG_LVL : PC_LOG_INF_LVL );
 
   // construct and initialize pyth-client manager
   manager mgr;

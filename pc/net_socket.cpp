@@ -498,6 +498,17 @@ void net_connect::poll_error( bool is_read )
   set_err_msg( emsg, errno );
 }
 
+void net_connect::teardown()
+{
+  close();
+  while( whd_ ) {
+    net_buf *nxt = whd_->next_;
+    whd_->dealloc();
+    whd_ = nxt;
+  }
+  wtl_ = nullptr;
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // net_listen
 
@@ -560,7 +571,10 @@ void net_listen::poll()
 // tcp_connect
 
 tcp_connect::tcp_connect()
-: port_(-1)
+: port_(-1),
+  wait_( false ),
+  sts_( 0L ),
+  timeout_( 10000000000L )
 {
 }
 
@@ -612,9 +626,15 @@ static bool get_hname_addr( const std::string& name, sockaddr *saddr )
   return has_addr;
 }
 
+bool tcp_connect::get_is_wait()
+{
+  return wait_;
+}
+
 bool tcp_connect::init()
 {
-  close();
+  wait_ = false;
+  teardown();
   reset_err();
   int fd = ::socket( AF_INET, SOCK_STREAM, IPPROTO_TCP );
   if ( fd < 0 ) {
@@ -624,14 +644,59 @@ bool tcp_connect::init()
   if ( !get_hname_addr( host_, saddr ) ) {
     return set_err_msg( "failed to resolve host" );
   }
+  set_fd( fd );
+  set_block( false );
   sockaddr_in *iaddr = (sockaddr_in*)saddr;
   iaddr->sin_port = htons( (uint16_t)port_ );
   if ( 0 != ::connect( fd, saddr, sizeof( sockaddr ) ) ) {
-    return set_err_msg( "failed to connect", errno );
+    if ( errno != EINPROGRESS ) {
+      return set_err_msg( "failed to connect", errno );
+    }
+    sts_ = get_now();
+    wait_ = true;
   }
-  set_fd( fd );
-  set_block( false );
-  return net_socket::init();
+  return true;
+}
+
+void tcp_connect::teardown()
+{
+  net_connect::teardown();
+  wait_ = false;
+}
+
+void tcp_connect::check()
+{
+  if ( !wait_ ) return;
+  fd_set rfds[1], wfds[1], efds[1];
+  struct timeval tout[1];
+  tout->tv_sec  = 0;
+  tout->tv_usec = 0;
+  FD_ZERO( rfds );
+  FD_ZERO( wfds );
+  FD_ZERO( efds );
+  FD_SET( get_fd(), efds );
+  FD_SET( get_fd(), wfds );
+  int rsel = ::select( 1 + get_fd(), rfds, wfds, efds, tout );
+  if ( rsel > 0 ) {
+    // possibly connected or failed
+    wait_ = false;
+    int stat = 0;
+    socklen_t slen = sizeof( stat );
+    int rc = getsockopt( get_fd(), SOL_SOCKET, SO_ERROR, &stat, &slen );
+    if ( rc!=0 || stat!=0 ) {
+      set_err_msg( "failed to connect tcp socket", stat?stat:errno );
+    } else {
+      net_socket::init();
+    }
+  } else if ( rsel< 0 ) {
+    // failed to select socket
+    wait_ = false;
+    set_err_msg( "failed to construct tcp socket", errno );
+  } else if ( get_now() - sts_ > timeout_ ) {
+    // timeout waiting for connection to happen
+    wait_ = false;
+    set_err_msg( "timeout trying to connect" );
+  }
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -998,13 +1063,21 @@ void http_server::parse_content( const char *, size_t )
 ///////////////////////////////////////////////////////////////////////////
 // ws_connect
 
+ws_connect::ws_connect()
+{
+  init_.cp_ = this;
+  init_.np_ = nullptr;
+  init_.hs_ = false;
+}
+
 bool ws_connect::init()
 {
   if ( !tcp_connect::init() ) {
     return false;
   }
-  net_parser *np = get_net_parser();
-  init_.cp_ = this;
+  if ( !init_.np_ ) {
+    init_.np_ = get_net_parser();
+  }
   init_.hs_ = false;
   set_net_parser( &init_ );
 
@@ -1017,34 +1090,32 @@ bool ws_connect::init()
   msg.commit();
   add_send( msg );
 
-  // wait for handshake response
-  while( !init_.hs_ && !get_is_err() ) {
-    poll();
-    // use poll to wait for handshake result
-    struct pollfd pfd[1];
-    pfd->fd = get_fd();
-    pfd->events = POLLIN | POLLERR | POLLHUP;
-    if ( get_is_send() ) pfd->events |= POLLOUT;
-    pfd->revents = 0;
-    ::poll( pfd, 1, 1 );
-  }
-
-  // switch parser back
-  set_net_parser( np );
-
   return true;
 }
 
 void ws_connect::ws_connect_init::parse_status(
     int status, const char *txt, size_t len)
 {
-  if ( status == 101 ) {
-    hs_ = true;
-  } else {
+  hs_ = true;
+  cp_->set_net_parser( np_ );
+  if ( status != 101 ) {
     std::string err = "failed to handshake websocket: ";
     err.append( txt, len );
     cp_->set_err_msg( err );
   }
+}
+
+void ws_connect::check()
+{
+  tcp_connect::check();
+  if ( !tcp_connect::get_is_wait() && !get_is_err() ) {
+    poll();
+  }
+}
+
+bool ws_connect::get_is_wait()
+{
+  return tcp_connect::get_is_wait() || (!get_is_err() && !init_.hs_);
 }
 
 ///////////////////////////////////////////////////////////////////////////

@@ -146,7 +146,7 @@ async def test_2(uri1,uri2):
   await ws2.send( '{"id":18,"method":"update_price", "params":'
     '{"symbol":"US.EQ.SYMBOL3", "price_type": "price", "price": 1, '
     '"conf":2, "status": "trading"}}' )
-  check_error_obj( -32001, await ws2.recv(), idval=18 )
+  check_error_obj( -32600, await ws2.recv(), idval=18 )
 
   print('submitting subscriptions for symbols1, 2, 3')
   req = [ gen_sub( 'US.EQ.SYMBOL1', 1 ),

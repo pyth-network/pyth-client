@@ -9,10 +9,34 @@ using namespace pc;
 #define PC_BLOCKHASH_TIMEOUT  5
 
 ///////////////////////////////////////////////////////////////////////////
+// manager_sub
+
+manager_sub::~manager_sub()
+{
+}
+
+void manager_sub::on_connect( manager * )
+{
+}
+
+void manager_sub::on_disconnect( manager * )
+{
+}
+
+void manager_sub::on_init( manager * )
+{
+}
+
+void manager_sub::on_add_symbol( manager *, price * )
+{
+}
+
+///////////////////////////////////////////////////////////////////////////
 // manager
 
 manager::manager()
-: status_( 0 ),
+: sub_( nullptr ),
+  status_( 0 ),
   num_sub_( 0 ),
   version_( PC_VERSION ),
   kidx_( 0 ),
@@ -22,7 +46,8 @@ manager::manager()
   slot_int_( 0L ),
   slot_min_( 0L ),
   slot_( 0UL ),
-  slot_cnt_( 0UL )
+  slot_cnt_( 0UL ),
+  wait_conn_( false )
 {
   breq_->set_sub( this );
   sreq_->set_sub( this );
@@ -51,6 +76,10 @@ void manager::del_map_sub()
   if ( --num_sub_ <= 0 && !has_status( PC_PYTH_HAS_MAPPING ) ) {
     set_status( PC_PYTH_HAS_MAPPING );
     PC_LOG_INF( "completed_mapping_init" ).end();
+    // notify user that initialization is complete
+    if ( sub_ ) {
+      sub_->on_init( this );
+    }
   }
 }
 
@@ -72,6 +101,16 @@ void manager::set_listen_port( int port )
 int manager::get_listen_port() const
 {
   return lsvr_.get_port();
+}
+
+void manager::set_manager_sub( manager_sub *sub )
+{
+  sub_ = sub;
+}
+
+manager_sub *manager::get_manager_sub() const
+{
+  return sub_;
 }
 
 hash *manager::get_recent_block_hash()
@@ -149,12 +188,9 @@ bool manager::init()
   wconn_.set_host( rhost_ );
   wconn_.set_net_loop( &nl_ );
   clnt_.set_ws_conn( &wconn_ );
-  if ( hconn_.init() && wconn_.init() ) {
-    PC_LOG_INF( "rpc_connected" ).end();
-    set_status( PC_PYTH_RPC_CONNECTED );
-    // submit slot subscription
-    clnt_.send( sreq_ );
-  }
+  hconn_.init();
+  wconn_.init();
+  wait_conn_ = true;
 
   // initialize listening port if port defined
   if ( lsvr_.get_port() > 0 ) {
@@ -166,15 +202,7 @@ bool manager::init()
     PC_LOG_INF("listening").add("port",lsvr_.get_port()).end();
   }
 
-  // wait for bootstrap
-  int status = PC_PYTH_RPC_CONNECTED | PC_PYTH_HAS_BLOCK_HASH;
-  if ( mpub ) {
-    status |= PC_PYTH_HAS_MAPPING;
-  }
-  while( !get_is_err() && !has_status( status ) ) {
-    poll();
-  }
-  return !get_is_err();
+  return true;
 }
 
 void manager::add_mapping( const pub_key& acc )
@@ -217,8 +245,10 @@ void manager::poll( bool do_wait )
   if ( do_wait ) {
     nl_.poll( 1 );
   } else {
-    hconn_.poll();
-    wconn_.poll();
+    if ( has_status( PC_PYTH_RPC_CONNECTED ) ) {
+      hconn_.poll();
+      wconn_.poll();
+    }
     if ( lsvr_.get_port() ) {
       lsvr_.poll();
       for( user *uptr = olist_.first(); uptr; ) {
@@ -266,24 +296,24 @@ void manager::poll( bool do_wait )
 
 void manager::reconnect_rpc()
 {
-  // log disconnect error
-  if ( has_status( PC_PYTH_RPC_CONNECTED ) ) {
-    log_disconnect();
+  // check if connection process has complete
+  if ( hconn_.get_is_wait() ) {
+    hconn_.check();
   }
-  status_ = 0;
-  int64_t ts = get_now();
-  if ( ctimeout_ > (ts-cts_) ) {
+  if ( wconn_.get_is_wait() ) {
+    wconn_.check();
+  }
+  if ( hconn_.get_is_wait() || wconn_.get_is_wait() ) {
     return;
   }
-  // attempt to reconnect
-  cts_ = ts;
-  ctimeout_ += ctimeout_;
-  ctimeout_ = std::min( ctimeout_, PC_RECONNECT_TIMEOUT );
-  if ( hconn_.init() && wconn_.init() ) {
+
+  // check for successful (re)connect
+  if ( !hconn_.get_is_err() && !wconn_.get_is_err() ) {
     PC_LOG_INF( "rpc_connected" ).end();
     set_status( PC_PYTH_RPC_CONNECTED );
 
     // reset state
+    wait_conn_ = false;
     ctimeout_ = PC_NSECS_IN_SEC;
     slot_ts_ = slot_int_ = 0L;
     slot_cnt_ = 0UL;
@@ -305,9 +335,36 @@ void manager::reconnect_rpc()
       submit( ptr );
       add_map_sub();
     }
-  } else {
-    log_disconnect();
+    // callback user with connection status
+    if ( sub_ ) {
+      sub_->on_connect( this );
+    }
+    return;
   }
+
+  // log disconnect error
+  if ( wait_conn_ || has_status( PC_PYTH_RPC_CONNECTED ) ) {
+    wait_conn_ = false;
+    log_disconnect();
+    if ( sub_ && has_status( PC_PYTH_RPC_CONNECTED ) ) {
+      sub_->on_disconnect( this );
+    }
+  }
+
+  // wait for reconnect timeout
+  status_ = 0;
+  int64_t ts = get_now();
+  if ( ctimeout_ > (ts-cts_) ) {
+    return;
+  }
+
+  // attempt to reconnect
+  cts_ = ts;
+  ctimeout_ += ctimeout_;
+  ctimeout_ = std::min( ctimeout_, PC_RECONNECT_TIMEOUT );
+  wait_conn_ = true;
+  hconn_.init();
+  wconn_.init();
 }
 
 void manager::log_disconnect()

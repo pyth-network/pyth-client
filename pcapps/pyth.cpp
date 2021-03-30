@@ -61,6 +61,14 @@ int submit_request( const std::string& rpc_host,
     std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
     return 1;
   }
+  int status = PC_PYTH_RPC_CONNECTED | PC_PYTH_HAS_BLOCK_HASH;
+  if ( mgr.get_mapping_pub_key() ) {
+    status |= PC_PYTH_HAS_MAPPING;
+  }
+  while( !mgr.get_is_err() && !mgr.has_status( status ) ) {
+    mgr.poll();
+  }
+
   // submit request and poll for completion or error
   mgr.submit( req );
   while( !req->get_is_done() &&

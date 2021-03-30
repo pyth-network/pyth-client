@@ -8,7 +8,6 @@
 #define PC_JSON_UNKNOWN_METHOD  -32601
 #define PC_JSON_INVALID_PARAMS  -32602
 #define PC_JSON_UNKNOWN_SYMBOL  -32000
-#define PC_JSON_INVALID_PUBLISH -32001
 
 using namespace pc;
 
@@ -44,6 +43,8 @@ void user::set_manager( manager *sptr )
 
 void user::teardown()
 {
+  net_connect::teardown();
+
   // remove self from server list
   sptr_->del_user( this );
 
@@ -149,9 +150,6 @@ void user::parse_upd_price( uint32_t tok, uint32_t itok )
       add_tail( itok );
     } else if ( sptr->get_is_err() ) {
       add_error( itok, PC_JSON_INVALID_REQUEST, sptr->get_err_msg() );
-    } else {
-      // update failed because of permissions
-      add_invalid_publisher( itok );
     }
     return;
   } while( 0 );
@@ -256,11 +254,6 @@ void user::add_tail( uint32_t id )
   }
   // pop enclosing object block
   jw_.pop();
-}
-
-void user::add_invalid_publisher( uint32_t itok )
-{
-  add_error( itok, PC_JSON_INVALID_PUBLISH, "invalid publisher" );
 }
 
 void user::add_unknown_symbol( uint32_t itok )

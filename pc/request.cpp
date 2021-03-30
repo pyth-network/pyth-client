@@ -722,7 +722,7 @@ bool price::update(
     return false;
   }
   if ( PC_UNLIKELY( !has_publisher( *pkey_ ) ) ) {
-    return false;
+    return set_err_msg( "not permissioned to update price" );
   }
   preq_->set_price( price, conf, st );
   manager *cptr = get_manager();
@@ -768,7 +768,7 @@ void price::on_response( rpc::account_subscribe *res )
 void price::on_response( rpc::upd_price *res )
 {
   if ( res->get_is_err() ) {
-    get_manager()->set_err_msg( res->get_err_msg() );
+    on_error_sub( res->get_err_msg(), this );
     st_ = e_error;
     return;
   }
@@ -799,6 +799,17 @@ void price::init_subscribe( pc_price_t *pupd )
     .add( "num_publishers", pupd->num_ )
     .end();
 
+  // initial assignment
+  cnum_ = pupd->num_;
+  for( unsigned i=0; i != cnum_; ++i ) {
+    pc_pub_key_assign( &cpub_[i], &pupd->comp_[i].pub_ );
+  }
+  apx_  = pupd->agg_.price_;
+  aconf_ = pupd->agg_.conf_;
+  sym_st_ = (symbol_status)pupd->agg_.status_;
+  pub_slot_ = pupd->agg_.pub_slot_;
+  valid_slot_ = pupd->valid_slot_;
+
   // replace symbol/price_type with later version
   manager *cptr = get_manager();
   cptr->add_symbol( sym_, ptype_, this );
@@ -806,6 +817,12 @@ void price::init_subscribe( pc_price_t *pupd )
   // subscribe to next symbol in chain
   if ( !pc_pub_key_is_zero( &pupd->next_ ) ) {
     cptr->add_symbol( *(pub_key*)&pupd->next_ );
+  }
+
+  // callback users on new symbol update
+  manager_sub *sub = cptr->get_manager_sub();
+  if ( sub ) {
+    sub->on_add_symbol( cptr, this );
   }
 
   // reduce subscription count after we subscribe to next symbol in chain
