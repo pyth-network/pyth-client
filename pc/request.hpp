@@ -229,6 +229,55 @@ namespace pc
     rpc::signature_subscribe sig_[1];
   };
 
+  // transfer SOL from publisher to other account
+  class transfer : public request,
+                   public rpc_sub_i<rpc::transfer>,
+                   public rpc_sub_i<rpc::signature_subscribe>
+  {
+  public:
+    transfer();
+    void set_receiver( pub_key * );
+    void set_lamports( uint64_t funds );
+    void set_commitment( commitment );
+
+  public:
+    void on_response( rpc::transfer *msg ) override;
+    void on_response( rpc::signature_subscribe * ) override;
+    bool get_is_done() const override;
+    void submit() override;
+
+  private:
+    typedef enum { e_sent, e_sig, e_done, e_error } state_t;
+
+    state_t                  st_;
+    commitment               cmt_;
+    key_pair                 akey_;
+    key_pair                 skey_;
+    rpc::transfer            req_[1];
+    rpc::signature_subscribe sig_[1];
+  };
+
+  // get account balance
+  class balance : public request,
+                  public rpc_sub_i<rpc::get_account_info>
+  {
+  public:
+    balance();
+    void set_pub_key( pub_key * );
+    uint64_t get_lamports() const;
+
+  public:
+    void submit() override;
+    void on_response( rpc::get_account_info * ) override;
+    bool get_is_done() const override;
+
+  private:
+    typedef enum { e_sent, e_done, e_error } state_t;
+    state_t  st_;
+    pub_key *pub_;
+    rpc::get_account_info req_[1];
+  };
+
   class price;
 
   // price submission schedule

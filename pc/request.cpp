@@ -586,6 +586,131 @@ bool add_publisher::get_is_done() const
 }
 
 ///////////////////////////////////////////////////////////////////////////
+// transfer
+
+transfer::transfer()
+: st_( e_sent ),
+  cmt_( commitment::e_confirmed )
+{
+}
+
+void transfer::set_receiver( pub_key *pkey )
+{
+  req_->set_receiver( pkey );
+}
+
+void transfer::set_lamports( uint64_t funds )
+{
+  req_->set_lamports( funds );
+}
+
+void transfer::set_commitment( commitment cmt )
+{
+  cmt_ = cmt;
+}
+
+void transfer::on_response( rpc::transfer *res )
+{
+  if ( res->get_is_err() ) {
+    on_error_sub( res->get_err_msg(), this );
+    st_ = e_error;
+  } else if ( st_ == e_sent ) {
+    st_ = e_sig;
+    sig_->set_commitment( cmt_ );
+    sig_->set_signature( res->get_signature() );
+    get_rpc_client()->send( sig_ );
+  }
+}
+
+void transfer::on_response( rpc::signature_subscribe *res )
+{
+  if ( res->get_is_err() ) {
+    on_error_sub( res->get_err_msg(), this );
+    st_ = e_error;
+  } else if ( st_ == e_sig ) {
+    st_ = e_done;
+    on_response_sub( this );
+  }
+}
+
+void transfer::submit()
+{
+  manager *cptr = get_manager();
+  key_pair *pkey = cptr->get_publish_key_pair();
+  if ( !pkey ) {
+    on_error_sub( "missing or invalid publish key [" +
+        cptr->get_publish_key_pair_file() + "]", this );
+    return;
+  }
+  req_->set_sender( pkey );
+  req_->set_sub( this );
+  sig_->set_sub( this );
+
+  // get recent block hash and submit request
+  st_ = e_sent;
+  req_->set_block_hash( cptr->get_recent_block_hash() );
+  get_rpc_client()->send( req_ );
+}
+
+bool transfer::get_is_done() const
+{
+  return st_ == e_done;
+}
+
+///////////////////////////////////////////////////////////////////////////
+// balance
+
+balance::balance()
+: pub_( nullptr )
+{
+}
+
+void balance::set_pub_key( pub_key *pkey )
+{
+  pub_ = pkey;
+}
+
+uint64_t balance::get_lamports() const
+{
+  return req_->get_lamports();
+}
+
+void balance::on_response( rpc::get_account_info *res )
+{
+  if ( res->get_is_err() ) {
+    on_error_sub( res->get_err_msg(), this );
+    st_ = e_error;
+  } else if ( st_ == e_sent ) {
+    st_ = e_done;
+    on_response_sub( this );
+  }
+}
+
+void balance::submit()
+{
+  if ( pub_ ) {
+    req_->set_account( pub_ );
+  } else {
+    manager *cptr = get_manager();
+    pub_key *pkey = cptr->get_publish_pub_key();
+    if ( !pkey ) {
+      on_error_sub( "missing or invalid publish key [" +
+          cptr->get_publish_key_pair_file() + "]", this );
+      return;
+    }
+    req_->set_account( pkey );
+  }
+  st_ = e_sent;
+  req_->set_sub( this );
+  get_rpc_client()->send( req_ );
+}
+
+bool balance::get_is_done() const
+{
+  return st_ == e_done;
+}
+
+///////////////////////////////////////////////////////////////////////////
 // price
 
 price::price( const pub_key& acc )

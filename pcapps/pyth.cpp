@@ -31,6 +31,8 @@ int usage()
   std::cerr << "  init_key       [options]" << std::endl;
   std::cerr << "  init_program   [options]" << std::endl;
   std::cerr << "  init_mapping   <amount> [options]" << std::endl;
+  std::cerr << "  transfer       <pub_key> <amount> [options]" << std::endl;
+  std::cerr << "  balance        [-p <pub_key>] [options]" << std::endl;
   std::cerr << "  add_mapping    <amount> [options]" << std::endl;
   std::cerr << "  add_symbol     <symbol> <price_type> <amount> "
             << "[-e <price_exponent (default " << get_exponent()
@@ -193,6 +195,84 @@ int on_init_mapping( int argc, char **argv )
   req->set_lamports( lamports );
   req->set_commitment( cmt );
   return submit_request( rpc_host, key_dir, req );
+}
+
+int on_transfer( int argc, char **argv )
+{
+  // get input parameters
+  if ( argc < 3 ) {
+    return usage();
+  }
+  pub_key pub;
+  pub.init_from_text( argv[1] );
+  int64_t lamports = str_to_dec( argv[2], -9 );
+  if ( lamports <= 0 ) {
+    return usage();
+  }
+  argc -= 2;
+  argv += 2;
+  int opt = 0;
+  commitment cmt = commitment::e_confirmed;
+  std::string rpc_host = get_rpc_host();
+  std::string key_dir  = get_key_store();
+  while( (opt = ::getopt(argc,argv, "r:k:c:h" )) != -1 ) {
+    switch(opt) {
+      case 'r': rpc_host = optarg; break;
+      case 'k': key_dir = optarg; break;
+      case 'c': cmt = str_to_commitment(optarg); break;
+      default: return usage();
+    }
+  }
+  if ( cmt == commitment::e_unknown ) {
+    std::cerr << "pyth: unknown commitment level" << std::endl;
+    return usage();
+  }
+  std::string knm;
+  pub.enc_base58( knm );
+  std::cout << "transfer to account:" << std::endl;
+  std::cout << "  account    : " << knm << std::endl
+            << "  amount     : " << lamports/1e9 << std::endl;
+  std::cout << "are you sure? [y/n] ";
+  char ch;
+  std::cin >> ch;
+  if ( ch != 'y' && ch != 'Y' ) {
+    return 1;
+  }
+
+  // submit request
+  transfer req[1];
+  req->set_lamports( lamports );
+  req->set_commitment( cmt );
+  req->set_receiver( &pub );
+  return submit_request( rpc_host, key_dir, req );
+}
+
+int on_balance( int argc, char **argv )
+{
+  int opt = 0;
+  pub_key pub;
+  std::string knm;
+  std::string rpc_host = get_rpc_host();
+  std::string key_dir  = get_key_store();
+  while( (opt = ::getopt(argc,argv, "r:k:p:h" )) != -1 ) {
+    switch(opt) {
+      case 'r': rpc_host = optarg; break;
+      case 'k': key_dir = optarg; break;
+      case 'p': knm = optarg; break;
+      default: return usage();
+    }
+  }
+
+  balance req[1];
+  if ( !knm.empty() ) {
+    pub.init_from_text( knm );
+    req->set_pub_key( &pub );
+  }
+  int ret = submit_request( rpc_host, key_dir, req );
+  if ( ret == 0 ) {
+    printf( "balance: %18.9f\n", 1e-9*req->get_lamports() );
+  }
+  return ret;
 }
 
 int on_add_symbol( int argc, char **argv )
@@ -374,6 +454,10 @@ int main(int argc, char **argv)
     rc = on_init_program( argc, argv );
   } else if ( cmd == "init_mapping" ) {
     rc = on_init_mapping( argc, argv );
+  } else if ( cmd == "transfer" ) {
+    rc = on_transfer( argc, argv );
+  } else if ( cmd == "balance" ) {
+    rc = on_balance( argc, argv );
   } else if ( cmd == "add_symbol" ) {
     rc = on_add_symbol( argc, argv );
   } else if ( cmd == "add_publisher" ) {
