@@ -324,6 +324,9 @@ namespace pc
       void set_signature( signature * );
       void set_commitment( commitment );
 
+      // results
+      uint64_t get_slot() const;
+
       signature_subscribe();
       void request( json_wtr& ) override;
       void response( const jtree& ) override;
@@ -332,6 +335,7 @@ namespace pc
     private:
       signature  *sig_;
       commitment  cmt_;
+      uint64_t    slot_;
     };
 
     // account data subscription

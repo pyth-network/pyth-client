@@ -307,7 +307,8 @@ namespace pc
   class price : public request,
                 public rpc_sub_i<rpc::get_account_info>,
                 public rpc_sub_i<rpc::account_subscribe>,
-                public rpc_sub_i<rpc::upd_price>
+                public rpc_sub_i<rpc::upd_price>,
+                public rpc_sub_i<rpc::signature_subscribe>
   {
   public:
 
@@ -316,7 +317,12 @@ namespace pc
     // is publisher authorized to publish on this symbol
     bool has_publisher( const pub_key& );
 
+    // ready to publish (i.e. not waiting for confirmation)
+    bool get_is_ready() const;
+
     // submit new price update
+    // will fail with false if in error (check get_is_err() )
+    // or because symbol is not ready to publish (check get_is_ready())
     bool update( int64_t price, uint64_t conf, symbol_status );
 
     // get and activate price schedule subscription
@@ -331,8 +337,16 @@ namespace pc
     int64_t       get_price() const;
     uint64_t      get_conf() const;
     symbol_status get_status() const;
+
+    // slot that corresponds to the prices used to compile the last
+    // published aggregate
     uint64_t      get_valid_slot() const;
+
+    // slot of last aggregate price
     uint64_t      get_pub_slot() const;
+
+    // slot of last confirmed published price
+    uint64_t      get_last_slot() const;
 
   public:
 
@@ -348,12 +362,14 @@ namespace pc
     void on_response( rpc::get_account_info * ) override;
     void on_response( rpc::account_subscribe * ) override;
     void on_response( rpc::upd_price * ) override;
+    void on_response( rpc::signature_subscribe * ) override;
 
   private:
 
     typedef enum {
       e_subscribe, e_sent_subscribe,
-      e_publish, e_pend_publish, e_sent_publish, e_error } state_t;
+      e_publish, e_pend_publish, e_sent_publish, e_sent_sig,
+      e_error } state_t;
 
     template<class T> void update( T *res );
 
@@ -361,7 +377,6 @@ namespace pc
     void init_subscribe( pc_price_t * );
 
     bool                   init_;
-    bool                   pxchg_;
     bool                   isched_;
     state_t                st_;
     symbol                 sym_;
@@ -381,6 +396,7 @@ namespace pc
     rpc::get_account_info  areq_[1];
     rpc::account_subscribe sreq_[1];
     rpc::upd_price         preq_[1];
+    rpc::signature_subscribe sig_[1];
   };
 
   template<class T>
@@ -402,6 +418,5 @@ namespace pc
     set_err_msg( emsg );
     on_response_sub( req );
   }
-
 
 }

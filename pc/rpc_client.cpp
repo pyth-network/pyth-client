@@ -738,7 +738,8 @@ bool rpc::slot_subscribe::notify( const jtree& jt )
 // signature_subscribe
 
 rpc::signature_subscribe::signature_subscribe()
-: cmt_( commitment::e_finalized )
+: cmt_( commitment::e_finalized ),
+  slot_( 0UL )
 {
 }
 
@@ -750,6 +751,11 @@ void rpc::signature_subscribe::set_signature( signature *sig )
 void rpc::signature_subscribe::set_commitment( commitment val )
 {
   cmt_ = val;
+}
+
+uint64_t rpc::signature_subscribe::get_slot() const
+{
+  return slot_;
 }
 
 void rpc::signature_subscribe::request( json_wtr& msg )
@@ -774,6 +780,11 @@ void rpc::signature_subscribe::response( const jtree& jt )
 bool rpc::signature_subscribe::notify( const jtree& jt )
 {
   if ( on_error( jt, this ) ) return true;
+
+  uint32_t ptok = jt.find_val( 1, "params" );
+  uint32_t rtok = jt.find_val( ptok, "result" );
+  uint32_t ctok = jt.find_val( rtok, "context" );
+  slot_ = jt.get_uint( jt.find_val( ctok, "slot" ) );
 
   on_response( this );
   return true;  // remove notification

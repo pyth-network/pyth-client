@@ -715,7 +715,6 @@ bool balance::get_is_done() const
 
 price::price( const pub_key& acc )
 : init_( false ),
-  pxchg_( false ),
   isched_( false ),
   st_( e_subscribe ),
   apub_( acc ),
@@ -739,6 +738,7 @@ price::price( const pub_key& acc )
   areq_->set_sub( this );
   sreq_->set_sub( this );
   preq_->set_sub( this );
+  sig_->set_sub( this );
 }
 
 bool price::init_publish()
@@ -813,6 +813,16 @@ uint64_t price::get_pub_slot() const
   return pub_slot_;
 }
 
+uint64_t price::get_last_slot() const
+{
+  return sig_->get_slot();
+}
+
+bool price::get_is_ready() const
+{
+  return st_ == e_publish;
+}
+
 void price::reset()
 {
   st_ = e_subscribe;
@@ -852,13 +862,12 @@ bool price::update(
   preq_->set_price( price, conf, st );
   manager *cptr = get_manager();
   if ( cptr && st_ == e_publish ) {
-    pxchg_ = false;
     st_ = e_pend_publish;
     cptr->submit( this );
+    return true;
   } else {
-    pxchg_ = true;
+    return false;
   }
-  return true;
 }
 
 void price::submit()
@@ -896,15 +905,22 @@ void price::on_response( rpc::upd_price *res )
     on_error_sub( res->get_err_msg(), this );
     st_ = e_error;
     return;
+  } else if ( st_ == e_sent_publish ) {
+    st_ = e_sent_sig;
+    sig_->set_commitment( commitment::e_confirmed );
+    sig_->set_signature( res->get_signature() );
+    get_rpc_client()->send( sig_ );
+  }
+}
+
+void price::on_response( rpc::signature_subscribe *res )
+{
+  if ( res->get_is_err() ) {
+    on_error_sub( res->get_err_msg(), this );
+    st_ = e_error;
+    return;
   }
   st_ = e_publish;
-
-  // resubmit if more price updates in meantime
-  if ( pxchg_ ) {
-    pxchg_ = false;
-    st_ = e_pend_publish;
-    get_manager()->submit( this );
-  }
 }
 
 void price::init_subscribe( pc_price_t *pupd )
@@ -1044,5 +1060,7 @@ void price_sched::submit()
 
 void price_sched::schedule()
 {
-  on_response_sub( this );
+  if ( ptr_->get_is_ready() ) {
+    on_response_sub( this );
+  }
 }
