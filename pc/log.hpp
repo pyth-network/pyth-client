@@ -17,6 +17,14 @@ if (pc::log::has_level(LVL)) pc::log::add(X,LVL)
 namespace pc
 {
 
+  class log_wtr : public net_wtr
+  {
+  public:
+    void add_i64( int64_t );
+    void add_u64( uint64_t );
+    void add_f64( double );
+  };
+
   // log line
   class log_line
   {
@@ -34,11 +42,11 @@ namespace pc
   private:
     log_line( str, int lvl );
     void add_key( str );
-    bool is_first_;
+    bool    is_first_;
+    log_wtr wtr_;
   };
 
   // log reporting
-  // TODO: implement deferred (i.e. threaded) logging
   class log
   {
   public:
