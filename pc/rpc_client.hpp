@@ -516,6 +516,39 @@ namespace pc
       signature  sig_;
     };
 
+    // remove price publisher from symbol account
+    class del_publisher : public rpc_request
+    {
+    public:
+      void set_symbol( const symbol& );
+      void set_publisher( const pub_key& );
+      void set_program( pub_key * );
+      void set_block_hash( hash * );
+      void set_publish( key_pair * );
+      void set_account( key_pair * );
+      void set_price_type( price_type );
+      symbol  *get_symbol();
+      pub_key *get_publisher();
+      price_type get_price_type() const;
+
+      // results
+      signature *get_signature();
+
+      void request( json_wtr& ) override;
+      void response( const jtree& ) override;
+
+    private:
+      symbol     sym_;
+      pub_key    nkey_;
+      hash      *bhash_;
+      key_pair  *pkey_;
+      pub_key   *gkey_;
+      key_pair  *akey_;
+      price_type ptype_;
+      signature  sig_;
+    };
+
+
     // set new component price
     class upd_price : public rpc_request
     {

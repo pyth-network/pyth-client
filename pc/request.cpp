@@ -586,6 +586,123 @@ bool add_publisher::get_is_done() const
 }
 
 ///////////////////////////////////////////////////////////////////////////
+// del_publisher
+
+del_publisher::del_publisher()
+: cmt_( commitment::e_confirmed )
+{
+}
+
+void del_publisher::set_symbol( const symbol& sym )
+{
+  req_->set_symbol( sym );
+}
+
+void del_publisher::set_publisher( const pub_key& pub )
+{
+  req_->set_publisher( pub );
+}
+
+void del_publisher::set_price_type( price_type ptype )
+{
+  req_->set_price_type( ptype );
+}
+
+void del_publisher::set_commitment( commitment cmt )
+{
+  cmt_ = cmt;
+}
+
+bool del_publisher::get_is_ready()
+{
+  manager *cptr = get_manager();
+  if ( !cptr->get_mapping_pub_key() ) {
+    return set_err_msg( "missing mapping key file ["
+        + cptr->get_mapping_pub_key_file() + "]" );
+  }
+  return cptr->has_status( PC_PYTH_RPC_CONNECTED |
+                           PC_PYTH_HAS_BLOCK_HASH |
+                           PC_PYTH_HAS_MAPPING );
+}
+
+void del_publisher::submit()
+{
+  manager *cptr = get_manager();
+
+  // check if this symbol exists
+  price *sptr = cptr->get_symbol(
+      *req_->get_symbol(), req_->get_price_type() );
+  if ( !sptr ) {
+    on_error_sub( "symbol/price_type does not exist", this );
+    return;
+  }
+
+  // check if we already have this symbol/publisher combination
+  if ( !sptr->has_publisher( *req_->get_publisher() ) ) {
+    on_error_sub( "publisher not defined for this symbol", this );
+    return;
+  }
+  key_pair *pkey = cptr->get_publish_key_pair();
+  if ( !pkey ) {
+    on_error_sub( "missing or invalid publish key [" +
+        cptr->get_publish_key_pair_file() + "]", this );
+    return;
+  }
+  pub_key *gpub = cptr->get_program_pub_key();
+  if ( !gpub ) {
+    on_error_sub( "missing or invalid program public key [" +
+        cptr->get_program_pub_key_file() + "]", this );
+    return;
+  }
+  pub_key *apub = sptr->get_account();
+  if ( !cptr->get_account_key_pair( *apub, akey_ ) ) {
+    std::string knm;
+    apub->enc_base58( knm );
+    on_error_sub( "missing key pair for symbol [" + knm + "]", this);
+    return;
+  }
+  req_->set_program( gpub );
+  req_->set_publish( pkey );
+  req_->set_account( &akey_ );
+  req_->set_sub( this );
+  sig_->set_sub( this );
+
+  // get recent block hash and submit request
+  st_ = e_add_sent;
+  req_->set_block_hash( get_manager()->get_recent_block_hash() );
+  get_rpc_client()->send( req_ );
+}
+
+void del_publisher::on_response( rpc::del_publisher *res )
+{
+  if ( res->get_is_err() ) {
+    on_error_sub( res->get_err_msg(), this );
+    st_ = e_error;
+  } else if ( st_ == e_add_sent ) {
+    st_ = e_add_sig;
+    sig_->set_commitment( cmt_ );
+    sig_->set_signature( res->get_signature() );
+    get_rpc_client()->send( sig_ );
+  }
+}
+
+void del_publisher::on_response( rpc::signature_subscribe *res )
+{
+  if ( res->get_is_err() ) {
+    on_error_sub( res->get_err_msg(), this );
+    st_ = e_error;
+  } else if ( st_ == e_add_sig ) {
+    st_ = e_done;
+    on_response_sub( this );
+  }
+}
+
+bool del_publisher::get_is_done() const
+{
+  return st_ == e_done;
+}
+
+///////////////////////////////////////////////////////////////////////////
 // transfer
 
 transfer::transfer()
@@ -725,6 +842,7 @@ price::price( const pub_key& acc )
   aconf_( 0 ),
   valid_slot_( 0 ),
   pub_slot_( 0 ),
+  lamports_( 0UL ),
   aexpo_( 0 ),
   cnum_( 0 ),
   pkey_( nullptr ),
@@ -801,6 +919,11 @@ price_type price::get_price_type() const
 symbol_status price::get_status() const
 {
   return sym_st_;
+}
+
+uint64_t price::get_lamports() const
+{
+  return lamports_;
 }
 
 uint64_t price::get_valid_slot() const
@@ -995,10 +1118,13 @@ void price::update( T *res )
 
   // update publishers
   cnum_ = pupd->num_;
+  lamports_ = res->get_lamports();
   for( unsigned i=0; i != cnum_; ++i ) {
     if ( !pc_pub_key_equal( &cpub_[i], &pupd->comp_[i].pub_ ) ) {
       pc_pub_key_assign( &cpub_[i], &pupd->comp_[i].pub_ );
     }
+    cprice_[i] = pupd->comp_[i].agg_.price_;
+    cconf_[i]  = pupd->comp_[i].agg_.conf_;
   }
 
   // update aggregate price and status if changed
@@ -1021,6 +1147,26 @@ void price::update( T *res )
       .add( "valid_slot", valid_slot_ )
       .end();
   }
+}
+
+unsigned price::get_num_publisher() const
+{
+  return cnum_;
+}
+
+const pub_key *price::get_publisher( unsigned i ) const
+{
+  return (const pub_key*)&cpub_[i];
+}
+
+int64_t price::get_publisher_price( unsigned i ) const
+{
+  return cprice_[i];
+}
+
+uint64_t price::get_publisher_conf( unsigned i ) const
+{
+  return cconf_[i];
 }
 
 ///////////////////////////////////////////////////////////////////////////

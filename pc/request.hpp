@@ -229,6 +229,37 @@ namespace pc
     rpc::signature_subscribe sig_[1];
   };
 
+  // remove price publisher from symbol account
+  class del_publisher : public request,
+                        public rpc_sub_i<rpc::signature_subscribe>,
+                        public rpc_sub_i<rpc::del_publisher>
+  {
+  public:
+    del_publisher();
+    void set_symbol( const symbol& );
+    void set_publisher( const pub_key& );
+    void set_price_type( price_type );
+    void set_commitment( commitment );
+    bool get_is_done() const override;
+
+  public:
+    void on_response( rpc::del_publisher * ) override;
+    void on_response( rpc::signature_subscribe * ) override;
+    bool get_is_ready() override;
+    void submit() override;
+
+  private:
+    typedef enum {
+      e_add_sent, e_add_sig, e_done, e_error
+    } state_t;
+
+    state_t                  st_;
+    commitment               cmt_;
+    key_pair                 akey_;
+    rpc::del_publisher       req_[1];
+    rpc::signature_subscribe sig_[1];
+  };
+
   // transfer SOL from publisher to other account
   class transfer : public request,
                    public rpc_sub_i<rpc::transfer>,
@@ -337,6 +368,13 @@ namespace pc
     int64_t       get_price() const;
     uint64_t      get_conf() const;
     symbol_status get_status() const;
+    uint64_t      get_lamports() const;
+
+    // get publishers
+    unsigned get_num_publisher() const;
+    int64_t  get_publisher_price( unsigned ) const;
+    uint64_t get_publisher_conf( unsigned ) const;
+    const pub_key *get_publisher( unsigned ) const;
 
     // slot that corresponds to the prices used to compile the last
     // published aggregate
@@ -388,11 +426,14 @@ namespace pc
     uint64_t               aconf_;
     uint64_t               valid_slot_;
     uint64_t               pub_slot_;
+    uint64_t               lamports_;
     int32_t                aexpo_;
     uint32_t               cnum_;
     pub_key               *pkey_;
     price_sched            sched_;
     pc_pub_key_t           cpub_[PC_COMP_SIZE];
+    int64_t                cprice_[PC_COMP_SIZE];
+    uint64_t               cconf_[PC_COMP_SIZE];
     rpc::get_account_info  areq_[1];
     rpc::account_subscribe sreq_[1];
     rpc::upd_price         preq_[1];

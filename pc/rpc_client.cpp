@@ -1220,6 +1220,123 @@ void rpc::add_publisher::response( const jtree& jt )
 }
 
 ///////////////////////////////////////////////////////////////////////////
+// del_publisher
+
+void rpc::del_publisher::set_symbol( const symbol& sym )
+{
+  sym_= sym;
+}
+
+void rpc::del_publisher::set_program( pub_key *gkey )
+{
+  gkey_ = gkey;
+}
+
+void rpc::del_publisher::set_block_hash( hash *bhash )
+{
+  bhash_ = bhash;
+}
+
+void rpc::del_publisher::set_publish( key_pair *pkey )
+{
+  pkey_ = pkey;
+}
+
+void rpc::del_publisher::set_account( key_pair *akey )
+{
+  akey_ = akey;
+}
+
+void rpc::del_publisher::set_publisher( const pub_key& nkey )
+{
+  nkey_ = nkey;
+}
+
+void rpc::del_publisher::set_price_type( price_type ptype )
+{
+  ptype_ = ptype;
+}
+
+symbol *rpc::del_publisher::get_symbol()
+{
+  return &sym_;
+}
+
+pub_key *rpc::del_publisher::get_publisher()
+{
+  return &nkey_;
+}
+
+price_type rpc::del_publisher::get_price_type() const
+{
+  return ptype_;
+}
+
+signature *rpc::del_publisher::get_signature()
+{
+  return &sig_;
+}
+
+void rpc::del_publisher::request( json_wtr& msg )
+{
+  // construct binary transaction
+  net_buf *bptr = net_buf::alloc();
+  bincode tx( bptr->buf_ );
+
+  // signatures section
+  tx.add_len<2>();      // two signatures (publish, symbol )
+  size_t pub_idx = tx.reserve_sign();
+  size_t sym_idx = tx.reserve_sign();
+
+  // message header
+  size_t tx_idx = tx.get_pos();
+  tx.add( (uint8_t)2 ); // pub and  symbol are signing accounts
+  tx.add( (uint8_t)0 ); // read-only signed accounts
+  tx.add( (uint8_t)1 ); // program-id are read-only unsigned accounts
+
+  // accounts
+  tx.add_len<3>();      // 3 accounts: publish, symbol, program
+  tx.add( *pkey_ );     // publish account
+  tx.add( *akey_ );     // symbol account
+  tx.add( *gkey_ );     // programid
+
+  // recent block hash
+  tx.add( *bhash_ );    // recent block hash
+
+  // instructions section
+  tx.add_len<1>();      // one instruction
+  tx.add( (uint8_t)2);  // program_id index
+  tx.add_len<2>();      // 2 accounts: publish, symbol
+  tx.add( (uint8_t)0 ); // index of publish account
+  tx.add( (uint8_t)1 ); // index of symbol account
+
+  // instruction parameter section
+  tx.add_len<sizeof(cmd_del_publisher)>();
+  tx.add( (uint32_t)PC_VERSION );
+  tx.add( (int32_t)e_cmd_del_publisher );
+  tx.add( (uint32_t)ptype_ );
+  tx.add( (uint32_t)0 );
+  tx.add( sym_ );
+  tx.add( nkey_ );
+
+  // all accounts need to sign transaction
+  tx.sign( pub_idx, tx_idx, *pkey_ );
+  sig_.init_from_buf( (const uint8_t*)(tx.get_buf() + pub_idx) );
+  tx.sign( sym_idx, tx_idx, *akey_ );
+
+  // encode transaction and add to json params
+  send_transaction( msg, tx );
+  bptr->dealloc();
+}
+
+void rpc::del_publisher::response( const jtree& jt )
+{
+  if ( on_error( jt, this ) ) return;
+  on_response( this );
+}
+
+
+///////////////////////////////////////////////////////////////////////////
 // upd_price
 
 void rpc::upd_price::set_symbol( symbol *sym )

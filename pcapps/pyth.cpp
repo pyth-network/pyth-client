@@ -28,18 +28,23 @@ using namespace pc;
 int usage()
 {
   std::cerr << "usage: pyth " << std::endl;
-  std::cerr << "  init_key       [options]" << std::endl;
-  std::cerr << "  init_program   [options]" << std::endl;
-  std::cerr << "  init_mapping   <amount> [options]" << std::endl;
-  std::cerr << "  transfer       <pub_key> <amount> [options]" << std::endl;
-  std::cerr << "  balance        [-p <pub_key>] [options]" << std::endl;
-  std::cerr << "  add_mapping    <amount> [options]" << std::endl;
-  std::cerr << "  add_symbol     <symbol> <price_type> <amount> "
+  std::cerr << "  init_key        [options]" << std::endl;
+  std::cerr << "  init_program    [options]" << std::endl;
+  std::cerr << "  init_mapping    <amount> [options]" << std::endl;
+  std::cerr << "  transfer        <pub_key> <amount> [options]" << std::endl;
+  std::cerr << "  balance         [-p <pub_key>] [options]" << std::endl;
+  std::cerr << "  add_mapping     <amount> [options]" << std::endl;
+  std::cerr << "  add_symbol      <symbol> <price_type> <amount> "
             << "[-e <price_exponent (default " << get_exponent()
             << ")>] [options]" << std::endl;
-  std::cerr << "  add_publisher  <pub_key> <symbol> <price_type> [options]"
+  std::cerr << "  get_symbol      <symbol> <price_type> [options]"
             << std::endl;
-  std::cerr << "  pub_key        <key_pair_file>" << std::endl;
+  std::cerr << "  get_symbol_list [options]" << std::endl;
+  std::cerr << "  add_publisher   <pub_key> <symbol> <price_type> [options]"
+            << std::endl;
+  std::cerr << "  del_publisher   <pub_key> <symbol> <price_type> [options]"
+            << std::endl;
+  std::cerr << "  pub_key         <key_pair_file>" << std::endl;
   std::cerr << std::endl;
 
   std::cerr << "options include:" << std::endl;
@@ -59,16 +64,9 @@ int submit_request( const std::string& rpc_host,
   manager mgr;
   mgr.set_rpc_host( rpc_host );
   mgr.set_dir( key_dir );
-  if ( !mgr.init() ) {
+  if ( !mgr.init() || !mgr.bootstrap() ) {
     std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
     return 1;
-  }
-  int status = PC_PYTH_RPC_CONNECTED | PC_PYTH_HAS_BLOCK_HASH;
-  if ( mgr.get_mapping_pub_key() ) {
-    status |= PC_PYTH_HAS_MAPPING;
-  }
-  while( !mgr.get_is_err() && !mgr.has_status( status ) ) {
-    mgr.poll();
   }
 
   // submit request and poll for completion or error
@@ -94,10 +92,11 @@ int on_init_key( int argc, char **argv )
   int opt = 0;
   std::string rpc_host = get_rpc_host();
   std::string key_dir  = get_key_store();
-  while( (opt = ::getopt(argc,argv, "r:k:c:h" )) != -1 ) {
+  while( (opt = ::getopt(argc,argv, "r:k:c:dh" )) != -1 ) {
     switch(opt) {
       case 'r': rpc_host = optarg; break;
       case 'k': key_dir = optarg; break;
+      case 'd': log::set_level( PC_LOG_DBG_LVL ); break;
       case 'c': break;
       default: return usage();
     }
@@ -132,10 +131,11 @@ int on_init_program( int argc, char **argv )
   int opt = 0;
   std::string rpc_host = get_rpc_host();
   std::string key_dir  = get_key_store();
-  while( (opt = ::getopt(argc,argv, "r:k:c:h" )) != -1 ) {
+  while( (opt = ::getopt(argc,argv, "r:k:c:dh" )) != -1 ) {
     switch(opt) {
       case 'r': rpc_host = optarg; break;
       case 'k': key_dir = optarg; break;
+      case 'd': log::set_level( PC_LOG_DBG_LVL ); break;
       case 'c': break;
       default: return usage();
     }
@@ -177,10 +177,11 @@ int on_init_mapping( int argc, char **argv )
   commitment cmt = commitment::e_confirmed;
   std::string rpc_host = get_rpc_host();
   std::string key_dir  = get_key_store();
-  while( (opt = ::getopt(argc,argv, "r:k:c:h" )) != -1 ) {
+  while( (opt = ::getopt(argc,argv, "r:k:c:dh" )) != -1 ) {
     switch(opt) {
       case 'r': rpc_host = optarg; break;
       case 'k': key_dir = optarg; break;
+      case 'd': log::set_level( PC_LOG_DBG_LVL ); break;
       case 'c': cmt = str_to_commitment(optarg); break;
       default: return usage();
     }
@@ -215,10 +216,11 @@ int on_transfer( int argc, char **argv )
   commitment cmt = commitment::e_confirmed;
   std::string rpc_host = get_rpc_host();
   std::string key_dir  = get_key_store();
-  while( (opt = ::getopt(argc,argv, "r:k:c:h" )) != -1 ) {
+  while( (opt = ::getopt(argc,argv, "r:k:c:dh" )) != -1 ) {
     switch(opt) {
       case 'r': rpc_host = optarg; break;
       case 'k': key_dir = optarg; break;
+      case 'd': log::set_level( PC_LOG_DBG_LVL ); break;
       case 'c': cmt = str_to_commitment(optarg); break;
       default: return usage();
     }
@@ -270,7 +272,7 @@ int on_balance( int argc, char **argv )
   }
   int ret = submit_request( rpc_host, key_dir, req );
   if ( ret == 0 ) {
-    printf( "balance: %18.9f\n", 1e-9*req->get_lamports() );
+    printf( "balance: %.9f\n", 1e-9*req->get_lamports() );
   }
   return ret;
 }
@@ -305,11 +307,12 @@ int on_add_symbol( int argc, char **argv )
   std::string rpc_host = get_rpc_host();
   std::string key_dir  = get_key_store();
   commitment cmt = commitment::e_confirmed;
-  while( (opt = ::getopt(argc,argv, "e:r:k:c:h" )) != -1 ) {
+  while( (opt = ::getopt(argc,argv, "e:r:k:c:dh" )) != -1 ) {
     switch(opt) {
       case 'r': rpc_host = optarg; break;
       case 'k': key_dir = optarg; break;
       case 'c': cmt = str_to_commitment(optarg); break;
+      case 'd': log::set_level( PC_LOG_DBG_LVL ); break;
       case 'e': exponent = ::atoi( optarg ); break;
       default: return usage();
     }
@@ -348,6 +351,121 @@ int on_add_symbol( int argc, char **argv )
   return submit_request( rpc_host, key_dir, req );
 }
 
+int on_get_symbol( int argc, char **argv )
+{
+  // get input parameters
+  if ( argc < 3 ) {
+    return usage();
+  }
+  str sym_s( argv[1] );
+  if ( sym_s.len_ > symbol::len ) {
+    std::cerr << "pyth: symbol length too long" << std::endl;
+    return usage();
+  }
+  symbol sym( sym_s );
+  if ( sym.data()[0] == 0x20 ) {
+    return usage();
+  }
+  price_type ptype = str_to_price_type( argv[2] );
+  if ( ptype == price_type::e_unknown ) {
+    std::cerr << "pyth: unknown price_type=" << argv[3] << std::endl;
+    return usage();
+  }
+  argc -= 1;
+  argv += 1;
+  int opt = 0;
+  std::string rpc_host = get_rpc_host();
+  std::string key_dir  = get_key_store();
+  while( (opt = ::getopt(argc,argv, "r:k:c:dh" )) != -1 ) {
+    switch(opt) {
+      case 'r': rpc_host = optarg; break;
+      case 'k': key_dir = optarg; break;
+      case 'd': log::set_level( PC_LOG_DBG_LVL ); break;
+      case 'c': break;
+      default: return usage();
+    }
+  }
+
+  // initialize connection to block-chain
+  manager mgr;
+  mgr.set_rpc_host( rpc_host );
+  mgr.set_dir( key_dir );
+  if ( !mgr.init() || !mgr.bootstrap() ) {
+    std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
+    return 1;
+  }
+  str pstr = price_type_to_str( ptype );
+  price *ptr = mgr.get_symbol( sym, ptype );
+  if ( !ptr ) {
+    std::cerr << "pyth: cannot find symbol=";
+    std::cerr.write( sym.data(), symbol::len );
+    std::cerr << ",price_type=";
+    std::cerr.write( pstr.str_, pstr.len_ );
+    std::cerr << std::endl;
+    return 1;
+  }
+  std::string pkey;
+  ptr->get_account()->enc_base58( pkey );
+  std::cout << "symbol    : ";
+  std::cout.write( sym.data(), symbol::len );
+  std::cout << std::endl;
+  std::cout << "price_type: ";
+  std::cout.write( pstr.str_, pstr.len_ );
+  std::cout << std::endl;
+  std::cout << "account   : " << pkey << std::endl;
+  printf( "balance   : %.9f\n", 1e-9*ptr->get_lamports() );
+  std::cout << "price     : " << ptr->get_price() << std::endl;
+  std::cout << "conf      : " << ptr->get_conf() << std::endl;
+  std::cout << "exponent  : " << ptr->get_price_exponent() << std::endl;
+  std::cout << "valid_slot: " << ptr->get_valid_slot() << std::endl;
+  std::cout << "pub_slot  : " << ptr->get_pub_slot() << std::endl;
+  for( unsigned i=0; i != ptr->get_num_publisher(); ++i ) {
+    const pub_key*ipub = ptr->get_publisher( i );
+    std::string istr;
+    ipub->enc_base58( istr );
+    std::cout << "publisher : " << istr << std::endl;
+    std::cout << "  price   : " << ptr->get_publisher_price(i) << std::endl;
+    std::cout << "  conf    : " << ptr->get_publisher_conf(i) << std::endl;
+  }
+  return 0;
+}
+
+int on_get_symbol_list( int argc, char **argv )
+{
+  int opt = 0;
+  std::string rpc_host = get_rpc_host();
+  std::string key_dir  = get_key_store();
+  while( (opt = ::getopt(argc,argv, "r:k:c:dh" )) != -1 ) {
+    switch(opt) {
+      case 'r': rpc_host = optarg; break;
+      case 'k': key_dir = optarg; break;
+      case 'd': log::set_level( PC_LOG_DBG_LVL ); break;
+      case 'c': break;
+      default: return usage();
+    }
+  }
+
+  // initialize connection to block-chain
+  manager mgr;
+  mgr.set_rpc_host( rpc_host );
+  mgr.set_dir( key_dir );
+  if ( !mgr.init() || !mgr.bootstrap() ) {
+    std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
+    return 1;
+  }
+  for(unsigned i=0; i != mgr.get_num_symbol(); ++i ) {
+    price *ptr = mgr.get_symbol( i );
+    symbol *sym = ptr->get_symbol();
+    price_type ptype = ptr->get_price_type();
+    str pstr = price_type_to_str( ptype );
+    std::cout.write( sym->data(), symbol::len );
+    std::cout << ' ';
+    std::cout.write( pstr.str_, pstr.len_ );
+    std::cout << std::endl;
+  }
+  return 0;
+}
+
 int on_add_publisher( int argc, char **argv )
 {
   // get input parameters
@@ -373,10 +491,11 @@ int on_add_publisher( int argc, char **argv )
   std::string rpc_host = get_rpc_host();
   std::string key_dir  = get_key_store();
   commitment cmt = commitment::e_confirmed;
-  while( (opt = ::getopt(argc,argv, "e:r:k:c:h" )) != -1 ) {
+  while( (opt = ::getopt(argc,argv, "e:r:k:c:dh" )) != -1 ) {
     switch(opt) {
       case 'r': rpc_host = optarg; break;
       case 'k': key_dir = optarg; break;
+      case 'd': log::set_level( PC_LOG_DBG_LVL ); break;
       case 'c': cmt = str_to_commitment(optarg); break;
       default: return usage();
     }
@@ -415,6 +534,75 @@ int on_add_publisher( int argc, char **argv )
   return submit_request( rpc_host, key_dir, req );
 }
 
+int on_del_publisher( int argc, char **argv )
+{
+  // get input parameters
+  if ( argc < 4 ) {
+    return usage();
+  }
+  str sym_s( argv[2] );
+  if ( sym_s.len_ > symbol::len ) {
+    std::cerr << "pyth: symbol length too long" << std::endl;
+    return usage();
+  }
+  pub_key pub;
+  pub.init_from_text( argv[1] );
+  symbol  sym( sym_s );
+  price_type ptype = str_to_price_type( argv[3] );
+  if ( ptype == price_type::e_unknown ) {
+    std::cerr << "pyth: unknown price_type=" << argv[3] << std::endl;
+    return usage();
+  }
+  argc -= 3;
+  argv += 3;
+  int opt = 0;
+  std::string rpc_host = get_rpc_host();
+  std::string key_dir  = get_key_store();
+  commitment cmt = commitment::e_confirmed;
+  while( (opt = ::getopt(argc,argv, "e:r:k:c:dh" )) != -1 ) {
+    switch(opt) {
+      case 'r': rpc_host = optarg; break;
+      case 'k': key_dir = optarg; break;
+      case 'd': log::set_level( PC_LOG_DBG_LVL ); break;
+      case 'c': cmt = str_to_commitment(optarg); break;
+      default: return usage();
+    }
+  }
+  if ( cmt == commitment::e_unknown ) {
+    std::cerr << "pyth: unknown commitment level" << std::endl;
+    return usage();
+  }
+
+  // are you sure prompt
+  std::string pnm;
+  pub.enc_base58( pnm );
+  str pstr = price_type_to_str( ptype );
+  std::cout << "removing publisher:" << std::endl;
+  std::cout << "  symbol    : ";
+  std::cout.write( sym.data(), symbol::len );
+  std::cout << std::endl;
+  std::cout << "  price_type: ";
+  std::cout.write( pstr.str_, pstr.len_ );
+  std::cout << std::endl;
+  std::cout << "  version   : " << PC_VERSION << std::endl;
+  std::cout << "  publisher : " << pnm << std::endl;
+  std::cout << "are you sure? [y/n] ";
+  char ch;
+  std::cin >> ch;
+  if ( ch != 'y' && ch != 'Y' ) {
+    return 1;
+  }
+
+  // submit request
+  del_publisher req[1];
+  req->set_symbol( sym );
+  req->set_publisher( pub );
+  req->set_price_type( ptype );
+  req->set_commitment( cmt );
+  return submit_request( rpc_host, key_dir, req );
+}
+
+
 int on_show_pub_key( int argc, char **argv )
 {
   if ( argc < 2 ) {
@@ -443,7 +631,7 @@ int main(int argc, char **argv)
 
   // set up signal handing
   signal( SIGPIPE, SIG_IGN );
-  log::set_level( PC_LOG_INF_LVL );
+  log::set_level( PC_LOG_ERR_LVL );
 
   // dispatch by command
   str cmd( argv[0] );
@@ -460,8 +648,14 @@ int main(int argc, char **argv)
     rc = on_balance( argc, argv );
   } else if ( cmd == "add_symbol" ) {
     rc = on_add_symbol( argc, argv );
+  } else if ( cmd == "get_symbol" ) {
+    rc = on_get_symbol( argc, argv );
+  } else if ( cmd == "get_symbol_list" ) {
+    rc = on_get_symbol_list( argc, argv );
   } else if ( cmd == "add_publisher" ) {
     rc = on_add_publisher( argc, argv );
+  } else if ( cmd == "del_publisher" ) {
+    rc = on_del_publisher( argc, argv );
   } else if ( cmd == "pub_key" ) {
     rc = on_show_pub_key( argc, argv );
   } else {

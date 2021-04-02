@@ -103,6 +103,9 @@ namespace pc
     // initialize server and loop
     bool init();
 
+    // poll server until fully initialized or in error
+    bool bootstrap();
+
     // poll for socket updates
     void poll( bool do_wait = true);
 

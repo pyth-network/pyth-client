@@ -205,6 +205,18 @@ bool manager::init()
   return true;
 }
 
+bool manager::bootstrap()
+{
+  int status = PC_PYTH_RPC_CONNECTED | PC_PYTH_HAS_BLOCK_HASH;
+  if ( get_mapping_pub_key() ) {
+    status |= PC_PYTH_HAS_MAPPING;
+  }
+  while( !get_is_err() && !has_status( status ) ) {
+    poll();
+  }
+  return !get_is_err();
+}
+
 void manager::add_mapping( const pub_key& acc )
 {
   // check if he have this mapping
