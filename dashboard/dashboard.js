@@ -92,6 +92,9 @@ window.onload = function() {
   ws.onclose = function(e) {
     let n = document.getElementById('notify');
     n.textContent = 'disconnectd';
+    n.style.backgroundColor = 'red';
+    let hdr = document.getElementById('prices_div');
+    hdr.style.backgroundColor = 'red';
   }
   ws.onmessage = function(e) {
     let msg = JSON.parse(e.data);
