@@ -539,6 +539,41 @@ void rpc::get_health::response( const jtree& jt )
 }
 
 ///////////////////////////////////////////////////////////////////////////
+// get_minimum_balance_rent_exemption
+
+rpc::get_minimum_balance_rent_exemption::get_minimum_balance_rent_exemption()
+: sz_( 128 ),
+  lamports_( 0 )
+{
+}
+
+void rpc::get_minimum_balance_rent_exemption::set_size( size_t sz )
+{
+  sz_ = sz;
+}
+
+uint64_t rpc::get_minimum_balance_rent_exemption::get_lamports() const
+{
+  return lamports_;
+}
+
+void rpc::get_minimum_balance_rent_exemption::request( json_wtr& msg )
+{
+  msg.add_key( "method", "getMinimumBalanceForRentExemption" );
+  msg.add_key( "params", json_wtr::e_arr );
+  msg.add_val( sz_ );
+  msg.pop();
+}
+
+void rpc::get_minimum_balance_rent_exemption::response( const jtree& jt)
+{
+  if ( on_error( jt, this ) ) return;
+
+  lamports_ = jt.get_uint( jt.find_val( 1, "result" ) );
+  on_response( this );
+}
+
+///////////////////////////////////////////////////////////////////////////
 // transfer
 
 void rpc::transfer::set_block_hash( hash *bhash )

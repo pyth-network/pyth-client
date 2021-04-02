@@ -828,6 +828,48 @@ bool balance::get_is_done() const
 }
 
 ///////////////////////////////////////////////////////////////////////////
+// get_minimum_balance_rent_exemption
+
+get_minimum_balance_rent_exemption::get_minimum_balance_rent_exemption()
+: st_( e_sent )
+{
+}
+
+void get_minimum_balance_rent_exemption::set_size( size_t sz )
+{
+  req_->set_size( sz );
+}
+
+uint64_t get_minimum_balance_rent_exemption::get_lamports() const
+{
+  return req_->get_lamports();
+}
+
+void get_minimum_balance_rent_exemption::on_response(
+    rpc::get_minimum_balance_rent_exemption *res )
+{
+  if ( res->get_is_err() ) {
+    on_error_sub( res->get_err_msg(), this );
+    st_ = e_error;
+  } else if ( st_ == e_sent ) {
+    st_ = e_done;
+    on_response_sub( this );
+  }
+}
+
+void get_minimum_balance_rent_exemption::submit()
+{
+  st_ = e_sent;
+  req_->set_sub( this );
+  get_rpc_client()->send( req_ );
+}
+
+bool get_minimum_balance_rent_exemption::get_is_done() const
+{
+  return st_ == e_done;
+}
+
+///////////////////////////////////////////////////////////////////////////
 // price
 
 price::price( const pub_key& acc )

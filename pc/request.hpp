@@ -309,6 +309,26 @@ namespace pc
     rpc::get_account_info req_[1];
   };
 
+  // get minimum balance for rent exemption
+  class get_minimum_balance_rent_exemption : public request,
+    public rpc_sub_i<rpc::get_minimum_balance_rent_exemption>
+  {
+  public:
+    get_minimum_balance_rent_exemption();
+    void set_size( size_t );
+    uint64_t get_lamports() const;
+
+  public:
+    void submit() override;
+    void on_response( rpc::get_minimum_balance_rent_exemption* ) override;
+    bool get_is_done() const override;
+
+  private:
+    typedef enum { e_sent, e_done, e_error } state_t;
+    state_t  st_;
+    rpc::get_minimum_balance_rent_exemption req_[1];
+  };
+
   class price;
 
   // price submission schedule

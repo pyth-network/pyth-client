@@ -304,6 +304,20 @@ namespace pc
       void response( const jtree& ) override;
     };
 
+    // get minimum balance needed to maintain to be exempt rent
+    class get_minimum_balance_rent_exemption : public rpc_request
+    {
+    public:
+      get_minimum_balance_rent_exemption();
+      void set_size( size_t );
+      uint64_t get_lamports() const;
+      void request( json_wtr& ) override;
+      void response( const jtree&p) override;
+    private:
+      size_t   sz_;
+      uint64_t lamports_;
+    };
+
     // find out when slots update
     class slot_subscribe : public rpc_subscription
     {

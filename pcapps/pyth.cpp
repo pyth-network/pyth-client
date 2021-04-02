@@ -32,19 +32,19 @@ int usage()
   std::cerr << "  init_program    [options]" << std::endl;
   std::cerr << "  init_mapping    <amount> [options]" << std::endl;
   std::cerr << "  transfer        <pub_key> <amount> [options]" << std::endl;
-  std::cerr << "  balance         [-p <pub_key>] [options]" << std::endl;
   std::cerr << "  add_mapping     <amount> [options]" << std::endl;
   std::cerr << "  add_symbol      <symbol> <price_type> <amount> "
             << "[-e <price_exponent (default " << get_exponent()
             << ")>] [options]" << std::endl;
-  std::cerr << "  get_symbol      <symbol> <price_type> [options]"
-            << std::endl;
-  std::cerr << "  get_symbol_list [options]" << std::endl;
   std::cerr << "  add_publisher   <pub_key> <symbol> <price_type> [options]"
             << std::endl;
   std::cerr << "  del_publisher   <pub_key> <symbol> <price_type> [options]"
             << std::endl;
-  std::cerr << "  pub_key         <key_pair_file>" << std::endl;
+  std::cerr << "  get_balance     [<pub_key>] [options]" << std::endl;
+  std::cerr << "  get_symbol      <symbol> <price_type> [options]"
+            << std::endl;
+  std::cerr << "  get_symbol_list [options]" << std::endl;
+  std::cerr << "  get_pub_key     <key_pair_file>" << std::endl;
   std::cerr << std::endl;
 
   std::cerr << "options include:" << std::endl;
@@ -249,11 +249,14 @@ int on_transfer( int argc, char **argv )
   return submit_request( rpc_host, key_dir, req );
 }
 
-int on_balance( int argc, char **argv )
+int on_get_balance( int argc, char **argv )
 {
-  int opt = 0;
   pub_key pub;
   std::string knm;
+  if ( argc > 1 && argv[1][0] != '-' ) {
+    knm = argv[1];
+  }
+  int opt = 0;
   std::string rpc_host = get_rpc_host();
   std::string key_dir  = get_key_store();
   while( (opt = ::getopt(argc,argv, "r:k:p:h" )) != -1 ) {
@@ -265,13 +268,23 @@ int on_balance( int argc, char **argv )
     }
   }
 
-  balance req[1];
-  if ( !knm.empty() ) {
+  if ( knm.empty() ) {
+    key_store mgr;
+    mgr.set_dir( key_dir );
+    if ( !mgr.init() ) {
+      std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
+      return 1;
+    }
+    pub = *mgr.get_publish_pub_key();
+  } else {
     pub.init_from_text( knm );
-    req->set_pub_key( &pub );
   }
+  balance req[1];
+  req->set_pub_key( &pub );
   int ret = submit_request( rpc_host, key_dir, req );
   if ( ret == 0 ) {
+    pub.enc_base58( knm );
+    std::cout << "account: " << knm << std::endl;
     printf( "balance: %.9f\n", 1e-9*req->get_lamports() );
   }
   return ret;
@@ -394,6 +407,23 @@ int on_get_symbol( int argc, char **argv )
     std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
     return 1;
   }
+  // get rent exemption amount
+  get_minimum_balance_rent_exemption req[1];
+  req->set_size( sizeof( pc_price_t ) );
+  mgr.submit( req );
+  while( !req->get_is_done() && !req->get_is_err() && !mgr.get_is_err() ) {
+    mgr.poll();
+  }
+  if ( req->get_is_err() ) {
+    std::cerr << "pyth: " << req->get_err_msg() << std::endl;
+    return 1;
+  }
+  if ( mgr.get_is_err() ) {
+    std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
+    return 1;
+  }
+
+  // print symbol details
   str pstr = price_type_to_str( ptype );
   price *ptr = mgr.get_symbol( sym, ptype );
   if ( !ptr ) {
@@ -414,6 +444,7 @@ int on_get_symbol( int argc, char **argv )
   std::cout << std::endl;
   std::cout << "account   : " << pkey << std::endl;
   printf( "balance   : %.9f\n", 1e-9*ptr->get_lamports() );
+  printf( "rent      : %.9f\n", 1e-9*req->get_lamports() );
   std::cout << "price     : " << ptr->get_price() << std::endl;
   std::cout << "conf      : " << ptr->get_conf() << std::endl;
   std::cout << "exponent  : " << ptr->get_price_exponent() << std::endl;
@@ -603,7 +634,7 @@ int on_del_publisher( int argc, char **argv )
 }
 
 
-int on_show_pub_key( int argc, char **argv )
+int on_get_pub_key( int argc, char **argv )
 {
   if ( argc < 2 ) {
     return usage();
@@ -644,8 +675,8 @@ int main(int argc, char **argv)
     rc = on_init_mapping( argc, argv );
   } else if ( cmd == "transfer" ) {
     rc = on_transfer( argc, argv );
-  } else if ( cmd == "balance" ) {
-    rc = on_balance( argc, argv );
+  } else if ( cmd == "get_balance" ) {
+    rc = on_get_balance( argc, argv );
   } else if ( cmd == "add_symbol" ) {
     rc = on_add_symbol( argc, argv );
   } else if ( cmd == "get_symbol" ) {
@@ -656,8 +687,8 @@ int main(int argc, char **argv)
     rc = on_add_publisher( argc, argv );
   } else if ( cmd == "del_publisher" ) {
     rc = on_del_publisher( argc, argv );
-  } else if ( cmd == "pub_key" ) {
-    rc = on_show_pub_key( argc, argv );
+  } else if ( cmd == "get_pub_key" ) {
+    rc = on_get_pub_key( argc, argv );
   } else {
     std::cerr << "pyth: unknown command" << std::endl;
     rc = usage();
