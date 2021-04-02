@@ -257,8 +257,7 @@ namespace pc
   {
   public:
     void init( const char *method="POST", const char *endpoint="/" );
-    void add_hdr( const char *hdr, const char *txt, size_t txt_len );
-    void add_hdr( const char *hdr, const char *txt  );
+    void add_hdr( const char *hdr, str );
     void add_hdr( const char *hdr, uint64_t val );
     void commit( net_wtr& );
     void commit();
@@ -305,21 +304,12 @@ namespace pc
 
     // access to http request components
     unsigned get_num_header() const;
-    void get_header_key( unsigned i, const char *&, size_t& ) const;
-    void get_header_val( unsigned i, const char *&, size_t& ) const;
-    bool get_header_val( const char *key, const char *&, size_t& ) const;
-    void get_path( const char *&, size_t& ) const;
+    void get_header_key( unsigned i, str& ) const;
+    void get_header_val( unsigned i, str&) const;
+    bool get_header_val( const str&key, str&) const;
+    void get_path( str& ) const;
 
   private:
-
-    struct str {
-      str();
-      str( const char *, size_t );
-      void set( const char *, size_t );
-      void get( const char *&, size_t& ) const;
-      const char *txt_;
-      size_t      len_;
-    };
 
     typedef std::vector<str> str_vec_t;
 
@@ -448,21 +438,19 @@ namespace pc
     return hnms_.size();
   }
 
-  inline void http_server::get_header_key(
-      unsigned i, const char *&txt, size_t& len ) const
+  inline void http_server::get_header_key( unsigned i, str& val ) const
   {
-    hnms_[i].get( txt, len );
+    val = hnms_[i];
   }
 
-  inline void http_server::get_header_val(
-      unsigned i, const char *&txt, size_t& len ) const
+  inline void http_server::get_header_val( unsigned i, str& val ) const
   {
-    hval_[i].get( txt, len );
+    val = hval_[i];
   }
 
-  inline void http_server::get_path( const char *&txt, size_t& len ) const
+  inline void http_server::get_path( str& val ) const
   {
-    path_.get( txt, len );
+    val = path_;
   }
 
 }

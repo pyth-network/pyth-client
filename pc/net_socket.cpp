@@ -760,19 +760,14 @@ void http_request::init( const char *method, const char *endpoint )
   add( " HTTP/1.1\r\n" );
 }
 
-void http_request::add_hdr( const char *hdr, const char *txt, size_t len )
+void http_request::add_hdr( const char *hdr, str val )
 {
   add( hdr );
   add( ':' );
   add( ' ' );
-  add( str( txt, len ) );
+  add( val );
   add( '\r' );
   add( '\n' );
-}
-
-void http_request::add_hdr( const char *hdr, const char *txt )
-{
-  add_hdr( hdr, txt, __builtin_strlen( txt ) );
 }
 
 void http_request::add_hdr( const char *hdr, uint64_t ival )
@@ -924,34 +919,11 @@ ws_parser *http_server::get_ws_parser() const
   return wp_;
 }
 
-inline http_server::str::str()
-: txt_( nullptr ), len_( 0 )
-{
-}
-
-inline http_server::str::str( const char *txt, size_t len )
-: txt_( txt ), len_( len ) {
-}
-
-inline void http_server::str::set( const char *txt, size_t len )
-{
-  txt_ = txt;
-  len_ = len;
-}
-
-inline void http_server::str::get( const char *&txt, size_t& len ) const
-{
-  txt = txt_;
-  len = len_;
-}
-
-bool http_server::get_header_val(
-    const char *key, const char *&txt, size_t&len ) const
+bool http_server::get_header_val( const str& key, str& val) const
 {
   for(unsigned i=0; i != hnms_.size(); ++i ) {
-    const str& h = hnms_[i];
-    if ( 0 == __builtin_strncmp( key, h.txt_, h.len_ ) ) {
-      hval_[i].get( txt, len );
+    if ( key == hnms_[i] ) {
+      val = hval_[i];
       return true;
     }
   }
@@ -971,7 +943,8 @@ bool http_server::parse( const char *ptr, size_t len, size_t& res )
   if ( !find( ' ', ptr, end ) ) return false;
   size_t path_len = ptr - path;
   if ( !find( CR, ptr, end ) )  return false;
-  path_.set( path, path_len );
+  path_.str_ = path;
+  path_.len_ = path_len;
   if ( !next( LF, ++ptr, end ) )  return false;
 
   // parse other header lines
@@ -1025,9 +998,8 @@ bool http_server::parse( const char *ptr, size_t len, size_t& res )
 
 void http_server::upgrade_ws()
 {
-  size_t key_len;
-  const char *key;
-  if ( !get_header_val( "Sec-WebSocket-Key", key, key_len ) ) {
+  str key;
+  if ( !get_header_val( "Sec-WebSocket-Key", key ) ) {
     return;
   }
   const char *magic_id = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
@@ -1035,7 +1007,7 @@ void http_server::upgrade_ws()
   __builtin_memset( skey, 0, SHA_DIGEST_LENGTH );
   SHA_CTX cx[1];
   SHA1_Init( cx );
-  SHA1_Update( cx, key, key_len );
+  SHA1_Update( cx, key.str_, key.len_ );
   SHA1_Update( cx, magic_id, __builtin_strlen( magic_id ) );
   SHA1_Final( (uint8_t*)skey, cx );
   char bkey[SHA_DIGEST_LENGTH+SHA_DIGEST_LENGTH];
@@ -1047,7 +1019,7 @@ void http_server::upgrade_ws()
   msg.init( "101", "Switching Protocols" );
   msg.add_hdr( "Connection", "Upgrade" );
   msg.add_hdr( "Upgrade", "websocket" );
-  msg.add_hdr( "Sec-WebSocket-Accept", bkey, blen );
+  msg.add_hdr( "Sec-WebSocket-Accept", str( bkey, blen ) );
   msg.commit();
   np_->add_send( msg );
 

@@ -37,6 +37,7 @@ namespace pc
   // string as char pointer plus length
   struct str
   {
+    str();
     str( const char * );
     str( const char *, size_t );
     str( const uint8_t *, size_t );
@@ -48,6 +49,10 @@ namespace pc
 
   /////////////////////////////////////////////////////////////////////////
   // inline impl
+
+  inline str::str()
+  : str_( nullptr ), len_( 0 ) {
+  }
 
   inline str::str( const char *str )
   : str_( str ), len_( __builtin_strlen( str ) ) {

@@ -103,6 +103,16 @@ int manager::get_listen_port() const
   return lsvr_.get_port();
 }
 
+void manager::set_content_dir( const std::string& cdir )
+{
+  cdir_ = cdir;
+}
+
+std::string manager::get_content_dir() const
+{
+  return cdir_;
+}
+
 void manager::set_manager_sub( manager_sub *sub )
 {
   sub_ = sub;
@@ -199,7 +209,8 @@ bool manager::init()
     if ( !lsvr_.init() ) {
       return set_err_msg( lsvr_.get_err_msg() );
     }
-    PC_LOG_INF("listening").add("port",lsvr_.get_port()).end();
+    PC_LOG_INF("listening").add("port",lsvr_.get_port())
+      .add( "content_dir", cdir_ ).end();
   }
 
   return true;

@@ -60,6 +60,10 @@ namespace pc
     void set_version( uint32_t );
     uint32_t get_version() const;
 
+    // content directory (for http content requests if running as server)
+    void set_content_dir( const std::string& );
+    std::string get_content_dir() const;
+
     // event subscription callback
     void set_manager_sub( manager_sub * );
     manager_sub *get_manager_sub() const;
@@ -191,6 +195,7 @@ namespace pc
     acc_map_t    amap_;     // account to symbol pricing info
     spx_vec_t    svec_;     // symbol price subscriber/publishers
     std::string  rhost_;    // rpc host
+    std::string  cdir_;     // content directory
     manager_sub *sub_;      // subscription callback
     int          status_;   // status bitmap
     int          num_sub_;  // number of in-flight mapping subscriptions

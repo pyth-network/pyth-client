@@ -1,0 +1,37 @@
+* {
+  font-family: monospace;
+}
+body {
+  background-color: #010514;
+}
+h2 {
+  color: #A442CC;
+}
+th {
+  text-align: center;
+  color: #425FDC;
+}
+td {
+  text-align: right;
+  color: cornsilk;
+}
+tr:hover {
+  background-color: #010305;
+}
+th, td {
+  border: 1px solid #202020;
+}
+#errmsg {
+  position: fixed;
+  bottom:   0;
+  right:    0;
+  width:    100%;
+  text-align: right;
+  color:    red;
+}
+#notify {
+  position: fixed;
+  bottom:   0;
+  width:    100%;
+  color:    white;
+}

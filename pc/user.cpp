@@ -1,6 +1,7 @@
 #include "user.hpp"
 #include "manager.hpp"
 #include "log.hpp"
+#include "mem_map.hpp"
 
 #define PC_JSON_RPC_VER         "2.0"
 #define PC_JSON_PARSE_ERROR     -32700
@@ -52,8 +53,48 @@ void user::teardown()
   psub_.teardown();
 }
 
+static str get_content_type( const std::string & filen )
+{
+  size_t i = filen.find_last_of( '.' );
+  if ( i != std::string::npos ) {
+    std::string ext = filen.substr( i );
+    if ( ext == ".html" ) {
+      return "text/html";
+    } else if ( ext == ".css" ) {
+      return "text/css";
+    } else if ( ext == ".js" ) {
+      return "application/javascript";
+    }
+  }
+  return "text/html";
+}
+
 void user::parse_content( const char *, size_t )
 {
+  str path;
+  hsvr_.get_path( path );
+  std::string cfile = sptr_->get_content_dir();
+  if ( cfile.empty() ) {
+    cfile += ".";
+  }
+  cfile += std::string( path.str_, path.len_ );
+  if ( path == str( "/" ) ) {
+    cfile += "index.html";
+  }
+  mem_map mf;
+  mf.set_file( cfile );
+  http_response msg;
+  if ( mf.init() ) {
+    msg.init( "200", "OK" );
+    msg.add_hdr( "Content-Type", get_content_type( cfile ) );
+    net_wtr mfb;
+    mfb.add( str( mf.data(), mf.size() ) );
+    msg.commit( mfb );
+  } else {
+    msg.init( "404", "Not Found" );
+    msg.commit();
+  }
+  add_send( msg );
 }
 
 void user::parse_msg( const char *txt, size_t len )
