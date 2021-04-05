@@ -311,7 +311,8 @@ Test( oracle, upd_price ) {
     .status_ = PC_STATUS_TRADING,
     .sym_    = { .k8_ = { 1UL, 2UL } },
     .price_  = 42L,
-    .conf_   = 9L
+    .conf_   = 9L,
+    .nonce_  = 100
   };
   SolPubkey p_id  = {.x = { 0xff, }};
   SolPubkey p_id2 = {.x = { 0xfe, }};
@@ -397,6 +398,26 @@ Test( oracle, upd_price ) {
   cr_assert( sptr->agg_.pub_slot_ == 3 );
   cr_assert( sptr->valid_slot_ == 1 );
   cr_assert( sptr->curr_slot_ == 3 );
+
+  // next price doesnt change but slot does
+  cvar.slot_ = 4;
+  cr_assert( SUCCESS == dispatch( &prm, acc ) );
+  cr_assert( sptr->comp_[0].latest_.price_ == 81L );
+  cr_assert( sptr->comp_[0].agg_.price_ == 81L );
+  cr_assert( sptr->comp_[0].latest_.pub_slot_ == 4 );
+  cr_assert( sptr->agg_.pub_slot_ == 4 );
+  cr_assert( sptr->valid_slot_ == 3 );
+  cr_assert( sptr->curr_slot_ == 4 );
+
+  // next price doesnt change and neither does aggregate but slot does
+  cvar.slot_ = 5;
+  cr_assert( SUCCESS == dispatch( &prm, acc ) );
+  cr_assert( sptr->comp_[0].latest_.price_ == 81L );
+  cr_assert( sptr->comp_[0].agg_.price_ == 81L );
+  cr_assert( sptr->comp_[0].latest_.pub_slot_ == 5 );
+  cr_assert( sptr->agg_.pub_slot_ == 5 );
+  cr_assert( sptr->valid_slot_ == 4 );
+  cr_assert( sptr->curr_slot_ == 5 );
 }
 
 Test(oracle, upd_aggregate ) {

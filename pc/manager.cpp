@@ -123,6 +123,11 @@ manager_sub *manager::get_manager_sub() const
   return sub_;
 }
 
+rpc_client *manager::get_rpc_client()
+{
+  return &clnt_;
+}
+
 hash *manager::get_recent_block_hash()
 {
   return breq_->get_block_hash();

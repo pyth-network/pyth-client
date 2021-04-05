@@ -567,6 +567,7 @@ namespace pc
     class upd_price : public rpc_request
     {
     public:
+      upd_price();
       void set_symbol( symbol * );
       void set_symbol_status( symbol_status );
       void set_price_type( price_type );
@@ -589,6 +590,7 @@ namespace pc
       pub_key      *akey_;
       int64_t       price_;
       uint64_t      conf_;
+      uint64_t      nonce_;
       price_type    pt_;
       symbol_status st_;
       signature     sig_;

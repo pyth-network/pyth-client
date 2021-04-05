@@ -193,6 +193,7 @@ typedef struct cmd_upd_price
   pc_symbol_t  sym_;
   int64_t      price_;
   uint64_t     conf_;
+  uint64_t     nonce_;
 } cmd_upd_price_t;
 
 // structure of clock sysvar account

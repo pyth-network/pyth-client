@@ -1,6 +1,6 @@
 #include "rpc_client.hpp"
 #include "bincode.hpp"
-#include <iostream>
+#include <unistd.h>
 
 #include "log.hpp"
 
@@ -1374,6 +1374,11 @@ void rpc::del_publisher::response( const jtree& jt )
 ///////////////////////////////////////////////////////////////////////////
 // upd_price
 
+rpc::upd_price::upd_price()
+{
+  nonce_ = getpid()*random();
+}
+
 void rpc::upd_price::set_symbol( symbol *sym )
 {
   sym_ = sym;
@@ -1465,6 +1470,7 @@ void rpc::upd_price::request( json_wtr& msg )
   tx.add( *sym_ );
   tx.add( price_ );
   tx.add( conf_ );
+  tx.add( nonce_++ );
 
   // all accounts need to sign transaction
   tx.sign( pub_idx, tx_idx, *pkey_ );
