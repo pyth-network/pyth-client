@@ -47,6 +47,8 @@ manager::manager()
   slot_min_( 0L ),
   slot_( 0UL ),
   slot_cnt_( 0UL ),
+  cum_ack_( 0L ),
+  num_ack_( 0L ),
   wait_conn_( false )
 {
   breq_->set_sub( this );
@@ -308,8 +310,10 @@ void manager::poll( bool do_wait )
   int64_t ts = get_now();
   while ( kidx_ < kvec_.size() ) {
     price_sched *kptr = kvec_[kidx_];
-    int64_t pub_ts = slot_ts_ + ( slot_min_ * kptr->get_hash() ) /
-      price_sched::period;
+    int64_t ack_ts = num_ack_?(cum_ack_/num_ack_):0L;
+    int64_t tot_ts = slot_min_ - ack_ts - ack_ts;
+    int64_t pub_ts = slot_ts_ + ( tot_ts * kptr->get_hash() ) /
+      price_sched::fraction;
     if ( ts > pub_ts ) {
       kptr->schedule();
       ++kidx_;
@@ -496,6 +500,9 @@ void manager::on_response( rpc::get_recent_block_hash *m )
         + m->get_err_msg()  + "]" );
     return;
   }
+  int64_t ack_ts = m->get_recv_time() - m->get_sent_time();
+  cum_ack_ += ack_ts;
+  ++num_ack_;
   if ( has_status( PC_PYTH_HAS_BLOCK_HASH ) ) {
     return;
   }
@@ -504,6 +511,7 @@ void manager::on_response( rpc::get_recent_block_hash *m )
   PC_LOG_INF( "received_recent_block_hash" )
     .add( "slot", m->get_slot() )
     .add( "slot_interval(ms)", 1e-6*slot_int_ )
+    .add( "rount_trip_time(ms)", 1e-6*ack_ts )
     .end();
 
   // subscribe to mapping account if not done before

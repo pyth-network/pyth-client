@@ -342,7 +342,6 @@ namespace pc
 
   public:
     static const uint64_t fraction = 997UL;
-    static const uint64_t period   = 1097UL;
 
     bool get_is_ready() override;
     void submit() override;

@@ -208,6 +208,8 @@ namespace pc
     int64_t      slot_min_; // slot minimum interval
     uint64_t     slot_;     // current slot
     uint64_t     slot_cnt_; // slot count
+    int64_t      cum_ack_;  // cumulative block hash ack times
+    int64_t      num_ack_;  // number of block hash acks
     kpx_vec_t    kvec_;     // symbol price scheduling
     bool         wait_conn_;// waiting on connection
 
