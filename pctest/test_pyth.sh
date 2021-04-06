@@ -65,12 +65,12 @@ setup_pub()
   check "$SOLANA airdrop 5 -k $DIR/publish_key_pair.json $SOL_OPT"
 
   # get program public key
-  prog_id=$($PYTH pub_key $ADM/program_key_pair.json)
+  prog_id=$($PYTH get_pub_key $ADM/program_key_pair.json)
   echo $prog_id > $DIR/program_key.json
   chmod 0400 $DIR/program_key.json
 
   # get mapping public key
-  map_id=$($PYTH pub_key $ADM/mapping_key_pair.json)
+  map_id=$($PYTH get_pub_key $ADM/mapping_key_pair.json)
   echo $map_id > $DIR/mapping_key.json
   chmod 0400 $DIR/mapping_key.json
 }
@@ -121,7 +121,7 @@ check "yes|$PYTH add_symbol US.EQ.SYMBOL2 price 0.1 -e -6 -k $dirA $popt"
 check "yes|$PYTH add_symbol US.EQ.SYMBOL3 price 0.05 -e -2 -k $dirA $popt"
 
 # add publishers
-pubA=$($PYTH pub_key $dirA/publish_key_pair.json)
+pubA=$($PYTH get_pub_key $dirA/publish_key_pair.json)
 check "yes|$PYTH add_publisher $pubA US.EQ.SYMBOL1 price -k $dirA $popt"
 # check that we cant add same publisher twice
 not_check "yes|$PYTH add_publisher $pubA US.EQ.SYMBOL1 price -k $dirA $popt"
@@ -129,7 +129,7 @@ check "yes|$PYTH add_publisher $pubA US.EQ.SYMBOL2 price -k $dirA $popt"
 check "yes|$PYTH add_publisher $pubA US.EQ.SYMBOL3 price -k $dirA $popt"
 # check that we cant add publisher for non-existent symbol
 not_check "yes|$PYTH add_publisher $pubA US.EQ.SYMBOL4 price -k $dirA $popt"
-pubP=$($PYTH pub_key $dirP/publish_key_pair.json)
+pubP=$($PYTH get_pub_key $dirP/publish_key_pair.json)
 not_check "yes|$PYTH add_publisher $pubP US.EQ.SYMBOL1 price -k $dirP $popt"
 check "yes|$PYTH add_publisher $pubP US.EQ.SYMBOL1 price -k $dirA $popt"
 check "yes|$PYTH add_publisher $pubP US.EQ.SYMBOL2 price -k $dirA $popt"
