@@ -357,8 +357,7 @@ namespace pc
   class price : public request,
                 public rpc_sub_i<rpc::get_account_info>,
                 public rpc_sub_i<rpc::account_subscribe>,
-                public rpc_sub_i<rpc::upd_price>,
-                public rpc_sub_i<rpc::signature_subscribe>
+                public rpc_sub_i<rpc::upd_price>
   {
   public:
 
@@ -368,11 +367,11 @@ namespace pc
     bool has_publisher( const pub_key& );
 
     // ready to publish (i.e. not waiting for confirmation)
-    bool get_is_ready() const;
+    bool get_is_ready_publish() const;
 
     // submit new price update
     // will fail with false if in error (check get_is_err() )
-    // or because symbol is not ready to publish (check get_is_ready())
+    // or because symbol is not ready to publish (get_is_ready_publish())
     bool update( int64_t price, uint64_t conf, symbol_status );
 
     // get and activate price schedule subscription
@@ -402,9 +401,6 @@ namespace pc
     // slot of last aggregate price
     uint64_t      get_pub_slot() const;
 
-    // slot of last confirmed published price
-    uint64_t      get_last_slot() const;
-
   public:
 
     void set_symbol( const symbol& );
@@ -419,13 +415,12 @@ namespace pc
     void on_response( rpc::get_account_info * ) override;
     void on_response( rpc::account_subscribe * ) override;
     void on_response( rpc::upd_price * ) override;
-    void on_response( rpc::signature_subscribe * ) override;
 
   private:
 
     typedef enum {
       e_subscribe, e_sent_subscribe,
-      e_publish, e_pend_publish, e_sent_publish, e_sent_sig,
+      e_publish, e_pend_publish, e_sent_publish,
       e_error } state_t;
 
     template<class T> void update( T *res );
@@ -456,7 +451,6 @@ namespace pc
     rpc::get_account_info  areq_[1];
     rpc::account_subscribe sreq_[1];
     rpc::upd_price         preq_[1];
-    rpc::signature_subscribe sig_[1];
   };
 
   template<class T>

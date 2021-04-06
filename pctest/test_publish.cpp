@@ -140,6 +140,7 @@ void test_publish::on_response( pc::price_sched *ptr, uint64_t sub_id )
     PC_LOG_ERR( "failed to submit price" )
       .add( "symbol", *sym->get_symbol() )
       .add( "price_type", pc::price_type_to_str( sym->get_price_type() ) )
+      .add( "err_msg", sym->get_err_msg() )
       .end();
   } else {
     double price  = expo_ * (double)px_;

@@ -898,7 +898,6 @@ price::price( const pub_key& acc )
   areq_->set_sub( this );
   sreq_->set_sub( this );
   preq_->set_sub( this );
-  sig_->set_sub( this );
 }
 
 bool price::init_publish()
@@ -978,12 +977,7 @@ uint64_t price::get_pub_slot() const
   return pub_slot_;
 }
 
-uint64_t price::get_last_slot() const
-{
-  return sig_->get_slot();
-}
-
-bool price::get_is_ready() const
+bool price::get_is_ready_publish() const
 {
   return st_ == e_publish;
 }
@@ -1071,21 +1065,8 @@ void price::on_response( rpc::upd_price *res )
     st_ = e_error;
     return;
   } else if ( st_ == e_sent_publish ) {
-    st_ = e_sent_sig;
-    sig_->set_commitment( commitment::e_confirmed );
-    sig_->set_signature( res->get_signature() );
-    get_rpc_client()->send( sig_ );
+    st_ = e_publish;
   }
-}
-
-void price::on_response( rpc::signature_subscribe *res )
-{
-  if ( res->get_is_err() ) {
-    on_error_sub( res->get_err_msg(), this );
-    st_ = e_error;
-    return;
-  }
-  st_ = e_publish;
 }
 
 void price::init_subscribe( pc_price_t *pupd )
@@ -1248,7 +1229,7 @@ void price_sched::submit()
 
 void price_sched::schedule()
 {
-  if ( ptr_->get_is_ready() ) {
+  if ( ptr_->get_is_ready_publish() ) {
     on_response_sub( this );
   }
 }
