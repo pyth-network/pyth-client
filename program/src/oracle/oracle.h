@@ -98,17 +98,17 @@ typedef struct pc_price
 {
   uint32_t        magic_;             // pyth magic number
   uint32_t        ver_;               // program version
-  uint32_t        unused_;            // 64bit padding
+  uint32_t        size_;              // price account size
   uint32_t        ptype_;             // price or calculation type
   int32_t         expo_;              // price exponent
   uint32_t        num_;               // number of component prices
   uint64_t        curr_slot_;         // currently accumulating price slot
   uint64_t        valid_slot_;        // valid slot-time of agg. price
   pc_symbol_t     sym_;               // symbol for this account
+  pc_pub_key_t    next_;              // next price account
   pc_pub_key_t    agg_pub_;           // aggregate price updater
   pc_price_info_t agg_;               // aggregate price information
   pc_price_comp_t comp_[PC_COMP_SIZE];// component prices
-  pc_pub_key_t    next_;              // next price account
 } pc_price_t;
 
 // command enumeration

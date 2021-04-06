@@ -183,6 +183,7 @@ int usage()
              << std::endl;
   std::cerr << "  [-k <key_store_directory (default "
             << get_key_store() << ">]" << std::endl;
+  std::cerr << "  [-c <capture file>]" << std::endl;
   std::cerr << "  [-n]" << std::endl;
   return 1;
 }
@@ -192,12 +193,14 @@ int main(int argc, char** argv)
   // unpack options
   int opt = 0;
   bool do_wait = true;
+  std::string cap_file;
   std::string rpc_host = get_rpc_host();
   std::string key_dir  = get_key_store();
-  while( (opt = ::getopt(argc,argv, "r:k:nh" )) != -1 ) {
+  while( (opt = ::getopt(argc,argv, "r:k:c:nh" )) != -1 ) {
     switch(opt) {
       case 'r': rpc_host = optarg; break;
       case 'k': key_dir = optarg; break;
+      case 'c': cap_file = optarg; break;
       case 'n': do_wait = false; break;
       default: return usage();
     }
@@ -219,6 +222,8 @@ int main(int argc, char** argv)
   mgr.set_rpc_host( rpc_host );
   mgr.set_dir( key_dir );
   mgr.set_manager_sub( &sub );
+  mgr.set_capture_file( cap_file );
+  mgr.set_do_capture( !cap_file.empty() );
   if ( !mgr.init() ) {
     std::cerr << "test_publish: " << mgr.get_err_msg() << std::endl;
     return 1;

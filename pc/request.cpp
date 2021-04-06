@@ -1158,7 +1158,8 @@ void price::update( T *res )
     pub_slot_ = pupd->agg_.pub_slot_;
     valid_slot_ = pupd->valid_slot_;
 
-    // TODO: capture price components that went into aggregate price
+    // capture aggregate price and components to disk
+    get_manager()->write( pupd );
 
     // ping subscribers with new aggregate price
     on_response_sub( this );

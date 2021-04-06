@@ -22,6 +22,7 @@ set( CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread")
 # pyth client API library
 #
 set( PC_SRC
+  pc/capture.cpp;
   pc/key_pair.cpp;
   pc/key_store.cpp;
   pc/jtree.cpp;
@@ -30,12 +31,14 @@ set( PC_SRC
   pc/mem_map.cpp;
   pc/misc.cpp;
   pc/net_socket.cpp;
+  pc/replay.cpp;
   pc/request.cpp;
   pc/rpc_client.cpp;
   pc/user.cpp;
   )
 
 set( PC_HDR
+  pc/capture.hpp;
   pc/dbl_list.hpp;
   pc/error.hpp;
   pc/jtree.hpp;
@@ -44,8 +47,10 @@ set( PC_HDR
   pc/hash_map.hpp;
   pc/log.hpp;
   pc/manager.hpp;
+  pc/mem_map.hpp;
   pc/misc.hpp;
   pc/net_socket.hpp;
+  pc/replay.hpp;
   pc/request.hpp;
   pc/rpc_client.hpp
   pc/user.hpp )
@@ -63,6 +68,8 @@ add_executable( pythd pcapps/pythd.cpp )
 target_link_libraries( pythd ${PC_DEP} )
 add_executable( pyth pcapps/pyth.cpp )
 target_link_libraries( pyth ${PC_DEP} )
+add_executable( pyth_csv pcapps/pyth_csv.cpp )
+target_link_libraries( pyth_csv ${PC_DEP} )
 
 #
 # install

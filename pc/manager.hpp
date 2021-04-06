@@ -7,6 +7,7 @@
 #include <pc/key_store.hpp>
 #include <pc/dbl_list.hpp>
 #include <pc/hash_map.hpp>
+#include <pc/capture.hpp>
 
 // status bits
 #define PC_PYTH_RPC_CONNECTED    (1<<0)
@@ -63,6 +64,14 @@ namespace pc
     // content directory (for http content requests if running as server)
     void set_content_dir( const std::string& );
     std::string get_content_dir() const;
+
+    // capture flag (off by default)
+    void set_do_capture( bool );
+    bool get_do_capture() const;
+
+    // price capture file
+    void set_capture_file( const std::string& cap_file );
+    std::string get_capture_file() const;
 
     // event subscription callback
     void set_manager_sub( manager_sub * );
@@ -125,6 +134,7 @@ namespace pc
     void add_map_sub();
     void del_map_sub();
     void schedule( price_sched* );
+    void write( pc_price_t *ptr );
 
     // rpc callbacks
     void on_response( rpc::slot_subscribe * );
@@ -212,10 +222,18 @@ namespace pc
     int64_t      num_ack_;  // number of block hash acks
     kpx_vec_t    kvec_;     // symbol price scheduling
     bool         wait_conn_;// waiting on connection
+    bool         do_cap_;   // do capture flag
+    capture      cap_;      // aggregate price capture
 
     // requests
     rpc::slot_subscribe        sreq_[1]; // slot subscription
     rpc::get_recent_block_hash breq_[1]; // block hash request
   };
 
+  inline void manager::write( pc_price_t *ptr )
+  {
+    if ( do_cap_ ) {
+      cap_.write( ptr );
+    }
+  }
 }

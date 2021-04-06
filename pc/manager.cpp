@@ -49,7 +49,8 @@ manager::manager()
   slot_cnt_( 0UL ),
   cum_ack_( 0L ),
   num_ack_( 0L ),
-  wait_conn_( false )
+  wait_conn_( false ),
+  do_cap_( false )
 {
   breq_->set_sub( this );
   sreq_->set_sub( this );
@@ -93,6 +94,26 @@ void manager::set_rpc_host( const std::string& rhost )
 std::string manager::get_rpc_host() const
 {
   return rhost_;
+}
+
+void manager::set_capture_file( const std::string& cap_file )
+{
+  cap_.set_file( cap_file );
+}
+
+std::string manager::get_capture_file() const
+{
+  return cap_.get_file();
+}
+
+void manager::set_do_capture( bool do_cap )
+{
+  do_cap_ = do_cap;
+}
+
+bool manager::get_do_capture() const
+{
+  return do_cap_;
 }
 
 void manager::set_listen_port( int port )
@@ -191,6 +212,11 @@ bool manager::init()
     PC_LOG_INF( "program_key" ).add( "key_name", *gpub ).end();
   }
 
+  // initialize capture
+  if ( do_cap_ && !cap_.init() ) {
+    return set_err_msg( cap_.get_err_msg() );
+  }
+
   // initialize net_loop
   if ( !nl_.init() ) {
     return set_err_msg( nl_.get_err_msg() );
@@ -217,7 +243,9 @@ bool manager::init()
       return set_err_msg( lsvr_.get_err_msg() );
     }
     PC_LOG_INF("listening").add("port",lsvr_.get_port())
-      .add( "content_dir", cdir_ ).end();
+      .add( "content_dir", get_content_dir() )
+      .add( "capture_file", get_capture_file() )
+      .end();
   }
 
   return true;
@@ -485,6 +513,11 @@ void manager::on_response( rpc::slot_subscribe *res )
     slot_min_ = std::min( slot_int_, slot_min_ );
   } else {
     slot_min_ = slot_int_;
+  }
+
+  // flush capture
+  if ( do_cap_ ) {
+    cap_.flush();
   }
   PC_LOG_DBG( "receive slot" )
    .add( "slot_num", res->get_slot() )

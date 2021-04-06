@@ -135,6 +135,7 @@ static uint64_t add_symbol( SolParameters *prm, SolAccountInfo *ka )
   sol_memset( sptr, 0, sizeof( pc_price_t ) );
   sptr->magic_ = PC_MAGIC;
   sptr->ver_   = PC_VERSION;
+  sptr->size_  = sizeof( pc_price_t );
   sptr->expo_  = cptr->expo_;
   sptr->ptype_ = cptr->ptype_;
   pc_symbol_assign( &sptr->sym_, &cptr->sym_ );
