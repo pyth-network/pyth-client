@@ -1310,7 +1310,7 @@ void price::update( T *res )
   lamports_ = res->get_lamports();
   if ( PC_UNLIKELY( cnum_ != pupd->num_ ) ) {
     cnum_ = pupd->num_;
-    log_update( "add_publisher", pupd );
+    log_update( "modify_publisher", pupd );
   }
   for( unsigned i=0; i != cnum_; ++i ) {
     if ( !pc_pub_key_equal( &cpub_[i], &pupd->comp_[i].pub_ ) ) {

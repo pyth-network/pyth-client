@@ -41,6 +41,25 @@ std::string mem_map::get_file() const
   return file_;
 }
 
+bool mem_map::remap()
+{
+  struct stat fst[1];
+  if ( 0 != fstat( fd_, fst ) || fst->st_size == 0 ) {
+    return false;
+  }
+  size_t nlen = fst->st_size;
+  if ( nlen == len_ ) {
+    return false;
+  }
+  void *buf = ::mremap( (void*)buf_, len_, nlen, MREMAP_MAYMOVE );
+  if ( buf == MAP_FAILED ) {
+    return false;
+  }
+  buf_ = (const char*)buf;
+  len_ = nlen;
+  return true;
+}
+
 bool mem_map::init()
 {
   close();

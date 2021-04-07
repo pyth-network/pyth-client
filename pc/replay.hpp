@@ -31,6 +31,7 @@ namespace pc
     bool get_next();
 
   private:
+
     int64_t     ts_;
     pc_price_t *up_;
     size_t      sz_;

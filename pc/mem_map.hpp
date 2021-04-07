@@ -16,6 +16,7 @@ namespace pc
     // initialize from file
     void set_file( const std::string& );
     std::string get_file() const;
+    bool remap();
     bool init();
 
     // access to file data

@@ -39,14 +39,16 @@ struct pc_hdr
 
 bool replay::get_next()
 {
-  pc_hdr *hdr = (pc_hdr*)(mf_.data() + sz_);
-  size_t left = mf_.size() - sz_;
-  if ( left >= sizeof( pc_hdr ) && left >= hdr->size_ ) {
-    ts_ = hdr->ts_;
-    up_ = (pc_price_t*)&mf_.data()[sz_+sizeof(int64_t)];
-    sz_ += hdr->size_;
-    return true;
-  } else {
-    return false;
+  for(;;) {
+    pc_hdr *hdr = (pc_hdr*)(mf_.data() + sz_);
+    size_t left = mf_.size() - sz_;
+    if ( left >= sizeof( pc_hdr ) && left >= hdr->size_ ) {
+      ts_ = hdr->ts_;
+      up_ = (pc_price_t*)&mf_.data()[sz_+sizeof(int64_t)];
+      sz_ += hdr->size_;
+      return true;
+    } else if ( ! mf_.remap() ) {
+      return false;
+    }
   }
 }
