@@ -1231,6 +1231,17 @@ void price::on_response( rpc::upd_price *res )
   }
 }
 
+void price::log_update( const char *title, pc_price_t *pupd )
+{
+  PC_LOG_INF( title )
+    .add( "symbol", sym_ )
+    .add( "price_type", price_type_to_str( ptype_ ) )
+    .add( "version", version_ )
+    .add( "exponent", aexpo_ )
+    .add( "num_publishers", pupd->num_ )
+    .end();
+}
+
 void price::init_subscribe( pc_price_t *pupd )
 {
   // update initial values
@@ -1240,13 +1251,7 @@ void price::init_subscribe( pc_price_t *pupd )
   sym_     = *(symbol*)&pupd->sym_;
   preq_->set_price_type( ptype_ );
   st_ = e_publish;
-  PC_LOG_INF( "add_symbol" )
-    .add( "symbol", sym_ )
-    .add( "price_type", price_type_to_str( ptype_ ) )
-    .add( "version", version_ )
-    .add( "exponent", aexpo_ )
-    .add( "num_publishers", pupd->num_ )
-    .end();
+  log_update( "add_symbol", pupd );
 
   // initial assignment
   cnum_ = pupd->num_;
@@ -1302,8 +1307,11 @@ void price::update( T *res )
   }
 
   // update publishers
-  cnum_ = pupd->num_;
   lamports_ = res->get_lamports();
+  if ( PC_UNLIKELY( cnum_ != pupd->num_ ) ) {
+    cnum_ = pupd->num_;
+    log_update( "add_publisher", pupd );
+  }
   for( unsigned i=0; i != cnum_; ++i ) {
     if ( !pc_pub_key_equal( &cpub_[i], &pupd->comp_[i].pub_ ) ) {
       pc_pub_key_assign( &cpub_[i], &pupd->comp_[i].pub_ );

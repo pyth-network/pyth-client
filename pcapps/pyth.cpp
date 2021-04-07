@@ -185,6 +185,7 @@ int on_init_mapping( int argc, char **argv )
     std::cerr << "pyth: unknown commitment level" << std::endl;
     return usage();
   }
+  std::cout << "this might take take up to 30 seconds..." << std::endl;
 
   // initialize connection to block-chain
   manager mgr;
@@ -362,6 +363,7 @@ int on_add_symbol( int argc, char **argv )
   if ( ch != 'y' && ch != 'Y' ) {
     return 1;
   }
+  std::cout << "this might take take up to 30 seconds..." << std::endl;
 
   // initialize connection to block-chain
   manager mgr;

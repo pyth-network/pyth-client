@@ -464,6 +464,7 @@ namespace pc
 
     bool init_publish();
     void init_subscribe( pc_price_t * );
+    void log_update( const char *title, pc_price_t * );
 
     bool                   init_;
     bool                   isched_;

@@ -50,7 +50,7 @@ setup_admin()
   check "$SOLANA program deploy ../target/oracle.so -k $DIR/publish_key_pair.json --program-id $DIR/program_key_pair.json $SOL_OPT"
 
   # setup mapping account
-  check "$PYTH init_mapping 0.5 $OPT"
+  check "$PYTH init_mapping $OPT"
 }
 
 setup_pub()
@@ -100,25 +100,25 @@ setup_admin $dirA
 setup_pub $dirA $dirP
 
 # try to add symbols from pub account
-not_check "yes|$PYTH add_symbol US.EQ.SYMBOL1 price 5 -e -4 -k $dirP $popt"
+not_check "yes|$PYTH add_symbol US.EQ.SYMBOL1 price -e -4 -k $dirP $popt"
 
 # copy mapping key by not right key
 cp $dirP/publish_key_pair.json $dirP/mapping_key_pair.json
-not_check "yes|$PYTH add_symbol US.EQ.SYMBOL1 price 5 -e -4 -k $dirP $popt"
+not_check "yes|$PYTH add_symbol US.EQ.SYMBOL1 price -e -4 -k $dirP $popt"
 rm -f $dirP/mapping_key_pair.json
 
 # create from mapping account
-check "yes|$PYTH add_symbol US.EQ.SYMBOL1 price 0.1 -e -4 -k $dirA $popt"
+check "yes|$PYTH add_symbol US.EQ.SYMBOL1 price -e -4 -k $dirA $popt"
 
 # cant create twice
-not_check "yes|$PYTH add_symbol US.EQ.SYMBOL1 price 0.1 -e -4 -k $dirA $popt"
+not_check "yes|$PYTH add_symbol US.EQ.SYMBOL1 price -e -4 -k $dirA $popt"
 
 # still cant create from publishing account
-not_check "yes|$PYTH add_symbol US.EQ.SYMBOL1 price 0.2 -e -4 -k $dirP $popt"
+not_check "yes|$PYTH add_symbol US.EQ.SYMBOL1 price -e -4 -k $dirP $popt"
 
 # add some other symbols
-check "yes|$PYTH add_symbol US.EQ.SYMBOL2 price 0.1 -e -6 -k $dirA $popt"
-check "yes|$PYTH add_symbol US.EQ.SYMBOL3 price 0.05 -e -2 -k $dirA $popt"
+check "yes|$PYTH add_symbol US.EQ.SYMBOL2 price -e -6 -k $dirA $popt"
+check "yes|$PYTH add_symbol US.EQ.SYMBOL3 price -e -2 -k $dirA $popt"
 
 # add publishers
 pubA=$($PYTH get_pub_key $dirA/publish_key_pair.json)
