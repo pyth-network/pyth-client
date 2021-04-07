@@ -16,7 +16,7 @@ KDIR=$1
 if [ -z "$KDIR" ] ; then
   KDIR=$HOME/.pythd
 fi
-echo "6uiESo51K5kJDbXmT6SdJc9h2AtM9dmByFgpKky3M44M" > $KDIR/program_key.json
+echo "25d2dsoksoMjjzKJ7tyP4n1CWLzmb4MTHhqJEbzGbT8q" > $KDIR/program_key.json
 check "chmod 0400 $KDIR/program_key.json"
-echo "GzWer3FtosUUso6TzG5wB4cchuXHfMWVvNu9R2FfaXH7" > $KDIR/mapping_key.json
+echo "B2Csr2HUoq7CPCnjXBuxD7jb4cbpsQ2nFY9kSy61MUkN" > $KDIR/mapping_key.json
 check "chmod 0400 $KDIR/mapping_key.json"
