@@ -4,6 +4,7 @@
 #include <atomic>
 #include <thread>
 #include <mutex>
+#include <fstream>
 #include <iostream>
 
 namespace pc
@@ -18,16 +19,19 @@ namespace pc
     void stop();
     void run();
     void add( net_wtr& wtr );
+    bool set_log_file( const std::string& );
 
   private:
     typedef std::vector<net_buf*> buf_vec_t;
     typedef std::atomic<bool> atomic_t;
-    atomic_t    is_run_;
-    atomic_t    is_wtr_;
-    std::mutex  mtx_;
-    std::thread thrd_;
-    buf_vec_t   logv_;
-    buf_vec_t   reuse_;
+    atomic_t      is_run_;
+    atomic_t      is_wtr_;
+    std::mutex    mtx_;
+    std::thread   thrd_;
+    buf_vec_t     logv_;
+    buf_vec_t     reuse_;
+    std::ostream *strm_;
+    std::ofstream logf_;
   };
 
 }
@@ -41,13 +45,25 @@ static void run_log( log_impl *iptr )
 
 log_impl::log_impl()
 : is_run_( true ),
-  is_wtr_( false )
+  is_wtr_( false ),
+  strm_( &std::cerr )
 {
 }
 
 log_impl::~log_impl()
 {
   stop();
+}
+
+bool log_impl::set_log_file( const std::string& filen )
+{
+  logf_.open( filen.c_str() );
+  if ( logf_.good() ) {
+    strm_ = &logf_;
+    return true;
+  } else {
+    return false;
+  }
 }
 
 void log_impl::start()
@@ -110,10 +126,10 @@ void log_impl::run()
       for( net_buf *ptr: logv ) {
         while( ptr ) {
           net_buf *nxt = ptr->next_;
-          std::cerr.write( ptr->buf_, ptr->size_ );
+          strm_->write( ptr->buf_, ptr->size_ );
           ptr = nxt;
         }
-        std::cerr << std::endl;
+        (*strm_) << std::endl;
       }
 
       // send buffers back
@@ -141,6 +157,11 @@ void log::set_level( int t )
     level_ |= 1;
   }
   impl_.start();
+}
+
+bool log::set_log_file( const std::string& log_file )
+{
+  return impl_.set_log_file( log_file );
 }
 
 log_line log::add( str topic, int level )

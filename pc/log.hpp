@@ -51,6 +51,7 @@ namespace pc
   {
   public:
 
+    static bool set_log_file( const std::string& );
     static void set_level( int level );
     static bool has_level( int level );
     static log_line add( str topic, int level );
