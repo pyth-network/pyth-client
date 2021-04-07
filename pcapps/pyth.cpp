@@ -30,10 +30,10 @@ int usage()
   std::cerr << "usage: pyth " << std::endl;
   std::cerr << "  init_key        [options]" << std::endl;
   std::cerr << "  init_program    [options]" << std::endl;
-  std::cerr << "  init_mapping    <amount> [options]" << std::endl;
-  std::cerr << "  transfer        <pub_key> <amount> [options]" << std::endl;
-  std::cerr << "  add_mapping     <amount> [options]" << std::endl;
-  std::cerr << "  add_symbol      <symbol> <price_type> <amount> "
+  std::cerr << "  init_mapping    [options]" << std::endl;
+  std::cerr << "  transfer        <pub_key> <amount> [options]"
+            << std::endl;
+  std::cerr << "  add_symbol      <symbol> <price_type> "
             << "[-e <price_exponent (default " << get_exponent()
             << ")>] [options]" << std::endl;
   std::cerr << "  add_publisher   <pub_key> <symbol> <price_type> [options]"
@@ -56,19 +56,8 @@ int usage()
   return 1;
 }
 
-int submit_request( const std::string& rpc_host,
-                    const std::string& key_dir,
-                    request *req )
+int submit_request( manager& mgr, request *req )
 {
-  // initialize connection to block-chain
-  manager mgr;
-  mgr.set_rpc_host( rpc_host );
-  mgr.set_dir( key_dir );
-  if ( !mgr.init() || !mgr.bootstrap() ) {
-    std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
-    return 1;
-  }
-
   // submit request and poll for completion or error
   mgr.submit( req );
   while( !req->get_is_done() &&
@@ -85,6 +74,21 @@ int submit_request( const std::string& rpc_host,
     return 1;
   }
   return 0;
+}
+
+int submit_request( const std::string& rpc_host,
+                    const std::string& key_dir,
+                    request *req )
+{
+  // initialize connection to block-chain
+  manager mgr;
+  mgr.set_rpc_host( rpc_host );
+  mgr.set_dir( key_dir );
+  if ( !mgr.init() || !mgr.bootstrap() ) {
+    std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
+    return 1;
+  }
+  return submit_request( mgr, req );
 }
 
 int on_init_key( int argc, char **argv )
@@ -164,15 +168,6 @@ int on_init_program( int argc, char **argv )
 int on_init_mapping( int argc, char **argv )
 {
   // get input parameters
-  if ( argc < 2 ) {
-    return usage();
-  }
-  int64_t lamports = str_to_dec( argv[1], -9 );
-  if ( lamports <= 0 ) {
-    return usage();
-  }
-  --argc;
-  ++argv;
   int opt = 0;
   commitment cmt = commitment::e_confirmed;
   std::string rpc_host = get_rpc_host();
@@ -191,11 +186,30 @@ int on_init_mapping( int argc, char **argv )
     return usage();
   }
 
-  // submit request
-  init_mapping req[1];
-  req->set_lamports( lamports );
-  req->set_commitment( cmt );
-  return submit_request( rpc_host, key_dir, req );
+  // initialize connection to block-chain
+  manager mgr;
+  mgr.set_rpc_host( rpc_host );
+  mgr.set_dir( key_dir );
+  if ( !mgr.init() || !mgr.bootstrap() ) {
+    std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
+    return 1;
+  }
+
+  // get rent-exemption amount
+  get_minimum_balance_rent_exemption req_r[1];
+  req_r->set_size( sizeof( pc_map_table_t ) );
+  if( submit_request( mgr, req_r ) ) {
+    return 1;
+  }
+
+  // submit init_mapping request
+  init_mapping req_i[1];
+  req_i->set_lamports( req_r->get_lamports() );
+  req_i->set_commitment( cmt );
+  if( submit_request( mgr, req_i ) ) {
+    return 1;
+  }
+  return 0;
 }
 
 int on_transfer( int argc, char **argv )
@@ -293,7 +307,7 @@ int on_get_balance( int argc, char **argv )
 int on_add_symbol( int argc, char **argv )
 {
   // get input parameters
-  if ( argc < 4 ) {
+  if ( argc < 3 ) {
     return usage();
   }
   str sym_s( argv[1] );
@@ -310,12 +324,8 @@ int on_add_symbol( int argc, char **argv )
     std::cerr << "pyth: unknown price_type=" << argv[3] << std::endl;
     return usage();
   }
-  int64_t lamports = str_to_dec( argv[3], -9 );
-  if ( lamports <= 0 ) {
-    return usage();
-  }
-  argc -= 2;
-  argv += 2;
+  argc -= 1;
+  argv += 1;
   int opt = 0, exponent = get_exponent();
   std::string rpc_host = get_rpc_host();
   std::string key_dir  = get_key_store();
@@ -345,8 +355,7 @@ int on_add_symbol( int argc, char **argv )
   std::cout.write( pstr.str_, pstr.len_ );
   std::cout << std::endl
             << "  version    : " << PC_VERSION << std::endl
-            << "  exponent   : " << exponent << std::endl
-            << "  amount     : " << lamports/1e9 << std::endl;
+            << "  exponent   : " << exponent << std::endl;
   std::cout << "are you sure? [y/n] ";
   char ch;
   std::cin >> ch;
@@ -354,14 +363,50 @@ int on_add_symbol( int argc, char **argv )
     return 1;
   }
 
-  // submit request
-  add_symbol req[1];
-  req->set_symbol( sym );
-  req->set_exponent( exponent );
-  req->set_price_type( ptype );
-  req->set_lamports( lamports );
-  req->set_commitment( cmt );
-  return submit_request( rpc_host, key_dir, req );
+  // initialize connection to block-chain
+  manager mgr;
+  mgr.set_rpc_host( rpc_host );
+  mgr.set_dir( key_dir );
+  if ( !mgr.init() || !mgr.bootstrap() ) {
+    std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
+    return 1;
+  }
+
+  // check if we need to create a new mapping account first
+  get_mapping *mptr = mgr.get_last_mapping();
+  if ( mptr && mptr->get_is_full() ) {
+    // get rent-exemption amount for mapping account
+    get_minimum_balance_rent_exemption req_r[1];
+    req_r->set_size( sizeof( pc_map_node_t ) );
+    if( submit_request( mgr, req_r ) ) {
+      return 1;
+    }
+    // add mapping account
+    add_mapping req_m[1];
+    req_m->set_lamports( req_r->get_lamports() );
+    req_m->set_commitment( commitment::e_finalized );
+    if( submit_request( mgr, req_m ) ) {
+      return 1;
+    }
+  }
+
+  // get rent-exemption amount for symbol account
+  get_minimum_balance_rent_exemption req_r[1];
+  req_r->set_size( sizeof( pc_price_t ) );
+  if( submit_request( mgr, req_r ) ) {
+    return 1;
+  }
+  // add new symbol account
+  add_symbol req_a[1];
+  req_a->set_symbol( sym );
+  req_a->set_exponent( exponent );
+  req_a->set_price_type( ptype );
+  req_a->set_lamports( req_r->get_lamports() );
+  req_a->set_commitment( cmt );
+  if( submit_request( mgr, req_a ) ) {
+    return 1;
+  }
+  return 0;
 }
 
 int on_get_symbol( int argc, char **argv )
@@ -410,16 +455,7 @@ int on_get_symbol( int argc, char **argv )
   // get rent exemption amount
   get_minimum_balance_rent_exemption req[1];
   req->set_size( sizeof( pc_price_t ) );
-  mgr.submit( req );
-  while( !req->get_is_done() && !req->get_is_err() && !mgr.get_is_err() ) {
-    mgr.poll();
-  }
-  if ( req->get_is_err() ) {
-    std::cerr << "pyth: " << req->get_err_msg() << std::endl;
-    return 1;
-  }
-  if ( mgr.get_is_err() ) {
-    std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
+  if( submit_request( mgr, req ) ) {
     return 1;
   }
 

@@ -463,6 +463,32 @@ namespace pc
       signature sig_;
     };
 
+    // add new mapping account
+    class add_mapping : public rpc_request
+    {
+    public:
+      // parameters
+      void set_block_hash( hash * );
+      void set_publish( key_pair * );
+      void set_mapping( key_pair * );
+      void set_account( key_pair * );
+      void set_program( pub_key * );
+
+      // results
+      signature *get_signature();
+
+      void request( json_wtr& ) override;
+      void response( const jtree& ) override;
+
+    private:
+      hash     *bhash_;
+      key_pair *pkey_;
+      key_pair *mkey_;
+      key_pair *akey_;
+      pub_key  *gkey_;
+      signature sig_;
+    };
+
     // add new symbol to mapping account
     class add_symbol: public rpc_request
     {

@@ -140,6 +140,7 @@ namespace pc
     void on_response( rpc::slot_subscribe * );
     void on_response( rpc::get_recent_block_hash * );
     void set_status( int );
+    get_mapping *get_last_mapping() const;
 
   private:
 

@@ -85,6 +85,80 @@ Test(oracle, init_mapping) {
   cr_assert( SUCCESS == dispatch( &prm, acc ) );
 }
 
+Test(oracle, add_mapping ) {
+  // start with perfect inputs
+  cmd_hdr_t idata = {
+    .ver_ = PC_VERSION,
+    .cmd_ = e_cmd_add_mapping
+  };
+  pc_map_table_t tptr[1];
+  sol_memset( tptr, 0, sizeof( pc_map_table_t ) );
+  tptr->magic_ = PC_MAGIC;
+  tptr->ver_ = PC_VERSION;
+  tptr->num_ = PC_MAP_NODE_SIZE;
+
+  SolPubkey p_id  = {.x = { 0xff, }};
+  SolPubkey pkey = {.x = { 1, }};
+  SolPubkey tkey = {.x = { 2, }};
+  SolPubkey mkey = {.x = { 3, }};
+  uint64_t pqty = 100, tqty = 100, mqty = 200;
+  pc_map_table_t mptr[1];
+  sol_memset( mptr, 0, sizeof( pc_map_table_t ) );
+  SolAccountInfo acc[] = {{
+      .key         = &pkey,
+      .lamports    = &pqty,
+      .data_len    = 0,
+      .data        = NULL,
+      .owner       = NULL,
+      .rent_epoch  = 0,
+      .is_signer   = true,
+      .is_writable = true,
+      .executable  = false
+  },{
+      .key         = &tkey,
+      .lamports    = &pqty,
+      .data_len    = sizeof( pc_map_table_t ),
+      .data        = (uint8_t*)tptr,
+      .owner       = &p_id,
+      .rent_epoch  = 0,
+      .is_signer   = true,
+      .is_writable = true,
+      .executable  = false
+  },{
+      .key         = &mkey,
+      .lamports    = &tqty,
+      .data_len    = sizeof( pc_map_table_t ),
+      .data        = (uint8_t*)mptr,
+      .owner       = &p_id,
+      .rent_epoch  = 0,
+      .is_signer   = true,
+      .is_writable = true,
+      .executable  = false
+  }};
+  SolParameters prm = {
+    .ka         = acc,
+    .ka_num     = 3,
+    .data       = (const uint8_t*)&idata,
+    .data_len   = sizeof( idata ),
+    .program_id = &p_id
+  };
+  cr_assert( SUCCESS == dispatch( &prm, acc ) );
+  cr_assert( mptr->magic_ == PC_MAGIC );
+  cr_assert( mptr->ver_ == PC_VERSION );
+  cr_assert( pc_pub_key_equal( &tptr->next_, (pc_pub_key_t*)&mkey ) );
+  cr_assert( pc_pub_key_is_zero( &mptr->next_ ) );
+  pc_pub_key_set_zero( &tptr->next_ );
+  sol_memset( mptr, 0, sizeof( pc_map_table_t ) );
+  tptr->num_ = 0;
+  cr_assert( ERROR_INVALID_ARGUMENT == dispatch( &prm, acc ) );
+  cr_assert( pc_pub_key_is_zero( &tptr->next_ ) );
+  tptr->num_ = PC_MAP_NODE_SIZE;
+  tptr->magic_ = 0;
+  cr_assert( ERROR_INVALID_ARGUMENT == dispatch( &prm, acc ) );
+  tptr->magic_ = PC_MAGIC;
+  cr_assert( SUCCESS == dispatch( &prm, acc ) );
+}
+
 Test(oracle, add_symbol) {
   // start with perfect inputs
   cmd_add_symbol_t idata = {

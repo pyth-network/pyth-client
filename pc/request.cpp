@@ -129,7 +129,8 @@ request::prev_next_t *request::get_request()
 // init_mapping
 
 init_mapping::init_mapping()
-: cmt_( commitment::e_confirmed )
+: st_( e_create_sent ),
+  cmt_( commitment::e_confirmed )
 {
 }
 
@@ -240,7 +241,8 @@ bool init_mapping::get_is_done() const
 // get_mapping
 
 get_mapping::get_mapping()
-: st_( e_new )
+: st_( e_new ),
+  num_sym_( 0 )
 {
 }
 
@@ -252,6 +254,16 @@ void get_mapping::set_mapping_key( const pub_key& mkey )
 pub_key *get_mapping::get_mapping_key()
 {
   return &mkey_;
+}
+
+uint32_t get_mapping::get_num_symbols() const
+{
+  return num_sym_;
+}
+
+bool get_mapping::get_is_full() const
+{
+  return num_sym_ >= PC_MAP_NODE_SIZE;
 }
 
 void get_mapping::reset()
@@ -282,21 +294,6 @@ void get_mapping::on_response( rpc::account_subscribe *res )
   update( res );
 }
 
-void get_mapping::init( pc_map_table_t *tab )
-{
-  // update state
-  st_ = e_init;
-
-  // subscribe to next mapping account in the chain
-  manager *cptr = get_manager();
-  if ( !pc_pub_key_is_zero( &tab->next_ ) ) {
-    cptr->add_mapping( *(pub_key*)&tab->next_ );
-  }
-
-  // reduce subscription account after we subscribe to next account in chain
-  cptr->del_map_sub();
-}
-
 template<class T>
 void get_mapping::update( T *res )
 {
@@ -313,23 +310,173 @@ void get_mapping::update( T *res )
   }
 
   // check and subscribe to any new price accounts in mapping table
+  num_sym_ = tab->num_;
+  PC_LOG_INF( "add_mapping" )
+    .add( "key_name", mkey_ )
+    .add( "num_symbols", num_sym_ )
+    .end();
   for( unsigned i=0; i != tab->num_; ++i ) {
     pc_map_node_t *nptr = &tab->nds_[i];
     pub_key *aptr = (pub_key*)&nptr->price_acc_;
     cptr->add_symbol( *aptr );
   }
 
-  // update state and reduce subscription count
+  // subscribe to other mapping accounts
+  if ( !pc_pub_key_is_zero( &tab->next_ ) ) {
+    cptr->add_mapping( *(pub_key*)&tab->next_ );
+  }
+
+  // update state and reduce subscription count after we subscribe to
+  // other accounts
   if ( st_ == e_new ) {
-    init( tab );
+    st_ = e_init;
+    cptr->del_map_sub();
   }
 }
+
+///////////////////////////////////////////////////////////////////////////
+// add_mapping
+
+add_mapping::add_mapping()
+: st_( e_create_sent ),
+  cmt_( commitment::e_confirmed )
+{
+}
+
+void add_mapping::set_commitment( commitment cmt )
+{
+  cmt_= cmt;
+}
+
+void add_mapping::set_lamports( uint64_t lamports )
+{
+  areq_->set_lamports( lamports );
+}
+
+bool add_mapping::get_is_ready()
+{
+  manager *cptr = get_manager();
+  if ( !cptr->get_mapping_pub_key() ) {
+    return set_err_msg( "missing mapping key pairfile ["
+        + cptr->get_mapping_key_pair_file() + "]" );
+  }
+  return cptr->has_status( PC_PYTH_RPC_CONNECTED |
+                           PC_PYTH_HAS_BLOCK_HASH |
+                           PC_PYTH_HAS_MAPPING );
+}
+
+void add_mapping::submit()
+{
+  // get keys
+  manager *cptr = get_manager();
+  key_pair *pkey = cptr->get_publish_key_pair();
+  if ( !pkey ) {
+    on_error_sub( "missing or invalid publish key [" +
+        cptr->get_publish_key_pair_file(), this );
+    return;
+  }
+  key_pair *mkey = cptr->get_mapping_key_pair();
+  if ( !mkey ) {
+    on_error_sub( "missing or invalid mapping key [" +
+        cptr->get_mapping_key_pair_file() + "]", this );
+    return;
+  }
+  get_mapping *mptr = cptr->get_last_mapping();
+  if ( !mptr->get_is_full() ) {
+    on_error_sub( "last mapping table not yet full", this );
+    return;
+  }
+  pub_key *mpub = mptr->get_mapping_key();
+  if ( mpub[0] == *cptr->get_mapping_pub_key() ) {
+    mreq_->set_mapping( mkey );
+  } else if ( cptr->get_account_key_pair( *mpub, mkey_ ) ) {
+    mreq_->set_mapping( &mkey_ );
+  } else {
+    on_error_sub( "cant find last mapping key_pair", this );
+    return;
+  }
+  pub_key *gpub = cptr->get_program_pub_key();
+  if ( !gpub ) {
+    on_error_sub( "missing or invalid program public key [" +
+        cptr->get_program_pub_key_file() + "]", this );
+    return;
+  }
+  if ( !cptr->create_account_key_pair( akey_ ) ) {
+    on_error_sub( "failed to create new mapping key_pair", this );
+    return;
+  }
+  areq_->set_sender( pkey );
+  areq_->set_account( &akey_ );
+  areq_->set_owner( gpub );
+  areq_->set_space( sizeof( pc_map_table_t ) );
+  mreq_->set_program( gpub );
+  mreq_->set_publish( pkey );
+  mreq_->set_account( &akey_ );
+  areq_->set_sub( this );
+  mreq_->set_sub( this );
+  sig_->set_sub( this );
+
+  // get recent block hash and submit request
+  st_ = e_create_sent;
+  areq_->set_block_hash( get_manager()->get_recent_block_hash() );
+  get_rpc_client()->send( areq_ );
+}
+
+void add_mapping::on_response( rpc::create_account *res )
+{
+  if ( res->get_is_err() ) {
+    on_error_sub( res->get_err_msg(), this );
+    st_ = e_error;
+  } else if ( st_ == e_create_sent ) {
+    // subscribe to signature completion
+    st_ = e_create_sig;
+    sig_->set_commitment( commitment::e_finalized );
+    sig_->set_signature( res->get_signature() );
+    get_rpc_client()->send( sig_ );
+  }
+}
+
+void add_mapping::on_response( rpc::add_mapping *res )
+{
+  if ( res->get_is_err() ) {
+    on_error_sub( res->get_err_msg(), this );
+    st_ = e_error;
+  } else if ( st_ == e_init_sent ) {
+    // subscribe to signature completion
+    st_ = e_init_sig;
+    sig_->set_commitment( cmt_ );
+    sig_->set_signature( res->get_signature() );
+    get_rpc_client()->send( sig_ );
+  }
+}
+
+void add_mapping::on_response( rpc::signature_subscribe *res )
+{
+  if ( res->get_is_err() ) {
+    on_error_sub( res->get_err_msg(), this );
+    st_ = e_error;
+  } else if ( st_ == e_create_sig ) {
+    st_ = e_init_sent;
+    mreq_->set_block_hash( get_manager()->get_recent_block_hash() );
+    get_rpc_client()->send( mreq_ );
+  } else if ( st_ == e_init_sig ) {
+    st_ = e_done;
+    on_response_sub( this );
+  }
+}
+
+bool add_mapping::get_is_done() const
+{
+  return st_ == e_done;
+}
+
 
 ///////////////////////////////////////////////////////////////////////////
 // add_symbol
 
 add_symbol::add_symbol()
-: cmt_( commitment::e_confirmed )
+: st_( e_create_sent ),
+  cmt_( commitment::e_confirmed )
 {
 }
 
@@ -380,14 +527,26 @@ void add_symbol::submit()
         + std::to_string( sptr->get_version() ), this );
     return;
   }
-
   key_pair *mkey = cptr->get_mapping_key_pair();
   if ( !mkey ) {
     on_error_sub( "missing or invalid mapping key [" +
         cptr->get_mapping_key_pair_file() + "]", this );
     return;
   }
-  sreq_->set_mapping( mkey );
+  get_mapping *mptr = cptr->get_last_mapping();
+  if ( mptr->get_is_full() ) {
+    on_error_sub( "mapping table full. run add_mapping first", this );
+    return;
+  }
+  pub_key *mpub = mptr->get_mapping_key();
+  if ( mpub[0] == *cptr->get_mapping_pub_key() ) {
+    sreq_->set_mapping( mkey );
+  } else if ( cptr->get_account_key_pair( *mpub, mkey_ ) ) {
+    sreq_->set_mapping( &mkey_ );
+  } else {
+    on_error_sub( "cant find last mapping key_pair", this );
+    return;
+  }
   key_pair *pkey = cptr->get_publish_key_pair();
   if ( !pkey ) {
     on_error_sub( "missing or invalid publish key [" +
@@ -472,7 +631,8 @@ bool add_symbol::get_is_done() const
 // add_publisher
 
 add_publisher::add_publisher()
-: cmt_( commitment::e_confirmed )
+: st_( e_add_sent ),
+  cmt_( commitment::e_confirmed )
 {
 }
 
@@ -589,7 +749,8 @@ bool add_publisher::get_is_done() const
 // del_publisher
 
 del_publisher::del_publisher()
-: cmt_( commitment::e_confirmed )
+: st_( e_add_sent ),
+  cmt_( commitment::e_confirmed )
 {
 }
 
@@ -778,7 +939,8 @@ bool transfer::get_is_done() const
 // balance
 
 balance::balance()
-: pub_( nullptr )
+: st_( e_sent ),
+  pub_( nullptr )
 {
 }
 
@@ -1163,13 +1325,6 @@ void price::update( T *res )
 
     // ping subscribers with new aggregate price
     on_response_sub( this );
-
-    PC_LOG_DBG( "agg_price_update" )
-      .add( "price", apx_ )
-      .add( "conf", aconf_ )
-      .add( "pub_slot", pub_slot_ )
-      .add( "valid_slot", valid_slot_ )
-      .end();
   }
 }
 

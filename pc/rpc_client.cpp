@@ -212,9 +212,6 @@ void rpc_client::rpc_ws::parse_msg( const char *txt, size_t len )
 
 void rpc_client::parse_response( const char *txt, size_t len )
 {
-//  std::cout.write( txt, len );
-//  std::cout << std::endl;
-
   // parse and redirect response to corresponding request
   jp_.parse( txt, len );
   uint32_t idtok = jp_.find_val( 1, "id" );
@@ -1133,6 +1130,97 @@ void rpc::init_mapping::request( json_wtr& msg )
 }
 
 void rpc::init_mapping::response( const jtree& jt )
+{
+  if ( on_error( jt, this ) ) return;
+  on_response( this );
+}
+
+///////////////////////////////////////////////////////////////////////////
+// add_mapping
+
+void rpc::add_mapping::set_block_hash( hash* bhash )
+{
+  bhash_ = bhash;
+}
+
+void rpc::add_mapping::set_publish( key_pair *kp )
+{
+  pkey_ = kp;
+}
+
+void rpc::add_mapping::set_mapping( key_pair *kp )
+{
+  mkey_ = kp;
+}
+
+void rpc::add_mapping::set_account( key_pair *kp )
+{
+  akey_ = kp;
+}
+
+void rpc::add_mapping::set_program( pub_key *gkey )
+{
+  gkey_ = gkey;
+}
+
+signature *rpc::add_mapping::get_signature()
+{
+  return &sig_;
+}
+
+void rpc::add_mapping::request( json_wtr& msg )
+{
+  // construct binary transaction
+  net_buf *bptr = net_buf::alloc();
+  bincode tx( bptr->buf_ );
+
+  // signatures section
+  tx.add_len<3>();      // three signatures (funding, mapping and account)
+  size_t pub_idx = tx.reserve_sign();
+  size_t map_idx = tx.reserve_sign();
+  size_t acc_idx = tx.reserve_sign();
+
+  // message header
+  size_t tx_idx = tx.get_pos();
+  tx.add( (uint8_t)3 ); // fund, map and new map are signing accounts
+  tx.add( (uint8_t)0 ); // read-only signed accounts
+  tx.add( (uint8_t)1 ); // program-id are read-only unsigned accounts
+
+  // accounts
+  tx.add_len<4>();      // 4 accounts: publish, mapping, new-account, program
+  tx.add( *pkey_ );     // publish account
+  tx.add( *mkey_ );     // mapping account
+  tx.add( *akey_ );     // new mapping account
+  tx.add( *gkey_ );     // programid
+
+  // recent block hash
+  tx.add( *bhash_ );     // recent block hash
+
+  // instructions section
+  tx.add_len<1>();      // one instruction
+  tx.add( (uint8_t)3);  // program_id index
+  tx.add_len<3>();      // 3 accounts: publish, mapping and new account
+  tx.add( (uint8_t)0 ); // index of publish account
+  tx.add( (uint8_t)1 ); // index of mapping account
+  tx.add( (uint8_t)2 ); // index of new account
+
+  // instruction parameter section
+  tx.add_len<sizeof(cmd_hdr)>();     // size of data array
+  tx.add( (uint32_t)PC_VERSION );
+  tx.add( (uint32_t)e_cmd_add_mapping );
+
+  // all accounts need to sign transaction
+  tx.sign( pub_idx, tx_idx, *pkey_ );
+  sig_.init_from_buf( (const uint8_t*)(tx.get_buf() + pub_idx) );
+  tx.sign( map_idx, tx_idx, *mkey_ );
+  tx.sign( acc_idx, tx_idx, *akey_ );
+
+  // encode transaction and add to json params
+  send_transaction( msg, tx );
+  bptr->dealloc();
+}
+
+void rpc::add_mapping::response( const jtree& jt )
 {
   if ( on_error( jt, this ) ) return;
   on_response( this );

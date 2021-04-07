@@ -282,6 +282,11 @@ void manager::add_mapping( const pub_key& acc )
   add_map_sub();
 }
 
+get_mapping *manager::get_last_mapping() const
+{
+  return !mvec_.empty() ? mvec_.back() : nullptr;
+}
+
 bool manager::has_status( int status ) const
 {
   return status == (status_ & status);

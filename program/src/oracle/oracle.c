@@ -63,9 +63,8 @@ static uint64_t init_mapping( SolParameters *prm, SolAccountInfo *ka )
 
 static uint64_t add_mapping( SolParameters *prm, SolAccountInfo *ka )
 {
-  // Account (1) is the map list account
-  // Account (2) is the tail or last mapping account in the chain
-  // Account (3) is the new mapping account and will become the new tail
+  // Account (1) is the tail or last mapping account in the chain
+  // Account (2) is the new mapping account and will become the new tail
   // Verify that these are signed, writable accounts with correct ownership
   // and size
   if ( prm->ka_num < 3 ||

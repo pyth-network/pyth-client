@@ -143,6 +143,8 @@ namespace pc
     get_mapping();
     void set_mapping_key( const pub_key& );
     pub_key *get_mapping_key();
+    uint32_t get_num_symbols() const;
+    bool     get_is_full() const;
 
   public:
     void reset();
@@ -152,13 +154,47 @@ namespace pc
   private:
     typedef enum { e_new, e_init } state_t;
 
-    void init( pc_map_table_t * );
     template<class T> void update( T* );
 
     state_t  st_;
     pub_key  mkey_;
+    uint32_t num_sym_;
     rpc::get_account_info  areq_[1];
     rpc::account_subscribe sreq_[1];
+  };
+
+  // add new mapping acount
+  class add_mapping : public request,
+                      public rpc_sub_i<rpc::create_account>,
+                      public rpc_sub_i<rpc::add_mapping>,
+                      public rpc_sub_i<rpc::signature_subscribe>
+  {
+  public:
+    add_mapping();
+    void set_lamports( uint64_t );
+    void set_commitment( commitment );
+    bool get_is_done() const override;
+
+  public:
+    void submit() override;
+    bool get_is_ready() override;
+    void on_response( rpc::create_account * ) override;
+    void on_response( rpc::add_mapping * ) override;
+    void on_response( rpc::signature_subscribe * ) override;
+
+  private:
+    typedef enum {
+      e_create_sent, e_create_sig,
+      e_init_sent, e_init_sig, e_done, e_error
+    } state_t;
+
+    state_t                  st_;
+    commitment               cmt_;
+    key_pair                 akey_;
+    key_pair                 mkey_;
+    rpc::create_account      areq_[1];
+    rpc::add_mapping         mreq_[1];
+    rpc::signature_subscribe sig_[1];
   };
 
   // add new symbol to mapping
@@ -193,6 +229,7 @@ namespace pc
     commitment               cmt_;
     key_pair                 akey_;
     key_pair                 skey_;
+    key_pair                 mkey_;
     rpc::create_account      areq_[1];
     rpc::add_symbol          sreq_[1];
     rpc::signature_subscribe sig_[1];
