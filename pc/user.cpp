@@ -259,8 +259,9 @@ void user::parse_get_symbol_list( uint32_t itok )
 {
   add_header();
   jw_.add_key( "result", json_wtr::e_arr );
+  unsigned j =0;
   for( unsigned i=0; i != sptr_->get_num_symbol(); ++i ) {
-    price *sptr = sptr_->get_symbol( i );
+    price *sptr = sptr_->get_next_symbol( j );
     symbol *sym = sptr->get_symbol();
     int64_t expo = sptr->get_price_exponent();
     price_type ptype = sptr->get_price_type();

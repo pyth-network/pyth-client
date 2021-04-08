@@ -126,6 +126,16 @@ int manager::get_listen_port() const
   return lsvr_.get_port();
 }
 
+void manager::set_version( uint32_t version )
+{
+  version_ = version;
+}
+
+uint32_t manager::get_version() const
+{
+  return version_;
+}
+
 void manager::set_content_dir( const std::string& cdir )
 {
   cdir_ = cdir;
@@ -244,9 +254,12 @@ bool manager::init()
     }
     PC_LOG_INF("listening").add("port",lsvr_.get_port())
       .add( "content_dir", get_content_dir() )
-      .add( "capture_file", get_capture_file() )
       .end();
   }
+  PC_LOG_INF( "initialized" )
+    .add( "version", version_ )
+    .add( "capture_file", get_capture_file() )
+    .end();
 
   return true;
 }
@@ -592,15 +605,19 @@ void manager::add_symbol(
     // replace with newer version account but only if the version
     // is less than we're currently running
     price *prv = smap_.obj( it );
-    if ( ptr->get_version() > prv->get_version() &&
-         ptr->get_version() <= version_ ) {
-      smap_.ref( it ) = ptr;
-      // TODO: add prv to unsubscribe and demolition list
-    } else {
-      // TODO: add ptr to unsubscribe and demolition list
+    if ( ptr != prv ) {
+      if ( ptr->get_version() > prv->get_version() &&
+           ptr->get_version() <= version_ ) {
+        smap_.ref( it ) = ptr;
+        prv->unsubscribe();
+      } else {
+        ptr->unsubscribe();
+      }
     }
-  } else {
+  } else if ( ptr->get_version() <= version_ ) {
     smap_.ref( smap_.add( sk ) ) = ptr;
+  } else {
+    ptr->unsubscribe();
   }
 }
 
@@ -619,10 +636,16 @@ price *manager::get_symbol( const symbol& sym, price_type ptype )
 
 unsigned manager::get_num_symbol() const
 {
-  return svec_.size();
+  return smap_.size();
 }
 
-price *manager::get_symbol( unsigned i ) const
+price *manager::get_next_symbol( unsigned& i ) const
 {
-  return i < svec_.size() ? svec_[i] : nullptr;
+  while( i < svec_.size() ) {
+    price *ptr = svec_[i++];
+    if ( ptr->get_is_subscribed() ) {
+      return ptr;
+    }
+  }
+  return nullptr;
 }

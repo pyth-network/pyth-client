@@ -448,10 +448,12 @@ namespace pc
     void set_symbol_status( symbol_status );
 
     void reset();
+    void unsubscribe();
     void submit() override;
     void on_response( rpc::get_account_info * ) override;
     void on_response( rpc::account_subscribe * ) override;
     void on_response( rpc::upd_price * ) override;
+    bool get_is_subscribed() const;
 
   private:
 
@@ -468,6 +470,8 @@ namespace pc
 
     bool                   init_;
     bool                   isched_;
+    bool                   do_unsub_;
+    bool                   do_notify_;
     state_t                st_;
     symbol                 sym_;
     pub_key                apub_;

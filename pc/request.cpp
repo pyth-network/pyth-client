@@ -304,8 +304,9 @@ void get_mapping::update( T *res )
     return;
   }
   pc_map_table_t *tab;
-  if ( !res->get_data( tab ) ) {
-    cptr->set_err_msg( "invalid mapping account size" );
+  res->get_data( tab );
+  if ( tab->magic_ != PC_MAGIC ) {
+    cptr->set_err_msg( "bad mapping account header" );
     return;
   }
 
@@ -1037,6 +1038,8 @@ bool get_minimum_balance_rent_exemption::get_is_done() const
 price::price( const pub_key& acc )
 : init_( false ),
   isched_( false ),
+  do_unsub_( false ),
+  do_notify_( false ),
   st_( e_subscribe ),
   apub_( acc ),
   ptype_( price_type::e_unknown ),
@@ -1147,6 +1150,7 @@ bool price::get_is_ready_publish() const
 void price::reset()
 {
   st_ = e_subscribe;
+  do_unsub_ = do_notify_ = false;
   reset_err();
 }
 
@@ -1217,7 +1221,14 @@ void price::on_response( rpc::get_account_info *res )
 
 void price::on_response( rpc::account_subscribe *res )
 {
-  update( res );
+  if ( !do_unsub_ ) {
+    update( res );
+  } else if ( do_notify_ ) {
+    // remove subscription if not already done so
+    do_notify_ = false;
+    res->remove_notify();
+    // TODO: send unsubscibe request
+  }
 }
 
 void price::on_response( rpc::upd_price *res )
@@ -1242,6 +1253,11 @@ void price::log_update( const char *title, pc_price_t *pupd )
     .end();
 }
 
+void price::unsubscribe()
+{
+  do_unsub_ = do_notify_ = true;
+}
+
 void price::init_subscribe( pc_price_t *pupd )
 {
   // update initial values
@@ -1251,7 +1267,6 @@ void price::init_subscribe( pc_price_t *pupd )
   sym_     = *(symbol*)&pupd->sym_;
   preq_->set_price_type( ptype_ );
   st_ = e_publish;
-  log_update( "add_symbol", pupd );
 
   // initial assignment
   cnum_ = pupd->num_;
@@ -1264,22 +1279,29 @@ void price::init_subscribe( pc_price_t *pupd )
   pub_slot_ = pupd->agg_.pub_slot_;
   valid_slot_ = pupd->valid_slot_;
 
-  // replace symbol/price_type with later version
-  manager *cptr = get_manager();
-  cptr->add_symbol( sym_, ptype_, this );
-
   // subscribe to next symbol in chain
+  manager *cptr = get_manager();
   if ( !pc_pub_key_is_zero( &pupd->next_ ) ) {
     cptr->add_symbol( *(pub_key*)&pupd->next_ );
   }
 
-  // callback users on new symbol update
-  manager_sub *sub = cptr->get_manager_sub();
-  if ( sub ) {
-    sub->on_add_symbol( cptr, this );
+  // add to map of prices by symbol and price_type
+  // or replace what's there if this is a later version
+  cptr->add_symbol( sym_, ptype_, this );
+  if ( !do_unsub_ ) {
+
+    // only log and callback if this symbol is valid
+    log_update( "add_symbol", pupd );
+
+    // callback users on new symbol update
+    manager_sub *sub = cptr->get_manager_sub();
+    if ( sub ) {
+      sub->on_add_symbol( cptr, this );
+    }
   }
 
   // reduce subscription count after we subscribe to next symbol in chain
+  // do this last in case this triggers an init callback
   cptr->del_map_sub();
 }
 
@@ -1295,8 +1317,9 @@ void price::update( T *res )
 
   // get account data
   pc_price_t *pupd;
-  if ( !res->get_data( pupd ) ) {
-    on_error_sub( "invalid price account size", this );
+  res->get_data( pupd );
+  if ( pupd->magic_ != PC_MAGIC ) {
+    on_error_sub( "bad price account header", this );
     st_ = e_error;
     return;
   }
@@ -1304,6 +1327,9 @@ void price::update( T *res )
   // update state and subscribe to next price account in the chain
   if ( PC_UNLIKELY( st_ == e_sent_subscribe ) ) {
     init_subscribe( pupd );
+    if ( do_unsub_ ) {
+      return;
+    }
   }
 
   // update publishers
@@ -1334,6 +1360,11 @@ void price::update( T *res )
     // ping subscribers with new aggregate price
     on_response_sub( this );
   }
+}
+
+bool price::get_is_subscribed() const
+{
+  return !do_unsub_;
 }
 
 unsigned price::get_num_publisher() const

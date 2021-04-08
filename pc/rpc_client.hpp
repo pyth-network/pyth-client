@@ -89,7 +89,7 @@ namespace pc
 
     // decode into buffer and return pointer
     template<class T>
-    bool get_data( const char *dptr, size_t dlen, T *&ptr );
+    void get_data( const char *dptr, size_t dlen, T *&ptr );
 
     // reset state
     void reset();
@@ -225,16 +225,12 @@ namespace pc
   // wrappers for various solana rpc requests
 
   template<class T>
-  bool rpc_client::get_data( const char *dptr, size_t dlen, T *&ptr )
+  void rpc_client::get_data( const char *dptr, size_t dlen, T *&ptr )
   {
-    if ( dlen >= (size_t)enc_base64_len( sizeof( T ) ) ) {
-      abuf_.resize( dlen );
-      dec_base64( (const uint8_t*)dptr, dlen, (uint8_t*)&abuf_[0] );
-      ptr = (T*)&abuf_[0];
-      return true;
-    } else {
-      return false;
-    }
+    size_t tlen = enc_base64_len( sizeof( T ) );
+    abuf_.resize( std::max( dlen, tlen ) );
+    dec_base64( (const uint8_t*)dptr, dlen, (uint8_t*)&abuf_[0] );
+    ptr = (T*)&abuf_[0];
   }
 
   namespace rpc
@@ -253,7 +249,7 @@ namespace pc
       uint64_t get_rent_epoch() const;
       bool     get_is_executable() const;
       void     get_owner( const char *&, size_t& ) const;
-      template<class T> bool get_data( T *& ) const;
+      template<class T> void get_data( T *& ) const;
 
       get_account_info();
       void request( json_wtr& ) override;
@@ -272,9 +268,9 @@ namespace pc
       commitment  cmt_;
     };
 
-    template<class T> bool get_account_info::get_data( T *&res ) const
+    template<class T> void get_account_info::get_data( T *&res ) const
     {
-      return get_rpc_client()->get_data( dptr_, dlen_, res );
+      get_rpc_client()->get_data( dptr_, dlen_, res );
     }
 
     // recent block hash and fee schedule
@@ -363,7 +359,7 @@ namespace pc
       // results
       uint64_t get_slot() const;
       uint64_t get_lamports() const;
-      template<class T> bool get_data( T *& ) const;
+      template<class T> void get_data( T *& ) const;
 
       account_subscribe();
       void request( json_wtr& ) override;
@@ -379,9 +375,9 @@ namespace pc
       commitment  cmt_;
     };
 
-    template<class T> bool account_subscribe::get_data( T *&res ) const
+    template<class T> void account_subscribe::get_data( T *&res ) const
     {
-      return get_rpc_client()->get_data( dptr_, dlen_, res );
+      get_rpc_client()->get_data( dptr_, dlen_, res );
     }
 
     // transaction to transfer funds between accounts

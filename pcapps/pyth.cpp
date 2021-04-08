@@ -434,13 +434,15 @@ int on_get_symbol( int argc, char **argv )
   argc -= 1;
   argv += 1;
   int opt = 0;
+  uint32_t version = PC_VERSION;
   std::string rpc_host = get_rpc_host();
   std::string key_dir  = get_key_store();
-  while( (opt = ::getopt(argc,argv, "r:k:c:dh" )) != -1 ) {
+  while( (opt = ::getopt(argc,argv, "r:k:c:v:dh" )) != -1 ) {
     switch(opt) {
       case 'r': rpc_host = optarg; break;
       case 'k': key_dir = optarg; break;
       case 'd': log::set_level( PC_LOG_DBG_LVL ); break;
+      case 'v': version = ::atoi( optarg ); break;
       case 'c': break;
       default: return usage();
     }
@@ -450,6 +452,7 @@ int on_get_symbol( int argc, char **argv )
   manager mgr;
   mgr.set_rpc_host( rpc_host );
   mgr.set_dir( key_dir );
+  mgr.set_version( version );
   if ( !mgr.init() || !mgr.bootstrap() ) {
     std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
     return 1;
@@ -483,6 +486,7 @@ int on_get_symbol( int argc, char **argv )
   std::cout << "account   : " << pkey << std::endl;
   printf( "balance   : %.9f\n", 1e-9*ptr->get_lamports() );
   printf( "rent      : %.9f\n", 1e-9*req->get_lamports() );
+  std::cout << "version   : " << ptr->get_version() << std::endl;
   std::cout << "price     : " << ptr->get_price() << std::endl;
   std::cout << "conf      : " << ptr->get_conf() << std::endl;
   std::cout << "exponent  : " << ptr->get_price_exponent() << std::endl;
@@ -502,13 +506,15 @@ int on_get_symbol( int argc, char **argv )
 int on_get_symbol_list( int argc, char **argv )
 {
   int opt = 0;
+  uint32_t version = PC_VERSION;
   std::string rpc_host = get_rpc_host();
   std::string key_dir  = get_key_store();
-  while( (opt = ::getopt(argc,argv, "r:k:c:dh" )) != -1 ) {
+  while( (opt = ::getopt(argc,argv, "r:k:c:v:dh" )) != -1 ) {
     switch(opt) {
       case 'r': rpc_host = optarg; break;
       case 'k': key_dir = optarg; break;
       case 'd': log::set_level( PC_LOG_DBG_LVL ); break;
+      case 'v': version = ::atoi( optarg ); break;
       case 'c': break;
       default: return usage();
     }
@@ -518,12 +524,14 @@ int on_get_symbol_list( int argc, char **argv )
   manager mgr;
   mgr.set_rpc_host( rpc_host );
   mgr.set_dir( key_dir );
+  mgr.set_version( version );
   if ( !mgr.init() || !mgr.bootstrap() ) {
     std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
     return 1;
   }
+  unsigned j = 0;
   for(unsigned i=0; i != mgr.get_num_symbol(); ++i ) {
-    price *ptr = mgr.get_symbol( i );
+    price *ptr = mgr.get_next_symbol( j );
     symbol *sym = ptr->get_symbol();
     price_type ptype = ptr->get_price_type();
     str pstr = price_type_to_str( ptype );

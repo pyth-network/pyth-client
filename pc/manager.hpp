@@ -102,7 +102,7 @@ namespace pc
 
     // iterate through symbols
     unsigned get_num_symbol() const;
-    price *get_symbol( unsigned i ) const;
+    price *get_next_symbol( unsigned& i ) const;
 
     // submit pyth client api request
     void submit( request * );

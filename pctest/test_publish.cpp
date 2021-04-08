@@ -184,7 +184,9 @@ int usage()
   std::cerr << "  [-k <key_store_directory (default "
             << get_key_store() << ">]" << std::endl;
   std::cerr << "  [-c <capture file>]" << std::endl;
+  std::cout << "  [-l <log_file>]" << std::endl;
   std::cerr << "  [-n]" << std::endl;
+  std::cerr << "  [-d]" << std::endl;
   return 1;
 }
 
@@ -192,24 +194,31 @@ int main(int argc, char** argv)
 {
   // unpack options
   int opt = 0;
-  bool do_wait = true;
-  std::string cap_file;
+  bool do_wait = true, do_debug = false;
+  std::string cap_file, log_file;
   std::string rpc_host = get_rpc_host();
   std::string key_dir  = get_key_store();
-  while( (opt = ::getopt(argc,argv, "r:k:c:nh" )) != -1 ) {
+  while( (opt = ::getopt(argc,argv, "r:k:c:l:ndh" )) != -1 ) {
     switch(opt) {
       case 'r': rpc_host = optarg; break;
       case 'k': key_dir = optarg; break;
       case 'c': cap_file = optarg; break;
+      case 'l': log_file = optarg; break;
       case 'n': do_wait = false; break;
+      case 'd': do_debug = true; break;
       default: return usage();
     }
   }
-  // set logging level
-  pc::log::set_level( PC_LOG_INF_LVL );
+  // set logging level and disable SIGPIPE
+  signal( SIGPIPE, SIG_IGN );
+  if ( !log_file.empty() && !pc::log::set_log_file( log_file ) ) {
+    std::cerr << "test_publish: failed to create log_file="
+              << log_file << std::endl;
+    return 1;
+  }
+  pc::log::set_level( do_debug ? PC_LOG_DBG_LVL : PC_LOG_INF_LVL );
 
   // set up signal handing (ignore SIGPIPE - its evil)
-  signal( SIGPIPE, SIG_IGN );
   signal( SIGINT, sig_handle );
   signal( SIGHUP, sig_handle );
   signal( SIGTERM, sig_handle );
