@@ -5,6 +5,9 @@ client API for on-chain pyth programs
 # depends on openssl
 apt install libssl-dev
 
+# depends on libz
+apt install zlib1g
+
 # uses cmake to build
 apt install cmake
 
