@@ -15,7 +15,6 @@ int usage()
             << std::endl << std::endl;
   std::cerr << "options include:" << std::endl;
   std::cerr << "  -s <symbol>" << std::endl;
-  std::cerr << "  -f" << std::endl;
   return 1;
 }
 
@@ -77,14 +76,12 @@ int main(int argc, char **argv)
     return usage();
   }
   int opt = 0;
-  bool do_follow = false;
   std::string cap_file = argv[1], symstr;
   argc -= 1;
   argv += 1;
-  while( (opt = ::getopt(argc,argv, "s:fh" )) != -1 ) {
+  while( (opt = ::getopt(argc,argv, "s:h" )) != -1 ) {
     switch(opt) {
       case 's': symstr = optarg; break;
-      case 'f': do_follow = true; break;
       default: return usage();
     }
   }
@@ -103,8 +100,6 @@ int main(int argc, char **argv)
     for(;;) {
       if ( rep.get_next() ) {
         print( rep );
-      } else if ( do_follow ) {
-        clock_nanosleep( CLOCK_REALTIME, 0, ts, NULL );
       } else {
         break;
       }
@@ -119,8 +114,6 @@ int main(int argc, char **argv)
         if ( sym == sptr[0] ) {
           print( rep );
         }
-      } else if ( do_follow ) {
-        clock_nanosleep( CLOCK_REALTIME, 0, ts, NULL );
       } else {
         break;
       }

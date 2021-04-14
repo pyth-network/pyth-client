@@ -2,29 +2,58 @@
 
 using namespace pc;
 
+static const size_t buf_sz = 1024*1024;
+
 replay::replay()
 : ts_( 0L ),
   up_( nullptr ),
-  sz_( 0 )
+  buf_( nullptr ),
+  pos_( 0 ),
+  len_( 0 ),
+  zfd_( nullptr )
 {
+  buf_ = new char[buf_sz];
+}
+
+replay::~replay()
+{
+  if ( zfd_ ) {
+    ::gzclose( zfd_ );
+    zfd_ = nullptr;
+  }
+  if ( buf_ ) {
+    delete [] buf_;
+    buf_ = nullptr;
+  }
 }
 
 void replay::set_file( const std::string& cap_file )
 {
-  mf_.set_file( cap_file );
+  file_ = cap_file;
 }
 
 std::string replay::get_file() const
 {
-  return mf_.get_file();
+  return file_;
 }
 
 bool replay::init()
 {
-  if ( !mf_.init() ) {
-    return set_err_msg( "failed to open/find file=" + mf_.get_file() );
+  std::string file = file_;
+  size_t flen = file.length();
+  if ( flen >=3 && file.substr(flen-3) != ".gz" ) {
+    file += ".gz";
   }
-  sz_ = 0;
+  zfd_ = ::gzopen( file.c_str(), "r" );
+  if ( !zfd_ ) {
+    return set_err_msg( "failed to open file=" + file );
+  }
+  static const size_t gzb_sz = 128*1024;
+  if ( 0 != gzbuffer( zfd_, gzb_sz ) ) {
+    return set_err_msg(
+        "failed to set compression buffer file=" + file );
+  }
+  pos_ = len_ = 0;
   return true;
 }
 
@@ -40,15 +69,25 @@ struct pc_hdr
 bool replay::get_next()
 {
   for(;;) {
-    pc_hdr *hdr = (pc_hdr*)(mf_.data() + sz_);
-    size_t left = mf_.size() - sz_;
+    size_t left = len_ - pos_;
+    pc_hdr *hdr = (pc_hdr*)&buf_[pos_];
     if ( left >= sizeof( pc_hdr ) && left >= hdr->size_ ) {
+      up_ = (pc_price_t*)&buf_[pos_+sizeof(int64_t)];
       ts_ = hdr->ts_;
-      up_ = (pc_price_t*)&mf_.data()[sz_+sizeof(int64_t)];
-      sz_ += hdr->size_;
+      pos_ += hdr->size_;
       return true;
-    } else if ( ! mf_.remap() ) {
-      return false;
+    } else {
+      if ( pos_ ) {
+        __builtin_memmove( &buf_[0], &buf_[pos_], left );
+      }
+      pos_ = 0;
+      len_ = left;
+      int numread = ::gzread( zfd_, &buf_[len_], buf_sz - len_ );
+      if ( numread > 0 ) {
+        len_ += numread;
+      } else {
+        return false;
+      }
     }
   }
 }

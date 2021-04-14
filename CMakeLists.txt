@@ -58,7 +58,7 @@ set( PC_HDR
 add_library( pc STATIC ${PC_SRC} )
 
 # dependencies
-set( PC_DEP pc ssl crypto )
+set( PC_DEP pc ssl crypto z )
 
 #
 # applications

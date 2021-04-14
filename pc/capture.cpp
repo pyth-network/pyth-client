@@ -10,7 +10,8 @@ capture::capture()
 : curr_( nullptr ),
   is_run_( true ),
   is_wtr_( false ),
-  fd_(-1)
+  fd_(-1),
+  zfd_( nullptr )
 {
 }
 
@@ -29,6 +30,13 @@ capture::~capture()
   }
   reuse_.clear();
   done_.clear();
+  if ( zfd_ ) {
+    ::gzclose( zfd_ );
+  }
+  if ( fd_ > 0 ) {
+    ::close( fd_ );
+    fd_ = -1;
+  }
 }
 
 void capture::set_file( const std::string& file )
@@ -48,16 +56,31 @@ static void run_capture( capture *ptr )
 
 bool capture::init()
 {
+  std::string file = file_;
+  size_t flen = file.length();
+  if ( flen >=3 && file.substr(flen-3) != ".gz" ) {
+    file += ".gz";
+  }
   // check if file already exists
   struct stat fst[1];
-  if ( 0 == ::stat( file_.c_str(), fst ) ) {
+  if ( 0 == ::stat( file.c_str(), fst ) ) {
     return set_err_msg(
-        "capture file already exists file=" + file_  );
+        "capture file already exists file=" + file  );
   }
-  fd_ = ::open( file_.c_str(), O_CREAT | O_WRONLY, 0644 );
+  fd_ = ::open( file.c_str(), O_CREAT | O_WRONLY, 0644 );
   if ( fd_ < 0 ) {
     return set_err_msg(
-        "failed to create capture file=" + file_, errno  );
+        "failed to create capture file=" + file, errno  );
+  }
+  zfd_ = ::gzdopen( fd_, "w" );
+  if ( !zfd_ ) {
+    return set_err_msg(
+        "failed to create capture file=" + file, errno  );
+  }
+  static const size_t gzb_sz = 128*1024;
+  if ( 0 != gzbuffer( zfd_, gzb_sz ) ) {
+    return set_err_msg(
+        "failed to set compression buffer file=" + file );
   }
   thrd_ = std::thread( run_capture, this );
   return true;
@@ -130,7 +153,7 @@ void capture::run()
         char *buf = ptr->buf_;
         size_t sz = ptr->size_;
         while( sz > 0 ) {
-          int num = ::write( fd_, buf, sz );
+          int num = ::gzwrite( zfd_, buf, sz );
           if ( num > 0 ) {
             buf += num;
             sz  -= num;

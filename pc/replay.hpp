@@ -3,6 +3,7 @@
 #include <pc/mem_map.hpp>
 #include <pc/error.hpp>
 #include <oracle/oracle.h>
+#include <zlib.h>
 
 namespace pc
 {
@@ -13,6 +14,7 @@ namespace pc
   public:
 
     replay();
+    ~replay();
 
     // capture file
     void set_file( const std::string& cap_file );
@@ -34,8 +36,11 @@ namespace pc
 
     int64_t     ts_;
     pc_price_t *up_;
-    size_t      sz_;
-    mem_map     mf_;
+    char       *buf_;
+    size_t      pos_;
+    size_t      len_;
+    gzFile      zfd_;
+    std::string file_;
   };
 
   inline int64_t replay::get_time() const

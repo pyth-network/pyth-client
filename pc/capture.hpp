@@ -7,6 +7,7 @@
 #include <atomic>
 #include <mutex>
 #include <thread>
+#include <zlib.h>
 
 namespace pc
 {
@@ -57,6 +58,7 @@ namespace pc
     buf_vec_t   done_;
     buf_vec_t   reuse_;
     int         fd_;
+    gzFile      zfd_;
     std::string file_;
   };
 
