@@ -597,7 +597,7 @@ namespace pc
       void set_account( pub_key * );
       void set_program( pub_key * );
       void set_block_hash( hash * );
-      void set_price( int64_t px, uint64_t conf, symbol_status );
+      void set_price( int64_t px, uint64_t conf, symbol_status, bool );
 
       // results
       signature *get_signature();
@@ -613,6 +613,7 @@ namespace pc
       int64_t       price_;
       uint64_t      conf_;
       uint64_t      nonce_;
+      command_t     cmd_;
       price_type    pt_;
       symbol_status st_;
       signature     sig_;

@@ -1463,6 +1463,7 @@ void rpc::del_publisher::response( const jtree& jt )
 // upd_price
 
 rpc::upd_price::upd_price()
+: cmd_( e_cmd_upd_price )
 {
   nonce_ = getpid()*random();
 }
@@ -1507,11 +1508,13 @@ signature *rpc::upd_price::get_signature()
   return &sig_;
 }
 
-void rpc::upd_price::set_price( int64_t px, uint64_t conf, symbol_status st)
+void rpc::upd_price::set_price(
+    int64_t px, uint64_t conf, symbol_status st, bool is_agg )
 {
   price_ = px;
   conf_  = conf;
   st_    = st;
+  cmd_   = is_agg?e_cmd_agg_price:e_cmd_upd_price;
 }
 
 void rpc::upd_price::request( json_wtr& msg )
@@ -1552,7 +1555,7 @@ void rpc::upd_price::request( json_wtr& msg )
   // instruction parameter section
   tx.add_len<sizeof(cmd_upd_price)>();
   tx.add( (uint32_t)PC_VERSION );
-  tx.add( (int32_t)e_cmd_upd_price );
+  tx.add( (int32_t)cmd_ );
   tx.add( (int32_t)pt_ );
   tx.add( (int32_t)st_ );
   tx.add( *sym_ );

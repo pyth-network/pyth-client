@@ -1,5 +1,6 @@
 #pragma once
 
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -145,7 +146,13 @@ typedef enum {
   // key[0] funding account       [signer writable]
   // key[1] price account         [writable]
   // key[2] sysvar_clock account  [readable]
-  e_cmd_upd_price
+  e_cmd_upd_price,
+
+  // compute aggregate price
+  // key[0] funding account       [signer writable]
+  // key[1] price account         [writable]
+  // key[2] sysvar_clock account  [readable]
+  e_cmd_agg_price
 
 } command_t;
 

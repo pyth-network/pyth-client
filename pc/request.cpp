@@ -1175,8 +1175,19 @@ price_sched *price::get_sched()
   return &sched_;
 }
 
+bool price::update()
+{
+  return update( 0L, 0UL, symbol_status::e_unknown, true );
+}
+
 bool price::update(
     int64_t price, uint64_t conf, symbol_status st )
+{
+  return update( price, conf, st, false );
+}
+
+bool price::update(
+    int64_t price, uint64_t conf, symbol_status st, bool is_agg )
 {
   if ( PC_UNLIKELY( !init_ && !init_publish() ) ) {
     return false;
@@ -1184,10 +1195,10 @@ bool price::update(
   if ( PC_UNLIKELY( !has_publisher( *pkey_ ) ) ) {
     return set_err_msg( "not permissioned to update price" );
   }
-  preq_->set_price( price, conf, st );
   manager *cptr = get_manager();
   if ( cptr && st_ == e_publish ) {
     st_ = e_pend_publish;
+    preq_->set_price( price, conf, st, is_agg );
     cptr->submit( this );
     return true;
   } else {
@@ -1364,6 +1375,11 @@ void price::update( T *res )
 bool price::get_is_subscribed() const
 {
   return !do_unsub_;
+}
+
+bool price::get_is_done() const
+{
+  return st_ == e_publish;
 }
 
 unsigned price::get_num_publisher() const

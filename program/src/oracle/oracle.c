@@ -365,11 +365,13 @@ static uint64_t upd_price( SolParameters *prm, SolAccountInfo *ka )
     upd_aggregate( pptr, kptr, sptr->slot_ );
   }
 
-  // find and update component price
-  fptr->price_    = cptr->price_;
-  fptr->conf_     = cptr->conf_;
-  fptr->status_   = cptr->status_;
-  fptr->pub_slot_ = sptr->slot_;
+  // update component price if required
+  if ( cptr->cmd_ == e_cmd_upd_price ) {
+    fptr->price_    = cptr->price_;
+    fptr->conf_     = cptr->conf_;
+    fptr->status_   = cptr->status_;
+    fptr->pub_slot_ = sptr->slot_;
+  }
   return SUCCESS;
 }
 
@@ -378,7 +380,8 @@ static uint64_t dispatch_1( SolParameters *prm, SolAccountInfo *ka )
   uint64_t res = ERROR_INVALID_ARGUMENT;
   cmd_hdr_t *hdr = (cmd_hdr_t*)prm->data;
   switch(hdr->cmd_) {
-    case e_cmd_upd_price:{
+    case e_cmd_upd_price:
+    case e_cmd_agg_price:{
       res = upd_price( prm, ka );
       break;
     }

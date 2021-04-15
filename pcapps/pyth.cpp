@@ -40,6 +40,8 @@ int usage()
             << std::endl;
   std::cerr << "  del_publisher   <pub_key> <symbol> <price_type> [options]"
             << std::endl;
+  std::cerr << "  upd_price       <symbol> <price_type> [options]"
+            << std::endl;
   std::cerr << "  get_balance     [<pub_key>] [options]" << std::endl;
   std::cerr << "  get_symbol      <symbol> <price_type> [options]"
             << std::endl;
@@ -411,6 +413,76 @@ int on_add_symbol( int argc, char **argv )
   return 0;
 }
 
+int on_upd_price( int argc, char **argv )
+{
+  // get input parameters
+  if ( argc < 3 ) {
+    return usage();
+  }
+  str sym_s( argv[1] );
+  if ( sym_s.len_ > symbol::len ) {
+    std::cerr << "pyth: symbol length too long" << std::endl;
+    return usage();
+  }
+  symbol sym( sym_s );
+  if ( sym.data()[0] == 0x20 ) {
+    return usage();
+  }
+  price_type ptype = str_to_price_type( argv[2] );
+  if ( ptype == price_type::e_unknown ) {
+    std::cerr << "pyth: unknown price_type=" << argv[3] << std::endl;
+    return usage();
+  }
+  argc -= 1;
+  argv += 1;
+  int opt = 0;
+  std::string rpc_host = get_rpc_host();
+  std::string key_dir  = get_key_store();
+  while( (opt = ::getopt(argc,argv, "r:k:c:dh" )) != -1 ) {
+    switch(opt) {
+      case 'r': rpc_host = optarg; break;
+      case 'k': key_dir = optarg; break;
+      case 'd': log::set_level( PC_LOG_DBG_LVL ); break;
+      case 'c': break;
+      default: return usage();
+    }
+  }
+
+  // initialize connection to block-chain
+  manager mgr;
+  mgr.set_rpc_host( rpc_host );
+  mgr.set_dir( key_dir );
+  if ( !mgr.init() || !mgr.bootstrap() ) {
+    std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
+    return 1;
+  }
+  price *ptr = mgr.get_symbol( sym, ptype );
+  if ( !ptr ) {
+    str pstr = price_type_to_str( ptype );
+    std::cerr << "pyth: cannot find symbol=";
+    std::cerr.write( sym.data(), symbol::len );
+    std::cerr << ",price_type=";
+    std::cerr.write( pstr.str_, pstr.len_ );
+    std::cerr << std::endl;
+    return 1;
+  }
+  ptr->update();
+  while( !ptr->get_is_done() &&
+         !ptr->get_is_err() &&
+         !mgr.get_is_err() ) {
+    mgr.poll();
+  }
+  if ( ptr->get_is_err() ) {
+    std::cerr << "pyth: " << ptr->get_err_msg() << std::endl;
+    return 1;
+  }
+  if ( mgr.get_is_err() ) {
+    std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
+    return 1;
+  }
+  return 0;
+}
+
 int on_get_symbol( int argc, char **argv )
 {
   // get input parameters
@@ -734,6 +806,8 @@ int main(int argc, char **argv)
     rc = on_get_balance( argc, argv );
   } else if ( cmd == "add_symbol" ) {
     rc = on_add_symbol( argc, argv );
+  } else if ( cmd == "upd_price" ) {
+    rc = on_upd_price( argc, argv );
   } else if ( cmd == "get_symbol" ) {
     rc = on_get_symbol( argc, argv );
   } else if ( cmd == "get_symbol_list" ) {

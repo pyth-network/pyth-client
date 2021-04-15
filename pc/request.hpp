@@ -406,10 +406,13 @@ namespace pc
     // ready to publish (i.e. not waiting for confirmation)
     bool get_is_ready_publish() const;
 
-    // submit new price update
+    // submit new price update and update aggregate
     // will fail with false if in error (check get_is_err() )
     // or because symbol is not ready to publish (get_is_ready_publish())
     bool update( int64_t price, uint64_t conf, symbol_status );
+
+    // update aggregate price only
+    bool update();
 
     // get and activate price schedule subscription
     price_sched *get_sched();
@@ -456,6 +459,7 @@ namespace pc
     void on_response( rpc::account_subscribe * ) override;
     void on_response( rpc::upd_price * ) override;
     bool get_is_subscribed() const;
+    bool get_is_done() const override;
 
   private:
 
@@ -469,6 +473,7 @@ namespace pc
     bool init_publish();
     void init_subscribe( pc_price_t * );
     void log_update( const char *title, pc_price_t * );
+    bool update( int64_t price, uint64_t conf, symbol_status, bool aggr );
 
     bool                   init_;
     bool                   isched_;
