@@ -29,19 +29,28 @@ class Prices
   on_notify( msg ) {
     this.sub[msg.params.subscription]( msg );
   }
+  draw_cell( cell, txt, color ) {
+    cell.textContent = txt;
+    cell.style.color = color;
+  }
   on_price( sym, msg ) {
     let tab = document.getElementById( "prices" );
     let row = tab.rows[sym.idx];
     let res = msg.params.result;
-    let col = 1;
+    let col = 0;
     let expo = -sym.price_exponent;
     let px   = res.price * this.fact[expo];
     let conf = res.conf * this.fact[expo];
-    row.cells[col++].textContent = px.toFixed(expo);
-    row.cells[col++].textContent = conf.toFixed(expo);
-    row.cells[col++].textContent = res.status;
-    row.cells[col++].textContent = res.valid_slot;
-    row.cells[col++].textContent = res.pub_slot;
+    let color = 'cornsilk';
+    if ( res.status == 'unknown' ) {
+      color = '#c0392b';
+    }
+    row.cells[col++].style.color = color;
+    this.draw_cell( row.cells[col++], px.toFixed(expo), color );
+    this.draw_cell( row.cells[col++], conf.toFixed(expo), color );
+    this.draw_cell( row.cells[col++], res.status, color );
+    this.draw_cell( row.cells[col++], res.valid_slot, color );
+    this.draw_cell( row.cells[col++], res.pub_slot, color );
   }
   get_price( sym, msg ) {
     let sub_id = msg.result.subscription;
