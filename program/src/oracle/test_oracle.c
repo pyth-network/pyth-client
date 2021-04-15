@@ -500,13 +500,13 @@ Test(oracle, upd_aggregate ) {
   pc_price_t px[1];
   sol_memset( px, 0, sizeof( pc_price_t ) );
   pc_price_info_t p1 = { .price_=100, .conf_=10,
-    .status_ = PC_STATUS_TRADING, .pub_slot_ = 42 };
+    .status_ = PC_STATUS_TRADING, .pub_slot_ = 1000 };
   pc_price_info_t p2 = { .price_=200, .conf_=20,
-    .status_ = PC_STATUS_TRADING, .pub_slot_ = 42 };
+    .status_ = PC_STATUS_TRADING, .pub_slot_ = 1000 };
   pc_price_info_t p3 = { .price_=300, .conf_=30,
-    .status_ = PC_STATUS_TRADING, .pub_slot_ = 42 };
+    .status_ = PC_STATUS_TRADING, .pub_slot_ = 1000 };
   pc_price_info_t p4 = { .price_=400, .conf_=40,
-    .status_ = PC_STATUS_TRADING, .pub_slot_ = 42 };
+    .status_ = PC_STATUS_TRADING, .pub_slot_ = 1000 };
 
 
   // single publisher
@@ -546,6 +546,10 @@ Test(oracle, upd_aggregate ) {
   upd_aggregate( px, pub, 1001 );
   cr_assert( px->agg_.price_ == 250 );
   cr_assert( px->agg_.conf_ == 25 );
+
+  // check what happens when nothing publishes for a while
+  upd_aggregate( px, pub, 1003 );
+  cr_assert( px->agg_.status_ == PC_STATUS_UNKNOWN );
 }
 
 Test( oracle, del_publisher ) {

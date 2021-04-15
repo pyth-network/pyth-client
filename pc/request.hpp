@@ -429,6 +429,8 @@ namespace pc
     unsigned get_num_publisher() const;
     int64_t  get_publisher_price( unsigned ) const;
     uint64_t get_publisher_conf( unsigned ) const;
+    uint64_t get_publisher_slot( unsigned ) const;
+    symbol_status  get_publisher_status( unsigned ) const;
     const pub_key *get_publisher( unsigned ) const;
 
     // slot that corresponds to the prices used to compile the last
@@ -488,8 +490,7 @@ namespace pc
     pub_key               *pkey_;
     price_sched            sched_;
     pc_pub_key_t           cpub_[PC_COMP_SIZE];
-    int64_t                cprice_[PC_COMP_SIZE];
-    uint64_t               cconf_[PC_COMP_SIZE];
+    pc_price_info_t        cprice_[PC_COMP_SIZE];
     rpc::get_account_info  areq_[1];
     rpc::account_subscribe sreq_[1];
     rpc::upd_price         preq_[1];

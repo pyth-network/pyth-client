@@ -281,8 +281,10 @@ static void upd_aggregate( pc_price_t *ptr,
     pc_price_comp_t *iptr = &ptr->comp_[i];
     // copy contributing price to aggregate snapshot
     iptr->agg_ = iptr->latest_;
-    // add valid price to sorted permutation arry
-    if ( iptr->agg_.status_ == PC_STATUS_TRADING ) {
+    // add valid price to sorted permutation array
+    // if it is a recent valid price
+    if ( iptr->agg_.status_ == PC_STATUS_TRADING &&
+         iptr->agg_.pub_slot_ == slot - 1 ) {
       int64_t ipx = iptr->agg_.price_;
       uint32_t j = numa++;
       for( ; j > 0 && ptr->comp_[aidx[j-1]].agg_.price_ > ipx; --j ) {
@@ -317,7 +319,6 @@ static uint64_t upd_price( SolParameters *prm, SolAccountInfo *ka )
   // Validate command parameters
   cmd_upd_price_t *cptr = (cmd_upd_price_t*)prm->data;
   if ( prm->data_len != sizeof( cmd_upd_price_t ) ||
-       cptr->status_ == PC_STATUS_UNKNOWN ||
        pc_symbol_is_zero( &cptr->sym_ ) ) {
     return ERROR_INVALID_ARGUMENT;
   }

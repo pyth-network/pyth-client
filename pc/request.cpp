@@ -1342,8 +1342,7 @@ void price::update( T *res )
     if ( !pc_pub_key_equal( &cpub_[i], &pupd->comp_[i].pub_ ) ) {
       pc_pub_key_assign( &cpub_[i], &pupd->comp_[i].pub_ );
     }
-    cprice_[i] = pupd->comp_[i].agg_.price_;
-    cconf_[i]  = pupd->comp_[i].agg_.conf_;
+    cprice_[i] = pupd->comp_[i].agg_;
   }
 
   // update aggregate price and status if changed
@@ -1379,12 +1378,22 @@ const pub_key *price::get_publisher( unsigned i ) const
 
 int64_t price::get_publisher_price( unsigned i ) const
 {
-  return cprice_[i];
+  return cprice_[i].price_;
 }
 
 uint64_t price::get_publisher_conf( unsigned i ) const
 {
-  return cconf_[i];
+  return cprice_[i].conf_;
+}
+
+uint64_t price::get_publisher_slot( unsigned i ) const
+{
+  return cprice_[i].pub_slot_;
+}
+
+symbol_status price::get_publisher_status( unsigned i ) const
+{
+  return (symbol_status)cprice_[i].status_;
 }
 
 ///////////////////////////////////////////////////////////////////////////

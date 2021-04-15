@@ -32,7 +32,8 @@ void print_header()
   for(unsigned i=0; i != PC_COMP_SIZE; ++i ) {
     std::cout << ",comp_status_" << i
               << ",comp_price_" << i
-              << ",comp_conf_" << i;
+              << ",comp_conf_" << i
+              << ",comp_slot" << i;
   }
   std::cout << std::endl;
 }
@@ -61,11 +62,12 @@ void print( replay& rep )
     std::cout << ',';
     str sstr = symbol_status_to_str( (symbol_status)cptr->agg_.status_ );
     std::cout.write( sstr.str_, sstr.len_ );
-    std::cout << ',' << ptr->agg_.price_
-              << ',' << ptr->agg_.conf_;
+    std::cout << ',' << cptr->agg_.price_
+              << ',' << cptr->agg_.conf_
+              << ',' << cptr->agg_.pub_slot_;
   }
   for( unsigned i=ptr->num_; i != PC_COMP_SIZE; ++i ) {
-    std::cout << ",,,";
+    std::cout << ",,,,";
   }
   std::cout << std::endl;
 }

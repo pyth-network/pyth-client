@@ -487,6 +487,10 @@ int on_get_symbol( int argc, char **argv )
   printf( "balance   : %.9f\n", 1e-9*ptr->get_lamports() );
   printf( "rent      : %.9f\n", 1e-9*req->get_lamports() );
   std::cout << "version   : " << ptr->get_version() << std::endl;
+  str stat = symbol_status_to_str( ptr->get_status() );
+  std::cout << "status    : ";
+  std::cout.write( stat.str_, stat.len_ );
+  std::cout << std::endl;
   std::cout << "price     : " << ptr->get_price() << std::endl;
   std::cout << "conf      : " << ptr->get_conf() << std::endl;
   std::cout << "exponent  : " << ptr->get_price_exponent() << std::endl;
@@ -497,8 +501,13 @@ int on_get_symbol( int argc, char **argv )
     std::string istr;
     ipub->enc_base58( istr );
     std::cout << "publisher : " << istr << std::endl;
+    std::cout << "  status  : ";
+    stat = symbol_status_to_str( ptr->get_publisher_status(i) );
+    std::cout.write( stat.str_, stat.len_ );
+    std::cout << std::endl;
     std::cout << "  price   : " << ptr->get_publisher_price(i) << std::endl;
     std::cout << "  conf    : " << ptr->get_publisher_conf(i) << std::endl;
+    std::cout << "  slot    : " << ptr->get_publisher_slot(i) << std::endl;
   }
   return 0;
 }
