@@ -507,6 +507,8 @@ void net_connect::teardown()
     whd_ = nxt;
   }
   wtl_ = nullptr;
+  rdr_.clear();
+  rsz_ = wsz_ = 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////
