@@ -76,7 +76,7 @@ target_link_libraries( pyth_csv ${PC_DEP} )
 #
 
 install( TARGETS pc DESTINATION lib )
-install( TARGETS pyth pythd DESTINATION bin )
+install( TARGETS pyth pythd pyth_csv DESTINATION bin )
 install( FILES ${PC_HDR} DESTINATION include/pc )
 install( FILES program/src/oracle/oracle.h DESTINATION include/oracle )
 
