@@ -6,7 +6,7 @@ using namespace pc;
 #define PC_RPC_HTTP_PORT      8899
 #define PC_RPC_WEBSOCKET_PORT 8900
 #define PC_RECONNECT_TIMEOUT  (120L*1000000000L)
-#define PC_BLOCKHASH_TIMEOUT  5
+#define PC_BLOCKHASH_TIMEOUT  3
 
 ///////////////////////////////////////////////////////////////////////////
 // manager_sub
@@ -47,10 +47,9 @@ manager::manager()
   slot_min_( 0L ),
   slot_( 0UL ),
   slot_cnt_( 0UL ),
-  cum_ack_( 0L ),
-  num_ack_( 0L ),
   wait_conn_( false ),
-  do_cap_( false )
+  do_cap_( false ),
+  first_ack_( true )
 {
   breq_->set_sub( this );
   sreq_->set_sub( this );
@@ -356,8 +355,8 @@ void manager::poll( bool do_wait )
   int64_t ts = get_now();
   while ( kidx_ < kvec_.size() ) {
     price_sched *kptr = kvec_[kidx_];
-    int64_t ack_ts = num_ack_?(cum_ack_/num_ack_):0L;
-    int64_t tot_ts = slot_min_ - ack_ts - ack_ts;
+    int64_t tot_ts = slot_min_ - ack_ts_ - ack_ts_;
+    tot_ts = std::max( slot_min_/10, tot_ts );
     int64_t pub_ts = slot_ts_ + ( tot_ts * kptr->get_hash() ) /
       price_sched::fraction;
     if ( ts > pub_ts ) {
@@ -392,6 +391,7 @@ void manager::reconnect_rpc()
 
     // reset state
     wait_conn_ = false;
+    first_ack_ = true;
     ctimeout_ = PC_NSECS_IN_SEC;
     slot_ts_ = slot_int_ = 0L;
     slot_cnt_ = 0UL;
@@ -551,9 +551,14 @@ void manager::on_response( rpc::get_recent_block_hash *m )
         + m->get_err_msg()  + "]" );
     return;
   }
+  static const double afactor = 2./(1+8.);
   int64_t ack_ts = m->get_recv_time() - m->get_sent_time();
-  cum_ack_ += ack_ts;
-  ++num_ack_;
+  if ( !first_ack_ ) {
+    ack_ts_ = (1.-afactor)*ack_ts_ + afactor * ack_ts;
+  } else {
+    ack_ts_ = ack_ts;
+    first_ack_ = false;
+  }
   if ( has_status( PC_PYTH_HAS_BLOCK_HASH ) ) {
     return;
   }
@@ -562,7 +567,7 @@ void manager::on_response( rpc::get_recent_block_hash *m )
   PC_LOG_INF( "received_recent_block_hash" )
     .add( "slot", m->get_slot() )
     .add( "slot_interval(ms)", 1e-6*slot_int_ )
-    .add( "rount_trip_time(ms)", 1e-6*ack_ts )
+    .add( "rount_trip_time(ms)", 1e-6*ack_ts_ )
     .end();
 
   // subscribe to mapping account if not done before
