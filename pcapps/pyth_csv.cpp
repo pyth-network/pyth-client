@@ -49,11 +49,11 @@ void print( replay& rep )
   std::cout << ',';
   str pstr = price_type_to_str( (price_type)ptr->ptype_ );
   std::cout.write( pstr.str_, pstr.len_ );
+  std::cout << ',' << ptr->expo_;
   std::cout << ',';
   str sstr = symbol_status_to_str( (symbol_status)ptr->agg_.status_ );
   std::cout.write( sstr.str_, sstr.len_ );
-  std::cout << ',' << ptr->expo_
-            << ',' << ptr->agg_.price_
+  std::cout << ',' << ptr->agg_.price_
             << ',' << ptr->agg_.conf_
             << ',' << ptr->valid_slot_
             << ',' << ptr->agg_.pub_slot_;
