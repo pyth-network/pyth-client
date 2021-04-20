@@ -45,6 +45,8 @@ public:
   void on_response( pc::price_sched *, uint64_t ) override;
 
 private:
+  void unsubscribe();
+
   pc::request_sub_set sub_;   // request subscriptions for this object
   int64_t             px_;    // price to submit
   uint64_t            sprd_;  // confidence interval or bid-ask spread
@@ -106,18 +108,43 @@ bool test_connect::get_is_init() const
 
 test_publish::~test_publish()
 {
+  unsubscribe();
+}
+
+void test_publish::unsubscribe()
+{
+  // unsubscribe to callbacks
   sub_.del( sid1_ ); // unsubscribe price updates
   sub_.del( sid2_ ); // unsubscribe price schedule updates
 }
 
-void test_publish::on_response( pc::price *sym, uint64_t sub_id )
+void test_publish::on_response( pc::price *sym, uint64_t )
 {
+  // check if currently in error
   if ( sym->get_is_err() ) {
     PC_LOG_ERR( "error receiving aggregate price" )
       .add( "err", sym->get_err_msg() )
       .end();
+    unsubscribe();
     return;
   }
+
+  // get my own contribution to the aggregate
+  pc::symbol_status my_status = pc::symbol_status::e_unknown;
+  double  my_price = 0., my_conf = 0.;
+  uint64_t my_slot = 0UL;
+  pc::pub_key *my_key = sym->get_manager()->get_publish_pub_key();
+  for(unsigned i=0; i !=  sym->get_num_publisher(); ++i ) {
+    const pc::pub_key *ikey = sym->get_publisher( i );
+    if ( *my_key == *ikey ) {
+      my_price  = expo_ * (double)sym->get_publisher_price( i );
+      my_conf   = expo_ * (double)sym->get_publisher_conf( i );
+      my_slot   = sym->get_publisher_slot( i );
+      my_status = sym->get_publisher_status( i );
+      break;
+    }
+  }
+
   // received aggregate price update for this symbol
   double price  = expo_ * (double)sym->get_price();
   double spread = expo_ * (double)sym->get_conf();
@@ -129,14 +156,26 @@ void test_publish::on_response( pc::price *sym, uint64_t sub_id )
     .add( "agg_spread", spread )
     .add( "valid_slot", sym->get_valid_slot() )
     .add( "pub_slot", sym->get_pub_slot() )
-    .add( "sub_id", sub_id )
+    .add( "my_price", my_price )
+    .add( "my_conf", my_conf )
+    .add( "my_status", pc::symbol_status_to_str( my_status ) )
+    .add( "my_slot", my_slot )
     .end();
 }
 
 void test_publish::on_response( pc::price_sched *ptr, uint64_t sub_id )
 {
-  // submit next price to block chain for this symbol
+  // check if currently in error
   pc::price *sym = ptr->get_price();
+  if ( sym->get_is_err() ) {
+    PC_LOG_ERR( "aggregate price in error" )
+      .add( "err", sym->get_err_msg() )
+      .end();
+    unsubscribe();
+    return;
+  }
+
+  // submit next price to block chain for this symbol
   if ( !sym->update( px_, sprd_, pc::symbol_status::e_trading ) ) {
     PC_LOG_ERR( "failed to submit price" )
       .add( "symbol", *sym->get_symbol() )
