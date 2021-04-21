@@ -176,13 +176,7 @@ void test_publish::on_response( pc::price_sched *ptr, uint64_t sub_id )
   }
 
   // submit next price to block chain for this symbol
-  if ( !sym->update( px_, sprd_, pc::symbol_status::e_trading ) ) {
-    PC_LOG_ERR( "failed to submit price" )
-      .add( "symbol", *sym->get_symbol() )
-      .add( "price_type", pc::price_type_to_str( sym->get_price_type() ) )
-      .add( "err_msg", sym->get_err_msg() )
-      .end();
-  } else {
+  if ( sym->update( px_, sprd_, pc::symbol_status::e_trading ) ) {
     double price  = expo_ * (double)px_;
     double spread = expo_ * (double)sprd_;
     PC_LOG_INF( "submit price to block-chain" )
@@ -195,6 +189,27 @@ void test_publish::on_response( pc::price_sched *ptr, uint64_t sub_id )
       .end();
     // increase price
     px_ += sprd_;
+  } else if ( !sym->has_publisher() ) {
+    PC_LOG_WRN( "missing publish permission" )
+      .add( "symbol", *sym->get_symbol() )
+      .add( "price_type", pc::price_type_to_str( sym->get_price_type() ) )
+      .end();
+    // should work once publisher has been permissioned
+  } else if ( !sym->get_is_ready_publish() ) {
+    PC_LOG_WRN( "not ready to publish next price" )
+      .add( "symbol", *sym->get_symbol() )
+      .add( "price_type", pc::price_type_to_str( sym->get_price_type() ) )
+      .end();
+    // could be delay in confirmation - try again next time
+  } else if ( sym->get_is_err() ) {
+    PC_LOG_WRN( "block-chain error" )
+      .add( "symbol", *sym->get_symbol() )
+      .add( "price_type", pc::price_type_to_str( sym->get_price_type() ) )
+      .add( "err_msg", sym->get_err_msg() )
+      .end();
+    unsubscribe();
+    // either bad config or on-chain program problem - cant continue as is
+    // could try calling reset_err() and continue once error is resolved
   }
 }
 

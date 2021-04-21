@@ -9,6 +9,8 @@
 #define PC_JSON_UNKNOWN_METHOD  -32601
 #define PC_JSON_INVALID_PARAMS  -32602
 #define PC_JSON_UNKNOWN_SYMBOL  -32000
+#define PC_JSON_MISSING_PERMS   -32001
+#define PC_JSON_NOT_READY       -32002
 
 using namespace pc;
 
@@ -189,8 +191,14 @@ void user::parse_upd_price( uint32_t tok, uint32_t itok )
       add_header();
       jw_.add_key( "result", 0UL );
       add_tail( itok );
+    } else if ( !sptr->get_is_ready_publish() ) {
+      add_error( itok, PC_JSON_NOT_READY, "not ready to publish" );
+    } else if ( !sptr->has_publisher() ) {
+      add_error( itok, PC_JSON_MISSING_PERMS, "missing publish permission" );
     } else if ( sptr->get_is_err() ) {
       add_error( itok, PC_JSON_INVALID_REQUEST, sptr->get_err_msg() );
+    } else {
+      add_error( itok, PC_JSON_INVALID_REQUEST, "unknown error" );
     }
     return;
   } while( 0 );

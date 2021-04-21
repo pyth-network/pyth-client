@@ -1154,6 +1154,11 @@ void price::reset()
   reset_err();
 }
 
+bool price::has_publisher()
+{
+  return has_publisher( *pkey_ );
+}
+
 bool price::has_publisher( const pub_key& key )
 {
   pc_pub_key_t *pk = (pc_pub_key_t*)key.data();
@@ -1192,18 +1197,16 @@ bool price::update(
   if ( PC_UNLIKELY( !init_ && !init_publish() ) ) {
     return false;
   }
-  if ( PC_UNLIKELY( !has_publisher( *pkey_ ) ) ) {
-    return set_err_msg( "not permissioned to update price" );
-  }
-  manager *cptr = get_manager();
-  if ( cptr && st_ == e_publish ) {
-    st_ = e_pend_publish;
-    preq_->set_price( price, conf, st, is_agg );
-    cptr->submit( this );
-    return true;
-  } else {
+  if ( PC_UNLIKELY( !has_publisher() ) ) {
     return false;
   }
+  if ( PC_UNLIKELY( st_ != e_publish ) ) {
+    return false;
+  }
+  st_ = e_pend_publish;
+  preq_->set_price( price, conf, st, is_agg );
+  get_manager()->submit( this );
+  return true;
 }
 
 void price::submit()
@@ -1449,7 +1452,5 @@ void price_sched::submit()
 
 void price_sched::schedule()
 {
-  if ( ptr_->get_is_ready_publish() ) {
-    on_response_sub( this );
-  }
+  on_response_sub( this );
 }

@@ -400,6 +400,9 @@ namespace pc
 
     price( const pub_key& );
 
+    // is current publisher authorized to publish on this symbol
+    bool has_publisher();
+
     // is publisher authorized to publish on this symbol
     bool has_publisher( const pub_key& );
 
@@ -409,6 +412,7 @@ namespace pc
     // submit new price update and update aggregate
     // will fail with false if in error (check get_is_err() )
     // or because symbol is not ready to publish (get_is_ready_publish())
+    // or because publisher does not have permission (has_publisher())
     bool update( int64_t price, uint64_t conf, symbol_status );
 
     // update aggregate price only
