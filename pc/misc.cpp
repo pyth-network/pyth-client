@@ -239,7 +239,7 @@ int enc_base64( const uint8_t *inp, int len, uint8_t *out )
 int dec_base64( const uint8_t *inp, int len, uint8_t *out )
 {
   int i = 0, j = 0, decLen = 0;
-  uint8_t a3[3];
+  uint8_t a3[3] = { 0,0,0 };
   uint8_t a4[4];
 
   while ( len-- ) {

@@ -18,7 +18,7 @@ void jtree::parse( const char *cptr, size_t sz )
 
   typedef enum { e_start, e_string, e_number, e_keyword } state_t;
   state_t st = e_start;
-  const char *txt, *end = &cptr[sz];
+  const char *txt=nullptr, *end = &cptr[sz];
   for(;;) {
     switch(st) {
       case e_start: {

@@ -34,7 +34,7 @@ using namespace pc;
 net_buf_alloc::net_buf_alloc()
 : ptr_( nullptr )
 {
-  static_assert( sizeof( net_buf ) == 1280);
+  static_assert( sizeof( net_buf ) == 1280, "unexpected net_buf size");
 }
 
 net_buf_alloc::~net_buf_alloc()
