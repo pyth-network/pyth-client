@@ -13,7 +13,7 @@ async def get_symbol_list( uri ):
   ws = await websockets.connect(uri)
 
   # submit get_symbol_list request
-  req = { 'jsonrpc': '2.0', 'method':  'get_symbol_list', 'id': None }
+  req = { 'jsonrpc': '2.0', 'method':  'get_product_list', 'id': None }
   await ws.send( json.dumps( req ) )
 
   # wait for reply

@@ -98,25 +98,24 @@ capture::cap_buf *capture::alloc()
   return curr_;
 }
 
-void capture::write( pc_price_t *ptr )
+void capture::write( pc_pub_key_t *kptr, pc_acc_t *aptr )
 {
   if ( PC_UNLIKELY( !curr_ ) ) {
     curr_ = alloc();
   }
-  uint64_t plen = sizeof( int64_t ) +
-    ptr->size_ - sizeof( ptr->comp_ )  +
-    ptr->num_ * sizeof( pc_price_comp_t );
+  size_t tlen = aptr->size_ + sizeof( int64_t ) + sizeof( pc_pub_key_t );
   uint64_t left = max_size - curr_->size_ - sizeof( cap_buf );
-  if ( PC_UNLIKELY( plen > left ) ) {
+  if ( PC_UNLIKELY( tlen > left ) ) {
     flush();
     curr_ = alloc();
   }
   char *tgt = &curr_->buf_[curr_->size_];
   ((int64_t*)tgt)[0] = get_now();
   tgt += sizeof( int64_t );
-  __builtin_memcpy( tgt, ptr, plen );
-  ((pc_price_t*)tgt)->size_ = plen;
-  curr_->size_ += plen;
+  pc_pub_key_assign( (pc_pub_key_t*)tgt, kptr );
+  tgt += sizeof( pc_pub_key_t );
+  __builtin_memcpy( tgt, aptr, aptr->size_ );
+  curr_->size_ += tlen;
 }
 
 void capture::flush()

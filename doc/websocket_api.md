@@ -1,14 +1,14 @@
 # pyth-client websocket API
 The pythd daemon supports a websocket interface based on the jsoni-rpc 2.0 standard.  Methods include:
 
-- [get_symbol_list](#get_symbol_list)
+- [get_product_list](#get_product_list)
 - [update_price](#update_price)
 - [subscribe_price](#subscribe_price)
 - [subscribe_price_sched](#subscribe_price_sched)
 
 Batch requests are processed in the order the requests appear within the batch.
 
-## get_symbol_list
+## get_product_list
 
 Get list of available symbols and associated meta data.
 
@@ -16,44 +16,74 @@ Request looks like:
 ```
 {
   "jsonrpc": "2.0",
-  "method": "get_symbol_list",
+  "method": "get_product_list",
   "id" : 1
 }
 ```
 
-A successful response looks like:
+A successful response looks something like:
 ```
 {
-  "jsonrpc": "2.0",
-  "result" : [
+ "jsonrpc": "2.0",
+ "result": [
+  {
+   "account": "9F6eBgAfktth93C9zmtKDXFXNjZkq6JwJR56VPKqWmJm",
+   "attr_dict": {
+    "symbol": "SYMBOL1/USD",
+    "asset_type": "Equity",
+    "country": "USA",
+    "description": "pyth example product #1",
+    "quote_currency": "USD",
+    "tenor": "Spot",
+    "cms_symbol": "SYMBOL1",
+    "cqs_symbol": "SYMBOL1",
+    "nasdaq_symbol": "SYMBOL1"
+   },
+   "price": [
     {
-      "symbol" : "US.EQ.SYMBOL1",
-      "price_exponent" : -4,
-      "price_type" : "price"
-    },
-    {
-      "symbol" : "US.EQ.SYMBOL2",
-      "price_exponent" : -6,
-      "price_type" : "price"
+     "account": "CrZCEEt3awgkGLnVbsv45Pp4aLhr7fZfZr3ubzrbNXaq",
+     "price_exponent": -4,
+     "price_type": "price"
     }
-  ],
-  "id" : 1
+   ]
+  },
+  {
+   "account": "HCFaDYyz1ajS57HfCaaqzA1cZSaa2oEccQejbHaaofd4",
+   "attr_dict": {
+    "symbol": "SYMBOL2/USD",
+    "asset_type": "Equity",
+    "country": "USA",
+    "description": "pyth example product #2",
+    "quote_currency": "USD",
+    "tenor": "Spot",
+    "cms_symbol": "SYMBOL2",
+    "cqs_symbol": "SYMBOL2",
+    "nasdaq_symbol": "SYMBOL2"
+   },
+   "price": [
+    {
+     "account": "7FUsKvvtN5rB1fgYFWZLo5DLcqHTTeu63bUPThYT6MiS",
+     "price_exponent": -4,
+     "price_type": "price"
+    }
+   ]
+  }
+ ],
+ "id": null
 }
-
 ```
 
 ## update_price
 
 Update component price of some symbol using the publishing key of the pythd daemon.
 
-Request looks like:
+Request includes the pricing account from the get_product_list output and looks something like:
 ```
 {
   "jsonrpc": "2.0",
   "method": "update_price",
   "params" : {
-    "symbol": "US.EQ.SYMBOL1",
-    "price_type": "price",
+    "account": "CrZCEEt3awgkGLnVbsv45Pp4aLhr7fZfZr3ubzrbNXaq",
     "price" : 42002,
     "conf" : 3,
     "status": "trading"
@@ -84,8 +114,7 @@ Request looks like:
   "jsonrpc": "2.0",
   "method": "subscribe_price",
   "params" : {
-    "symbol" : "US.EQ.SYMBOL1",
-    "price_type" : "price"
+    "account": "CrZCEEt3awgkGLnVbsv45Pp4aLhr7fZfZr3ubzrbNXaq",
   },
   "id" : 1
 }
@@ -138,8 +167,7 @@ Request looks like:
   "jsonrpc": "2.0",
   "method": "subscribe_price_sched",
   "params" : {
-    "symbol" : "US.EQ.SYMBOL1",
-    "price_type" : "price"
+    "account": "CrZCEEt3awgkGLnVbsv45Pp4aLhr7fZfZr3ubzrbNXaq",
   },
   "id" : 1
 }

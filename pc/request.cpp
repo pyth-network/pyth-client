@@ -263,7 +263,7 @@ uint32_t get_mapping::get_num_symbols() const
 
 bool get_mapping::get_is_full() const
 {
-  return num_sym_ >= PC_MAP_NODE_SIZE;
+  return num_sym_ >= PC_MAP_TABLE_SIZE;
 }
 
 void get_mapping::reset()
@@ -304,22 +304,25 @@ void get_mapping::update( T *res )
     return;
   }
   pc_map_table_t *tab;
-  res->get_data( tab );
-  if ( tab->magic_ != PC_MAGIC ) {
-    cptr->set_err_msg( "bad mapping account header" );
+  if ( sizeof( pc_map_table_t ) > res->get_data( tab ) ||
+       tab->magic_ != PC_MAGIC ) {
+    cptr->set_err_msg( "invalid or corrupt mapping account" );
     return;
+  }
+  if ( tab->ver_ != PC_VERSION ) {
+    cptr->set_err_msg( "invalid mapping account version=" +
+        std::to_string( tab->ver_ ) );
   }
 
   // check and subscribe to any new price accounts in mapping table
   num_sym_ = tab->num_;
   PC_LOG_INF( "add_mapping" )
-    .add( "key_name", mkey_ )
-    .add( "num_symbols", num_sym_ )
+    .add( "account", mkey_ )
+    .add( "num_products", num_sym_ )
     .end();
   for( unsigned i=0; i != tab->num_; ++i ) {
-    pc_map_node_t *nptr = &tab->nds_[i];
-    pub_key *aptr = (pub_key*)&nptr->price_acc_;
-    cptr->add_symbol( *aptr );
+    pub_key *aptr = (pub_key*)&tab->prod_[i];
+    cptr->add_product( *aptr );
   }
 
   // subscribe to other mapping accounts
@@ -333,6 +336,9 @@ void get_mapping::update( T *res )
     st_ = e_init;
     cptr->del_map_sub();
   }
+
+  // capture mapping attributes to disk
+  cptr->write( (pc_pub_key_t*)mkey_.data(), (pc_acc_t*)tab );
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -471,42 +477,31 @@ bool add_mapping::get_is_done() const
   return st_ == e_done;
 }
 
-
 ///////////////////////////////////////////////////////////////////////////
-// add_symbol
+// add_product
 
-add_symbol::add_symbol()
+add_product::add_product()
 : st_( e_create_sent ),
   cmt_( commitment::e_confirmed )
 {
 }
 
-void add_symbol::set_symbol( const symbol& sym )
-{
-  sreq_->set_symbol( sym );
-}
-
-void add_symbol::set_exponent( int32_t expo )
-{
-  sreq_->set_exponent( expo );
-}
-
-void add_symbol::set_price_type( price_type ptype )
-{
-  sreq_->set_price_type( ptype );
-}
-
-void add_symbol::set_lamports( uint64_t funds )
+void add_product::set_lamports( uint64_t funds )
 {
   areq_->set_lamports( funds );
 }
 
-void add_symbol::set_commitment( commitment cmt )
+void add_product::set_commitment( commitment cmt )
 {
   cmt_ = cmt;
 }
 
-bool add_symbol::get_is_ready()
+key_pair *add_product::get_account()
+{
+  return &akey_;
+}
+
+bool add_product::get_is_ready()
 {
   manager *cptr = get_manager();
   if ( !cptr->get_mapping_pub_key() ) {
@@ -518,16 +513,9 @@ bool add_symbol::get_is_ready()
                            PC_PYTH_HAS_MAPPING );
 }
 
-void add_symbol::submit()
+void add_product::submit()
 {
   manager *cptr = get_manager();
-  price *sptr = cptr->get_symbol(
-      *sreq_->get_symbol(), sreq_->get_price_type() );
-  if ( sptr && sptr->get_version() >= PC_VERSION ) {
-    on_error_sub( "symbol/price type already exists with version="
-        + std::to_string( sptr->get_version() ), this );
-    return;
-  }
   key_pair *mkey = cptr->get_mapping_key_pair();
   if ( !mkey ) {
     on_error_sub( "missing or invalid mapping key [" +
@@ -581,7 +569,7 @@ void add_symbol::submit()
   get_rpc_client()->send( areq_ );
 }
 
-void add_symbol::on_response( rpc::create_account *res )
+void add_product::on_response( rpc::create_account *res )
 {
   if ( res->get_is_err() ) {
     on_error_sub( res->get_err_msg(), this );
@@ -595,7 +583,7 @@ void add_symbol::on_response( rpc::create_account *res )
   }
 }
 
-void add_symbol::on_response( rpc::signature_subscribe *res )
+void add_product::on_response( rpc::signature_subscribe *res )
 {
   if ( res->get_is_err() ) {
     on_error_sub( res->get_err_msg(), this );
@@ -610,7 +598,7 @@ void add_symbol::on_response( rpc::signature_subscribe *res )
   }
 }
 
-void add_symbol::on_response( rpc::add_symbol *res )
+void add_product::on_response( rpc::add_product *res )
 {
   if ( res->get_is_err() ) {
     on_error_sub( res->get_err_msg(), this );
@@ -623,33 +611,276 @@ void add_symbol::on_response( rpc::add_symbol *res )
   }
 }
 
-bool add_symbol::get_is_done() const
+bool add_product::get_is_done() const
 {
   return st_ == e_done;
 }
 
 ///////////////////////////////////////////////////////////////////////////
-// add_publisher
+// upd_product
 
-add_publisher::add_publisher()
-: st_( e_add_sent ),
+upd_product::upd_product()
+: st_( e_sent ),
   cmt_( commitment::e_confirmed )
 {
 }
 
-void add_publisher::set_symbol( const symbol& sym )
+void upd_product::set_commitment( commitment cmt )
 {
-  req_->set_symbol( sym );
+  cmt_ = cmt;
+}
+
+void upd_product::set_product( product *prod )
+{
+  prod_ = prod;
+}
+
+void upd_product::set_attr_dict( attr_dict *aptr )
+{
+  sreq_->set_attr_dict( aptr );
+}
+
+void upd_product::reset()
+{
+  reset_err();
+  st_ = e_sent;
+}
+
+bool upd_product::get_is_ready()
+{
+  manager *cptr = get_manager();
+  if ( !cptr->get_mapping_pub_key() ) {
+    return set_err_msg( "missing mapping key pairfile ["
+        + cptr->get_mapping_key_pair_file() + "]" );
+  }
+  return cptr->has_status( PC_PYTH_RPC_CONNECTED |
+                           PC_PYTH_HAS_BLOCK_HASH |
+                           PC_PYTH_HAS_MAPPING );
+}
+
+void upd_product::submit()
+{
+  manager *cptr = get_manager();
+  key_pair *pkey = cptr->get_publish_key_pair();
+  if ( !pkey ) {
+    on_error_sub( "missing or invalid publish key [" +
+        cptr->get_publish_key_pair_file() + "]", this );
+    return;
+  }
+  pub_key *gpub = cptr->get_program_pub_key();
+  if ( !gpub ) {
+    on_error_sub( "missing or invalid program public key [" +
+        cptr->get_program_pub_key_file() + "]", this );
+    return;
+  }
+  pub_key *apub = prod_->get_account();
+  if ( !cptr->get_account_key_pair( *apub, skey_ ) ) {
+    std::string knm;
+    apub->enc_base58( knm );
+    on_error_sub( "missing key pair for product acct [" + knm + "]", this);
+    return;
+  }
+  sreq_->set_program( gpub );
+  sreq_->set_publish( pkey );
+  sreq_->set_account( &skey_ );
+  sreq_->set_sub( this );
+  sig_->set_sub( this );
+
+  // get recent block hash and submit request
+  st_ = e_sent;
+  sreq_->set_block_hash( get_manager()->get_recent_block_hash() );
+  get_rpc_client()->send( sreq_ );
+}
+
+void upd_product::on_response( rpc::upd_product *res )
+{
+  if ( res->get_is_err() ) {
+    on_error_sub( res->get_err_msg(), this );
+    st_ = e_error;
+  } else if ( st_ == e_sent ) {
+    // subscribe to signature completion
+    st_ = e_sig;
+    sig_->set_commitment( cmt_ );
+    sig_->set_signature( res->get_signature() );
+    get_rpc_client()->send( sig_ );
+  }
+}
+
+void upd_product::on_response( rpc::signature_subscribe *res )
+{
+  if ( res->get_is_err() ) {
+    on_error_sub( res->get_err_msg(), this );
+    st_ = e_error;
+  } else if ( st_ == e_sig ) {
+    st_ = e_done;
+    on_response_sub( this );
+  }
+}
+
+bool upd_product::get_is_done() const
+{
+  return st_ == e_done;
+}
+
+///////////////////////////////////////////////////////////////////////////
+// add_price
+
+add_price::add_price()
+: st_( e_create_sent ),
+  cmt_( commitment::e_confirmed )
+{
+}
+
+void add_price::set_exponent( int32_t expo )
+{
+  sreq_->set_exponent( expo );
+}
+
+void add_price::set_price_type( price_type ptype )
+{
+  sreq_->set_price_type( ptype );
+}
+
+void add_price::set_product( product *prod )
+{
+  prod_ = prod;
+}
+
+void add_price::set_lamports( uint64_t funds )
+{
+  areq_->set_lamports( funds );
+}
+
+void add_price::set_commitment( commitment cmt )
+{
+  cmt_ = cmt;
+}
+
+bool add_price::get_is_ready()
+{
+  manager *cptr = get_manager();
+  if ( !cptr->get_mapping_pub_key() ) {
+    return set_err_msg( "missing mapping key pairfile ["
+        + cptr->get_mapping_key_pair_file() + "]" );
+  }
+  return cptr->has_status( PC_PYTH_RPC_CONNECTED |
+                           PC_PYTH_HAS_BLOCK_HASH |
+                           PC_PYTH_HAS_MAPPING );
+}
+
+void add_price::submit()
+{
+  manager *cptr = get_manager();
+  key_pair *pkey = cptr->get_publish_key_pair();
+  if ( !pkey ) {
+    on_error_sub( "missing or invalid publish key [" +
+        cptr->get_publish_key_pair_file() + "]", this );
+    return;
+  }
+  pub_key *gpub = cptr->get_program_pub_key();
+  if ( !gpub ) {
+    on_error_sub( "missing or invalid program public key [" +
+        cptr->get_program_pub_key_file() + "]", this );
+    return;
+  }
+  if ( prod_->get_price( sreq_->get_price_type() ) ) {
+    on_error_sub( "price_type already exists for this product", this  );
+    return;
+  }
+  pub_key *apub = prod_->get_account();
+  if ( !cptr->get_account_key_pair( *apub, mkey_ ) ) {
+    std::string knm;
+    apub->enc_base58( knm );
+    on_error_sub( "missing key pair for product acct [" + knm + "]", this);
+    return;
+  }
+  if ( !cptr->create_account_key_pair( akey_ ) ) {
+    on_error_sub( "failed to create new symbol key_pair", this );
+    return;
+  }
+  areq_->set_sender( pkey );
+  areq_->set_account( &akey_ );
+  areq_->set_owner( gpub );
+  areq_->set_space( sizeof( pc_price_t ) );
+  sreq_->set_program( gpub );
+  sreq_->set_publish( pkey );
+  sreq_->set_product( &mkey_ );
+  sreq_->set_account( &akey_ );
+  areq_->set_sub( this );
+  sreq_->set_sub( this );
+  sig_->set_sub( this );
+
+  // get recent block hash and submit request
+  st_ = e_create_sent;
+  areq_->set_block_hash( get_manager()->get_recent_block_hash() );
+  get_rpc_client()->send( areq_ );
+}
+
+void add_price::on_response( rpc::create_account *res )
+{
+  if ( res->get_is_err() ) {
+    on_error_sub( res->get_err_msg(), this );
+    st_ = e_error;
+  } else if ( st_ == e_create_sent ) {
+    // subscribe to signature completion
+    st_ = e_create_sig;
+    sig_->set_commitment( commitment::e_finalized );
+    sig_->set_signature( res->get_signature() );
+    get_rpc_client()->send( sig_ );
+  }
+}
+
+void add_price::on_response( rpc::signature_subscribe *res )
+{
+  if ( res->get_is_err() ) {
+    on_error_sub( res->get_err_msg(), this );
+    st_ = e_error;
+  } else if ( st_ == e_create_sig ) {
+    st_ = e_add_sent;
+    sreq_->set_block_hash( get_manager()->get_recent_block_hash() );
+    get_rpc_client()->send( sreq_ );
+  } else if ( st_ == e_add_sig ) {
+    st_ = e_done;
+    on_response_sub( this );
+  }
+}
+
+void add_price::on_response( rpc::add_price *res )
+{
+  if ( res->get_is_err() ) {
+    on_error_sub( res->get_err_msg(), this );
+    st_ = e_error;
+  } else if ( st_ == e_add_sent ) {
+    st_ = e_add_sig;
+    sig_->set_commitment( cmt_ );
+    sig_->set_signature( res->get_signature() );
+    get_rpc_client()->send( sig_ );
+  }
+}
+
+bool add_price::get_is_done() const
+{
+  return st_ == e_done;
+}
+
+///////////////////////////////////////////////////////////////////////////
+// dd_publisher
+
+add_publisher::add_publisher()
+: st_( e_add_sent ),
+  cmt_( commitment::e_confirmed ),
+  px_( nullptr )
+{
+}
+
+void add_publisher::set_price( price *px )
+{
+  px_ = px;
 }
 
 void add_publisher::set_publisher( const pub_key& pub )
 {
   req_->set_publisher( pub );
-}
-
-void add_publisher::set_price_type( price_type ptype )
-{
-  req_->set_price_type( ptype );
 }
 
 void add_publisher::set_commitment( commitment cmt )
@@ -673,16 +904,8 @@ void add_publisher::submit()
 {
   manager *cptr = get_manager();
 
-  // check if this symbol exists
-  price *sptr = cptr->get_symbol(
-      *req_->get_symbol(), req_->get_price_type() );
-  if ( !sptr ) {
-    on_error_sub( "symbol/price_type does not exist", this );
-    return;
-  }
-
   // check if we already have this symbol/publisher combination
-  if ( sptr->has_publisher( *req_->get_publisher() ) ) {
+  if ( px_->has_publisher( *req_->get_publisher() ) ) {
     on_error_sub( "publisher already exists for this symbol", this );
     return;
   }
@@ -698,11 +921,11 @@ void add_publisher::submit()
         cptr->get_program_pub_key_file() + "]", this );
     return;
   }
-  pub_key *apub = sptr->get_account();
+  pub_key *apub = px_->get_account();
   if ( !cptr->get_account_key_pair( *apub, akey_ ) ) {
     std::string knm;
     apub->enc_base58( knm );
-    on_error_sub( "missing key pair for symbol [" + knm + "]", this);
+    on_error_sub( "missing key pair for price acct [" + knm + "]", this);
     return;
   }
   req_->set_program( gpub );
@@ -751,23 +974,19 @@ bool add_publisher::get_is_done() const
 
 del_publisher::del_publisher()
 : st_( e_add_sent ),
-  cmt_( commitment::e_confirmed )
+  cmt_( commitment::e_confirmed ),
+  px_( nullptr )
 {
 }
 
-void del_publisher::set_symbol( const symbol& sym )
+void del_publisher::set_price( price *px )
 {
-  req_->set_symbol( sym );
+  px_ = px;
 }
 
 void del_publisher::set_publisher( const pub_key& pub )
 {
   req_->set_publisher( pub );
-}
-
-void del_publisher::set_price_type( price_type ptype )
-{
-  req_->set_price_type( ptype );
 }
 
 void del_publisher::set_commitment( commitment cmt )
@@ -791,16 +1010,8 @@ void del_publisher::submit()
 {
   manager *cptr = get_manager();
 
-  // check if this symbol exists
-  price *sptr = cptr->get_symbol(
-      *req_->get_symbol(), req_->get_price_type() );
-  if ( !sptr ) {
-    on_error_sub( "symbol/price_type does not exist", this );
-    return;
-  }
-
   // check if we already have this symbol/publisher combination
-  if ( !sptr->has_publisher( *req_->get_publisher() ) ) {
+  if ( !px_->has_publisher( *req_->get_publisher() ) ) {
     on_error_sub( "publisher not defined for this symbol", this );
     return;
   }
@@ -816,11 +1027,11 @@ void del_publisher::submit()
         cptr->get_program_pub_key_file() + "]", this );
     return;
   }
-  pub_key *apub = sptr->get_account();
+  pub_key *apub = px_->get_account();
   if ( !cptr->get_account_key_pair( *apub, akey_ ) ) {
     std::string knm;
     apub->enc_base58( knm );
-    on_error_sub( "missing key pair for symbol [" + knm + "]", this);
+    on_error_sub( "missing key pair for price acct [" + knm + "]", this);
     return;
   }
   req_->set_program( gpub );
@@ -1033,13 +1244,147 @@ bool get_minimum_balance_rent_exemption::get_is_done() const
 }
 
 ///////////////////////////////////////////////////////////////////////////
+// product
+
+product::product( const pub_key& acc )
+: acc_( acc ),
+  st_( e_subscribe )
+{
+  areq_->set_account( &acc_ );
+  sreq_->set_account( &acc_ );
+  areq_->set_sub( this );
+  sreq_->set_sub( this );
+}
+
+pub_key *product::get_account()
+{
+  return &acc_;
+}
+
+str product::get_symbol()
+{
+  str sym;
+  get_attr( attr_id( "symbol" ), sym);
+  return sym;
+}
+
+void product::reset()
+{
+  reset_err();
+  st_ = e_subscribe;
+}
+
+void product::add_price( price *px )
+{
+  pvec_.push_back( px );
+}
+
+void product::submit()
+{
+  rpc_client  *cptr = get_rpc_client();
+  st_ = e_subscribe;
+  cptr->send( sreq_ );
+  cptr->send( areq_ );
+}
+
+void product::on_response( rpc::get_account_info *res )
+{
+  update( res );
+}
+
+void product::on_response( rpc::account_subscribe *res )
+{
+  update( res );
+}
+
+template<class T>
+void product::update( T *res )
+{
+  // check for errors and deserialize
+  manager *cptr = get_manager();
+  if ( res->get_is_err() ) {
+    cptr->set_err_msg( res->get_err_msg() );
+    st_ = e_error;
+    return;
+  }
+  pc_prod_t *prod;
+  if ( sizeof( pc_prod_t ) > res->get_data( prod ) ||
+       prod->magic_ != PC_MAGIC ||
+       !init_from_account( prod ) ) {
+    cptr->set_err_msg( "invalid or corrupt product account" );
+    st_ = e_error;
+    return;
+  }
+  if ( prod->ver_ != PC_VERSION ) {
+    cptr->set_err_msg( "invalid product account version=" +
+        std::to_string( prod->ver_ ) );
+    st_ = e_error;
+    return;
+  }
+
+  // subscribe to firstprice account in chain
+  if ( !pc_pub_key_is_zero( &prod->px_acc_ ) ) {
+    cptr->add_price( *(pub_key*)&prod->px_acc_, this );
+  }
+
+  // log product update
+  json_wtr wtr;
+  wtr.add_val( json_wtr::e_obj );
+  write_json( wtr );
+  wtr.pop();
+  net_buf *jhd, *jtl;
+  wtr.detach( jhd, jtl );
+  PC_LOG_INF( st_ != e_done ? "add_product" : "upd_product" )
+    .add( "account", acc_ )
+    .add( "attr", str( jhd->buf_, jhd->size_) )
+    .end();
+  jhd->dealloc();
+
+  // capture product attributes to disk
+  cptr->write( (pc_pub_key_t*)acc_.data(), (pc_acc_t*)prod );
+
+  if ( st_ != e_done ) {
+    // log new product
+    st_ = e_done;
+    // reduce subscription count
+    cptr->del_map_sub();
+  }
+
+  // ping subscribers with new product details
+  on_response_sub( this );
+}
+
+bool product::get_is_done() const
+{
+  return st_ == e_done;
+}
+
+unsigned product::get_num_price() const
+{
+  return pvec_.size();
+}
+
+price *product::get_price( unsigned i ) const
+{
+  return pvec_[i];
+}
+
+price *product::get_price( price_type pt ) const
+{
+  for( price *ptr: pvec_ ) {
+    if ( ptr->get_price_type() == pt ) {
+      return ptr;
+    }
+  }
+  return nullptr;
+}
+
+///////////////////////////////////////////////////////////////////////////
 // price
 
-price::price( const pub_key& acc )
+price::price( const pub_key& acc, product *prod )
 : init_( false ),
   isched_( false ),
-  do_unsub_( false ),
-  do_notify_( false ),
   st_( e_subscribe ),
   apub_( acc ),
   ptype_( price_type::e_unknown ),
@@ -1053,12 +1398,12 @@ price::price( const pub_key& acc )
   aexpo_( 0 ),
   cnum_( 0 ),
   pkey_( nullptr ),
+  prod_( prod ),
   sched_( this )
 {
   __builtin_memset( &cpub_, 0, sizeof( cpub_ ) );
   areq_->set_account( &apub_ );
   sreq_->set_account( &apub_ );
-  preq_->set_symbol( &sym_ );
   preq_->set_account( &apub_ );
   areq_->set_sub( this );
   sreq_->set_sub( this );
@@ -1080,16 +1425,25 @@ bool price::init_publish()
         cptr->get_program_pub_key_file() + "]", this );
     return false;
   }
-  pkey_ = cptr->get_publish_pub_key();
   preq_->set_publish( pkey );
   preq_->set_program( gpub );
   init_ = true;
   return true;
 }
 
-symbol *price::get_symbol()
+product *price::get_product() const
 {
-  return &sym_;
+  return prod_;
+}
+
+str price::get_symbol()
+{
+  return prod_->get_symbol();
+}
+
+bool price::get_attr( attr_id aid, str& val ) const
+{
+  return prod_->get_attr( aid, val );
 }
 
 pub_key *price::get_account()
@@ -1150,13 +1504,16 @@ bool price::get_is_ready_publish() const
 void price::reset()
 {
   st_ = e_subscribe;
-  do_unsub_ = do_notify_ = false;
   reset_err();
 }
 
 bool price::has_publisher()
 {
-  return has_publisher( *pkey_ );
+  if ( pkey_ ) {
+    return has_publisher( *pkey_ );
+  } else {
+    return false;
+  }
 }
 
 bool price::has_publisher( const pub_key& key )
@@ -1224,6 +1581,7 @@ void price::submit()
     // subscribe first
     cptr->send( sreq_ );
     cptr->send( areq_ );
+    pkey_ = get_manager()->get_publish_pub_key();
     st_ = e_sent_subscribe;
   }
 }
@@ -1235,14 +1593,7 @@ void price::on_response( rpc::get_account_info *res )
 
 void price::on_response( rpc::account_subscribe *res )
 {
-  if ( !do_unsub_ ) {
-    update( res );
-  } else if ( do_notify_ ) {
-    // remove subscription if not already done so
-    do_notify_ = false;
-    res->remove_notify();
-    // TODO: send unsubscibe request
-  }
+  update( res );
 }
 
 void price::on_response( rpc::upd_price *res )
@@ -1256,20 +1607,21 @@ void price::on_response( rpc::upd_price *res )
   }
 }
 
-void price::log_update( const char *title, pc_price_t *pupd )
+void price::log_update( const char *title )
 {
   PC_LOG_INF( title )
-    .add( "symbol", sym_ )
+    .add( "account", *get_account() )
+    .add( "product", *prod_->get_account() )
+    .add( "symbol", get_symbol() )
     .add( "price_type", price_type_to_str( ptype_ ) )
     .add( "version", version_ )
     .add( "exponent", aexpo_ )
-    .add( "num_publishers", pupd->num_ )
+    .add( "num_publishers", cnum_ )
     .end();
 }
 
 void price::unsubscribe()
 {
-  do_unsub_ = do_notify_ = true;
 }
 
 void price::init_subscribe( pc_price_t *pupd )
@@ -1278,8 +1630,6 @@ void price::init_subscribe( pc_price_t *pupd )
   aexpo_   = pupd->expo_;
   ptype_   = (price_type)pupd->ptype_;
   version_ = pupd->ver_;
-  sym_     = *(symbol*)&pupd->sym_;
-  preq_->set_price_type( ptype_ );
   st_ = e_publish;
 
   // initial assignment
@@ -1296,22 +1646,16 @@ void price::init_subscribe( pc_price_t *pupd )
   // subscribe to next symbol in chain
   manager *cptr = get_manager();
   if ( !pc_pub_key_is_zero( &pupd->next_ ) ) {
-    cptr->add_symbol( *(pub_key*)&pupd->next_ );
+    cptr->add_price( *(pub_key*)&pupd->next_, prod_ );
   }
 
-  // add to map of prices by symbol and price_type
-  // or replace what's there if this is a later version
-  cptr->add_symbol( sym_, ptype_, this );
-  if ( !do_unsub_ ) {
+  // log new price object
+  log_update( "add_price" );
 
-    // only log and callback if this symbol is valid
-    log_update( "add_symbol", pupd );
-
-    // callback users on new symbol update
-    manager_sub *sub = cptr->get_manager_sub();
-    if ( sub ) {
-      sub->on_add_symbol( cptr, this );
-    }
+  // callback users on new symbol update
+  manager_sub *sub = cptr->get_manager_sub();
+  if ( sub ) {
+    sub->on_add_symbol( cptr, this );
   }
 
   // reduce subscription count after we subscribe to next symbol in chain
@@ -1332,7 +1676,7 @@ void price::update( T *res )
   // get account data
   pc_price_t *pupd;
   res->get_data( pupd );
-  if ( pupd->magic_ != PC_MAGIC ) {
+  if ( PC_UNLIKELY( pupd->magic_ != PC_MAGIC ) ) {
     on_error_sub( "bad price account header", this );
     st_ = e_error;
     return;
@@ -1341,16 +1685,13 @@ void price::update( T *res )
   // update state and subscribe to next price account in the chain
   if ( PC_UNLIKELY( st_ == e_sent_subscribe ) ) {
     init_subscribe( pupd );
-    if ( do_unsub_ ) {
-      return;
-    }
   }
 
   // update publishers
   lamports_ = res->get_lamports();
   if ( PC_UNLIKELY( cnum_ != pupd->num_ ) ) {
     cnum_ = pupd->num_;
-    log_update( "modify_publisher", pupd );
+    log_update( "modify_publisher" );
   }
   for( unsigned i=0; i != cnum_; ++i ) {
     if ( !pc_pub_key_equal( &cpub_[i], &pupd->comp_[i].pub_ ) ) {
@@ -1368,16 +1709,11 @@ void price::update( T *res )
     valid_slot_ = pupd->valid_slot_;
 
     // capture aggregate price and components to disk
-    get_manager()->write( pupd );
+    get_manager()->write( (pc_pub_key_t*)apub_.data(), (pc_acc_t*)pupd );
 
     // ping subscribers with new aggregate price
     on_response_sub( this );
   }
-}
-
-bool price::get_is_subscribed() const
-{
-  return !do_unsub_;
 }
 
 bool price::get_is_done() const
@@ -1444,8 +1780,8 @@ bool price_sched::get_is_ready()
 
 void price_sched::submit()
 {
-  uint64_t *iptr = (uint64_t*)ptr_->get_symbol()->data();
-  shash_ = ((iptr[0]^iptr[1])<<3) |(uint64_t)ptr_->get_price_type();
+  uint64_t *iptr = (uint64_t*)ptr_->get_account()->data();
+  shash_ = iptr[0]^iptr[2];
   shash_ = shash_ % fraction;
   get_manager()->schedule( this );
 }

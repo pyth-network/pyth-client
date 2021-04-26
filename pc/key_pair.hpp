@@ -15,11 +15,13 @@ namespace pc
     hash( const hash& );
     hash& operator=( const hash& );
     bool operator==( const hash& )const;
+    bool operator!=( const hash& )const;
     void zero();
 
     // initialize from base58 encoded file or text
     bool init_from_file( const std::string& file );
     bool init_from_text( const std::string& buf );
+    bool init_from_text( str buf );
     void init_from_buf( const uint8_t * );
 
     // encode to text buffer
@@ -34,23 +36,7 @@ namespace pc
     union{ uint64_t i_[4]; uint8_t pk_[len]; };
   };
 
-  class symbol
-  {
-  public:
-    static const size_t len = 16;
-    symbol();
-    symbol( const symbol& );
-    symbol( const char * );
-    symbol( str );
-    symbol& operator=( const symbol& );
-    bool operator==( const symbol& )const;
-    str as_str() const;
-    const char *data() const;
-  private:
-    union { uint64_t i_[2]; char c_[len];};
-  };
   // public key
-
   class pub_key : public hash
   {
   public:

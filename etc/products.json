@@ -1,0 +1,128 @@
+[
+  {
+    "account": "EfmGojb5qyrt4TqVdSSYpn9R8iGgKBk8445EBu4p4b3h",
+    "attr_dict":{
+      "symbol": "AAPL/USD",
+      "asset_type": "Equity",
+      "country": "US",
+      "description": "APPLE INC",
+      "quote_currency" : "USD",
+      "tenor": "Spot",
+      "cms_symbol": "AAPL",
+      "cqs_symbol": "AAPL",
+      "nasdaq_symbol": "AAPL"
+    }
+  },
+  {
+    "account": "AjWYgfJ91AMz8rfFJbW2SFac6yEex2La6DEZhVhFgAjN",
+    "attr_dict":{
+      "symbol": "TSLA/USD",
+      "asset_type": "Equity",
+      "country": "US",
+      "description": "TESLA INC",
+      "quote_currency" : "USD",
+      "tenor": "Spot",
+      "cms_symbol": "TSLA",
+      "cqs_symbol": "TSLA",
+      "nasdaq_symbol": "TSLA"
+    }
+  },
+  {
+    "account": "Hspa1SHEEaoBp1qSpp7Pta2aWsoV3HdjXEXi1iz5gih6",
+    "attr_dict":{
+      "symbol": "AMZN/USD",
+      "asset_type": "Equity",
+      "country": "US",
+      "description": "AMAZON.COM INC",
+      "quote_currency" : "USD",
+      "tenor": "Spot",
+      "cms_symbol": "AMZN",
+      "cqs_symbol": "AMZN",
+      "nasdaq_symbol": "AMZN"
+    }
+  },
+  {
+    "account": "GUoA6BsYH5gtKf9VzaTHGTQUPdA8DqtrwiZcQu7u4K2o",
+    "attr_dict":{
+      "symbol": "NFLX/USD",
+      "asset_type": "Equity",
+      "country": "US",
+      "description": "NETFLIX INC",
+      "quote_currency" : "USD",
+      "tenor": "Spot",
+      "cms_symbol": "NFLX",
+      "cqs_symbol": "NFLX",
+      "nasdaq_symbol": "NFLX"
+    }
+  },
+  {
+    "account": "GDdKzmzXeTNqrQFjFnvC7Xd3HPpRbAzb5Eqg9ALTSNHS",
+    "attr_dict":{
+      "symbol": "GME/USD",
+      "asset_type": "Equity",
+      "country": "US",
+      "description": "GAMESTOP CORP-CLASS A",
+      "quote_currency" : "USD",
+      "tenor": "Spot",
+      "cms_symbol": "GME",
+      "cqs_symbol": "GME",
+      "nasdaq_symbol": "GME"
+    }
+  },
+  {
+    "account": "6C92Jh8TuYD4Jm3bYP5HkYG8bo8KLjjWGZsJcz7d7fsV",
+    "attr_dict":{
+      "symbol": "AMC/USD",
+      "asset_type": "Equity",
+      "country": "US",
+      "description": "AMC ENTERTAINMENT HLDS-CL A",
+      "quote_currency" : "USD",
+      "tenor": "Spot",
+      "cms_symbol": "AMC",
+      "cqs_symbol": "AMC",
+      "nasdaq_symbol": "AMC"
+    }
+  },
+  {
+    "account": "4gEs7AVX9XoqA7A5kuAhdZbLgdxGJYrvxjU1SGMnCFjW",
+    "attr_dict":{
+      "symbol": "GOOG/USD",
+      "asset_type": "Equity",
+      "country": "US",
+      "description": "ALPHABET INC-CL C",
+      "quote_currency" : "USD",
+      "tenor": "Spot",
+      "cms_symbol": "GOOG",
+      "cqs_symbol": "GOOG",
+      "nasdaq_symbol": "GOOG"
+    }
+  },
+  {
+    "account": "BYKzsZDzJ13GpJZxcgutLFfyrne6npSnByjjJCa3JmH",
+    "attr_dict":{
+      "symbol": "SPY/USD",
+      "asset_type": "Equity",
+      "country": "US",
+      "description": "SPDR S P 500 ETF TRUST",
+      "quote_currency" : "USD",
+      "tenor": "Spot",
+      "cms_symbol": "SPY",
+      "cqs_symbol": "SPY",
+      "nasdaq_symbol": "SPY"
+    }
+  },
+  {
+    "account": "9n3KwnAf2Yp15ES1AmtwLf29Npq5NHF8bSmNc8EJ8y6G",
+    "attr_dict":{
+      "symbol": "QQQ/USD",
+      "asset_type": "Equity",
+      "country": "US",
+      "description": "INVESCO QQQ TRUST SERIES 1",
+      "quote_currency" : "USD",
+      "tenor": "Spot",
+      "cms_symbol": "QQQ",
+      "cqs_symbol": "QQQ",
+      "nasdaq_symbol": "QQQ"
+    }
+  }
+]

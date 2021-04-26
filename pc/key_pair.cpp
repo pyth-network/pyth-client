@@ -34,6 +34,14 @@ bool hash::operator==( const hash& obj) const
     i_[3] == obj.i_[3];
 }
 
+bool hash::operator!=( const hash& obj) const
+{
+  return i_[0] != obj.i_[0] ||
+    i_[1] != obj.i_[1] ||
+    i_[2] != obj.i_[2] ||
+    i_[3] != obj.i_[3];
+}
+
 void hash::zero()
 {
   i_[0] = i_[1] = i_[2] = i_[3] = 0UL;
@@ -53,6 +61,12 @@ bool hash::init_from_file( const std::string& file )
 bool hash::init_from_text( const std::string& buf )
 {
   pc::dec_base58( (const uint8_t*)buf.c_str(), buf.length(), pk_ );
+  return true;
+}
+
+bool hash::init_from_text( str buf )
+{
+  pc::dec_base58( (const uint8_t*)buf.str_, buf.len_, pk_ );
   return true;
 }
 
@@ -77,52 +91,6 @@ int hash::enc_base58( std::string& res ) const
 int hash::dec_base58( const uint8_t *buf, uint32_t buflen )
 {
   return pc::dec_base58( buf, buflen, pk_ );
-}
-
-symbol::symbol()
-{
-  i_[0] = i_[1] = PC_SYMBOL_SPACES;
-}
-
-symbol::symbol( const symbol& obj )
-{
-  *this = obj;
-}
-
-symbol::symbol( const char *sym )
-{
-  i_[0] = i_[1] = PC_SYMBOL_SPACES;
-  __builtin_memcpy( c_, sym, std::min(16UL,__builtin_strlen( sym )) );
-}
-
-symbol::symbol( str sval )
-{
-  i_[0] = i_[1] = PC_SYMBOL_SPACES;
-  __builtin_memcpy( c_, sval.str_, std::min(16UL,sval.len_) );
-}
-
-symbol& symbol::operator=( const symbol& obj )
-{
-  i_[0] = obj.i_[0];
-  i_[1] = obj.i_[1];
-  return *this;
-}
-
-bool symbol::operator==( const symbol& obj ) const
-{
-  return i_[0] == obj.i_[0] && i_[1] == obj.i_[1];
-}
-
-str symbol::as_str() const
-{
-  str res( c_, len );
-  for( ;res.len_ != 0 && res.str_[res.len_-1] == 0x20; --res.len_ );
-  return res;
-}
-
-const char *symbol::data() const
-{
-  return c_;
 }
 
 pub_key::pub_key()

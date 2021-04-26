@@ -2,12 +2,15 @@
 
 #include <pc/rpc_client.hpp>
 #include <pc/dbl_list.hpp>
+#include <pc/attr_id.hpp>
 #include <oracle/oracle.h>
 
 namespace pc
 {
   class manager;
   class request;
+  class product;
+  class price;
 
   // pyth request subscriber
   class request_sub
@@ -197,25 +200,23 @@ namespace pc
     rpc::signature_subscribe sig_[1];
   };
 
-  // add new symbol to mapping
-  class add_symbol : public request,
-                     public rpc_sub_i<rpc::create_account>,
-                     public rpc_sub_i<rpc::signature_subscribe>,
-                     public rpc_sub_i<rpc::add_symbol>
+  // add new product to mapping
+  class add_product : public request,
+                      public rpc_sub_i<rpc::create_account>,
+                      public rpc_sub_i<rpc::signature_subscribe>,
+                      public rpc_sub_i<rpc::add_product>
   {
   public:
-    add_symbol();
-    void set_symbol( const symbol& );
-    void set_exponent( int32_t );
+    add_product();
     void set_lamports( uint64_t funds );
-    void set_price_type( price_type );
     void set_commitment( commitment );
     bool get_is_done() const override;
+    key_pair *get_account();
 
   public:
     void on_response( rpc::create_account * ) override;
     void on_response( rpc::signature_subscribe * ) override;
-    void on_response( rpc::add_symbol * ) override;
+    void on_response( rpc::add_product * ) override;
     bool get_is_ready() override;
     void submit() override;
 
@@ -231,9 +232,82 @@ namespace pc
     key_pair                 skey_;
     key_pair                 mkey_;
     rpc::create_account      areq_[1];
-    rpc::add_symbol          sreq_[1];
+    rpc::add_product         sreq_[1];
     rpc::signature_subscribe sig_[1];
   };
+
+  // update product attribute data
+  class upd_product : public request,
+                      public rpc_sub_i<rpc::signature_subscribe>,
+                      public rpc_sub_i<rpc::upd_product>
+  {
+  public:
+    upd_product();
+    void set_commitment( commitment );
+    void set_attr_dict( attr_dict * );
+    void set_product( product * );
+    bool get_is_done() const override;
+
+  public:
+    void on_response( rpc::signature_subscribe * ) override;
+    void on_response( rpc::upd_product * ) override;
+    bool get_is_ready() override;
+    void submit() override;
+    void reset();
+
+  private:
+    typedef enum {
+      e_sent, e_sig, e_done, e_error
+    } state_t;
+
+    state_t                  st_;
+    commitment               cmt_;
+    product                 *prod_;
+    key_pair                 skey_;
+    rpc::upd_product         sreq_[1];
+    rpc::signature_subscribe sig_[1];
+  };
+
+
+  // add new price account to product
+  class add_price : public request,
+                    public rpc_sub_i<rpc::create_account>,
+                    public rpc_sub_i<rpc::signature_subscribe>,
+                    public rpc_sub_i<rpc::add_price>
+  {
+  public:
+    add_price();
+    void set_exponent( int32_t );
+    void set_lamports( uint64_t funds );
+    void set_price_type( price_type );
+    void set_product( product * );
+    void set_commitment( commitment );
+    bool get_is_done() const override;
+
+  public:
+    void on_response( rpc::create_account * ) override;
+    void on_response( rpc::signature_subscribe * ) override;
+    void on_response( rpc::add_price * ) override;
+    bool get_is_ready() override;
+    void submit() override;
+
+  private:
+    typedef enum {
+      e_create_sent, e_create_sig,
+      e_add_sent, e_add_sig, e_done, e_error
+    } state_t;
+
+    state_t                  st_;
+    commitment               cmt_;
+    product                 *prod_;
+    key_pair                 akey_;
+    key_pair                 skey_;
+    key_pair                 mkey_;
+    rpc::create_account      areq_[1];
+    rpc::add_price           sreq_[1];
+    rpc::signature_subscribe sig_[1];
+  };
+
 
   // add new price publisher to symbol account
   class add_publisher : public request,
@@ -242,9 +316,8 @@ namespace pc
   {
   public:
     add_publisher();
-    void set_symbol( const symbol& );
+    void set_price( price * );
     void set_publisher( const pub_key& );
-    void set_price_type( price_type );
     void set_commitment( commitment );
     bool get_is_done() const override;
 
@@ -261,7 +334,9 @@ namespace pc
 
     state_t                  st_;
     commitment               cmt_;
+    price                   *px_;
     key_pair                 akey_;
+    key_pair                 mkey_;
     rpc::add_publisher       req_[1];
     rpc::signature_subscribe sig_[1];
   };
@@ -273,9 +348,8 @@ namespace pc
   {
   public:
     del_publisher();
-    void set_symbol( const symbol& );
+    void set_price( price * );
     void set_publisher( const pub_key& );
-    void set_price_type( price_type );
     void set_commitment( commitment );
     bool get_is_done() const override;
 
@@ -292,6 +366,7 @@ namespace pc
 
     state_t                  st_;
     commitment               cmt_;
+    price                   *px_;
     key_pair                 akey_;
     rpc::del_publisher       req_[1];
     rpc::signature_subscribe sig_[1];
@@ -366,7 +441,47 @@ namespace pc
     rpc::get_minimum_balance_rent_exemption req_[1];
   };
 
-  class price;
+  // product symbol and other reference-data attributes
+  class product : public request,
+                  public attr_dict,
+                  public rpc_sub_i<rpc::get_account_info>,
+                  public rpc_sub_i<rpc::account_subscribe>
+  {
+  public:
+    // product account number
+    pub_key *get_account();
+
+    // symbol from attr_dict
+    str get_symbol();
+
+    // iterate through associated price accounts (quotes) associated
+    // with this product
+    unsigned get_num_price() const;
+    price *get_price( unsigned i ) const;
+    price *get_price( price_type ) const;
+
+  public:
+
+    product( const pub_key& );
+    void reset();
+    void submit() override;
+    void on_response( rpc::get_account_info * ) override;
+    void on_response( rpc::account_subscribe * ) override;
+    bool get_is_done() const override;
+    void add_price( price * );
+
+  private:
+    typedef enum { e_subscribe, e_done, e_error } state_t;
+    typedef std::vector<price*> prices_t;
+
+    template<class T> void update( T *res );
+
+    pub_key                acc_;
+    prices_t               pvec_;
+    state_t                st_;
+    rpc::get_account_info  areq_[1];
+    rpc::account_subscribe sreq_[1];
+  };
 
   // price submission schedule
   class price_sched : public request
@@ -398,7 +513,16 @@ namespace pc
   {
   public:
 
-    price( const pub_key& );
+    price( const pub_key&, product *prod );
+
+    // corresponding product definition
+    product *get_product() const;
+
+    // convenience wrapper equiv to: get_product()->get_symbol()
+    str get_symbol();
+
+    // convenience wrapper equiv to: get_product()->get_sttr()
+    bool get_attr( attr_id, str& ) const;
 
     // is current publisher authorized to publish on this symbol
     bool has_publisher();
@@ -422,7 +546,6 @@ namespace pc
     price_sched *get_sched();
 
     // various accessors
-    symbol       *get_symbol();
     pub_key      *get_account();
     price_type    get_price_type() const;
     int64_t       get_price_exponent() const;
@@ -449,12 +572,12 @@ namespace pc
 
   public:
 
-    void set_symbol( const symbol& );
     void set_price_type( price_type );
     void set_version( uint32_t );
     void set_price( int64_t );
     void set_conf( int64_t );
     void set_symbol_status( symbol_status );
+    void set_product( product * );
 
     void reset();
     void unsubscribe();
@@ -462,7 +585,6 @@ namespace pc
     void on_response( rpc::get_account_info * ) override;
     void on_response( rpc::account_subscribe * ) override;
     void on_response( rpc::upd_price * ) override;
-    bool get_is_subscribed() const;
     bool get_is_done() const override;
 
   private:
@@ -476,15 +598,12 @@ namespace pc
 
     bool init_publish();
     void init_subscribe( pc_price_t * );
-    void log_update( const char *title, pc_price_t * );
+    void log_update( const char *title );
     bool update( int64_t price, uint64_t conf, symbol_status, bool aggr );
 
     bool                   init_;
     bool                   isched_;
-    bool                   do_unsub_;
-    bool                   do_notify_;
     state_t                st_;
-    symbol                 sym_;
     pub_key                apub_;
     price_type             ptype_;
     symbol_status          sym_st_;
@@ -497,6 +616,7 @@ namespace pc
     int32_t                aexpo_;
     uint32_t               cnum_;
     pub_key               *pkey_;
+    product               *prod_;
     price_sched            sched_;
     pc_pub_key_t           cpub_[PC_COMP_SIZE];
     pc_price_info_t        cprice_[PC_COMP_SIZE];

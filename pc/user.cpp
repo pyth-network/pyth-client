@@ -159,8 +159,8 @@ void user::parse_request( uint32_t tok )
     parse_sub_price( tok, itok );
   } else if ( mst == "subscribe_price_sched" ) {
     parse_sub_price_sched( tok, itok );
-  } else if ( mst == "get_symbol_list" ) {
-    parse_get_symbol_list( itok );
+  } else if ( mst == "get_product_list" ) {
+    parse_get_product_list( itok );
   } else {
     add_error( itok, PC_JSON_UNKNOWN_METHOD, "method not found" );
   }
@@ -172,11 +172,10 @@ void user::parse_upd_price( uint32_t tok, uint32_t itok )
     // unpack and verify parameters
     uint32_t ntok,ptok = jp_.find_val( tok, "params" );
     if ( ptok == 0 || jp_.get_type(ptok) != jtree::e_obj ) break;
-    if ( 0 == (ntok = jp_.find_val( ptok, "symbol" ) ) ) break;
-    symbol sym = jp_.get_str( ntok );
-    if ( 0 == (ntok = jp_.find_val( ptok, "price_type" ) ) ) break;
-    price_type ptype = str_to_price_type( jp_.get_str( ntok ) );
-    price *sptr = sptr_->get_symbol( sym, ptype );
+    if ( 0 == (ntok = jp_.find_val( ptok, "account" ) ) ) break;
+    pub_key pkey;
+    pkey.init_from_text( jp_.get_str( ntok ) );
+    price *sptr = sptr_->get_price( pkey );
     if ( PC_UNLIKELY( !sptr ) ) { add_unknown_symbol(itok); return; }
     if ( 0 == (ntok = jp_.find_val( ptok, "price" ) ) ) break;
     int64_t price = jp_.get_int( ntok );
@@ -211,11 +210,10 @@ void user::parse_sub_price( uint32_t tok, uint32_t itok )
     // unpack and verify parameters
     uint32_t ntok,ptok = jp_.find_val( tok, "params" );
     if ( ptok == 0 || jp_.get_type(ptok) != jtree::e_obj ) break;
-    if ( 0 == (ntok = jp_.find_val( ptok, "symbol" ) ) ) break;
-    symbol sym = jp_.get_str( ntok );
-    if ( 0 == (ntok = jp_.find_val( ptok, "price_type" ) ) ) break;
-    price_type ptype = str_to_price_type( jp_.get_str( ntok ) );
-    price *sptr = sptr_->get_symbol( sym, ptype );
+    if ( 0 == (ntok = jp_.find_val( ptok, "account" ) ) ) break;
+    pub_key pkey;
+    pkey.init_from_text( jp_.get_str( ntok ) );
+    price *sptr = sptr_->get_price( pkey );
     if ( PC_UNLIKELY( !sptr ) ) { add_unknown_symbol(itok); return; }
 
     // add subscription
@@ -242,11 +240,10 @@ void user::parse_sub_price_sched( uint32_t tok, uint32_t itok )
     // unpack and verify parameters
     uint32_t ntok,ptok = jp_.find_val( tok, "params" );
     if ( ptok == 0 || jp_.get_type(ptok) != jtree::e_obj ) break;
-    if ( 0 == (ntok = jp_.find_val( ptok, "symbol" ) ) ) break;
-    symbol sym = jp_.get_str( ntok );
-    if ( 0 == (ntok = jp_.find_val( ptok, "price_type" ) ) ) break;
-    price_type ptype = str_to_price_type( jp_.get_str( ntok ) );
-    price *sptr = sptr_->get_symbol( sym, ptype );
+    if ( 0 == (ntok = jp_.find_val( ptok, "account" ) ) ) break;
+    pub_key pkey;
+    pkey.init_from_text( jp_.get_str( ntok ) );
+    price *sptr = sptr_->get_price( pkey );
     if ( PC_UNLIKELY( !sptr ) ) { add_unknown_symbol(itok); return; }
 
     // add subscription
@@ -263,20 +260,29 @@ void user::parse_sub_price_sched( uint32_t tok, uint32_t itok )
   add_invalid_params( itok );
 }
 
-void user::parse_get_symbol_list( uint32_t itok )
+void user::parse_get_product_list( uint32_t itok )
 {
   add_header();
   jw_.add_key( "result", json_wtr::e_arr );
-  unsigned j =0;
-  for( unsigned i=0; i != sptr_->get_num_symbol(); ++i ) {
-    price *sptr = sptr_->get_next_symbol( j );
-    symbol *sym = sptr->get_symbol();
-    int64_t expo = sptr->get_price_exponent();
-    price_type ptype = sptr->get_price_type();
+  for( unsigned i=0; i != sptr_->get_num_product(); ++i ) {
+    product *prod = sptr_->get_product( i );
     jw_.add_val( json_wtr::e_obj );
-    jw_.add_key( "symbol", sym->as_str() );
-    jw_.add_key( "price_exponent", expo );
-    jw_.add_key( "price_type", price_type_to_str( ptype) );
+    jw_.add_key( "account", *prod->get_account() );
+    jw_.add_key( "attr_dict", json_wtr::e_obj );
+    prod->write_json( jw_ );
+    jw_.pop();
+    jw_.add_key( "price", json_wtr::e_arr );
+    for( unsigned j=0; j != prod->get_num_price(); ++j ) {
+      jw_.add_val( json_wtr::e_obj );
+      price *px = prod->get_price( j );
+      int64_t expo = px->get_price_exponent();
+      price_type ptype = px->get_price_type();
+      jw_.add_key( "account", *px->get_account() );
+      jw_.add_key( "price_exponent", expo );
+      jw_.add_key( "price_type", price_type_to_str( ptype) );
+      jw_.pop();
+    }
+    jw_.pop();
     jw_.pop();
   }
   jw_.pop();

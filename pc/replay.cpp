@@ -5,8 +5,7 @@ using namespace pc;
 static const size_t buf_sz = 1024*1024;
 
 replay::replay()
-: ts_( 0L ),
-  up_( nullptr ),
+: up_( nullptr ),
   buf_( nullptr ),
   pos_( 0 ),
   len_( 0 ),
@@ -57,24 +56,17 @@ bool replay::init()
   return true;
 }
 
-struct pc_hdr
-{
-  int64_t  ts_;
-  uint32_t magic_;
-  uint32_t ver_;
-  uint32_t size_;
-  uint32_t ptype_;
-};
-
 bool replay::get_next()
 {
   for(;;) {
     size_t left = len_ - pos_;
-    pc_hdr *hdr = (pc_hdr*)&buf_[pos_];
-    if ( left >= sizeof( pc_hdr ) && left >= hdr->size_ ) {
-      up_ = (pc_price_t*)&buf_[pos_+sizeof(int64_t)];
-      ts_ = hdr->ts_;
-      pos_ += hdr->size_;
+    up_ = (hdr*)&buf_[pos_];
+    size_t upsz = sizeof( hdr );
+    if ( left >= upsz ) {
+      upsz = sizeof( int64_t ) + sizeof( pc_pub_key_t ) + up_->acc_.size_;
+    }
+    if ( left >= upsz ) {
+      pos_ += upsz;
       return true;
     } else {
       if ( pos_ ) {

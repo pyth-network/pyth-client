@@ -42,6 +42,7 @@ namespace pc
     str( const char *, size_t );
     str( const uint8_t *, size_t );
     str( const std::string& );
+    std::string as_string() const;
     bool operator==( const str& ) const;
     const char *str_;
     size_t      len_;
@@ -74,6 +75,11 @@ namespace pc
   {
     return len_ == obj.len_ &&
            0 == __builtin_strncmp( str_, obj.str_, len_);
+  }
+
+  inline std::string str::as_string() const
+  {
+    return std::string( str_, len_ );
   }
 
 }

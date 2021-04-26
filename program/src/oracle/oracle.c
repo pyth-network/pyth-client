@@ -55,9 +55,12 @@ static uint64_t init_mapping( SolParameters *prm, SolAccountInfo *ka )
 
   // Initialize by setting to zero again (just in case) and setting
   // the version number
+  cmd_hdr_t *hdr = (cmd_hdr_t*)prm->data;
   sol_memset( tptr, 0, sizeof( pc_map_table_t ) );
   tptr->magic_ = PC_MAGIC;
-  tptr->ver_   = PC_VERSION;
+  tptr->ver_   = hdr->ver_;
+  tptr->type_  = PC_ACCTYPE_MAPPING;
+  tptr->size_  = sizeof( pc_map_table_t ) - sizeof( tptr->prod_ );
   return SUCCESS;
 }
 
@@ -76,11 +79,13 @@ static uint64_t add_mapping( SolParameters *prm, SolAccountInfo *ka )
   // Verify that last mapping account in chain is initialized, full
   // and not pointing to a another account in the chain
   // Also verify that the new account is uninitialized
+  cmd_hdr_t *hdr = (cmd_hdr_t*)prm->data;
   pc_map_table_t *pptr = (pc_map_table_t*)ka[1].data;
   pc_map_table_t *nptr = (pc_map_table_t*)ka[2].data;
   if ( pptr->magic_ != PC_MAGIC ||
+       pptr->ver_   != hdr->ver_ ||
        nptr->magic_ != 0 ||
-       pptr->num_ < PC_MAP_NODE_SIZE ||
+       pptr->num_ < PC_MAP_TABLE_SIZE ||
        nptr->num_   != 0 ||
        !pc_pub_key_is_zero( &pptr->next_ ) ) {
     return ERROR_INVALID_ARGUMENT;
@@ -88,7 +93,9 @@ static uint64_t add_mapping( SolParameters *prm, SolAccountInfo *ka )
   // Initialize new account and set version number
   sol_memset( nptr, 0, sizeof( pc_map_table_t ) );
   nptr->magic_ = PC_MAGIC;
-  nptr->ver_   = PC_VERSION;
+  nptr->ver_   = hdr->ver_;
+  nptr->type_  = PC_ACCTYPE_MAPPING;
+  nptr->size_  = sizeof( pc_map_table_t ) - sizeof( nptr->prod_ );
 
   // Set last mapping account to point to this mapping account
   pc_pub_key_t *pkey = (pc_pub_key_t*)ka[1].key;
@@ -97,35 +104,128 @@ static uint64_t add_mapping( SolParameters *prm, SolAccountInfo *ka )
   return SUCCESS;
 }
 
-static uint64_t add_symbol( SolParameters *prm, SolAccountInfo *ka )
+static uint64_t add_product( SolParameters *prm, SolAccountInfo *ka )
 {
-  // Validate command parameters
-  cmd_add_symbol_t *cptr = (cmd_add_symbol_t*)prm->data;
-  if ( prm->data_len != sizeof( cmd_add_symbol_t ) ||
-       cptr->expo_ > PC_MAX_NUM_DECIMALS ||
-       cptr->expo_ < -PC_MAX_NUM_DECIMALS ||
-       cptr->ptype_ == PC_PTYPE_UNKNOWN ||
-       pc_symbol_is_zero( &cptr->sym_ ) ) {
-    return ERROR_INVALID_ARGUMENT;
-  }
-
   // Account (1) is the mapping account that we're going to add to and
   // must be the tail (or last) mapping account in chain
-  // Account (2) is the new price account
+  // Account (2) is the new product account
   // Verify that these are signed, writable accounts with correct ownership
   // and size
   if ( prm->ka_num < 3 ||
        !valid_funding_account( &ka[0] ) ||
        !valid_signable_account( prm, &ka[1], sizeof( pc_map_table_t ) ) ||
-       !valid_signable_account( prm, &ka[2], sizeof( pc_price_t ) ) ) {
+       !valid_signable_account( prm, &ka[2], PC_PROD_ACC_SIZE ) ) {
     return ERROR_INVALID_ARGUMENT;
   }
 
   // Verify that mapping account is a valid tail account
-  // and that the new price account is uninitialized
+  // that the new product account is uninitialized and that there is space
+  // in the mapping account
+  cmd_hdr_t *hdr = (cmd_hdr_t*)prm->data;
   pc_map_table_t *mptr = (pc_map_table_t*)ka[1].data;
-  pc_price_t *sptr = (pc_price_t*)ka[2].data;
+  pc_prod_t *pptr = (pc_prod_t*)ka[2].data;
   if ( mptr->magic_ != PC_MAGIC ||
+       mptr->ver_ != hdr->ver_ ||
+       mptr->type_ != PC_ACCTYPE_MAPPING ||
+       pptr->magic_ != 0 ||
+       mptr->num_ >= PC_MAP_TABLE_SIZE ) {
+    return ERROR_INVALID_ARGUMENT;
+  }
+
+  // Initialize product account
+  sol_memset( pptr, 0, PC_PROD_ACC_SIZE );
+  pptr->magic_ = PC_MAGIC;
+  pptr->ver_   = hdr->ver_;
+  pptr->type_  = PC_ACCTYPE_PRODUCT;
+  pptr->size_  = sizeof( pc_prod_t );
+
+  // finally add mapping account link
+  pc_pub_key_assign( &mptr->prod_[mptr->num_++], (pc_pub_key_t*)ka[2].key );
+  mptr->size_  = sizeof( pc_map_table_t ) - sizeof( mptr->prod_ ) +
+    mptr->num_ * sizeof( pc_pub_key_t );
+  return SUCCESS;
+}
+
+#define PC_ADD_STR \
+  tag = (pc_str_t*)src;\
+  tag_len = 1UL + (uint64_t)tag->len_;\
+  if ( &src[tag_len] > end ) return ERROR_INVALID_ARGUMENT;\
+  sol_memcpy( tgt, tag, tag_len );\
+  tgt += tag_len;\
+  src += tag_len;\
+
+static uint64_t upd_product( SolParameters *prm, SolAccountInfo *ka )
+{
+  // Account (1) is the existing product account
+  // Verify that these are signed, writable accounts with correct ownership
+  // and size
+  if ( prm->ka_num < 2 ||
+       !valid_funding_account( &ka[0] ) ||
+       !valid_signable_account( prm, &ka[1], PC_PROD_ACC_SIZE ) ) {
+    return ERROR_INVALID_ARGUMENT;
+  }
+
+  // verify that product account is valid
+  cmd_hdr_t *hdr = (cmd_hdr_t*)prm->data;
+  pc_prod_t *pptr = (pc_prod_t*)ka[1].data;
+  if ( pptr->magic_ != PC_MAGIC ||
+       pptr->ver_ != hdr->ver_ ||
+       pptr->type_ != PC_ACCTYPE_PRODUCT ) {
+    return ERROR_INVALID_ARGUMENT;
+  }
+
+  // unpack and verify attribute set and ssign to product account
+  if ( prm->data_len < sizeof( cmd_upd_product_t ) ||
+       prm->data_len > PC_PROD_ACC_SIZE +
+         sizeof( cmd_upd_product_t ) - sizeof( pc_prod_t ) ) {
+    return ERROR_INVALID_ARGUMENT;
+  }
+  cmd_upd_product_t *cptr = (cmd_upd_product_t*)prm->data;
+  pptr->size_ = sizeof ( pc_prod_t ) + prm->data_len -
+    sizeof( cmd_upd_product_t );
+  uint8_t *tgt = (uint8_t*)pptr + sizeof( pc_prod_t );
+  const uint8_t *src = prm->data + sizeof( cmd_upd_product_t );
+  const uint8_t *end = prm->data + prm->data_len;
+  const pc_str_t *tag;
+  uint64_t tag_len;
+  while( src != end ) {
+    // check key string
+    PC_ADD_STR
+    // check value string
+    PC_ADD_STR
+  }
+  return SUCCESS;
+}
+
+static uint64_t add_price( SolParameters *prm, SolAccountInfo *ka )
+{
+  // Validate command parameters
+  cmd_add_price_t *cptr = (cmd_add_price_t*)prm->data;
+  if ( prm->data_len != sizeof( cmd_add_price_t ) ||
+       cptr->expo_ > PC_MAX_NUM_DECIMALS ||
+       cptr->expo_ < -PC_MAX_NUM_DECIMALS ||
+       cptr->ptype_ == PC_PTYPE_UNKNOWN ) {
+    return ERROR_INVALID_ARGUMENT;
+  }
+
+  // Account (1) is the product account that we're going to add to
+  // Account (2) is the new price account
+  // Verify that these are signed, writable accounts with correct ownership
+  // and size
+  if ( prm->ka_num < 3 ||
+       !valid_funding_account( &ka[0] ) ||
+       !valid_signable_account( prm, &ka[1], PC_PROD_ACC_SIZE ) ||
+       !valid_signable_account( prm, &ka[2], sizeof( pc_price_t ) ) ) {
+    return ERROR_INVALID_ARGUMENT;
+  }
+
+  // Verify that the product account is valid
+  // and that the new price account is uninitialized
+  pc_prod_t  *pptr = (pc_prod_t*)ka[1].data;
+  pc_price_t *sptr = (pc_price_t*)ka[2].data;
+  if ( pptr->magic_ != PC_MAGIC ||
+       pptr->ver_ != cptr->ver_ ||
+       pptr->type_ != PC_ACCTYPE_PRODUCT ||
        sptr->magic_ != 0 ) {
     return ERROR_INVALID_ARGUMENT;
   }
@@ -133,37 +233,16 @@ static uint64_t add_symbol( SolParameters *prm, SolAccountInfo *ka )
   // Initialize symbol account
   sol_memset( sptr, 0, sizeof( pc_price_t ) );
   sptr->magic_ = PC_MAGIC;
-  sptr->ver_   = PC_VERSION;
-  sptr->size_  = sizeof( pc_price_t );
+  sptr->ver_   = cptr->ver_;
+  sptr->type_  = PC_ACCTYPE_PRICE;
+  sptr->size_  = sizeof( pc_price_t ) - sizeof( sptr->comp_ );
   sptr->expo_  = cptr->expo_;
   sptr->ptype_ = cptr->ptype_;
-  pc_symbol_assign( &sptr->sym_, &cptr->sym_ );
+  pc_pub_key_assign( &sptr->prod_, (pc_pub_key_t*)ka[1].key );
 
-  // bind symbol to new account or add new account
-  pc_pub_key_t *kptr = (pc_pub_key_t*)ka[2].key;
-  uint32_t idx = cptr->sym_.k8_[0] % (uint64_t)PC_MAP_TABLE_SIZE;
-  for( uint32_t vidx = mptr->tab_[idx]; vidx; ) {
-    pc_map_node_t *nptr = &mptr->nds_[vidx-1];
-    vidx = nptr->next_;
-    if ( pc_symbol_equal( &cptr->sym_, &nptr->sym_ ) ) {
-      pc_pub_key_assign( &sptr->next_, &nptr->price_acc_ );
-      pc_pub_key_assign( &nptr->price_acc_, kptr );
-      return SUCCESS;
-    }
-  }
-
-  // add new symbol if not found but only if last
-  // mapping account in the chain and if enough space
-  if ( mptr->num_ >= PC_MAP_NODE_SIZE ||
-       !pc_pub_key_is_zero( &mptr->next_ ) ) {
-    return ERROR_INVALID_ARGUMENT;
-  }
-  uint32_t hidx = ++mptr->num_;
-  pc_map_node_t *hn = &mptr->nds_[hidx-1];
-  hn->next_ = mptr->tab_[idx];
-  pc_symbol_assign( &hn->sym_, &cptr->sym_ );
-  pc_pub_key_assign( &hn->price_acc_, kptr );
-  mptr->tab_[idx] = hidx;
+  // bind price account to product account
+  pc_pub_key_assign( &sptr->next_, &pptr->px_acc_ );
+  pc_pub_key_assign( &pptr->px_acc_, (pc_pub_key_t*)ka[2].key );
   return SUCCESS;
 }
 
@@ -172,8 +251,6 @@ static uint64_t add_publisher( SolParameters *prm, SolAccountInfo *ka )
   // Validate command parameters
   cmd_add_publisher_t *cptr = (cmd_add_publisher_t*)prm->data;
   if ( prm->data_len != sizeof( cmd_add_publisher_t ) ||
-       cptr->ptype_ == PC_PTYPE_UNKNOWN ||
-       pc_symbol_is_zero( &cptr->sym_ ) ||
        pc_pub_key_is_zero( &cptr->pub_ ) ) {
     return ERROR_INVALID_ARGUMENT;
   }
@@ -192,8 +269,7 @@ static uint64_t add_publisher( SolParameters *prm, SolAccountInfo *ka )
   pc_price_t *sptr = (pc_price_t*)ka[1].data;
   if ( sptr->magic_ != PC_MAGIC ||
        sptr->ver_ != cptr->ver_ ||
-       sptr->ptype_ != cptr->ptype_ ||
-       !pc_symbol_equal( &sptr->sym_, &cptr->sym_ ) ) {
+       sptr->type_ != PC_ACCTYPE_PRICE ) {
     return ERROR_INVALID_ARGUMENT;
   }
 
@@ -210,6 +286,10 @@ static uint64_t add_publisher( SolParameters *prm, SolAccountInfo *ka )
   pc_price_comp_t *iptr = &sptr->comp_[sptr->num_++];
   sol_memset( iptr, 0, sizeof( pc_price_comp_t ) );
   pc_pub_key_assign( &iptr->pub_, &cptr->pub_ );
+
+  // update size of account
+  sptr->size_ = sizeof( pc_price_t ) - sizeof( sptr->comp_ ) +
+    sptr->num_ * sizeof( pc_price_comp_t );
   return SUCCESS;
 }
 
@@ -219,8 +299,6 @@ static uint64_t del_publisher( SolParameters *prm, SolAccountInfo *ka )
   // Validate command parameters
   cmd_del_publisher_t *cptr = (cmd_del_publisher_t*)prm->data;
   if ( prm->data_len != sizeof( cmd_del_publisher_t ) ||
-       cptr->ptype_ == PC_PTYPE_UNKNOWN ||
-       pc_symbol_is_zero( &cptr->sym_ ) ||
        pc_pub_key_is_zero( &cptr->pub_ ) ) {
     return ERROR_INVALID_ARGUMENT;
   }
@@ -239,8 +317,7 @@ static uint64_t del_publisher( SolParameters *prm, SolAccountInfo *ka )
   pc_price_t *sptr = (pc_price_t*)ka[1].data;
   if ( sptr->magic_ != PC_MAGIC ||
        sptr->ver_ != cptr->ver_ ||
-       sptr->ptype_ != cptr->ptype_ ||
-       !pc_symbol_equal( &sptr->sym_, &cptr->sym_ ) ) {
+       sptr->type_ != PC_ACCTYPE_PRICE ) {
     return ERROR_INVALID_ARGUMENT;
   }
 
@@ -255,6 +332,9 @@ static uint64_t del_publisher( SolParameters *prm, SolAccountInfo *ka )
       }
       --sptr->num_;
       sol_memset( iptr, 0, sizeof( pc_price_comp_t ) );
+      // update size of account
+      sptr->size_ = sizeof( pc_price_t ) - sizeof( sptr->comp_ ) +
+        sptr->num_ * sizeof( pc_price_comp_t );
       return SUCCESS;
     }
   }
@@ -318,8 +398,7 @@ static uint64_t upd_price( SolParameters *prm, SolAccountInfo *ka )
 {
   // Validate command parameters
   cmd_upd_price_t *cptr = (cmd_upd_price_t*)prm->data;
-  if ( prm->data_len != sizeof( cmd_upd_price_t ) ||
-       pc_symbol_is_zero( &cptr->sym_ ) ) {
+  if ( prm->data_len != sizeof( cmd_upd_price_t ) ) {
     return ERROR_INVALID_ARGUMENT;
   }
 
@@ -339,9 +418,8 @@ static uint64_t upd_price( SolParameters *prm, SolAccountInfo *ka )
   // same symbol in the instruction parameters
   pc_price_t *pptr = (pc_price_t*)ka[1].data;
   if ( pptr->magic_ != PC_MAGIC ||
-       pptr->ver_ > PC_VERSION ||
-       pptr->ptype_ != cptr->ptype_ ||
-       !pc_symbol_equal( &pptr->sym_, &cptr->sym_ ) ) {
+       pptr->ver_ != cptr->ver_ ||
+       pptr->type_ != PC_ACCTYPE_PRICE ) {
     return ERROR_INVALID_ARGUMENT;
   }
 
@@ -393,8 +471,16 @@ static uint64_t dispatch_1( SolParameters *prm, SolAccountInfo *ka )
       res = add_mapping( prm, ka );
       break;
     }
-    case e_cmd_add_symbol:{
-      res = add_symbol( prm, ka );
+    case e_cmd_add_product:{
+      res = add_product( prm, ka );
+      break;
+    }
+    case e_cmd_upd_product:{
+      res = upd_product( prm, ka );
+      break;
+    }
+    case e_cmd_add_price:{
+      res = add_price( prm, ka );
       break;
     }
     case e_cmd_add_publisher:{

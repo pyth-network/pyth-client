@@ -5,7 +5,6 @@ class Prices
     this.req   = [];
     this.sub   = [];
     this.reuse = [];
-    this.symbols = {};
     this.fact  = [ 0, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 1e-7, 1e-8 ];
   }
   send( msg, callback ) {
@@ -33,12 +32,12 @@ class Prices
     cell.textContent = txt;
     cell.style.color = color;
   }
-  on_price( sym, msg ) {
+  on_price( pxa, msg ) {
     let tab = document.getElementById( "prices" );
-    let row = tab.rows[sym.idx];
+    let row = tab.rows[pxa.idx];
     let res = msg.params.result;
     let col = 0;
-    let expo = -sym.price_exponent;
+    let expo = -pxa.price_exponent;
     let px   = res.price * this.fact[expo];
     let conf = res.conf * this.fact[expo];
     let color = 'cornsilk';
@@ -46,11 +45,17 @@ class Prices
       color = '#c0392b';
     }
     row.cells[col++].style.color = color;
+    row.cells[col++].style.color = color;
+    row.cells[col++].style.color = color;
+    row.cells[col++].style.color = color;
     this.draw_cell( row.cells[col++], px.toFixed(expo), color );
     this.draw_cell( row.cells[col++], conf.toFixed(expo), color );
     this.draw_cell( row.cells[col++], res.status, color );
     this.draw_cell( row.cells[col++], res.valid_slot, color );
     this.draw_cell( row.cells[col++], res.pub_slot, color );
+    row.cells[col++].style.color = color;
+    row.cells[col++].style.color = color;
+    row.cells[col++].style.color = color;
   }
   get_price( sym, msg ) {
     let sub_id = msg.result.subscription;
@@ -59,30 +64,41 @@ class Prices
     }
     this.sub[sub_id] = this.on_price.bind( this, sym );
   }
-  get_symbols( res ) {
-    this.symbols = [];
+  get_title( att, title ) {
+    let td = document.createElement( 'TD' )
+    td.textContent = att[title]
+    td.style['text-align'] = 'left';
+    return td;
+  }
+  get_product_list( res ) {
     let tab = document.getElementById( "prices" );
     for( let i = 0; i != res.result.length; ++i ) {
       let sym = res.result[i];
-      let row = tab.insertRow(-1);
-      let sym_td = document.createElement( 'TD' )
-      sym_td.textContent = sym['symbol']
-      sym_td.style['text-align'] = 'left';
-      row.appendChild( sym_td );
-      row.appendChild( document.createElement( 'TD' ) );
-      row.appendChild( document.createElement( 'TD' ) );
-      row.appendChild( document.createElement( 'TD' ) );
-      row.appendChild( document.createElement( 'TD' ) );
-      row.appendChild( document.createElement( 'TD' ) );
-      let msg = {
-        'method' : 'subscribe_price',
-        'params' : {
-          'symbol' : sym['symbol'],
-          'price_type' : sym['price_type']
-         }
-       };
-      sym.idx = i+1;
-      this.send( msg, this.get_price.bind( this, sym ) );
+      let att = sym['attr_dict']
+      for( let j=0; j != sym.price.length; ++j ) {
+        let pxa = sym.price[j];
+        let row = tab.insertRow(-1);
+        row.appendChild( this.get_title( att, 'asset_type') );
+        row.appendChild( this.get_title( att, 'country') );
+        row.appendChild( this.get_title( att, 'symbol') );
+        row.appendChild( this.get_title( pxa, 'price_type') );
+        row.appendChild( document.createElement( 'TD' ) );
+        row.appendChild( document.createElement( 'TD' ) );
+        row.appendChild( document.createElement( 'TD' ) );
+        row.appendChild( document.createElement( 'TD' ) );
+        row.appendChild( document.createElement( 'TD' ) );
+        row.appendChild( this.get_title( att, 'tenor') );
+        row.appendChild( this.get_title( att, 'quote_currency') );
+        row.appendChild( this.get_title( att, 'description') );
+        let msg = {
+          'method' : 'subscribe_price',
+          'params' : {
+            'account' : pxa['account']
+           }
+        };
+        pxa.idx = i+1;
+        this.send( msg, this.get_price.bind( this, pxa ) );
+      }
     }
   }
 }
@@ -95,8 +111,8 @@ window.onload = function() {
   ws.onopen = function(e) {
     let n = document.getElementById('notify');
     n.textContent = 'connected';
-    px.send( { 'method': 'get_symbol_list' },
-             px.get_symbols.bind( px ) );
+    px.send( { 'method': 'get_product_list' },
+             px.get_product_list.bind( px ) );
   };
   ws.onclose = function(e) {
     let n = document.getElementById('notify');

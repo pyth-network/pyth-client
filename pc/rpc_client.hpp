@@ -3,6 +3,7 @@
 #include <pc/net_socket.hpp>
 #include <pc/jtree.hpp>
 #include <pc/key_pair.hpp>
+#include <pc/attr_id.hpp>
 #include <oracle/oracle.h>
 #include <pc/hash_map.hpp>
 
@@ -89,7 +90,7 @@ namespace pc
 
     // decode into buffer and return pointer
     template<class T>
-    void get_data( const char *dptr, size_t dlen, T *&ptr );
+    size_t get_data( const char *dptr, size_t dlen, T *&ptr );
 
     // reset state
     void reset();
@@ -225,12 +226,13 @@ namespace pc
   // wrappers for various solana rpc requests
 
   template<class T>
-  void rpc_client::get_data( const char *dptr, size_t dlen, T *&ptr )
+  size_t rpc_client::get_data( const char *dptr, size_t dlen, T *&ptr )
   {
     size_t tlen = enc_base64_len( sizeof( T ) );
     abuf_.resize( std::max( dlen, tlen ) );
     dec_base64( (const uint8_t*)dptr, dlen, (uint8_t*)&abuf_[0] );
     ptr = (T*)&abuf_[0];
+    return abuf_.size();
   }
 
   namespace rpc
@@ -249,7 +251,7 @@ namespace pc
       uint64_t get_rent_epoch() const;
       bool     get_is_executable() const;
       void     get_owner( const char *&, size_t& ) const;
-      template<class T> void get_data( T *& ) const;
+      template<class T> size_t get_data( T *& ) const;
 
       get_account_info();
       void request( json_wtr& ) override;
@@ -268,9 +270,9 @@ namespace pc
       commitment  cmt_;
     };
 
-    template<class T> void get_account_info::get_data( T *&res ) const
+    template<class T> size_t get_account_info::get_data( T *&res ) const
     {
-      get_rpc_client()->get_data( dptr_, dlen_, res );
+      return get_rpc_client()->get_data( dptr_, dlen_, res );
     }
 
     // recent block hash and fee schedule
@@ -359,7 +361,7 @@ namespace pc
       // results
       uint64_t get_slot() const;
       uint64_t get_lamports() const;
-      template<class T> void get_data( T *& ) const;
+      template<class T> size_t get_data( T *& ) const;
 
       account_subscribe();
       void request( json_wtr& ) override;
@@ -375,9 +377,9 @@ namespace pc
       commitment  cmt_;
     };
 
-    template<class T> void account_subscribe::get_data( T *&res ) const
+    template<class T> size_t account_subscribe::get_data( T *&res ) const
     {
-      get_rpc_client()->get_data( dptr_, dlen_, res );
+      return get_rpc_client()->get_data( dptr_, dlen_, res );
     }
 
     // transaction to transfer funds between accounts
@@ -485,33 +487,25 @@ namespace pc
       signature sig_;
     };
 
-    // add new symbol to mapping account
-    class add_symbol: public rpc_request
+    // create and add new product account to mapping account
+    class add_product : public rpc_request
     {
     public:
-      void set_symbol( const symbol& );
-      void set_exponent( int32_t );
-      void set_price_type( price_type );
       void set_program( pub_key * );
       void set_block_hash( hash * );
       void set_publish( key_pair * );
       void set_account( key_pair * );
       void set_mapping( key_pair * );
-      symbol    *get_symbol();
       price_type get_price_type() const;
 
       // results
       signature *get_signature();
 
-      add_symbol();
+      add_product();
       void request( json_wtr& ) override;
       void response( const jtree& ) override;
 
     private:
-      unsigned   num_;
-      int32_t    expo_;
-      price_type ptype_;
-      symbol     sym_;
       hash      *bhash_;
       key_pair  *pkey_;
       pub_key   *gkey_;
@@ -520,20 +514,74 @@ namespace pc
       signature  sig_;
     };
 
+    // update product attribute data
+    class upd_product : public rpc_request
+    {
+    public:
+      void set_program( pub_key * );
+      void set_block_hash( hash * );
+      void set_publish( key_pair * );
+      void set_account( key_pair * );
+      void set_attr_dict( attr_dict* );
+      price_type get_price_type() const;
+
+      // results
+      signature *get_signature();
+
+      upd_product();
+      void request( json_wtr& ) override;
+      void response( const jtree& ) override;
+
+    private:
+      hash      *bhash_;
+      key_pair  *pkey_;
+      pub_key   *gkey_;
+      key_pair  *akey_;
+      attr_dict *aptr_;
+      signature  sig_;
+    };
+
+    // create and add new price account to product account
+    class add_price : public rpc_request
+    {
+    public:
+      void set_exponent( int32_t );
+      void set_price_type( price_type );
+      void set_program( pub_key * );
+      void set_block_hash( hash * );
+      void set_publish( key_pair * );
+      void set_account( key_pair * );
+      void set_product( key_pair * );
+      price_type get_price_type() const;
+
+      // results
+      signature *get_signature();
+
+      add_price();
+      void request( json_wtr& ) override;
+      void response( const jtree& ) override;
+
+    private:
+      int32_t    expo_;
+      price_type ptype_;
+      hash      *bhash_;
+      key_pair  *pkey_;
+      pub_key   *gkey_;
+      key_pair  *akey_;
+      key_pair  *skey_;
+      signature  sig_;
+    };
+
     // add new price publisher to symbol account
     class add_publisher : public rpc_request
     {
     public:
-      void set_symbol( const symbol& );
       void set_publisher( const pub_key& );
       void set_program( pub_key * );
       void set_block_hash( hash * );
       void set_publish( key_pair * );
       void set_account( key_pair * );
-      void set_price_type( price_type );
-      symbol  *get_symbol();
       pub_key *get_publisher();
-      price_type get_price_type() const;
 
       // results
       signature *get_signature();
@@ -542,13 +590,11 @@ namespace pc
       void response( const jtree& ) override;
 
     private:
-      symbol     sym_;
       pub_key    nkey_;
       hash      *bhash_;
       key_pair  *pkey_;
       pub_key   *gkey_;
       key_pair  *akey_;
-      price_type ptype_;
       signature  sig_;
     };
 
@@ -556,16 +602,13 @@ namespace pc
     class del_publisher : public rpc_request
     {
     public:
-      void set_symbol( const symbol& );
       void set_publisher( const pub_key& );
       void set_program( pub_key * );
       void set_block_hash( hash * );
       void set_publish( key_pair * );
       void set_account( key_pair * );
       void set_price_type( price_type );
-      symbol  *get_symbol();
       pub_key *get_publisher();
-      price_type get_price_type() const;
 
       // results
       signature *get_signature();
@@ -574,13 +617,11 @@ namespace pc
       void response( const jtree& ) override;
 
     private:
-      symbol     sym_;
       pub_key    nkey_;
       hash      *bhash_;
       key_pair  *pkey_;
       pub_key   *gkey_;
       key_pair  *akey_;
-      price_type ptype_;
       signature  sig_;
     };
 
@@ -590,9 +631,7 @@ namespace pc
     {
     public:
       upd_price();
-      void set_symbol( symbol * );
       void set_symbol_status( symbol_status );
-      void set_price_type( price_type );
       void set_publish( key_pair * );
       void set_account( pub_key * );
       void set_program( pub_key * );
@@ -605,7 +644,6 @@ namespace pc
       void request( json_wtr& ) override;
       void response( const jtree& ) override;
     private:
-      symbol       *sym_;
       hash         *bhash_;
       key_pair     *pkey_;
       pub_key      *gkey_;
@@ -614,7 +652,6 @@ namespace pc
       uint64_t      conf_;
       uint64_t      nonce_;
       command_t     cmd_;
-      price_type    pt_;
       symbol_status st_;
       signature     sig_;
     };

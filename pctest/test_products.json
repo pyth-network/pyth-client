@@ -1,0 +1,30 @@
+[
+  {
+    "account": "9F6eBgAfktth93C9zmtKDXFXNjZkq6JwJR56VPKqWmJm",
+    "attr_dict":{
+      "symbol": "SYMBOL1/USD",
+      "asset_type": "Equity",
+      "country": "USA",
+      "description": "pyth example product #1",
+      "quote_currency" : "USD",
+      "tenor": "Spot",
+      "cms_symbol": "SYMBOL1",
+      "cqs_symbol": "SYMBOL1",
+      "nasdaq_symbol": "SYMBOL1"
+    }
+  },
+  {
+    "account": "HCFaDYyz1ajS57HfCaaqzA1cZSaa2oEccQejbHaaofd4",
+    "attr_dict":{
+      "symbol": "SYMBOL2/USD",
+      "asset_type": "Equity",
+      "country": "USA",
+      "description": "pyth example product #2",
+      "quote_currency" : "USD",
+      "tenor": "Spot",
+      "cms_symbol": "SYMBOL2",
+      "cqs_symbol": "SYMBOL2",
+      "nasdaq_symbol": "SYMBOL2"
+    }
+  }
+]

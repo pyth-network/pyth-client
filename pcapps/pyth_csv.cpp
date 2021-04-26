@@ -5,20 +5,65 @@
 #include <signal.h>
 #include <iostream>
 
-// pyth csv playback utility
-
 using namespace pc;
 
-int usage()
+// pyth csv playback utility
+class csv_print
 {
-  std::cerr << "usage: pyth_csv <cap_file> [options]"
-            << std::endl << std::endl;
-  std::cerr << "options include:" << std::endl;
-  std::cerr << "  -s <symbol>" << std::endl;
-  return 1;
+public:
+
+  csv_print();
+
+  // print csv header row
+  void print_header();
+
+  // set symbol to filter on
+  void set_symbol( const std::string& );
+
+  // parse next update
+  void parse( replay& );
+
+private:
+
+  struct trait_account {
+    static const size_t hsize_ = 8363UL;
+    typedef uint32_t     idx_t;
+    typedef pub_key      key_t;
+    typedef const key_t& keyref_t;
+    typedef std::string  val_t;
+    struct hash_t {
+      idx_t operator() ( keyref_t a ) {
+        uint64_t *p = (uint64_t*)a.data();
+        return p[0] ^ p[1];
+      }
+    };
+  };
+
+  typedef hash_map<trait_account> symbol_map_t;
+
+  void parse_product( replay& );
+  void parse_price( replay& );
+
+  symbol_map_t smap_;
+  attr_id      sym_id_;
+  attr_dict    attr_;
+  pub_key      skey_;
+  std::string  sym_;
+  bool         has_sym_;
+};
+
+csv_print::csv_print()
+: sym_id_( attr_id::add( "symbol" ) ),
+  has_sym_( false )
+{
 }
 
-void print_header()
+void csv_print::set_symbol( const std::string& sym )
+{
+  sym_ = sym;
+}
+
+void csv_print::print_header()
 {
   std::cout << "time"
             << ",symbol"
@@ -38,14 +83,44 @@ void print_header()
   std::cout << std::endl;
 }
 
-void print( replay& rep )
+void csv_print::parse_product( replay& rep )
 {
-  pc_price_t *ptr = rep.get_update();
+  // generate attribute dictionary from account and get symbol
+  str sym, val;
+  if ( !attr_.init_from_account( (pc_prod_t*)rep.get_update() ) ||
+       !attr_.get_attr( sym_id_, sym ) ) {
+    return;
+  }
+
+  // generate map from product account to string symbol
+  pub_key *aptr = (pub_key*)rep.get_account();
+  symbol_map_t::iter_t i = smap_.find( *aptr );
+  if ( !i ) {
+    i = smap_.add( *aptr );
+  }
+  smap_.ref( i ) = sym.as_string();
+
+  // check if symbol matches filter
+  if ( sym_ == sym.as_string() ) {
+    has_sym_ = true;
+    skey_ = *aptr;
+  }
+}
+
+void csv_print::parse_price( replay& rep )
+{
+  pc_price_t *ptr = (pc_price_t*)rep.get_update();
+  pub_key *aptr = (pub_key*)&ptr->prod_;
+  // filter by symbol
+  if ( has_sym_ && *aptr != skey_ ) {
+    return;
+  }
   char tbuf[32];
   nsecs_to_utc6( rep.get_time(), tbuf );
   std::cout.write( tbuf, 27 );
   std::cout << ',';
-  std::cout.write( (char*)ptr->sym_.k1_, PC_SYMBOL_SIZE );
+  symbol_map_t::iter_t i = smap_.find( *aptr );
+  if ( i ) std::cout << smap_.obj(i);
   std::cout << ',';
   str pstr = price_type_to_str( (price_type)ptr->ptype_ );
   std::cout.write( pstr.str_, pstr.len_ );
@@ -72,8 +147,29 @@ void print( replay& rep )
   std::cout << std::endl;
 }
 
+void csv_print::parse( replay& rep )
+{
+  pc_acc_t *ptr = rep.get_update();
+  switch( ptr->type_ ) {
+    case PC_ACCTYPE_PRICE:   parse_price( rep ); break;
+    case PC_ACCTYPE_PRODUCT: parse_product( rep ); break;
+    case PC_ACCTYPE_MAPPING: break;
+  }
+}
+
+int usage()
+{
+  std::cerr << "usage: pyth_csv <cap_file> [options]"
+            << std::endl << std::endl;
+  std::cerr << "options include:" << std::endl;
+  std::cerr << "  -s <symbol>" << std::endl;
+  return 1;
+}
+
+
 int main(int argc, char **argv)
 {
+  // get input params and options
   if ( argc < 2 ) {
     return usage();
   }
@@ -87,40 +183,26 @@ int main(int argc, char **argv)
       default: return usage();
     }
   }
+  // initialize replay api
   replay rep;
   rep.set_file( cap_file );
   if ( !rep.init() ) {
     std::cerr << "pyth_csv: " << rep.get_err_msg() << std::endl;
     return 1;
   }
-  struct timespec ts[1];
-  ts->tv_sec  = 1;
-  ts->tv_nsec = 0;
-  print_header();
-  if ( symstr.empty() ) {
-    // print all updates
-    for(;;) {
-      if ( rep.get_next() ) {
-        print( rep );
-      } else {
-        break;
-      }
-    }
-  } else {
-    // filter by symbol
-    symbol sym( symstr.c_str() );
-    for(;;) {
-      if ( rep.get_next() ) {
-        pc_price_t *ptr = rep.get_update();
-        symbol *sptr = (symbol*)&ptr->sym_;
-        if ( sym == sptr[0] ) {
-          print( rep );
-        }
-      } else {
-        break;
-      }
+
+  // csv print object
+  csv_print csv;
+  csv.print_header();
+  csv.set_symbol( symstr );
+
+  // loop through and parse all updates in capture
+  for(;;) {
+    if ( rep.get_next() ) {
+      csv.parse( rep );
+    } else {
+      break;
     }
   }
-
   return 0;
 }

@@ -95,14 +95,17 @@ namespace pc
     // add and subscribe to new mapping account
     void add_mapping( const pub_key& );
 
-    // add new symbol from mapping account
-    void add_symbol( const pub_key& );
-    void add_symbol( const symbol&, price_type, price * );
-    price *get_symbol( const symbol&, price_type );
+    // add new product from mapping account
+    void add_product( const pub_key& );
 
-    // iterate through symbols
-    unsigned get_num_symbol() const;
-    price *get_next_symbol( unsigned& i ) const;
+    // add new price account in product
+    void add_price( const pub_key&, product * );
+
+    // iterate through products
+    unsigned get_num_product() const;
+    product *get_product( unsigned i ) const;
+    product *get_product( const pub_key& );
+    price   *get_price( const pub_key& );
 
     // submit pyth client api request
     void submit( request * );
@@ -134,7 +137,7 @@ namespace pc
     void add_map_sub();
     void del_map_sub();
     void schedule( price_sched* );
-    void write( pc_price_t *ptr );
+    void write( pc_pub_key_t *, pc_acc_t *ptr );
 
     // rpc callbacks
     void on_response( rpc::slot_subscribe * );
@@ -144,34 +147,12 @@ namespace pc
 
   private:
 
-    struct symbol_key {
-      symbol     sym_;
-      price_type ptype_;
-      bool operator==( const symbol_key& obj ) const {
-        return sym_ == obj.sym_ && ptype_ == obj.ptype_;
-      }
-    };
-
-    struct trait_symbol {
-      static const size_t hsize_ = 8363UL;
-      typedef uint32_t           idx_t;
-      typedef symbol_key         key_t;
-      typedef const symbol_key&  keyref_t;
-      typedef price        *val_t;
-      struct hash_t {
-        idx_t operator() ( keyref_t s ) {
-          uint64_t *i = (uint64_t*)s.sym_.data();
-          return ( (i[0]^i[1]) << 3 ) | (uint64_t)s.ptype_;
-        }
-      };
-    };
-
     struct trait_account {
       static const size_t hsize_ = 8363UL;
       typedef uint32_t        idx_t;
       typedef pub_key         key_t;
       typedef const pub_key&  keyref_t;
-      typedef price     *val_t;
+      typedef request        *val_t;
       struct hash_t {
         idx_t operator() ( keyref_t a ) {
           uint64_t *i = (uint64_t*)a.data();
@@ -183,9 +164,8 @@ namespace pc
     typedef dbl_list<user>            user_list_t;
     typedef dbl_list<request>         req_list_t;
     typedef std::vector<get_mapping*> map_vec_t;
-    typedef std::vector<price*>       spx_vec_t;
+    typedef std::vector<product*>     spx_vec_t;
     typedef std::vector<price_sched*> kpx_vec_t;
-    typedef hash_map<trait_symbol>    sym_map_t;
     typedef hash_map<trait_account>   acc_map_t;
 
     void reconnect_rpc();
@@ -202,7 +182,6 @@ namespace pc
     user_list_t  dlist_;    // to-be-deleted users list
     req_list_t   plist_;    // pending requests
     map_vec_t    mvec_;     // mapping account updates
-    sym_map_t    smap_;     // symbol+ptype to symbol pricing info
     acc_map_t    amap_;     // account to symbol pricing info
     spx_vec_t    svec_;     // symbol price subscriber/publishers
     std::string  rhost_;    // rpc host
@@ -231,10 +210,11 @@ namespace pc
     rpc::get_recent_block_hash breq_[1]; // block hash request
   };
 
-  inline void manager::write( pc_price_t *ptr )
+  inline void manager::write( pc_pub_key_t *key, pc_acc_t *ptr )
   {
     if ( do_cap_ ) {
-      cap_.write( ptr );
+      cap_.write( key, ptr );
     }
   }
+
 }

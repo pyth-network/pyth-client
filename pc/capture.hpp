@@ -26,8 +26,8 @@ namespace pc
     // start capture thread
     bool init();
 
-    // add agg price update to buffer
-    void write( pc_price_t * );
+    // capture time, account number and account content
+    void write( pc_pub_key_t *acc, pc_acc_t * );
 
     // flush buffer to disk
     void flush();

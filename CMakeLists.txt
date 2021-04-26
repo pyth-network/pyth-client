@@ -22,6 +22,7 @@ set( CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread")
 # pyth client API library
 #
 set( PC_SRC
+  pc/attr_id.cpp;
   pc/capture.cpp;
   pc/key_pair.cpp;
   pc/key_store.cpp;
@@ -38,6 +39,7 @@ set( PC_SRC
   )
 
 set( PC_HDR
+  pc/attr_id.hpp;
   pc/capture.hpp;
   pc/dbl_list.hpp;
   pc/error.hpp;

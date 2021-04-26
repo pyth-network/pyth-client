@@ -39,10 +39,11 @@ namespace pc
     void add( int64_t );
     void add( const pub_key& );
     void add( const hash& );
-    void add( const symbol& );
+    void add( const char *, size_t );
 
     // add (fixed) array length encoding
     template<unsigned N> void add_len();
+    void add_len( unsigned );
 
   private:
     template<class T> void add_val_T( T val );
@@ -147,23 +148,29 @@ namespace pc
     idx_ += hash::len;
   }
 
-  inline void bincode::add( const symbol& sym )
+  inline void bincode::add( const char *buf, size_t len )
   {
-    __builtin_memcpy( &buf_[idx_], sym.data(), symbol::len );
-    idx_ += symbol::len;
+    __builtin_memcpy( &buf_[idx_], buf, len );
+    idx_ += len;
   }
 
   template<unsigned N> void bincode::add_len()
   {
     if ( N < 0x80 ) {
       buf_[idx_++] = (char)(N&0x7f);
-    } else if ( N < 0x4000 ) {
-      buf_[idx_++] = (char)(0x80 | (N&0x7f) );
-      buf_[idx_++] = (char)((N>>7)&0x7f);
     } else {
       buf_[idx_++] = (char)(0x80 | (N&0x7f) );
-      buf_[idx_++] = (char)(0x80 | ((N>>7)&0x7f) );
-      buf_[idx_++] = (char)((N>>14)&0x7f);
+      buf_[idx_++] = (char)((N>>7)&0x7f);
+    }
+  }
+
+  inline void bincode::add_len( unsigned N )
+  {
+    if ( N < 0x80 ) {
+      buf_[idx_++] = (char)(N&0x7f);
+    } else {
+      buf_[idx_++] = (char)(0x80 | (N&0x7f) );
+      buf_[idx_++] = (char)((N>>7)&0x7f);
     }
   }
 

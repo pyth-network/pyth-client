@@ -284,13 +284,6 @@ log_line& log_line::add( str key, const pub_key& pk )
   return *this;
 }
 
-log_line& log_line::add( str key, const symbol& sym )
-{
-  add_key( key );
-  wtr_.add( sym.as_str() );
-  return *this;
-}
-
 void log_line::end()
 {
   impl_.add( wtr_ );

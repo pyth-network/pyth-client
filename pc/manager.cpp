@@ -61,7 +61,7 @@ manager::~manager()
     delete mptr;
   }
   mvec_.clear();
-  for( price *ptr: svec_ ) {
+  for( product *ptr: svec_ ) {
     delete ptr;
   }
   svec_.clear();
@@ -344,6 +344,9 @@ void manager::poll( bool do_wait )
     rptr = nxt;
   }
 
+  // destroy any users scheduled for deletion
+  teardown_users();
+
   // check if we need to reconnect rpc services
   if ( PC_UNLIKELY( !has_status( PC_PYTH_RPC_CONNECTED ) ||
                     hconn_.get_is_err() || wconn_.get_is_err() ))  {
@@ -351,7 +354,7 @@ void manager::poll( bool do_wait )
     return;
   }
 
-  // schedule next price update
+  // schedule next price update but only if we're connected to rpc port
   int64_t ts = get_now();
   while ( kidx_ < kvec_.size() ) {
     price_sched *kptr = kvec_[kidx_];
@@ -366,9 +369,6 @@ void manager::poll( bool do_wait )
       break;
     }
   }
-
-  // destroy any users scheduled for deletion
-  teardown_users();
 }
 
 void manager::reconnect_rpc()
@@ -408,10 +408,16 @@ void manager::reconnect_rpc()
       submit( mptr );
       add_map_sub();
     }
-    for( price *ptr: svec_ ) {
+    for( product *ptr: svec_ ) {
       ptr->reset();
       submit( ptr );
       add_map_sub();
+      for( unsigned i=0; i != ptr->get_num_price(); ++i ) {
+        price *qptr = ptr->get_price( i );
+        qptr->reset();
+        submit( qptr );
+        add_map_sub();
+      }
     }
     // callback user with connection status
     if ( sub_ ) {
@@ -584,13 +590,12 @@ void manager::submit( request *req )
   plist_.add( req );
 }
 
-void manager::add_symbol( const pub_key&acc )
+void manager::add_product( const pub_key&acc )
 {
-  // find current symbol account (if any)
   acc_map_t::iter_t it = amap_.find( acc );
   if ( !it ) {
     // subscribe to new symbol account
-    price *ptr = new price( acc );
+    product *ptr = new product( acc );
     amap_.ref( amap_.add( acc ) ) = ptr;
     svec_.push_back( ptr );
     submit( ptr );
@@ -599,58 +604,40 @@ void manager::add_symbol( const pub_key&acc )
   }
 }
 
-void manager::add_symbol(
-    const symbol& sym, price_type ptype, price *ptr )
+product *manager::get_product( const pub_key& acc )
 {
-  symbol_key sk;
-  sk.sym_   = sym;
-  sk.ptype_ = ptype;
-  sym_map_t::iter_t it = smap_.find( sk );
-  if ( it ) {
-    // replace with newer version account but only if the version
-    // is less than we're currently running
-    price *prv = smap_.obj( it );
-    if ( ptr != prv ) {
-      if ( ptr->get_version() > prv->get_version() &&
-           ptr->get_version() <= version_ ) {
-        smap_.ref( it ) = ptr;
-        prv->unsubscribe();
-      } else {
-        ptr->unsubscribe();
-      }
-    }
-  } else if ( ptr->get_version() <= version_ ) {
-    smap_.ref( smap_.add( sk ) ) = ptr;
-  } else {
-    ptr->unsubscribe();
+  acc_map_t::iter_t it = amap_.find( acc );
+  return it ? dynamic_cast<product*>( amap_.obj( it ) ) : nullptr;
+}
+
+void manager::add_price( const pub_key&acc, product *prod )
+{
+  // find current symbol account (if any)
+  acc_map_t::iter_t it = amap_.find( acc );
+  if ( !it ) {
+    // subscribe to new symbol account
+    price *ptr = new price( acc, prod );
+    amap_.ref( amap_.add( acc ) ) = ptr;
+    submit( ptr );
+    // add price to product
+    prod->add_price( ptr );
+    // add mapping subscription count
+    add_map_sub();
   }
 }
 
-price *manager::get_symbol( const symbol& sym, price_type ptype )
+price *manager::get_price( const pub_key& acc )
 {
-  symbol_key sk;
-  sk.sym_   = sym;
-  sk.ptype_ = ptype;
-  sym_map_t::iter_t it = smap_.find( sk );
-  if ( it ) {
-    return smap_.obj( it );
-  } else {
-    return nullptr;
-  }
+  acc_map_t::iter_t it = amap_.find( acc );
+  return it ? dynamic_cast<price*>( amap_.obj( it ) ) : nullptr;
 }
 
-unsigned manager::get_num_symbol() const
+unsigned manager::get_num_product() const
 {
-  return smap_.size();
+  return svec_.size();
 }
 
-price *manager::get_next_symbol( unsigned& i ) const
+product *manager::get_product( unsigned i ) const
 {
-  while( i < svec_.size() ) {
-    price *ptr = svec_[i++];
-    if ( ptr->get_is_subscribed() ) {
-      return ptr;
-    }
-  }
-  return nullptr;
+  return i < svec_.size() ? svec_[i] : nullptr;
 }

@@ -4,11 +4,14 @@
 #include <signal.h>
 #include <iostream>
 
-// system-wide notification events
+class test_publish;
+
+// system-wide notification events and factory for publisher
 class test_connect : public pc::manager_sub
 {
 public:
   test_connect();
+  virtual ~test_connect();
 
   // on connection to (but not initialization) solana validator
   void on_connect( pc::manager * ) override;
@@ -19,24 +22,32 @@ public:
   // on completion of (re)bootstrap of accounts following (re)connect
   void on_init( pc::manager * ) override;
 
-  // on addition of new symbols
+  // construct publishers on addition of new symbols
   void on_add_symbol( pc::manager *, pc::price * ) override;
 
   // have we received an on_init() callback yet
   bool get_is_init() const;
 
+  // get price from map
+  pc::price *get_price( const std::string& ) const;
+
 private:
-  bool is_init_;
+  test_publish *pub1_;     // SYMBOL1 publisher
+  test_publish *pub2_;     // SYMBOL2 publisher
 };
 
 // subscriber callback implementation
 class test_publish : public pc::request_sub,
+                     public pc::request_sub_i<pc::product>,
                      public pc::request_sub_i<pc::price>,
                      public pc::request_sub_i<pc::price_sched>
 {
 public:
   test_publish( pc::price *sym, int64_t px, uint64_t sprd );
   ~test_publish();
+
+  // callback for on-chain product reference data update
+  void on_response( pc::product*, uint64_t ) override;
 
   // callback for on-chain aggregate price update
   void on_response( pc::price*, uint64_t ) override;
@@ -53,6 +64,7 @@ private:
   double              expo_;  // price exponent
   uint64_t            sid1_;  // subscription id for prices
   uint64_t            sid2_;  // subscription id for scheduling
+  uint64_t            sid3_;  // subscription id for scheduling
 };
 
 test_publish::test_publish( pc::price *sym, int64_t px, uint64_t sprd )
@@ -66,14 +78,24 @@ test_publish::test_publish( pc::price *sym, int64_t px, uint64_t sprd )
   // add subscription for price scheduling
   sid2_ = sub_.add( sym->get_sched() );
 
+  // add subscription for product updates
+  sid3_ = sub_.add( sym->get_product() );
+
   // get price exponent for this symbol
   int64_t expo = sym->get_price_exponent();
   for( expo_ = 1.; expo <0.; expo_ *= 0.1, expo++ );
 }
 
 test_connect::test_connect()
-: is_init_( false )
+: pub1_( nullptr ),
+  pub2_( nullptr )
 {
+}
+
+test_connect::~test_connect()
+{
+  delete pub1_;
+  delete pub2_;
 }
 
 void test_connect::on_connect( pc::manager * )
@@ -89,22 +111,39 @@ void test_connect::on_disconnect( pc::manager * )
 void test_connect::on_init( pc::manager * )
 {
   PC_LOG_INF( "test_connect: initialized" ).end();
-  is_init_ = true;
 }
 
 void test_connect::on_add_symbol( pc::manager *, pc::price *sym )
 {
   PC_LOG_INF( "test_connect: new symbol added" )
-    .add( "symbol", *sym->get_symbol() )
+    .add( "symbol", sym->get_symbol() )
     .add( "price_type", pc::price_type_to_str( sym->get_price_type() ) )
     .end();
-}
 
-bool test_connect::get_is_init() const
-{
-  return is_init_;
-}
+  // construct publishers based on nasdaq symbol
+  pc::str nsym;
+  if ( !sym->get_attr( pc::attr_id( "nasdaq_symbol"), nsym ) ) {
+    // not a product with a nasdaq symbol
+    return;
+  }
+  // construct publisher for SYMBOL1
+  if ( nsym == "SYMBOL1" && !pub1_ ) {
+    pub1_ = new test_publish( sym, 10000, 100 );
+  }
+  // construct publisher for SYMBOL2
+  if ( nsym == "SYMBOL2" && !pub2_ ) {
+    pub2_ = new test_publish( sym, 20000, 200 );
+  }
 
+  // iterate through all the product attributes and log them
+  pc::product *prod = sym->get_product();
+  pc::str val_str;
+  for( pc::attr_id id; prod->get_next_attr( id, val_str ); ) {
+    PC_LOG_INF( prod->get_symbol() )
+      .add( id.get_str(), val_str )
+      .end();
+  }
+}
 
 test_publish::~test_publish()
 {
@@ -116,6 +155,21 @@ void test_publish::unsubscribe()
   // unsubscribe to callbacks
   sub_.del( sid1_ ); // unsubscribe price updates
   sub_.del( sid2_ ); // unsubscribe price schedule updates
+}
+
+void test_publish::on_response( pc::product *prod, uint64_t )
+{
+  PC_LOG_INF( "product ref. data update" )
+    .add( "symbol", prod->get_symbol() )
+    .end();
+
+  // iterate through all the product attributes and log them
+  pc::str val_str;
+  for( pc::attr_id id; prod->get_next_attr( id, val_str ); ) {
+    PC_LOG_INF( prod->get_symbol() )
+      .add( id.get_str(), val_str )
+      .end();
+  }
 }
 
 void test_publish::on_response( pc::price *sym, uint64_t )
@@ -149,7 +203,7 @@ void test_publish::on_response( pc::price *sym, uint64_t )
   double price  = expo_ * (double)sym->get_price();
   double spread = expo_ * (double)sym->get_conf();
   PC_LOG_INF( "received aggregate price update" )
-    .add( "symbol", *sym->get_symbol() )
+    .add( "symbol", sym->get_symbol() )
     .add( "price_type", pc::price_type_to_str( sym->get_price_type() ) )
     .add( "status", pc::symbol_status_to_str( sym->get_status() ) )
     .add( "agg_price", price )
@@ -180,7 +234,7 @@ void test_publish::on_response( pc::price_sched *ptr, uint64_t sub_id )
     double price  = expo_ * (double)px_;
     double spread = expo_ * (double)sprd_;
     PC_LOG_INF( "submit price to block-chain" )
-      .add( "symbol", *sym->get_symbol() )
+      .add( "symbol", sym->get_symbol() )
       .add( "price_type", pc::price_type_to_str( sym->get_price_type() ) )
       .add( "price", price )
       .add( "spread", spread )
@@ -191,19 +245,19 @@ void test_publish::on_response( pc::price_sched *ptr, uint64_t sub_id )
     px_ += sprd_;
   } else if ( !sym->has_publisher() ) {
     PC_LOG_WRN( "missing publish permission" )
-      .add( "symbol", *sym->get_symbol() )
+      .add( "symbol", sym->get_symbol() )
       .add( "price_type", pc::price_type_to_str( sym->get_price_type() ) )
       .end();
     // should work once publisher has been permissioned
   } else if ( !sym->get_is_ready_publish() ) {
     PC_LOG_WRN( "not ready to publish next price" )
-      .add( "symbol", *sym->get_symbol() )
+      .add( "symbol", sym->get_symbol() )
       .add( "price_type", pc::price_type_to_str( sym->get_price_type() ) )
       .end();
     // could be delay in confirmation - try again next time
   } else if ( sym->get_is_err() ) {
     PC_LOG_WRN( "block-chain error" )
-      .add( "symbol", *sym->get_symbol() )
+      .add( "symbol", sym->get_symbol() )
       .add( "price_type", pc::price_type_to_str( sym->get_price_type() ) )
       .add( "err_msg", sym->get_err_msg() )
       .end();
@@ -293,34 +347,8 @@ int main(int argc, char** argv)
     return 1;
   }
 
-  // wait to initialize
-  while( do_run && !mgr.get_is_err() && !sub.get_is_init() ) {
-    mgr.poll( do_wait );
-  }
-  if ( mgr.get_is_err() || !do_run ) {
-    std::cerr << "test_publish: " << mgr.get_err_msg() << std::endl;
-    return 1;
-  }
-
-  // get two symbols that we want to publish/subscribe
-  pc::price *sym1 = mgr.get_symbol(
-      "US.EQ.SYMBOL1", pc::price_type::e_price );
-  if ( !sym1 ) {
-    std::cerr << "test_publish: failed to find symbol1" << std::endl;
-    return 1;
-  }
-  pc::price *sym2 = mgr.get_symbol(
-      "US.EQ.SYMBOL2", pc::price_type::e_price );
-  if ( !sym2 ) {
-    std::cerr << "test_publish: failed to find symbol2" << std::endl;
-    return 1;
-  }
-
-  // construct publisher/subscriber instances
-  test_publish pub1( sym1, 10000, 100 );
-  test_publish pub2( sym2, 2000000, 20000 );
-
-  // run event loop and wait for price updates and requests to submit price
+  // run event loop and wait for product updates, price updates
+  // and requests to submit price
   while( do_run && !mgr.get_is_err() ) {
     mgr.poll( do_wait );
   }

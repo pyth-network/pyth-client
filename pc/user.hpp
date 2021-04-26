@@ -59,7 +59,7 @@ namespace pc
     typedef std::vector<deferred_sub> def_vec_t;
 
     void parse_request( uint32_t );
-    void parse_get_symbol_list( uint32_t );
+    void parse_get_product_list( uint32_t );
     void parse_upd_price( uint32_t,  uint32_t );
     void parse_sub_price( uint32_t,  uint32_t );
     void parse_sub_price_sched( uint32_t,  uint32_t );

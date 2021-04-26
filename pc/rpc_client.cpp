@@ -923,68 +923,40 @@ void rpc::create_account::response( const jtree& jt )
 }
 
 ///////////////////////////////////////////////////////////////////////////
-// add_symbol
+// add_product
 
-void rpc::add_symbol::set_symbol( const symbol& sym )
-{
-  sym_ = sym;
-}
-
-symbol *rpc::add_symbol::get_symbol()
-{
-  return &sym_;
-}
-
-price_type rpc::add_symbol::get_price_type() const
-{
-  return ptype_;
-}
-
-void rpc::add_symbol::set_exponent( int32_t expo )
-{
-  expo_ = expo;
-}
-
-void rpc::add_symbol::set_price_type( price_type ptype )
-{
-  ptype_ = ptype;
-}
-
-void rpc::add_symbol::set_program( pub_key *gkey )
+void rpc::add_product::set_program( pub_key *gkey )
 {
   gkey_ = gkey;
 }
 
-void rpc::add_symbol::set_block_hash( hash *bhash )
+void rpc::add_product::set_block_hash( hash *bhash )
 {
   bhash_ = bhash;
 }
 
-void rpc::add_symbol::set_publish( key_pair *pkey )
+void rpc::add_product::set_publish( key_pair *pkey )
 {
   pkey_ = pkey;
 }
 
-void rpc::add_symbol::set_account( key_pair *akey )
+void rpc::add_product::set_account( key_pair *akey )
 {
   akey_ = akey;
 }
 
-void rpc::add_symbol::set_mapping( key_pair *mkey )
+void rpc::add_product::set_mapping( key_pair *mkey )
 {
   mkey_ = mkey;
 }
 
-signature *rpc::add_symbol::get_signature()
+signature *rpc::add_product::get_signature()
 {
   return &sig_;
 }
 
-rpc::add_symbol::add_symbol()
-: num_( 0 ),
-  expo_( 0 ),
-  ptype_( price_type::e_price ),
-  bhash_( nullptr ),
+rpc::add_product::add_product()
+: bhash_( nullptr ),
   pkey_( nullptr ),
   gkey_( nullptr ),
   akey_( nullptr ),
@@ -992,7 +964,7 @@ rpc::add_symbol::add_symbol()
 {
 }
 
-void rpc::add_symbol::request( json_wtr& msg )
+void rpc::add_product::request( json_wtr& msg )
 {
   // construct binary transaction
   net_buf *bptr = net_buf::alloc();
@@ -1011,10 +983,10 @@ void rpc::add_symbol::request( json_wtr& msg )
   tx.add( (uint8_t)1 ); // program-id are read-only unsigned accounts
 
   // accounts
-  tx.add_len<4>();      // 4 accounts: publish, symbol, mapping*, program
+  tx.add_len<4>();      // 4 accounts: publish, mapping, product, program
   tx.add( *pkey_ );     // publish account
   tx.add( *mkey_ );     // mapping account
-  tx.add( *akey_ );     // symbol account
+  tx.add( *akey_ );     // product account
   tx.add( *gkey_ );     // programid
 
   // recent block hash
@@ -1023,18 +995,15 @@ void rpc::add_symbol::request( json_wtr& msg )
   // instructions section
   tx.add_len<1>();      // one instruction
   tx.add( (uint8_t)3);  // program_id index
-  tx.add_len<3>();      // 3 accounts: publish, symbol, mapping
+  tx.add_len<3>();      // 3 accounts: publish, mapping, product
   tx.add( (uint8_t)0 ); // index of publish account
   tx.add( (uint8_t)1 ); // index of mapping account
-  tx.add( (uint8_t)2 ); // index of symbol account
+  tx.add( (uint8_t)2 ); // index of product account
 
   // instruction parameter section
-  tx.add_len<sizeof(cmd_add_symbol)>();
+  tx.add_len<sizeof(cmd_add_product)>();
   tx.add( (uint32_t)PC_VERSION );
-  tx.add( (int32_t)e_cmd_add_symbol );
-  tx.add( (int32_t)expo_ );
-  tx.add( (uint32_t)ptype_ );
-  tx.add( sym_ );
+  tx.add( (int32_t)e_cmd_add_product );
 
   // all accounts need to sign transaction
   tx.sign( pub_idx, tx_idx, *pkey_ );
@@ -1047,7 +1016,231 @@ void rpc::add_symbol::request( json_wtr& msg )
   bptr->dealloc();
 }
 
-void rpc::add_symbol::response( const jtree& jt )
+void rpc::add_product::response( const jtree& jt )
+{
+  if ( on_error( jt, this ) ) return;
+  on_response( this );
+}
+
+///////////////////////////////////////////////////////////////////////////
+// upd_product
+
+void rpc::upd_product::set_program( pub_key *gkey )
+{
+  gkey_ = gkey;
+}
+
+void rpc::upd_product::set_block_hash( hash *bhash )
+{
+  bhash_ = bhash;
+}
+
+void rpc::upd_product::set_publish( key_pair *pkey )
+{
+  pkey_ = pkey;
+}
+
+void rpc::upd_product::set_account( key_pair *akey )
+{
+  akey_ = akey;
+}
+
+void rpc::upd_product::set_attr_dict( attr_dict *aptr )
+{
+  aptr_ = aptr;
+}
+
+signature *rpc::upd_product::get_signature()
+{
+  return &sig_;
+}
+
+rpc::upd_product::upd_product()
+: bhash_( nullptr ),
+  pkey_( nullptr ),
+  gkey_( nullptr ),
+  akey_( nullptr ),
+  aptr_( nullptr )
+{
+}
+
+void rpc::upd_product::request( json_wtr& msg )
+{
+  // construct binary transaction
+  net_buf *bptr = net_buf::alloc();
+  bincode tx( bptr->buf_ );
+
+  // signatures section
+  tx.add_len<2>();      // three signatures (publish, product)
+  size_t pub_idx = tx.reserve_sign();
+  size_t sym_idx = tx.reserve_sign();
+
+  // message header
+  size_t tx_idx = tx.get_pos();
+  tx.add( (uint8_t)2 ); // pub, and product are signing accounts
+  tx.add( (uint8_t)0 ); // read-only signed accounts
+  tx.add( (uint8_t)1 ); // program-id are read-only unsigned accounts
+
+  // accounts
+  tx.add_len<3>();      // 3 accounts: publish, product, program
+  tx.add( *pkey_ );     // publish account
+  tx.add( *akey_ );     // product account
+  tx.add( *gkey_ );     // programid
+
+  // recent block hash
+  tx.add( *bhash_ );    // recent block hash
+
+  // instructions section
+  tx.add_len<1>();      // one instruction
+  tx.add( (uint8_t)2);  // program_id index
+  tx.add_len<2>();      // 2 accounts: publish, product
+  tx.add( (uint8_t)0 ); // index of publish account
+  tx.add( (uint8_t)1 ); // index of product account
+
+  // serialize attribute dictionary and copy to transaction
+  net_wtr awtr;
+  aptr_->write_account( awtr );
+  net_buf *ahd, *atl;
+  awtr.detach( ahd, atl );
+
+  // instruction parameter section
+  tx.add_len( sizeof(cmd_upd_product) + ahd->size_ );
+  tx.add( (uint32_t)PC_VERSION );
+  tx.add( (int32_t)e_cmd_upd_product );
+  tx.add( ahd->buf_, ahd->size_ );
+  ahd->dealloc();
+
+  // all accounts need to sign transaction
+  tx.sign( pub_idx, tx_idx, *pkey_ );
+  sig_.init_from_buf( (const uint8_t*)(tx.get_buf() + pub_idx) );
+  tx.sign( sym_idx, tx_idx, *akey_ );
+
+  // encode transaction and add to json params
+  send_transaction( msg, tx );
+  bptr->dealloc();
+}
+
+void rpc::upd_product::response( const jtree& jt )
+{
+  if ( on_error( jt, this ) ) return;
+  on_response( this );
+}
+
+
+///////////////////////////////////////////////////////////////////////////
+// add_price
+
+price_type rpc::add_price::get_price_type() const
+{
+  return ptype_;
+}
+
+void rpc::add_price::set_exponent( int32_t expo )
+{
+  expo_ = expo;
+}
+
+void rpc::add_price::set_price_type( price_type ptype )
+{
+  ptype_ = ptype;
+}
+
+void rpc::add_price::set_program( pub_key *gkey )
+{
+  gkey_ = gkey;
+}
+
+void rpc::add_price::set_block_hash( hash *bhash )
+{
+  bhash_ = bhash;
+}
+
+void rpc::add_price::set_publish( key_pair *pkey )
+{
+  pkey_ = pkey;
+}
+
+void rpc::add_price::set_account( key_pair *akey )
+{
+  akey_ = akey;
+}
+
+void rpc::add_price::set_product( key_pair *mkey )
+{
+  skey_ = mkey;
+}
+
+signature *rpc::add_price::get_signature()
+{
+  return &sig_;
+}
+
+rpc::add_price::add_price()
+: expo_( 0 ),
+  ptype_( price_type::e_price ),
+  bhash_( nullptr ),
+  pkey_( nullptr ),
+  gkey_( nullptr ),
+  akey_( nullptr ),
+  skey_( nullptr )
+{
+}
+
+void rpc::add_price::request( json_wtr& msg )
+{
+  // construct binary transaction
+  net_buf *bptr = net_buf::alloc();
+  bincode tx( bptr->buf_ );
+
+  // signatures section
+  tx.add_len<3>();      // three signatures (publish, product, price)
+  size_t pub_idx = tx.reserve_sign();
+  size_t prd_idx = tx.reserve_sign();
+  size_t prc_idx = tx.reserve_sign();
+
+  // message header
+  size_t tx_idx = tx.get_pos();
+  tx.add( (uint8_t)3 ); // pub, symbol and mapping are signing accounts
+  tx.add( (uint8_t)0 ); // read-only signed accounts
+  tx.add( (uint8_t)1 ); // program-id are read-only unsigned accounts
+
+  // accounts
+  tx.add_len<4>();      // 4 accounts: publish, product, price, program
+  tx.add( *pkey_ );     // publish account
+  tx.add( *skey_ );     // product account
+  tx.add( *akey_ );     // price account
+  tx.add( *gkey_ );     // programid
+
+  // recent block hash
+  tx.add( *bhash_ );    // recent block hash
+
+  // instructions section
+  tx.add_len<1>();      // one instruction
+  tx.add( (uint8_t)3);  // program_id index
+  tx.add_len<3>();      // 3 accounts: publish, symbol, mapping
+  tx.add( (uint8_t)0 ); // index of publish account
+  tx.add( (uint8_t)1 ); // index of product account
+  tx.add( (uint8_t)2 ); // index of price account
+
+  // instruction parameter section
+  tx.add_len<sizeof(cmd_add_price)>();
+  tx.add( (uint32_t)PC_VERSION );
+  tx.add( (int32_t)e_cmd_add_price );
+  tx.add( (int32_t)expo_ );
+  tx.add( (uint32_t)ptype_ );
+
+  // all accounts need to sign transaction
+  tx.sign( pub_idx, tx_idx, *pkey_ );
+  sig_.init_from_buf( (const uint8_t*)(tx.get_buf() + pub_idx) );
+  tx.sign( prd_idx, tx_idx, *skey_ );
+  tx.sign( prc_idx, tx_idx, *akey_ );
+
+  // encode transaction and add to json params
+  send_transaction( msg, tx );
+  bptr->dealloc();
+}
+
+void rpc::add_price::response( const jtree& jt )
 {
   if ( on_error( jt, this ) ) return;
   on_response( this );
@@ -1229,11 +1422,6 @@ void rpc::add_mapping::response( const jtree& jt )
 ///////////////////////////////////////////////////////////////////////////
 // add_publisher
 
-void rpc::add_publisher::set_symbol( const symbol& sym )
-{
-  sym_= sym;
-}
-
 void rpc::add_publisher::set_program( pub_key *gkey )
 {
   gkey_ = gkey;
@@ -1259,24 +1447,9 @@ void rpc::add_publisher::set_publisher( const pub_key& nkey )
   nkey_ = nkey;
 }
 
-void rpc::add_publisher::set_price_type( price_type ptype )
-{
-  ptype_ = ptype;
-}
-
-symbol *rpc::add_publisher::get_symbol()
-{
-  return &sym_;
-}
-
 pub_key *rpc::add_publisher::get_publisher()
 {
   return &nkey_;
-}
-
-price_type rpc::add_publisher::get_price_type() const
-{
-  return ptype_;
 }
 
 signature *rpc::add_publisher::get_signature()
@@ -1291,7 +1464,7 @@ void rpc::add_publisher::request( json_wtr& msg )
   bincode tx( bptr->buf_ );
 
   // signatures section
-  tx.add_len<2>();      // two signatures (publish, symbol )
+  tx.add_len<2>();      // two signatures (publish, price )
   size_t pub_idx = tx.reserve_sign();
   size_t sym_idx = tx.reserve_sign();
 
@@ -1321,9 +1494,6 @@ void rpc::add_publisher::request( json_wtr& msg )
   tx.add_len<sizeof(cmd_add_publisher)>();
   tx.add( (uint32_t)PC_VERSION );
   tx.add( (int32_t)e_cmd_add_publisher );
-  tx.add( (uint32_t)ptype_ );
-  tx.add( (uint32_t)0 );
-  tx.add( sym_ );
   tx.add( nkey_ );
 
   // all accounts need to sign transaction
@@ -1344,11 +1514,6 @@ void rpc::add_publisher::response( const jtree& jt )
 
 ///////////////////////////////////////////////////////////////////////////
 // del_publisher
-
-void rpc::del_publisher::set_symbol( const symbol& sym )
-{
-  sym_= sym;
-}
 
 void rpc::del_publisher::set_program( pub_key *gkey )
 {
@@ -1375,24 +1540,9 @@ void rpc::del_publisher::set_publisher( const pub_key& nkey )
   nkey_ = nkey;
 }
 
-void rpc::del_publisher::set_price_type( price_type ptype )
-{
-  ptype_ = ptype;
-}
-
-symbol *rpc::del_publisher::get_symbol()
-{
-  return &sym_;
-}
-
 pub_key *rpc::del_publisher::get_publisher()
 {
   return &nkey_;
-}
-
-price_type rpc::del_publisher::get_price_type() const
-{
-  return ptype_;
 }
 
 signature *rpc::del_publisher::get_signature()
@@ -1407,7 +1557,7 @@ void rpc::del_publisher::request( json_wtr& msg )
   bincode tx( bptr->buf_ );
 
   // signatures section
-  tx.add_len<2>();      // two signatures (publish, symbol )
+  tx.add_len<2>();      // two signatures (publish, price )
   size_t pub_idx = tx.reserve_sign();
   size_t sym_idx = tx.reserve_sign();
 
@@ -1437,9 +1587,6 @@ void rpc::del_publisher::request( json_wtr& msg )
   tx.add_len<sizeof(cmd_del_publisher)>();
   tx.add( (uint32_t)PC_VERSION );
   tx.add( (int32_t)e_cmd_del_publisher );
-  tx.add( (uint32_t)ptype_ );
-  tx.add( (uint32_t)0 );
-  tx.add( sym_ );
   tx.add( nkey_ );
 
   // all accounts need to sign transaction
@@ -1468,19 +1615,9 @@ rpc::upd_price::upd_price()
   nonce_ = getpid()*random();
 }
 
-void rpc::upd_price::set_symbol( symbol *sym )
-{
-  sym_ = sym;
-}
-
 void rpc::upd_price::set_symbol_status( symbol_status st )
 {
   st_ = st;
-}
-
-void rpc::upd_price::set_price_type( price_type pt )
-{
-  pt_ = pt;
 }
 
 void rpc::upd_price::set_publish( key_pair *pk )
@@ -1556,9 +1693,8 @@ void rpc::upd_price::request( json_wtr& msg )
   tx.add_len<sizeof(cmd_upd_price)>();
   tx.add( (uint32_t)PC_VERSION );
   tx.add( (int32_t)cmd_ );
-  tx.add( (int32_t)pt_ );
   tx.add( (int32_t)st_ );
-  tx.add( *sym_ );
+  tx.add( (int32_t)0 );
   tx.add( price_ );
   tx.add( conf_ );
   tx.add( nonce_++ );

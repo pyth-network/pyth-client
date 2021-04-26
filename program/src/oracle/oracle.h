@@ -14,25 +14,30 @@ extern "C" {
 // latest program version
 #define PC_VERSION           PC_VERSION_1
 
-// various array sizes
-#define PC_SYMBOL_SIZE       16
+// various size constants
 #define PC_PUBKEY_SIZE       32
-#define PC_SYMBOL_SIZE_64   (PC_SYMBOL_SIZE/sizeof(uint64_t))
 #define PC_PUBKEY_SIZE_64   (PC_PUBKEY_SIZE/sizeof(uint64_t))
-#define PC_MAP_TABLE_SIZE   307
-#define PC_MAP_NODE_SIZE    300
+#define PC_MAP_TABLE_SIZE   640
 #define PC_COMP_SIZE         16
 #define PC_MAX_NUM_DECIMALS  16
+#define PC_PROD_ACC_SIZE    512
 
 // price types
 #define PC_PTYPE_UNKNOWN      0
 #define PC_PTYPE_PRICE        1
 #define PC_PTYPE_TWAP         2
+#define PC_PTYPE_VOLATILITY   3
 
 // symbol status
 #define PC_STATUS_UNKNOWN     0
 #define PC_STATUS_TRADING     1
 #define PC_STATUS_HALTED      2
+#define PC_STATUS_AUCTION     3
+
+// account types
+#define PC_ACCTYPE_MAPPING    1
+#define PC_ACCTYPE_PRODUCT    2
+#define PC_ACCTYPE_PRICE      3
 
 // binary version of sysvar_clock account id
 const uint64_t sysvar_clock[] = {
@@ -49,32 +54,46 @@ typedef union pc_pub_key
   uint64_t k8_[PC_PUBKEY_SIZE_64];
 } pc_pub_key_t;
 
-// asset symbol name
-typedef union pc_symbol
+// account header information
+typedef struct pc_acc
 {
-  int8_t   k1_[PC_SYMBOL_SIZE];
-  uint64_t k8_[PC_SYMBOL_SIZE_64];
-} pc_symbol_t;
-
-// individual symbol/price account mapping
-typedef struct pc_map_node
-{
-  uint32_t        next_;
-  uint32_t        unused_;
-  pc_symbol_t     sym_;              // symbol name
-  pc_pub_key_t    price_acc_;        // first price account in chain
-} pc_map_node_t;
+  uint32_t        magic_;            // pyth magic number
+  uint32_t        ver_;              // program/account version
+  uint32_t        type_;             // account type
+  uint32_t        size_;             // size of populated region of account
+} pc_acc_t;
 
 // hash table of symbol to price account mappings
 typedef struct pc_map_table
 {
   uint32_t        magic_;            // pyth magic number
   uint32_t        ver_;              // program/account version
+  uint32_t        type_;             // account type
+  uint32_t        size_;             // size of populated region of account
   uint32_t        num_;              // number of symbols
-  uint32_t        tab_[PC_MAP_TABLE_SIZE];
-  pc_map_node_t   nds_[PC_MAP_NODE_SIZE];
+  uint32_t        unused_;           // 64bit padding
   pc_pub_key_t    next_;             // next mapping account in chain
+  pc_pub_key_t    prod_[PC_MAP_TABLE_SIZE]; // product accounts
 } pc_map_table_t;
+
+// variable length string
+typedef struct pc_str
+{
+  uint8_t         len_;
+  char            data_[];
+} pc_str_t;
+
+// product reference data
+typedef struct pc_prod
+{
+  uint32_t        magic_;
+  uint32_t        ver_;              // program version
+  uint32_t        type_;             // account type
+  uint32_t        size_;             // size of populated region of account
+  pc_pub_key_t    px_acc_;           // first price (or quote) account
+  // variable number of reference key/value attribute pairs
+  // stored as strings (pc_str_t)
+} pc_prod_t;
 
 // price et al. for some component or aggregate
 typedef struct pc_price_info
@@ -82,7 +101,7 @@ typedef struct pc_price_info
   int64_t         price_;            // price per ptype_
   uint64_t        conf_;             // price confidence interval
   uint32_t        status_;           // symbol status as of last update
-  uint32_t        unused_;           // 64bit padding
+  uint32_t        corp_act_status_;  // corp action status as of last update
   uint64_t        pub_slot_;         // publish slot-time of price
 } pc_price_info_t;
 
@@ -99,14 +118,16 @@ typedef struct pc_price
 {
   uint32_t        magic_;             // pyth magic number
   uint32_t        ver_;               // program version
+  uint32_t        type_;              // account type
   uint32_t        size_;              // price account size
   uint32_t        ptype_;             // price or calculation type
   int32_t         expo_;              // price exponent
   uint32_t        num_;               // number of component prices
+  uint32_t        unused_;
   uint64_t        curr_slot_;         // currently accumulating price slot
   uint64_t        valid_slot_;        // valid slot-time of agg. price
-  pc_symbol_t     sym_;               // symbol for this account
-  pc_pub_key_t    next_;              // next price account
+  pc_pub_key_t    prod_;              // product id/ref-account
+  pc_pub_key_t    next_;              // next price account in list
   pc_pub_key_t    agg_pub_;           // aggregate price updater
   pc_price_info_t agg_;               // aggregate price information
   pc_price_comp_t comp_[PC_COMP_SIZE];// component prices
@@ -126,11 +147,22 @@ typedef enum {
   // key[2] new mapping account   [signer writable]
   e_cmd_add_mapping,
 
-  // add new symbol price account version node to
+  // initialize and add new product reference data account
   // key[0] funding account       [signer writable]
   // key[1] mapping account       [signer writable]
+  // key[2] new product account   [signer writable]
+  e_cmd_add_product,
+
+  // update product account
+  // key[0] funding account       [signer writable]
+  // key[1] product account       [signer writable]
+  e_cmd_upd_product,
+
+  // add new price account to a product account
+  // key[0] funding account       [signer writable]
+  // key[1] product account       [signer writable]
   // key[2] new price account     [signer writable]
-  e_cmd_add_symbol,
+  e_cmd_add_price,
 
   // add publisher to symbol account
   // key[0] funding account       [signer writable]
@@ -162,22 +194,31 @@ typedef struct cmd_hdr
   int32_t      cmd_;
 } cmd_hdr_t;
 
-typedef struct cmd_add_symbol
+typedef struct cmd_add_product
+{
+  uint32_t     ver_;
+  int32_t      cmd_;
+} cmd_add_product_t;
+
+typedef struct cmd_upd_product
+{
+  uint32_t     ver_;
+  int32_t      cmd_;
+  // set of key-value pairs
+} cmd_upd_product_t;
+
+typedef struct cmd_add_price
 {
   uint32_t     ver_;
   int32_t      cmd_;
   int32_t      expo_;
   uint32_t     ptype_;
-  pc_symbol_t  sym_;
-} cmd_add_symbol_t;
+} cmd_add_price_t;
 
 typedef struct cmd_add_publisher
 {
   uint32_t     ver_;
   int32_t      cmd_;
-  uint32_t     ptype_;
-  uint32_t     unused_;
-  pc_symbol_t  sym_;
   pc_pub_key_t pub_;
 } cmd_add_publisher_t;
 
@@ -185,9 +226,6 @@ typedef struct cmd_del_publisher
 {
   uint32_t     ver_;
   int32_t      cmd_;
-  uint32_t     ptype_;
-  uint32_t     unused_;
-  pc_symbol_t  sym_;
   pc_pub_key_t pub_;
 } cmd_del_publisher_t;
 
@@ -195,9 +233,8 @@ typedef struct cmd_upd_price
 {
   uint32_t     ver_;
   int32_t      cmd_;
-  uint32_t     ptype_;
   uint32_t     status_;
-  pc_symbol_t  sym_;
+  uint32_t     unused_;
   int64_t      price_;
   uint64_t     conf_;
   uint64_t     nonce_;
@@ -212,25 +249,6 @@ typedef struct sysvar_clock
   uint64_t    leader_schedule_epoch_;
   int64_t     unix_timestamp_;
 } sysvar_clock_t;
-
-// compare if two symbols are the same
-inline bool pc_symbol_equal( pc_symbol_t *s1, pc_symbol_t *s2 )
-{
-  return s1->k8_[0] == s2->k8_[0] && s1->k8_[1] == s2->k8_[1];
-}
-
-// check for null (zero) symbol key
-inline bool pc_symbol_is_zero( pc_symbol_t *s )
-{
-  return s->k8_[0] == 0UL && s->k8_[1] == 0UL;
-}
-
-// assign one symbol from another
-inline void pc_symbol_assign( pc_symbol_t *tgt, pc_symbol_t *src )
-{
-  tgt->k8_[0] = src->k8_[0];
-  tgt->k8_[1] = src->k8_[1];
-}
 
 // compare if two pub_keys (accounts) are the same
 inline bool pc_pub_key_equal( pc_pub_key_t *p1, pc_pub_key_t *p2 )

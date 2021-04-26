@@ -31,7 +31,7 @@ void test_key()
   PC_TEST_CHECK( res == pktxt );
 
   pub_key pk2;
-  pk2.init_from_text( pktxt );
+  pk2.init_from_text( str( pktxt ) );
   for(unsigned i=0; i != pub_key::len; ++i ) {
     PC_TEST_CHECK( pk.data()[i] == pk2.data()[i] );
   }
