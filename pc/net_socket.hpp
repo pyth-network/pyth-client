@@ -385,6 +385,8 @@ namespace pc
     typedef enum { e_obj = 0, e_arr } type_t;
 
     struct null {};
+    struct jtrue {};
+    struct jfalse {};
 
     json_wtr();
     void reset();
@@ -399,6 +401,8 @@ namespace pc
     void add_key( str key, type_t );
     void add_key( str key, const hash& );
     void add_key( str key, null );
+    void add_key( str key, jtrue );
+    void add_key( str key, jfalse );
     void add_key_verbatim( str key, str );
 
     // add array value

@@ -7,6 +7,7 @@ using namespace pc;
 #define PC_RPC_WEBSOCKET_PORT 8900
 #define PC_RECONNECT_TIMEOUT  (120L*1000000000L)
 #define PC_BLOCKHASH_TIMEOUT  3
+#define PC_PUB_INTERVAL       (293L*PC_NSECS_IN_MSEC)
 
 ///////////////////////////////////////////////////////////////////////////
 // manager_sub
@@ -39,17 +40,17 @@ manager::manager()
   status_( 0 ),
   num_sub_( 0 ),
   version_( PC_VERSION ),
-  kidx_( 0 ),
+  kidx_( (unsigned)-1 ),
   cts_( 0L ),
   ctimeout_( PC_NSECS_IN_SEC ),
-  slot_ts_( 0L ),
-  slot_int_( 0L ),
-  slot_min_( 0L ),
   slot_( 0UL ),
   slot_cnt_( 0UL ),
+  curr_ts_( 0L ),
+  pub_ts_( 0L ),
+  pub_int_( PC_PUB_INTERVAL ),
   wait_conn_( false ),
   do_cap_( false ),
-  first_ack_( true )
+  is_pub_( false )
 {
   breq_->set_sub( this );
   sreq_->set_sub( this );
@@ -105,6 +106,16 @@ std::string manager::get_capture_file() const
   return cap_.get_file();
 }
 
+void manager::set_publish_interval( int64_t pub_int )
+{
+  pub_int_ = pub_int * PC_NSECS_IN_MSEC;
+}
+
+int64_t manager::get_publish_interval() const
+{
+  return pub_int_ / PC_NSECS_IN_MSEC;
+}
+
 void manager::set_do_capture( bool do_cap )
 {
   do_cap_ = do_cap;
@@ -155,6 +166,11 @@ manager_sub *manager::get_manager_sub() const
   return sub_;
 }
 
+int64_t manager::get_curr_time() const
+{
+  return curr_ts_;
+}
+
 rpc_client *manager::get_rpc_client()
 {
   return &clnt_;
@@ -168,16 +184,6 @@ hash *manager::get_recent_block_hash()
 uint64_t manager::get_slot() const
 {
   return slot_;
-}
-
-int64_t manager::get_slot_time() const
-{
-  return slot_ts_;
-}
-
-int64_t manager::get_slot_interval() const
-{
-  return slot_int_;
 }
 
 void manager::teardown()
@@ -258,6 +264,7 @@ bool manager::init()
   PC_LOG_INF( "initialized" )
     .add( "version", version_ )
     .add( "capture_file", get_capture_file() )
+    .add( "publish_interval(ms)", get_publish_interval() )
     .end();
 
   return true;
@@ -347,24 +354,30 @@ void manager::poll( bool do_wait )
   // destroy any users scheduled for deletion
   teardown_users();
 
-  // check if we need to reconnect rpc services
-  if ( PC_UNLIKELY( !has_status( PC_PYTH_RPC_CONNECTED ) ||
-                    hconn_.get_is_err() || wconn_.get_is_err() ))  {
-    reconnect_rpc();
-    return;
-  }
+  // get current time
+  curr_ts_ = get_now();
 
-  // schedule next price update but only if we're connected to rpc port
-  int64_t ts = get_now();
-  while ( kidx_ < kvec_.size() ) {
+  // submit new quotes while connected
+  if ( has_status( PC_PYTH_RPC_CONNECTED ) &&
+       !hconn_.get_is_err() &&
+       !wconn_.get_is_err() ) {
+    poll_schedule();
+  } else {
+    reconnect_rpc();
+  }
+}
+
+void manager::poll_schedule()
+{
+  while ( is_pub_ && kidx_ < kvec_.size() ) {
     price_sched *kptr = kvec_[kidx_];
-    int64_t tot_ts = slot_min_ - ack_ts_ - ack_ts_;
-    tot_ts = std::max( slot_min_/10, tot_ts );
-    int64_t pub_ts = slot_ts_ + ( tot_ts * kptr->get_hash() ) /
+    int64_t pub_ts = pub_ts_ + ( pub_int_ * kptr->get_hash() ) /
       price_sched::fraction;
-    if ( ts > pub_ts ) {
+    if ( curr_ts_ > pub_ts ) {
       kptr->schedule();
-      ++kidx_;
+      if ( ++kidx_ >= kvec_.size() ) {
+        is_pub_ = false;
+      }
     } else {
       break;
     }
@@ -391,15 +404,17 @@ void manager::reconnect_rpc()
 
     // reset state
     wait_conn_ = false;
-    first_ack_ = true;
+    is_pub_ = false;
+    kidx_ = 0;
     ctimeout_ = PC_NSECS_IN_SEC;
-    slot_ts_ = slot_int_ = 0L;
+    pub_ts_ = 0L;
     slot_cnt_ = 0UL;
+    slot_ = 0L;
     num_sub_ = 0;
     clnt_.reset();
     plist_.clear();
 
-    // resubmit slot subscription
+    // subscribe to slots and get first block hash
     clnt_.send( sreq_ );
 
     // resubscribe to mapping and symbol accounts
@@ -419,6 +434,13 @@ void manager::reconnect_rpc()
         add_map_sub();
       }
     }
+
+    // subscribe to mapping account if not done before
+    pub_key *mpub = get_mapping_pub_key();
+    if ( mvec_.empty() && mpub ) {
+      add_mapping( *mpub );
+    }
+
     // callback user with connection status
     if ( sub_ ) {
       sub_->on_connect( this );
@@ -518,36 +540,31 @@ void manager::schedule( price_sched *kptr )
 
 void manager::on_response( rpc::slot_subscribe *res )
 {
-  if ( !slot_ts_ ) {
-    slot_ts_ = res->get_recv_time();
+  // ignore slots that go back in time
+  uint64_t slot = res->get_slot();
+  int64_t ts = res->get_recv_time();
+  if ( slot <= slot_ ) {
     return;
   }
-  slot_ = res->get_slot();
-  slot_int_ = res->get_recv_time() - slot_ts_;
-  slot_ts_ = res->get_recv_time();
+  slot_ = slot;
+  PC_LOG_DBG( "receive slot" ).add( "slot", slot_ ).end();
+
+  // submit block hash every N slots
   if ( slot_cnt_++ % PC_BLOCKHASH_TIMEOUT == 0 ) {
-    // submit block hash every N slots
     clnt_.send( breq_ );
   }
-  // reset scheduler
-  kidx_ = 0;
 
-  // derive minimum slot interval
-  if ( slot_min_ ) {
-    slot_min_ = std::min( slot_int_, slot_min_ );
-  } else {
-    slot_min_ = slot_int_;
+  // reset submit
+  if ( !is_pub_ ) {
+    kidx_ = 0;
+    pub_ts_ = ts;
+    is_pub_ = true;
   }
 
   // flush capture
   if ( do_cap_ ) {
     cap_.flush();
   }
-  PC_LOG_DBG( "receive slot" )
-   .add( "slot_num", res->get_slot() )
-   .add( "slot_int", 1e-6*slot_int_ )
-   .add( "slot_min", 1e-6*slot_min_ )
-   .end();
 }
 
 void manager::on_response( rpc::get_recent_block_hash *m )
@@ -557,30 +574,18 @@ void manager::on_response( rpc::get_recent_block_hash *m )
         + m->get_err_msg()  + "]" );
     return;
   }
-  static const double afactor = 2./(1+8.);
   int64_t ack_ts = m->get_recv_time() - m->get_sent_time();
-  if ( !first_ack_ ) {
-    ack_ts_ = (1.-afactor)*ack_ts_ + afactor * ack_ts;
-  } else {
-    ack_ts_ = ack_ts;
-    first_ack_ = false;
-  }
   if ( has_status( PC_PYTH_HAS_BLOCK_HASH ) ) {
     return;
   }
   // set initialized status for block hash
   set_status( PC_PYTH_HAS_BLOCK_HASH );
   PC_LOG_INF( "received_recent_block_hash" )
-    .add( "slot", m->get_slot() )
-    .add( "slot_interval(ms)", 1e-6*slot_int_ )
-    .add( "rount_trip_time(ms)", 1e-6*ack_ts_ )
+    .add( "curr_slot", slot_ )
+    .add( "hash_slot", m->get_slot() )
+    .add( "rount_trip_time(ms)", 1e-6*ack_ts )
     .end();
 
-  // subscribe to mapping account if not done before
-  pub_key *mpub = get_mapping_pub_key();
-  if ( mvec_.empty() && mpub ) {
-    add_mapping( *mpub );
-  }
 }
 
 void manager::submit( request *req )

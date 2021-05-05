@@ -3,6 +3,7 @@
 #include <pc/rpc_client.hpp>
 #include <pc/dbl_list.hpp>
 #include <pc/attr_id.hpp>
+#include <pc/pub_stats.hpp>
 #include <oracle/oracle.h>
 
 namespace pc
@@ -283,6 +284,7 @@ namespace pc
     void set_product( product * );
     void set_commitment( commitment );
     bool get_is_done() const override;
+    key_pair *get_account();
 
   public:
     void on_response( rpc::create_account * ) override;
@@ -305,6 +307,37 @@ namespace pc
     key_pair                 mkey_;
     rpc::create_account      areq_[1];
     rpc::add_price           sreq_[1];
+    rpc::signature_subscribe sig_[1];
+  };
+
+  // (re)initialize price account to reflect exponent change
+  class init_price : public request,
+                     public rpc_sub_i<rpc::signature_subscribe>,
+                     public rpc_sub_i<rpc::init_price>
+  {
+  public:
+    init_price();
+    void set_exponent( int32_t );
+    void set_price( price * );
+    void set_commitment( commitment );
+    bool get_is_done() const override;
+
+  public:
+    void on_response( rpc::signature_subscribe * ) override;
+    void on_response( rpc::init_price * ) override;
+    bool get_is_ready() override;
+    void submit() override;
+
+  private:
+    typedef enum {
+      e_init_sent, e_init_sig, e_done, e_error
+    } state_t;
+
+    state_t                  st_;
+    commitment               cmt_;
+    price                   *price_;
+    key_pair                 key_;
+    rpc::init_price          req_[1];
     rpc::signature_subscribe sig_[1];
   };
 
@@ -507,6 +540,7 @@ namespace pc
 
   // price subscriber and publisher
   class price : public request,
+                public pub_stats,
                 public rpc_sub_i<rpc::get_account_info>,
                 public rpc_sub_i<rpc::account_subscribe>,
                 public rpc_sub_i<rpc::upd_price>
@@ -598,6 +632,7 @@ namespace pc
 
     bool init_publish();
     void init_subscribe( pc_price_t * );
+    void init_price( pc_price_t * );
     void log_update( const char *title );
     bool update( int64_t price, uint64_t conf, symbol_status, bool aggr );
 
@@ -608,6 +643,7 @@ namespace pc
     price_type             ptype_;
     symbol_status          sym_st_;
     uint32_t               version_;
+    uint32_t               pub_idx_;
     int64_t                apx_;
     uint64_t               aconf_;
     uint64_t               valid_slot_;

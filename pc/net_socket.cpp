@@ -1336,6 +1336,18 @@ void json_wtr::add_key( str key, null )
   add( "null" );
 }
 
+void json_wtr::add_key( str key, jtrue )
+{
+  add_key_only( key );
+  add( "true" );
+}
+
+void json_wtr::add_key( str key, jfalse )
+{
+  add_key_only( key );
+  add( "false" );
+}
+
 void json_wtr::add_key_verbatim( str key, str val )
 {
   add_key_only( key );

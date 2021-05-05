@@ -32,6 +32,7 @@ set( PC_SRC
   pc/mem_map.cpp;
   pc/misc.cpp;
   pc/net_socket.cpp;
+  pc/pub_stats.cpp;
   pc/replay.cpp;
   pc/request.cpp;
   pc/rpc_client.cpp;

@@ -572,6 +572,35 @@ namespace pc
       signature  sig_;
     };
 
+    // (re) initialize price account
+    class init_price : public rpc_request
+    {
+    public:
+      void set_exponent( int32_t );
+      void set_price_type( price_type );
+      void set_program( pub_key * );
+      void set_block_hash( hash * );
+      void set_publish( key_pair * );
+      void set_account( key_pair * );
+      price_type get_price_type() const;
+
+      // results
+      signature *get_signature();
+
+      init_price();
+      void request( json_wtr& ) override;
+      void response( const jtree& ) override;
+
+    private:
+      int32_t    expo_;
+      price_type ptype_;
+      hash      *bhash_;
+      key_pair  *pkey_;
+      pub_key   *gkey_;
+      key_pair  *akey_;
+      signature  sig_;
+    };
+
     // add new price publisher to symbol account
     class add_publisher : public rpc_request
     {
@@ -636,7 +665,8 @@ namespace pc
       void set_account( pub_key * );
       void set_program( pub_key * );
       void set_block_hash( hash * );
-      void set_price( int64_t px, uint64_t conf, symbol_status, bool );
+      void set_price( int64_t px, uint64_t conf, symbol_status,
+                      uint64_t pub_slot, bool is_aggregate );
 
       // results
       signature *get_signature();
@@ -650,7 +680,7 @@ namespace pc
       pub_key      *akey_;
       int64_t       price_;
       uint64_t      conf_;
-      uint64_t      nonce_;
+      uint64_t      pub_slot_;;
       command_t     cmd_;
       symbol_status st_;
       signature     sig_;

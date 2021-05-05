@@ -32,6 +32,9 @@ int usage()
   std::cerr << "  init_key         [options]" << std::endl;
   std::cerr << "  init_program     [options]" << std::endl;
   std::cerr << "  init_mapping     [options]" << std::endl;
+  std::cerr << "  init_price       <price_key> "
+            << "[-e <price_exponent (default " << get_exponent()
+            << ")>] [options]" << std::endl;
   std::cerr << "  transfer         <pub_key> <amount> [options]"
             << std::endl;
   std::cerr << "  add_product      [options]" << std::endl;
@@ -554,7 +557,6 @@ int on_add_price( int argc, char **argv )
   }
   std::cerr << "this might take take up to 30 seconds..." << std::endl;
 
-
   // get rent-exemption amount for symbol account
   get_minimum_balance_rent_exemption req_r[1];
   req_r->set_size( sizeof( pc_price_t ) );
@@ -571,8 +573,95 @@ int on_add_price( int argc, char **argv )
   if( submit_request( mgr, req_a ) ) {
     return 1;
   }
+  // print new key
+  std::string pkstr;
+  pub_key pk( *req_a->get_account() );
+  pk.enc_base58( pkstr );
+  std::cout << pkstr << std::endl;
+
   return 0;
 }
+
+int on_init_price( int argc, char **argv )
+{
+  // get input parameters
+  if ( argc < 2 ) {
+    return usage();
+  }
+  std::string pkey( argv[1] );
+  pub_key pub;
+  pub.init_from_text( pkey );
+  argc -= 1;
+  argv += 1;
+  int opt = 0, exponent = get_exponent();
+  std::string rpc_host = get_rpc_host();
+  std::string key_dir  = get_key_store();
+  commitment cmt = commitment::e_confirmed;
+  while( (opt = ::getopt(argc,argv, "e:r:k:c:dh" )) != -1 ) {
+    switch(opt) {
+      case 'r': rpc_host = optarg; break;
+      case 'k': key_dir = optarg; break;
+      case 'c': cmt = str_to_commitment(optarg); break;
+      case 'd': log::set_level( PC_LOG_DBG_LVL ); break;
+      case 'e': exponent = ::atoi( optarg ); break;
+      default: return usage();
+    }
+  }
+  if ( cmt == commitment::e_unknown ) {
+    std::cerr << "pyth: unknown commitment level" << std::endl;
+    return usage();
+  }
+
+  // initialize connection to block-chain
+  manager mgr;
+  mgr.set_rpc_host( rpc_host );
+  mgr.set_dir( key_dir );
+  if ( !mgr.init() || !mgr.bootstrap() ) {
+    std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
+    return 1;
+  }
+
+  // get price
+  price *px = mgr.get_price( pub );
+  if ( !px ) {
+    std::cerr << "pyth: failed to find price=" << pkey << std::endl;
+    return 1;
+  }
+
+  // are you sure prompt
+  std::cout << "initialize price account:" << std::endl;
+  print( "price account", 2 );
+  pub_key pacc( *px->get_account() );
+  pacc.enc_base58( pkey );
+  std::cout << pkey << std::endl;
+  print( "symbol", 2 );
+  std::cout << px->get_symbol().as_string() << std::endl;
+  print( "price_type", 2 );
+  std::cout << price_type_to_str( px->get_price_type() ).as_string()
+            << std::endl;
+  print( "version", 2 );
+  std::cout << PC_VERSION << std::endl;
+  print( "exponent", 2 );
+  std::cout << exponent << std::endl;
+  std::cout << "are you sure? [y/n] ";
+  char ch;
+  std::cin >> ch;
+  if ( ch != 'y' && ch != 'Y' ) {
+    return 1;
+  }
+  std::cerr << "this might take take up to 30 seconds..." << std::endl;
+
+  // add new symbol account
+  init_price req_i[1];
+  req_i->set_exponent( exponent );
+  req_i->set_commitment( cmt );
+  req_i->set_price( px );
+  if( submit_request( mgr, req_i ) ) {
+    return 1;
+  }
+  return 0;
+}
+
 
 int on_upd_price( int argc, char **argv )
 {
@@ -894,6 +983,8 @@ int main(int argc, char **argv)
     rc = on_init_program( argc, argv );
   } else if ( cmd == "init_mapping" ) {
     rc = on_init_mapping( argc, argv );
+  } else if ( cmd == "init_price" ) {
+    rc = on_init_price( argc, argv );
   } else if ( cmd == "transfer" ) {
     rc = on_transfer( argc, argv );
   } else if ( cmd == "get_balance" ) {

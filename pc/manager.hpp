@@ -73,9 +73,16 @@ namespace pc
     void set_capture_file( const std::string& cap_file );
     std::string get_capture_file() const;
 
+    // override default publish interval (in milliseconds)
+    void set_publish_interval( int64_t mill_secs );
+    int64_t get_publish_interval() const;
+
     // event subscription callback
     void set_manager_sub( manager_sub * );
     manager_sub *get_manager_sub() const;
+
+    // current time in manager in nanoseconds from epoch
+    int64_t get_curr_time() const;
 
     // rpc client interface
     rpc_client *get_rpc_client();
@@ -85,12 +92,6 @@ namespace pc
 
     // get most recently processed slot
     uint64_t get_slot() const;
-
-    // slot start time esitimate
-    int64_t get_slot_time() const;
-
-    // slot interval time estimate
-    int64_t get_slot_interval() const;
 
     // add and subscribe to new mapping account
     void add_mapping( const pub_key& );
@@ -171,6 +172,7 @@ namespace pc
     void reconnect_rpc();
     void log_disconnect();
     void teardown_users();
+    void poll_schedule();
     void reset_status( int );
 
     net_loop     nl_;       // epoll loop
@@ -193,16 +195,15 @@ namespace pc
     uint32_t     kidx_;     // schedule index
     int64_t      cts_;      // (re)connect timestamp
     int64_t      ctimeout_; // connection timeout
-    int64_t      slot_ts_;  // slot start time estimate
-    int64_t      slot_int_; // slot interval
-    int64_t      slot_min_; // slot minimum interval
     uint64_t     slot_;     // current slot
     uint64_t     slot_cnt_; // slot count
-    int64_t      ack_ts_;   // ack time ema
+    int64_t      curr_ts_;  // current time
+    int64_t      pub_ts_;   // start publish time
+    int64_t      pub_int_;  // publish interval
     kpx_vec_t    kvec_;     // symbol price scheduling
     bool         wait_conn_;// waiting on connection
     bool         do_cap_;   // do capture flag
-    bool         first_ack_;// first ack flag
+    bool         is_pub_;   // is publishing mode
     capture      cap_;      // aggregate price capture
 
     // requests

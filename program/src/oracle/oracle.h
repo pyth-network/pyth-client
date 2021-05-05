@@ -14,6 +14,9 @@ extern "C" {
 // latest program version
 #define PC_VERSION           PC_VERSION_1
 
+// max latency in slots between send and receive
+#define PC_MAX_SEND_LATENCY   8
+
 // various size constants
 #define PC_PUBKEY_SIZE       32
 #define PC_PUBKEY_SIZE_64   (PC_PUBKEY_SIZE/sizeof(uint64_t))
@@ -102,7 +105,7 @@ typedef struct pc_price_info
   uint64_t        conf_;             // price confidence interval
   uint32_t        status_;           // symbol status as of last update
   uint32_t        corp_act_status_;  // corp action status as of last update
-  uint64_t        pub_slot_;         // publish slot-time of price
+  uint64_t        pub_slot_;         // publish slot of price
 } pc_price_info_t;
 
 // published component price for contributing provider
@@ -125,7 +128,7 @@ typedef struct pc_price
   uint32_t        num_;               // number of component prices
   uint32_t        unused_;
   uint64_t        curr_slot_;         // currently accumulating price slot
-  uint64_t        valid_slot_;        // valid slot-time of agg. price
+  uint64_t        valid_slot_;        // valid on-chain slot of agg. price
   pc_pub_key_t    prod_;              // product id/ref-account
   pc_pub_key_t    next_;              // next price account in list
   pc_pub_key_t    agg_pub_;           // aggregate price updater
@@ -184,7 +187,12 @@ typedef enum {
   // key[0] funding account       [signer writable]
   // key[1] price account         [writable]
   // key[2] sysvar_clock account  [readable]
-  e_cmd_agg_price
+  e_cmd_agg_price,
+
+  // (re)initialize price account
+  // key[0] funding account       [signer writable]
+  // key[1] new price account     [signer writable]
+  e_cmd_init_price
 
 } command_t;
 
@@ -215,6 +223,14 @@ typedef struct cmd_add_price
   uint32_t     ptype_;
 } cmd_add_price_t;
 
+typedef struct cmd_init_price
+{
+  uint32_t     ver_;
+  int32_t      cmd_;
+  int32_t      expo_;
+  uint32_t     ptype_;
+} cmd_init_price_t;
+
 typedef struct cmd_add_publisher
 {
   uint32_t     ver_;
@@ -237,7 +253,7 @@ typedef struct cmd_upd_price
   uint32_t     unused_;
   int64_t      price_;
   uint64_t     conf_;
-  uint64_t     nonce_;
+  uint64_t     pub_slot_;
 } cmd_upd_price_t;
 
 // structure of clock sysvar account

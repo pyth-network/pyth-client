@@ -246,6 +246,47 @@ static uint64_t add_price( SolParameters *prm, SolAccountInfo *ka )
   return SUCCESS;
 }
 
+static uint64_t init_price( SolParameters *prm, SolAccountInfo *ka )
+{
+  // Validate command parameters
+  cmd_init_price_t *cptr = (cmd_init_price_t*)prm->data;
+  if ( prm->data_len != sizeof( cmd_init_price_t ) ||
+       cptr->expo_ > PC_MAX_NUM_DECIMALS ||
+       cptr->expo_ < -PC_MAX_NUM_DECIMALS ) {
+    return ERROR_INVALID_ARGUMENT;
+  }
+
+  // Account (1) is the price account to (re)initialize
+  // Verify that these are signed, writable accounts with correct ownership
+  // and size
+  if ( prm->ka_num < 2 ||
+       !valid_funding_account( &ka[0] ) ||
+       !valid_signable_account( prm, &ka[1], sizeof( pc_price_t ) ) ) {
+    return ERROR_INVALID_ARGUMENT;
+  }
+
+  // Verify that the price account is initialized
+  pc_price_t *sptr = (pc_price_t*)ka[1].data;
+  if ( sptr->magic_ != PC_MAGIC ||
+       sptr->ver_ != cptr->ver_ ||
+       sptr->type_ != PC_ACCTYPE_PRICE ||
+       sptr->ptype_ != cptr->ptype_ ) {
+    return ERROR_INVALID_ARGUMENT;
+  }
+
+  // (re)initialize price exponent and clear-down all quotes
+  sptr->expo_  = cptr->expo_;
+  sptr->valid_slot_ = 0UL;
+  sptr->curr_slot_  = 0UL;
+  sol_memset( &sptr->agg_, 0, sizeof( pc_price_info_t ) );
+  for(unsigned i=0; i != sptr->num_; ++i ) {
+    pc_price_comp_t *iptr = &sptr->comp_[i];
+    sol_memset( &iptr->agg_, 0, sizeof( pc_price_info_t ) );
+    sol_memset( &iptr->latest_, 0, sizeof( pc_price_info_t ) );
+  }
+  return SUCCESS;
+}
+
 static uint64_t add_publisher( SolParameters *prm, SolAccountInfo *ka )
 {
   // Validate command parameters
@@ -364,7 +405,7 @@ static void upd_aggregate( pc_price_t *ptr,
     // add valid price to sorted permutation array
     // if it is a recent valid price
     if ( iptr->agg_.status_ == PC_STATUS_TRADING &&
-         iptr->agg_.pub_slot_ == slot - 1 ) {
+         (slot - iptr->agg_.pub_slot_ ) <= PC_MAX_SEND_LATENCY ) {
       int64_t ipx = iptr->agg_.price_;
       uint32_t j = numa++;
       for( ; j > 0 && ptr->comp_[aidx[j-1]].agg_.price_ > ipx; --j ) {
@@ -436,9 +477,15 @@ static uint64_t upd_price( SolParameters *prm, SolAccountInfo *ka )
     return ERROR_INVALID_ARGUMENT;
   }
 
-  // update aggregate price as necessary
+  // reject if this price corresponds to the same or earlier time
   pc_price_info_t *fptr = &pptr->comp_[i].latest_;
   sysvar_clock_t *sptr = (sysvar_clock_t*)ka[2].data;
+  if ( cptr->cmd_ == e_cmd_upd_price &&
+       cptr->pub_slot_ < fptr->pub_slot_ ) {
+    return ERROR_INVALID_ARGUMENT;
+  }
+
+  // update aggregate price as necessary
   if ( sptr->slot_ > pptr->curr_slot_ ) {
     upd_aggregate( pptr, kptr, sptr->slot_ );
   }
@@ -448,7 +495,7 @@ static uint64_t upd_price( SolParameters *prm, SolAccountInfo *ka )
     fptr->price_    = cptr->price_;
     fptr->conf_     = cptr->conf_;
     fptr->status_   = cptr->status_;
-    fptr->pub_slot_ = sptr->slot_;
+    fptr->pub_slot_ = cptr->pub_slot_;
   }
   return SUCCESS;
 }
@@ -489,6 +536,10 @@ static uint64_t dispatch_1( SolParameters *prm, SolAccountInfo *ka )
     }
     case e_cmd_del_publisher:{
       res = del_publisher( prm, ka );
+      break;
+    }
+    case e_cmd_init_price:{
+      res = init_price( prm, ka );
       break;
     }
     default: break;

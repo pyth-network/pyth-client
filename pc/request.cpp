@@ -756,6 +756,11 @@ void add_price::set_commitment( commitment cmt )
   cmt_ = cmt;
 }
 
+key_pair *add_price::get_account()
+{
+  return &akey_;
+}
+
 bool add_price::get_is_ready()
 {
   manager *cptr = get_manager();
@@ -864,7 +869,107 @@ bool add_price::get_is_done() const
 }
 
 ///////////////////////////////////////////////////////////////////////////
-// dd_publisher
+// init_price
+
+init_price::init_price()
+: st_( e_init_sent ),
+  cmt_( commitment::e_confirmed )
+{
+}
+
+void init_price::set_exponent( int32_t expo )
+{
+  req_->set_exponent( expo );
+}
+
+void init_price::set_price( price *px )
+{
+  price_ = px;
+}
+
+void init_price::set_commitment( commitment cmt )
+{
+  cmt_ = cmt;
+}
+
+bool init_price::get_is_ready()
+{
+  manager *cptr = get_manager();
+  if ( !cptr->get_mapping_pub_key() ) {
+    return set_err_msg( "missing mapping key pairfile ["
+        + cptr->get_mapping_key_pair_file() + "]" );
+  }
+  return cptr->has_status( PC_PYTH_RPC_CONNECTED |
+                           PC_PYTH_HAS_BLOCK_HASH |
+                           PC_PYTH_HAS_MAPPING );
+}
+
+void init_price::submit()
+{
+  manager *cptr = get_manager();
+  key_pair *pkey = cptr->get_publish_key_pair();
+  if ( !pkey ) {
+    on_error_sub( "missing or invalid publish key [" +
+        cptr->get_publish_key_pair_file() + "]", this );
+    return;
+  }
+  pub_key *gpub = cptr->get_program_pub_key();
+  if ( !gpub ) {
+    on_error_sub( "missing or invalid program public key [" +
+        cptr->get_program_pub_key_file() + "]", this );
+    return;
+  }
+  pub_key *pub = price_->get_account();
+  if ( !cptr->get_account_key_pair( *pub, key_ ) ) {
+    std::string knm;
+    pub->enc_base58( knm );
+    on_error_sub( "missing key pair for price acct [" + knm + "]", this);
+    return;
+  }
+  req_->set_program( gpub );
+  req_->set_publish( pkey );
+  req_->set_account( &key_ );
+  req_->set_price_type( price_->get_price_type() );
+  req_->set_sub( this );
+  sig_->set_sub( this );
+
+  // get recent block hash and submit request
+  st_ = e_init_sent;
+  req_->set_block_hash( get_manager()->get_recent_block_hash() );
+  get_rpc_client()->send( req_ );
+}
+
+void init_price::on_response( rpc::signature_subscribe *res )
+{
+  if ( res->get_is_err() ) {
+    on_error_sub( res->get_err_msg(), this );
+    st_ = e_error;
+  } else if ( st_ == e_init_sig ) {
+    st_ = e_done;
+    on_response_sub( this );
+  }
+}
+
+void init_price::on_response( rpc::init_price *res )
+{
+  if ( res->get_is_err() ) {
+    on_error_sub( res->get_err_msg(), this );
+    st_ = e_error;
+  } else if ( st_ == e_init_sent ) {
+    st_ = e_init_sig;
+    sig_->set_commitment( cmt_ );
+    sig_->set_signature( res->get_signature() );
+    get_rpc_client()->send( sig_ );
+  }
+}
+
+bool init_price::get_is_done() const
+{
+  return st_ == e_done;
+}
+
+///////////////////////////////////////////////////////////////////////////
+// add_publisher
 
 add_publisher::add_publisher()
 : st_( e_add_sent ),
@@ -1390,6 +1495,7 @@ price::price( const pub_key& acc, product *prod )
   ptype_( price_type::e_unknown ),
   sym_st_( symbol_status::e_unknown ),
   version_( 0 ),
+  pub_idx_( (unsigned)-1 ),
   apx_( 0 ),
   aconf_( 0 ),
   valid_slot_( 0 ),
@@ -1561,8 +1667,10 @@ bool price::update(
     return false;
   }
   st_ = e_pend_publish;
-  preq_->set_price( price, conf, st, is_agg );
-  get_manager()->submit( this );
+  manager *mgr = get_manager();
+  add_send( mgr->get_slot(), mgr->get_curr_time() );
+  preq_->set_price( price, conf, st, mgr->get_slot(), is_agg );
+  mgr->submit( this );
   return true;
 }
 
@@ -1624,6 +1732,28 @@ void price::unsubscribe()
 {
 }
 
+void price::init_price( pc_price_t *pupd )
+{
+  // (re) initialize all values
+  aexpo_   = pupd->expo_;
+  ptype_   = (price_type)pupd->ptype_;
+  version_ = pupd->ver_;
+  apx_     = pupd->agg_.price_;
+  aconf_   = pupd->agg_.conf_;
+  sym_st_  = (symbol_status)pupd->agg_.status_;
+  pub_slot_   = pupd->agg_.pub_slot_;
+  valid_slot_ = pupd->valid_slot_;
+  cnum_ = pupd->num_;
+  for( unsigned i=0; i != cnum_; ++i ) {
+    if ( !pc_pub_key_equal( &cpub_[i], &pupd->comp_[i].pub_ ) ) {
+      pc_pub_key_assign( &cpub_[i], &pupd->comp_[i].pub_ );
+    }
+    cprice_[i] = pupd->comp_[i].agg_;
+  }
+  // log new price object
+  log_update( "init_price" );
+}
+
 void price::init_subscribe( pc_price_t *pupd )
 {
   // update initial values
@@ -1634,8 +1764,13 @@ void price::init_subscribe( pc_price_t *pupd )
 
   // initial assignment
   cnum_ = pupd->num_;
+  manager *cptr = get_manager();
+  pub_key *pkey = cptr->get_publish_pub_key();
   for( unsigned i=0; i != cnum_; ++i ) {
     pc_pub_key_assign( &cpub_[i], &pupd->comp_[i].pub_ );
+    if ( pc_pub_key_equal( &cpub_[i], (pc_pub_key_t*)pkey ) ) {
+      pub_idx_ = i;
+    }
   }
   apx_  = pupd->agg_.price_;
   aconf_ = pupd->agg_.conf_;
@@ -1644,7 +1779,6 @@ void price::init_subscribe( pc_price_t *pupd )
   valid_slot_ = pupd->valid_slot_;
 
   // subscribe to next symbol in chain
-  manager *cptr = get_manager();
   if ( !pc_pub_key_is_zero( &pupd->next_ ) ) {
     cptr->add_price( *(pub_key*)&pupd->next_, prod_ );
   }
@@ -1682,6 +1816,11 @@ void price::update( T *res )
     return;
   }
 
+  // price account was (re) initialized
+  if ( PC_UNLIKELY( pupd->valid_slot_ == 0L ) ) {
+    init_price( pupd );
+  }
+
   // update state and subscribe to next price account in the chain
   if ( PC_UNLIKELY( st_ == e_sent_subscribe ) ) {
     init_subscribe( pupd );
@@ -1693,9 +1832,14 @@ void price::update( T *res )
     cnum_ = pupd->num_;
     log_update( "modify_publisher" );
   }
+  manager *mgr = get_manager();
   for( unsigned i=0; i != cnum_; ++i ) {
     if ( !pc_pub_key_equal( &cpub_[i], &pupd->comp_[i].pub_ ) ) {
       pc_pub_key_assign( &cpub_[i], &pupd->comp_[i].pub_ );
+      if ( pc_pub_key_equal( &cpub_[i], (pc_pub_key_t*)
+            mgr->get_publish_pub_key() ) ) {
+        pub_idx_ = i;
+      }
     }
     cprice_[i] = pupd->comp_[i].agg_;
   }
@@ -1709,7 +1853,13 @@ void price::update( T *res )
     valid_slot_ = pupd->valid_slot_;
 
     // capture aggregate price and components to disk
-    get_manager()->write( (pc_pub_key_t*)apub_.data(), (pc_acc_t*)pupd );
+    mgr->write( (pc_pub_key_t*)apub_.data(), (pc_acc_t*)pupd );
+
+    // add slot/time latency statistics
+    if ( pub_idx_ != (unsigned)-1 ) {
+      uint64_t pub_slot = cprice_[pub_idx_].pub_slot_;
+      add_recv( mgr->get_slot(), pub_slot, res->get_recv_time() );
+    }
 
     // ping subscribers with new aggregate price
     on_response_sub( this );

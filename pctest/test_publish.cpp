@@ -65,12 +65,14 @@ private:
   uint64_t            sid1_;  // subscription id for prices
   uint64_t            sid2_;  // subscription id for scheduling
   uint64_t            sid3_;  // subscription id for scheduling
+  uint64_t            rcnt_;  // price receive count
 };
 
 test_publish::test_publish( pc::price *sym, int64_t px, uint64_t sprd )
 : sub_( this ),
   px_( px ),
-  sprd_( sprd )
+  sprd_( sprd ),
+  rcnt_( 0UL )
 {
   // add subscriptions for price updates from block chain
   sid1_ = sub_.add( sym );
@@ -115,6 +117,10 @@ void test_connect::on_init( pc::manager * )
 
 void test_connect::on_add_symbol( pc::manager *, pc::price *sym )
 {
+  // gnore non-price quote types
+  if ( sym->get_price_type() != pc::price_type::e_price ) {
+    return;
+  }
   PC_LOG_INF( "test_connect: new symbol added" )
     .add( "symbol", sym->get_symbol() )
     .add( "price_type", pc::price_type_to_str( sym->get_price_type() ) )
@@ -215,6 +221,28 @@ void test_publish::on_response( pc::price *sym, uint64_t )
     .add( "my_status", pc::symbol_status_to_str( my_status ) )
     .add( "my_slot", my_slot )
     .end();
+
+  // periodically log publish statistics
+  if ( ++rcnt_ % 10 == 0 ) {
+    float    time_quartiles[4];
+    uint32_t slot_quartiles[4];
+    sym->get_time_quartiles( time_quartiles );
+    sym->get_slot_quartiles( slot_quartiles );
+      PC_LOG_INF( "publish statistics" )
+        .add( "symbol", sym->get_symbol() )
+        .add( "price_type", pc::price_type_to_str( sym->get_price_type() ) )
+        .add( "num_sent", sym->get_num_sent() )
+        .add( "hit_rate", sym->get_hit_rate() )
+        .add( "secs_p25", time_quartiles[0] )
+        .add( "secs_p50", time_quartiles[1] )
+        .add( "secs_p75", time_quartiles[2] )
+        .add( "secs_p99", time_quartiles[3] )
+        .add( "slot_p25", slot_quartiles[0] )
+        .add( "slot_p50", slot_quartiles[1] )
+        .add( "slot_p75", slot_quartiles[2] )
+        .add( "slot_p99", slot_quartiles[3] )
+        .end();
+  }
 }
 
 void test_publish::on_response( pc::price_sched *ptr, uint64_t sub_id )

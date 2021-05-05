@@ -72,10 +72,17 @@ class Prices
   }
   get_product_list( res ) {
     let tab = document.getElementById( "prices" );
+    let k = 1;
+    res.result.sort( function(a,b) {
+      return a['attr_dict']['symbol'] > b['attr_dict']['symbol'];
+    } );
+    res.result.sort( function(a,b) {
+      return a['attr_dict']['asset_type'] > b['attr_dict']['asset_type'];
+    } );
     for( let i = 0; i != res.result.length; ++i ) {
       let sym = res.result[i];
       let att = sym['attr_dict']
-      for( let j=0; j != sym.price.length; ++j ) {
+      for( let j=0; j != sym.price.length; ++j, ++k ) {
         let pxa = sym.price[j];
         let row = tab.insertRow(-1);
         row.appendChild( this.get_title( att, 'asset_type') );
@@ -96,7 +103,7 @@ class Prices
             'account' : pxa['account']
            }
         };
-        pxa.idx = i+1;
+        pxa.idx = k;
         this.send( msg, this.get_price.bind( this, pxa ) );
       }
     }

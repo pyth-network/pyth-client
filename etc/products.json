@@ -125,17 +125,5 @@
       "nasdaq_symbol": "QQQ"
     }
   }
-  {
-    "account": "96NiWypEbNs56cBEiYACEzZtFTLqhV2TQ6wH2A2CqxbM",
-    "attr_dict":{
-      "symbol": "GBP/USD",
-      "asset_type": "Currency",
-      "country": "US",
-      "description": "BRITISH POUND STERLING",
-      "quote_currency" : "USD",
-      "tenor": "Spot",
-      "jlqd_symbol": "GBPUSD"
-    }
-  }
 ]
 

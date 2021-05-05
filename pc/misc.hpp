@@ -6,6 +6,7 @@
 #define PC_PACKED        __attribute__((__packed__))
 #define PC_UNLIKELY(ARG) __builtin_expect((ARG),1)
 #define PC_NSECS_IN_SEC  1000000000L
+#define PC_NSECS_IN_MSEC 1000000L
 
 namespace pc
 {
@@ -44,6 +45,7 @@ namespace pc
     str( const std::string& );
     std::string as_string() const;
     bool operator==( const str& ) const;
+    bool operator!=( const str& ) const;
     const char *str_;
     size_t      len_;
   };
@@ -75,6 +77,12 @@ namespace pc
   {
     return len_ == obj.len_ &&
            0 == __builtin_strncmp( str_, obj.str_, len_);
+  }
+
+  inline bool str::operator!=( const str& obj ) const
+  {
+    return len_ != obj.len_ ||
+           0 != __builtin_strncmp( str_, obj.str_, len_);
   }
 
   inline std::string str::as_string() const

@@ -341,7 +341,7 @@ Test( oracle, upd_price ) {
     .status_ = PC_STATUS_TRADING,
     .price_  = 42L,
     .conf_   = 9L,
-    .nonce_  = 100
+    .pub_slot_ = 1
   };
   SolPubkey p_id  = {.x = { 0xff, }};
   SolPubkey p_id2 = {.x = { 0xfe, }};
@@ -423,17 +423,18 @@ Test( oracle, upd_price ) {
   cr_assert( SUCCESS == dispatch( &prm, acc ) );
   cr_assert( sptr->comp_[0].latest_.price_ == 81L );
   cr_assert( sptr->comp_[0].agg_.price_ == 44L );
-  cr_assert( sptr->comp_[0].latest_.pub_slot_ == 3 );
+  cr_assert( sptr->comp_[0].latest_.pub_slot_ == 1 );
   cr_assert( sptr->agg_.pub_slot_ == 3 );
   cr_assert( sptr->valid_slot_ == 1 );
   cr_assert( sptr->curr_slot_ == 3 );
 
   // next price doesnt change but slot does
   cvar.slot_ = 4;
+  idata.pub_slot_ = 2;
   cr_assert( SUCCESS == dispatch( &prm, acc ) );
   cr_assert( sptr->comp_[0].latest_.price_ == 81L );
   cr_assert( sptr->comp_[0].agg_.price_ == 81L );
-  cr_assert( sptr->comp_[0].latest_.pub_slot_ == 4 );
+  cr_assert( sptr->comp_[0].latest_.pub_slot_ == 2 );
   cr_assert( sptr->agg_.pub_slot_ == 4 );
   cr_assert( sptr->valid_slot_ == 3 );
   cr_assert( sptr->curr_slot_ == 4 );
@@ -443,10 +444,14 @@ Test( oracle, upd_price ) {
   cr_assert( SUCCESS == dispatch( &prm, acc ) );
   cr_assert( sptr->comp_[0].latest_.price_ == 81L );
   cr_assert( sptr->comp_[0].agg_.price_ == 81L );
-  cr_assert( sptr->comp_[0].latest_.pub_slot_ == 5 );
+  cr_assert( sptr->comp_[0].latest_.pub_slot_ == 2 );
   cr_assert( sptr->agg_.pub_slot_ == 5 );
   cr_assert( sptr->valid_slot_ == 4 );
   cr_assert( sptr->curr_slot_ == 5 );
+
+  // try to publish back-in-time
+  idata.pub_slot_ = 1;
+  cr_assert( ERROR_INVALID_ARGUMENT == dispatch( &prm, acc ) );
 }
 
 Test(oracle, upd_aggregate ) {
@@ -502,8 +507,11 @@ Test(oracle, upd_aggregate ) {
   cr_assert( px->agg_.price_ == 250 );
   cr_assert( px->agg_.conf_ == 25 );
 
+  upd_aggregate( px, pub, 1008 );
+  cr_assert( px->agg_.status_ == PC_STATUS_TRADING );
+
   // check what happens when nothing publishes for a while
-  upd_aggregate( px, pub, 1003 );
+  upd_aggregate( px, pub, 1009 );
   cr_assert( px->agg_.status_ == PC_STATUS_UNKNOWN );
 }
 
