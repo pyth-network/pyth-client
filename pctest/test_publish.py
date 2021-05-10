@@ -26,7 +26,7 @@ class test_publish:
         'jsonrpc': '2.0',
         'method' : 'subscribe_price',
         'params' : {
-          'symbol': self.symbol,
+          'account': self.account,
           'price_type' : 'price'
           },
         'id': self.sidnum
@@ -38,7 +38,7 @@ class test_publish:
         'jsonrpc': '2.0',
         'method' : 'subscribe_price_sched',
         'params' : {
-          'symbol': self.symbol,
+          'account': self.account,
           'price_type' : 'price'
           },
         'id': self.pidnum
@@ -50,7 +50,7 @@ class test_publish:
         'jsonrpc': '2.0',
         'method':  'update_price',
         'params':{
-          'symbol': self.symbol,
+          'account': self.account,
           'price_type': 'price',
           'status': 'trading',
           'price': self.price,
@@ -88,8 +88,9 @@ class test_publish:
           f',price={self.price}, spread={self.spread}, subscription={subid}')
       await ws.send( self.gen_update_price() )
 
-  async def subscribe( self, ws, allids ):
+  async def subscribe( self, acct, ws, allids ):
     # submmit initial subscriptions
+    self.account = acct
     allids[self.pidnum] = self
     allids[self.sidnum] = self
     await ws.send( self.gen_subscribe_price() )
@@ -104,10 +105,21 @@ async def poll( uri ):
   # submit subscriptions to pythd
   allids = {}
   allsub = {}
-  sym1 = test_publish( 'US.EQ.SYMBOL1', 10000, 100 )
-  sym2 = test_publish( 'US.EQ.SYMBOL2', 2000000, 20000 )
-  await sym1.subscribe( ws, allids )
-  await sym2.subscribe( ws, allids )
+  allsym = {}
+  sym1 = test_publish( 'SYMBOL1/USD', 10000, 100 )
+  sym2 = test_publish( 'SYMBOL2/USD', 2000000, 20000 )
+  allsym[sym1.symbol] = sym1
+  allsym[sym2.symbol] = sym2
+
+  # lookup accounts by symbol and subscribe
+  req = { 'jsonrpc': '2.0', 'method':  'get_product_list', 'id': None }
+  await ws.send( json.dumps( req ) )
+  msg = json.loads( await ws.recv() )
+  for prod in msg['result']:
+    sym = prod['attr_dict']['symbol']
+    for px in prod['price']:
+      if sym in allsym and px['price_type'] == 'price':
+        await allsym[sym].subscribe( px['account'], ws, allids );
 
   # poll for updates from pythd
   while True:

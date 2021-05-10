@@ -12,7 +12,7 @@ async def get_symbol_list( uri ):
   # connect to pythd
   ws = await websockets.connect(uri)
 
-  # submit get_symbol_list request
+  # submit get_product_list request
   req = { 'jsonrpc': '2.0', 'method':  'get_product_list', 'id': None }
   await ws.send( json.dumps( req ) )
 
