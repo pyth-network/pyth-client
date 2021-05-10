@@ -675,15 +675,13 @@ int on_upd_price( int argc, char **argv )
   argv += 1;
 
   int opt = 0;
-  uint32_t version = PC_VERSION;
   std::string rpc_host = get_rpc_host();
   std::string key_dir  = get_key_store();
-  while( (opt = ::getopt(argc,argv, "r:k:c:v:dh" )) != -1 ) {
+  while( (opt = ::getopt(argc,argv, "r:k:c:dh" )) != -1 ) {
     switch(opt) {
       case 'r': rpc_host = optarg; break;
       case 'k': key_dir = optarg; break;
       case 'd': log::set_level( PC_LOG_DBG_LVL ); break;
-      case 'v': version = ::atoi( optarg ); break;
       case 'c': break;
       default: return usage();
     }
@@ -693,7 +691,6 @@ int on_upd_price( int argc, char **argv )
   manager mgr;
   mgr.set_rpc_host( rpc_host );
   mgr.set_dir( key_dir );
-  mgr.set_version( version );
   if ( !mgr.init() || !mgr.bootstrap() ) {
     std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
     return 1;
@@ -827,15 +824,13 @@ int on_get_pub_key( int argc, char **argv )
 int on_get_product_list( int argc, char **argv )
 {
   int opt = 0;
-  uint32_t version = PC_VERSION;
   std::string rpc_host = get_rpc_host();
   std::string key_dir  = get_key_store();
-  while( (opt = ::getopt(argc,argv, "r:k:c:v:dh" )) != -1 ) {
+  while( (opt = ::getopt(argc,argv, "r:k:c:dh" )) != -1 ) {
     switch(opt) {
       case 'r': rpc_host = optarg; break;
       case 'k': key_dir = optarg; break;
       case 'd': log::set_level( PC_LOG_DBG_LVL ); break;
-      case 'v': version = ::atoi( optarg ); break;
       case 'c': break;
       default: return usage();
     }
@@ -845,7 +840,6 @@ int on_get_product_list( int argc, char **argv )
   manager mgr;
   mgr.set_rpc_host( rpc_host );
   mgr.set_dir( key_dir );
-  mgr.set_version( version );
   if ( !mgr.init() || !mgr.bootstrap() ) {
     std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
     return 1;
@@ -874,15 +868,13 @@ int on_get_product( int argc, char **argv )
   argv += 1;
 
   int opt = 0;
-  uint32_t version = PC_VERSION;
   std::string rpc_host = get_rpc_host();
   std::string key_dir  = get_key_store();
-  while( (opt = ::getopt(argc,argv, "r:k:c:v:dh" )) != -1 ) {
+  while( (opt = ::getopt(argc,argv, "r:k:c:dh" )) != -1 ) {
     switch(opt) {
       case 'r': rpc_host = optarg; break;
       case 'k': key_dir = optarg; break;
       case 'd': log::set_level( PC_LOG_DBG_LVL ); break;
-      case 'v': version = ::atoi( optarg ); break;
       case 'c': break;
       default: return usage();
     }
@@ -892,7 +884,6 @@ int on_get_product( int argc, char **argv )
   manager mgr;
   mgr.set_rpc_host( rpc_host );
   mgr.set_dir( key_dir );
-  mgr.set_version( version );
   if ( !mgr.init() || !mgr.bootstrap() ) {
     std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
     return 1;

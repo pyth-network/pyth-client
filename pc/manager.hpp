@@ -57,10 +57,6 @@ namespace pc
     void set_listen_port( int port );
     int get_listen_port() const;
 
-    // server subscription version
-    void set_version( uint32_t );
-    uint32_t get_version() const;
-
     // content directory (for http content requests if running as server)
     void set_content_dir( const std::string& );
     std::string get_content_dir() const;
@@ -191,7 +187,6 @@ namespace pc
     manager_sub *sub_;      // subscription callback
     int          status_;   // status bitmap
     int          num_sub_;  // number of in-flight mapping subscriptions
-    uint32_t     version_;  // account version subscription
     uint32_t     kidx_;     // schedule index
     int64_t      cts_;      // (re)connect timestamp
     int64_t      ctimeout_; // connection timeout

@@ -39,7 +39,6 @@ manager::manager()
 : sub_( nullptr ),
   status_( 0 ),
   num_sub_( 0 ),
-  version_( PC_VERSION ),
   kidx_( (unsigned)-1 ),
   cts_( 0L ),
   ctimeout_( PC_NSECS_IN_SEC ),
@@ -134,16 +133,6 @@ void manager::set_listen_port( int port )
 int manager::get_listen_port() const
 {
   return lsvr_.get_port();
-}
-
-void manager::set_version( uint32_t version )
-{
-  version_ = version;
-}
-
-uint32_t manager::get_version() const
-{
-  return version_;
 }
 
 void manager::set_content_dir( const std::string& cdir )
@@ -262,7 +251,7 @@ bool manager::init()
       .end();
   }
   PC_LOG_INF( "initialized" )
-    .add( "version", version_ )
+    .add( "version", PC_VERSION )
     .add( "capture_file", get_capture_file() )
     .add( "publish_interval(ms)", get_publish_interval() )
     .end();
