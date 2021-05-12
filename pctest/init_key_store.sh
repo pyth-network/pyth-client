@@ -12,11 +12,32 @@ check()
   fi
 }
 
-KDIR=$1
+KENV=$1
+KDIR=$2
+case $KENV in
+  devnet)
+    MAP_KEY=ArppEFcsybCLE8CRtQJLQ9tLv2peGmQoKWFuiUWm4KBP
+    PGM_KEY=5mkqGkkWSaSk2NL9p4XptwEQu4d5jFTJiurbbzdqYexF
+    ;;
+  pythnet)
+    MAP_KEY=CpmU3oZqTWtPoFatbgpQAJNhmTq816Edp1xZpZAQiTUv
+    PGM_KEY=FKVZxSxY4WnwLTgQQmzMoBF87hpsT2K4BPcMcT9u1YGD
+    ;;
+  *)
+    echo "Unknown environment. Please use: devnet, pythnet"
+    exit 1;
+esac
 if [ -z "$KDIR" ] ; then
   KDIR=$HOME/.pythd
 fi
-echo "7LmwnZDXi2d9dYsp45WsPkudU2Gb2ftjUC6fsxYvZocu" > $KDIR/program_key.json
+
+PKEY_FILE=$KDIR/publish_key_pair.json
+if [ ! -f $PKEY_FILE ] ; then
+  echo "cannot find $PKEY_FILE"
+  exit 1
+fi
+
+echo $PGM_KEY > $KDIR/program_key.json
 check "chmod 0400 $KDIR/program_key.json"
-echo "HQ9xBAuxpXcd9BgNjgE1Jm4uhwvU8BicP5w3gKfPRuAo" > $KDIR/mapping_key.json
+echo $MAP_KEY > $KDIR/mapping_key.json
 check "chmod 0400 $KDIR/mapping_key.json"

@@ -53,7 +53,7 @@ fn get_status( st: &PriceStatus ) -> &'static str
 fn get_corp_act( cact: &CorpAction ) -> &'static str
 {
   match cact {
-    CorpAction::NoCorpAct => "NoCorpAct",
+    CorpAction::NoCorpAct => "nocorpact",
   }
 }
 
