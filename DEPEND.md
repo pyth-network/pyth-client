@@ -2,7 +2,7 @@
 
 ## Base-64 Encoding/Decoding
 
-The pyth-client project contains source code from Adam Rudd's arduino-base64 project for base64 encoding/decoding maintained at github.com/adamvr/arduino-base64.  The corresponding copyright and permission notice are reproduced below:
+The pyth-client project contains source code from Adam Rudd's arduino-base64 project for base64 encoding/decoding maintained at https://github.com/adamvr/arduino-base64.  The corresponding copyright and permission notice are reproduced below:
 
 Copyright (C) 2013 Adam Rudd
 
