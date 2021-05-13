@@ -496,6 +496,7 @@ namespace pc
   public:
 
     product( const pub_key& );
+    virtual ~product();
     void reset();
     void submit() override;
     void on_response( rpc::get_account_info * ) override;

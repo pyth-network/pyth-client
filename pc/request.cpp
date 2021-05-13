@@ -1361,6 +1361,14 @@ product::product( const pub_key& acc )
   sreq_->set_sub( this );
 }
 
+product::~product()
+{
+  for( price *ptr: pvec_ ) {
+    delete ptr;
+  }
+  pvec_.clear();
+}
+
 pub_key *product::get_account()
 {
   return &acc_;

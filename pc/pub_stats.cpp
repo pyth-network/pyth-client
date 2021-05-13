@@ -64,7 +64,7 @@ void pub_stats::get_quartiles( const uint32_t *hist, uint32_t q[4] ) const
   unsigned j=0;
   for( uint64_t i=0; i != num_buckets && j != 4; ++i ) {
     cum += hist[i];
-    while ( cum >= pct[j]*num_recv_ && j != 4) {
+    while ( j != 4 && cum >= pct[j]*num_recv_ ) {
       q[j++] = i;
     }
   }

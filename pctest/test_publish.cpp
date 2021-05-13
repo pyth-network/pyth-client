@@ -11,7 +11,6 @@ class test_connect : public pc::manager_sub
 {
 public:
   test_connect();
-  virtual ~test_connect();
 
   // on connection to (but not initialization) solana validator
   void on_connect( pc::manager * ) override;
@@ -30,6 +29,8 @@ public:
 
   // get price from map
   pc::price *get_price( const std::string& ) const;
+
+  void teardown();
 
 private:
   test_publish *pub1_;     // SYMBOL1 publisher
@@ -94,10 +95,11 @@ test_connect::test_connect()
 {
 }
 
-test_connect::~test_connect()
+void test_connect::teardown()
 {
   delete pub1_;
   delete pub2_;
+  pub1_ = pub2_ = nullptr;
 }
 
 void test_connect::on_connect( pc::manager * )
@@ -388,6 +390,8 @@ int main(int argc, char** argv)
     std::cerr << "test_publish: " << mgr.get_err_msg() << std::endl;
     retcode = 1;
   }
+  sub.teardown();
+
   return retcode;
 }
 
