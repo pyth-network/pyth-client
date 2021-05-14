@@ -29,9 +29,9 @@ There exists a linked list of `mapping` accounts. Each contains a simple list of
 Each `product` account refers to the head of a linked-list of `price` accounts.  `price` accounts are where a product's price and other metrics are stored.  Each `price` account corresponds to a different "price_type". At the moment, these include "price", "twap" and "volatility".
 
 
-## pcrust example
+## rust example
 
-The pcrust example program uses the solana rust RPC API to load and print all pyth product and price data by bootstrapping from the root `mapping` account key. The output looks something like this:
+The rust example (pcrust/ or crates.io package pyth-client v0.1.1 ) program uses the solana rust RPC API to load and print all pyth product and price data by bootstrapping from the root `mapping` account key. The output looks something like this:
 
 ```
 product_account .. 4SxmcsbJWVBWvuP2cRQDjFtAgdqzWWLbHESnUTH4CegT
