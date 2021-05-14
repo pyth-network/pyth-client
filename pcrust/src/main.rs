@@ -1,12 +1,18 @@
-use pcrust::{
-  pc::Mapping,
-  pc::Product,
-  pc::Price,
-  pc::PriceType,
-  pc::PriceStatus,
-  pc::CorpAction,
-  pc::cast,
-  pc::PROD_HDR_SIZE
+// example usage of pyth-client account structure
+// bootstrap all product and pricing accounts from root mapping account
+
+use pyth_client::{
+  AccountType,
+  Mapping,
+  Product,
+  Price,
+  PriceType,
+  PriceStatus,
+  CorpAction,
+  cast,
+  MAGIC,
+  VERSION_1,
+  PROD_HDR_SIZE
 };
 use solana_client::{
   rpc_client::RpcClient
@@ -68,6 +74,11 @@ fn main() {
     // get Mapping account from key
     let map_data = clnt.get_account_data( &akey ).unwrap();
     let map_acct = cast::<Mapping>( &map_data );
+    assert_eq!( map_acct.magic, MAGIC, "not a valid pyth account" );
+    assert_eq!( map_acct.atype, AccountType::Mapping as u32,
+                "not a valid pyth mapping account" );
+    assert_eq!( map_acct.ver, VERSION_1,
+                "unexpected pyth mapping account version" );
 
     // iget and print each Product in Mapping directory
     let mut i = 0;
@@ -75,6 +86,11 @@ fn main() {
       let prod_pkey = Pubkey::new( &prod_akey.val );
       let prod_data = clnt.get_account_data( &prod_pkey ).unwrap();
       let prod_acct = cast::<Product>( &prod_data );
+      assert_eq!( prod_acct.magic, MAGIC, "not a valid pyth account" );
+      assert_eq!( prod_acct.atype, AccountType::Product as u32,
+                  "not a valid pyth product account" );
+      assert_eq!( prod_acct.ver, VERSION_1,
+                  "unexpected pyth product account version" );
 
       // print key and reference data for this Product
       println!( "product_account .. {:?}", prod_pkey );
@@ -93,6 +109,11 @@ fn main() {
         loop {
           let pd = clnt.get_account_data( &px_pkey ).unwrap();
           let pa = cast::<Price>( &pd );
+          assert_eq!( pa.magic, MAGIC, "not a valid pyth account" );
+          assert_eq!( pa.atype, AccountType::Price as u32,
+                     "not a valid pyth price account" );
+          assert_eq!( pa.ver, VERSION_1,
+                      "unexpected pyth price account version" );
           println!( "  price_account .. {:?}", px_pkey );
           println!( "    price_type ... {}", get_price_type(&pa.ptype));
           println!( "    exponent ..... {}", pa.expo );

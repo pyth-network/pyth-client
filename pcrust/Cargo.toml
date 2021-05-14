@@ -1,12 +1,19 @@
 [package]
-name = "pcrust"
+name = "pyth-client"
 version = "0.1.0"
-authors = ["Richard Brooks <richardbrooks2000@gmail.com>"]
+authors = ["Richard Brooks"]
 edition = "2018"
+license = "Apache-2.0"
+homepage = "https://pyth.network"
+repository = "https://github.com/pyth-network/pyth-client"
+description = "pyth price oracle data structures and example usage"
+readme = "false"
+keywords = [ "pyth", "solana", "oracle" ]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-solana-client = { path="../../solana/client" }
-solana-sdk = { path="../../solana/sdk" }
-solana-program = { path="../../solana/sdk/program" }
+solana-client = "1.6.7"
+solana-sdk = "1.6.7"
+solana-program = "1.6.7"
+
