@@ -7,7 +7,6 @@ license = "Apache-2.0"
 homepage = "https://pyth.network"
 repository = "https://github.com/pyth-network/pyth-client"
 description = "pyth price oracle data structures and example usage"
-readme = "false"
 keywords = [ "pyth", "solana", "oracle" ]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
