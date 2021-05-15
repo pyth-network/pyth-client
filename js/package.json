@@ -1,6 +1,6 @@
 {
   "name": "@pythnetwork/client",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Pyth price oracle data structures",
   "homepage": "https://pyth.network",
   "main": "lib/index.js",
@@ -25,7 +25,7 @@
     "solana",
     "oracle"
   ],
-  "license": "Apache",
+  "license": "Apache-2.0",
   "devDependencies": {
     "@types/jest": "^26.0.23",
     "jest": "^26.6.3",

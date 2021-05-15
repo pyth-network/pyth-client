@@ -82,7 +82,7 @@ export const parseProductData = (data: Buffer) => {
 
 const parsePriceInfo = (data: Buffer, exponent: number) => {
   // aggregate price
-  const priceComponent = data.readBigUInt64LE(0)
+  const priceComponent = data.readBigInt64LE(0)
   const price = Number(priceComponent) * 10 ** exponent
   // aggregate confidence
   const confidenceComponent = data.readBigUInt64LE(8)
