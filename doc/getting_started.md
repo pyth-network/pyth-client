@@ -43,7 +43,7 @@ KENV=pythnet  # or devnet or mainnet-beta
 
 This creates two files: `$KDIR/program_key.json` and `$KDIR/mapping_key.json`.
 
-Once pemissioned, you can test your setup by running the test_publish.cpp example program for publishing and subscribing to two test symbols.  To test publishing on pythnet you need to run:
+Once permissioned, you can test your setup by running the test_publish.cpp example program for publishing and subscribing to two test symbols.  To test publishing on pythnet you need to run:
 
 
 ```
@@ -52,3 +52,26 @@ KHOST=44.232.27.44 # or devnet.solana.com
 ```
 
 The certification environment can be found at the IP address 44.232.27.44. Solana devnet can be found at: devnet.solana.com
+
+You can also publish to solana using the pythd server. Start up the server using the same key-store directory and host specification:
+
+```
+./pythd -k $KDIR -r $KHOST
+```
+
+Run the test_publish.py example program on the same host to connect to the pythd server:
+
+```
+../pctest/test_publish.py
+
+```
+
+## Running the dashboard
+
+The pythd server also exports a dashboard web page for watching the ticking pyth prices.  The public key you create above does not need publish-permission to watch the ticking pyth prices.  To activate the dashboard page include an additional `-w` argument to pythd pointing at the html/javscript code directory:
+
+```
+./pythd -k $KDIR -r $KHOST -w ../dashboard
+```
+
+Connect to the dashboard via http://localhost:8910.
