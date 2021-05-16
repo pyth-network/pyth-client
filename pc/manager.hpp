@@ -30,6 +30,12 @@ namespace pc
     // on disconnect from solana validator
     virtual void on_disconnect( manager * );
 
+    // on connection to transaction proxy server
+    virtual void on_tx_connect( manager * );
+
+    // on disconnect from transaction proxy server
+    virtual void on_tx_disconnect( manager * );
+
     // on completion of (re)bootstrap of accounts following (re)connect
     virtual void on_init( manager * );
 
@@ -40,6 +46,7 @@ namespace pc
   // pyth-client connection management and event loop
   class manager : public key_store,
                   public net_accept,
+                  public tx_sub,
                   public rpc_sub,
                   public rpc_sub_i<rpc::slot_subscribe>,
                   public rpc_sub_i<rpc::get_recent_block_hash>
@@ -52,6 +59,14 @@ namespace pc
     // solana rpc http connection
     void set_rpc_host( const std::string& );
     std::string get_rpc_host() const;
+
+    // pyth transaction proxy host
+    void set_tx_host( const std::string& );
+    std::string get_tx_host() const;
+
+    // turn on/off tx proxy mode
+    void set_do_tx( bool );
+    bool get_do_tx() const;
 
     // server listening port
     void set_listen_port( int port );
@@ -106,6 +121,7 @@ namespace pc
 
     // submit pyth client api request
     void submit( request * );
+    void submit( tx_request * );
 
     // check status condition
     bool has_status( int status ) const;
@@ -135,6 +151,11 @@ namespace pc
     void del_map_sub();
     void schedule( price_sched* );
     void write( pc_pub_key_t *, pc_acc_t *ptr );
+
+    // tx_sub callbacks
+    void on_connect() override;
+    void on_disconnect() override;
+    bool get_is_tx_connect() const;
 
     // rpc callbacks
     void on_response( rpc::slot_subscribe * );
@@ -176,12 +197,14 @@ namespace pc
     ws_connect   wconn_;    // rpc websocket sonnection
     tcp_listen   lsvr_;     // listening socket
     rpc_client   clnt_;     // rpc api
+    tx_connect   tconn_;    // tx proxy connection
     user_list_t  olist_;    // open users list
     user_list_t  dlist_;    // to-be-deleted users list
     req_list_t   plist_;    // pending requests
     map_vec_t    mvec_;     // mapping account updates
     acc_map_t    amap_;     // account to symbol pricing info
     spx_vec_t    svec_;     // symbol price subscriber/publishers
+    std::string  thost_;    // tx proxy host
     std::string  rhost_;    // rpc host
     std::string  cdir_;     // content directory
     manager_sub *sub_;      // subscription callback
@@ -198,6 +221,7 @@ namespace pc
     kpx_vec_t    kvec_;     // symbol price scheduling
     bool         wait_conn_;// waiting on connection
     bool         do_cap_;   // do capture flag
+    bool         do_tx_;    // do tx proxy connectivity
     bool         is_pub_;   // is publishing mode
     capture      cap_;      // aggregate price capture
 
@@ -205,6 +229,11 @@ namespace pc
     rpc::slot_subscribe        sreq_[1]; // slot subscription
     rpc::get_recent_block_hash breq_[1]; // block hash request
   };
+
+  inline bool manager::get_is_tx_connect() const
+  {
+    return tconn_.get_is_connect();
+  }
 
   inline void manager::write( pc_pub_key_t *key, pc_acc_t *ptr )
   {

@@ -74,10 +74,14 @@ class Prices
     let tab = document.getElementById( "prices" );
     let k = 1;
     res.result.sort( function(a,b) {
-      return a['attr_dict']['symbol'] > b['attr_dict']['symbol'];
+      let asym = a['attr_dict']['symbol'];
+      let bsym = b['attr_dict']['symbol'];
+      return ( asym == bsym ? 0 : (asym > bsym ? 1: -1 ) );
     } );
     res.result.sort( function(a,b) {
-      return a['attr_dict']['asset_type'] > b['attr_dict']['asset_type'];
+      let atype = a['attr_dict']['asset_type'];
+      let btype = b['attr_dict']['asset_type'];
+      return ( atype == btype ? 0 : (atype > btype ? 1: -1 ) );
     } );
     for( let i = 0; i != res.result.length; ++i ) {
       let sym = res.result[i];

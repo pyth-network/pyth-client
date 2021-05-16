@@ -21,6 +21,12 @@ public:
   // on completion of (re)bootstrap of accounts following (re)connect
   void on_init( pc::manager * ) override;
 
+  // on connection to pyth_tx proxy publisher
+  void on_tx_connect( pc::manager * ) override;
+
+  // on disconnect from pyth_tx proxy publisher
+  void on_tx_disconnect( pc::manager * ) override;
+
   // construct publishers on addition of new symbols
   void on_add_symbol( pc::manager *, pc::price * ) override;
 
@@ -117,6 +123,16 @@ void test_connect::on_init( pc::manager * )
   PC_LOG_INF( "test_connect: initialized" ).end();
 }
 
+void test_connect::on_tx_connect( pc::manager * )
+{
+  PC_LOG_INF( "test_connect: pyth_tx connected" ).end();
+}
+
+void test_connect::on_tx_disconnect( pc::manager * )
+{
+  PC_LOG_INF( "test_connect: pyth_tx disconnected" ).end();
+}
+
 void test_connect::on_add_symbol( pc::manager *, pc::price *sym )
 {
   // gnore non-price quote types
@@ -140,7 +156,7 @@ void test_connect::on_add_symbol( pc::manager *, pc::price *sym )
   }
   // construct publisher for SYMBOL2
   if ( nsym == "SYMBOL2" && !pub2_ ) {
-    pub2_ = new test_publish( sym, 20000, 200 );
+    pub2_ = new test_publish( sym, 2000000, 20000 );
   }
 
   // iterate through all the product attributes and log them
@@ -320,6 +336,8 @@ int usage()
   std::cerr << "usage: test_publish " << std::endl;
   std::cerr << "  [-r <rpc_host (default " << get_rpc_host() << ")>]"
              << std::endl;
+  std::cerr << "  [-t <pyth_tx host (default " << get_rpc_host() << ")>]"
+             << std::endl;
   std::cerr << "  [-k <key_store_directory (default "
             << get_key_store() << ">]" << std::endl;
   std::cerr << "  [-c <capture file>]" << std::endl;
@@ -337,9 +355,11 @@ int main(int argc, char** argv)
   std::string cap_file, log_file;
   std::string rpc_host = get_rpc_host();
   std::string key_dir  = get_key_store();
-  while( (opt = ::getopt(argc,argv, "r:k:c:l:ndh" )) != -1 ) {
+  std::string tx_host  = get_rpc_host();
+  while( (opt = ::getopt(argc,argv, "r:t:k:c:l:ndh" )) != -1 ) {
     switch(opt) {
       case 'r': rpc_host = optarg; break;
+      case 't': tx_host = optarg; break;
       case 'k': key_dir = optarg; break;
       case 'c': cap_file = optarg; break;
       case 'l': log_file = optarg; break;
@@ -368,6 +388,7 @@ int main(int argc, char** argv)
   // initialize connection to solana validator and bootstrap symbol list
   pc::manager mgr;
   mgr.set_rpc_host( rpc_host );
+  mgr.set_tx_host( tx_host );
   mgr.set_dir( key_dir );
   mgr.set_manager_sub( &sub );
   mgr.set_capture_file( cap_file );

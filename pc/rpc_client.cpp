@@ -571,6 +571,98 @@ void rpc::get_minimum_balance_rent_exemption::response( const jtree& jt)
 }
 
 ///////////////////////////////////////////////////////////////////////////
+// get_cluster_nodes
+
+bool rpc::get_cluster_nodes::get_ip_addr( const pub_key& pkey, ip_addr& res )
+{
+  node_map_t::iter_t it = nmap_.find( pkey );
+  if ( it ) {
+    res = nmap_.obj( it );
+    return true;
+  } else {
+    return false;
+  }
+}
+
+void rpc::get_cluster_nodes::request( json_wtr& msg )
+{
+  msg.add_key( "method", "getClusterNodes" );
+}
+
+void rpc::get_cluster_nodes::response( const jtree& jt )
+{
+  if ( on_error( jt, this ) ) return;
+  uint32_t rtok = jt.find_val( 1, "result" );
+  pub_key pkey;
+  for( uint32_t tok = jt.get_first( rtok ); tok; tok = jt.get_next( tok ) ) {
+    pkey.init_from_text( jt.get_str( jt.find_val( tok, "pubkey" ) ) );
+    ip_addr addr( jt.get_str( jt.find_val( tok, "tpu" ) ) );
+    node_map_t::iter_t it = nmap_.find( pkey );
+    if ( !it ) it = nmap_.add( pkey );
+    nmap_.ref( it ) = addr;
+  }
+  on_response( this );
+}
+
+///////////////////////////////////////////////////////////////////////////
+// get_slot_leaders
+
+rpc::get_slot_leaders::get_slot_leaders()
+: rslot_( 0UL ),
+  limit_( 0UL ),
+  lslot_( 0UL )
+{
+}
+
+void rpc::get_slot_leaders::set_slot(uint64_t slot)
+{
+  rslot_ = slot;
+}
+
+void rpc::get_slot_leaders::set_limit( uint64_t limit )
+{
+  limit_ = limit;
+}
+
+uint64_t rpc::get_slot_leaders::get_last_slot() const
+{
+  return lslot_ + limit_;
+}
+
+pub_key *rpc::get_slot_leaders::get_leader( uint64_t slot )
+{
+  uint64_t idx = slot - lslot_;
+  if ( idx < lvec_.size() ) {
+    return &lvec_[idx];
+  } else {
+    return nullptr;
+  }
+}
+
+void rpc::get_slot_leaders::request( json_wtr& msg )
+{
+  msg.add_key( "method", "getSlotLeaders" );
+  msg.add_key( "params", json_wtr::e_arr );
+  msg.add_val( rslot_ );
+  msg.add_val( limit_ );
+  msg.pop();
+}
+
+void rpc::get_slot_leaders::response( const jtree& jt )
+{
+  lvec_.clear();
+  lslot_ = rslot_;
+  if ( on_error( jt, this ) ) return;
+  uint32_t rtok = jt.find_val( 1, "result" );
+  pub_key pkey;
+  for( uint32_t tok = jt.get_first( rtok ); tok; tok = jt.get_next( tok ) ) {
+    pkey.init_from_text( jt.get_str( tok ) );
+    lvec_.push_back( pkey );
+  }
+  on_response( this );
+}
+
+///////////////////////////////////////////////////////////////////////////
 // transfer
 
 void rpc::transfer::set_block_hash( hash *bhash )
@@ -1708,6 +1800,11 @@ void rpc::del_publisher::response( const jtree& jt )
   on_response( this );
 }
 
+///////////////////////////////////////////////////////////////////////////
+
+tx_request::~tx_request()
+{
+}
 
 ///////////////////////////////////////////////////////////////////////////
 // upd_price
@@ -1742,11 +1839,6 @@ void rpc::upd_price::set_block_hash( hash *bhash )
   bhash_ = bhash;
 }
 
-signature *rpc::upd_price::get_signature()
-{
-  return &sig_;
-}
-
 void rpc::upd_price::set_price( int64_t px,
                                 uint64_t conf,
                                 symbol_status st,
@@ -1760,11 +1852,26 @@ void rpc::upd_price::set_price( int64_t px,
   cmd_   = is_agg?e_cmd_agg_price:e_cmd_upd_price;
 }
 
-void rpc::upd_price::request( json_wtr& msg )
+class tx_wtr : public net_wtr
 {
-  // construct binary transaction
-  net_buf *bptr = net_buf::alloc();
-  bincode tx( bptr->buf_ );
+public:
+  void init( bincode& tx ) {
+    tx.attach( hd_->buf_ );
+    tx.add( (uint16_t)PC_TPU_PROTO_ID );
+    tx.add( (uint16_t)0 );
+  }
+  void commit( bincode& tx ) {
+    tx_hdr *hdr = (tx_hdr*)hd_->buf_;
+    hd_->size_ = tx.size();
+    hdr->size_ = tx.size();
+  }
+};
+
+void rpc::upd_price::build( net_wtr& wtr )
+{
+  // construct binary transaction and add header
+  bincode tx;
+  ((tx_wtr&)wtr).init( tx );
 
   // signatures section
   tx.add_len<1>();      // one signature (publish)
@@ -1807,22 +1914,5 @@ void rpc::upd_price::request( json_wtr& msg )
 
   // all accounts need to sign transaction
   tx.sign( pub_idx, tx_idx, *pkey_ );
-  sig_.init_from_buf( (const uint8_t*)(tx.get_buf() + pub_idx) );
-
-  // encode transaction and add to json params
-  msg.add_key( "method", "sendTransaction" );
-  msg.add_key( "params", json_wtr::e_arr );
-  msg.add_val_enc_base64( str( tx.get_buf(), tx.size() ) );
-  msg.add_val( json_wtr::e_obj );
-  msg.add_key( "skipPreflight", json_wtr::jtrue() );
-  msg.add_key( "encoding", "base64" );
-  msg.pop();
-  msg.pop();
-  bptr->dealloc();
-}
-
-void rpc::upd_price::response( const jtree& jt )
-{
-  if ( on_error( jt, this ) ) return;
-  on_response( this );
+  ((tx_wtr&)wtr).commit( tx );
 }

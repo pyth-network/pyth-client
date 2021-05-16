@@ -47,8 +47,8 @@ Once permissioned, you can test your setup by running the test_publish.cpp examp
 
 
 ```
-KHOST=44.232.27.44 # or devnet.solana.com
-./test_publish -k $KDIR -r $KHOST
+KHOST=44.232.27.44 # or api.devnet.solana.com
+./test_publish -k $KDIR -r $KHOST -t $KHOST
 ```
 
 The certification environment (pythnet) can be found at the IP address 44.232.27.44. Please also provide to the administrator the IP address you plan to publish to pythnet from so that it can be added to the pythnet firewall.  Solana devnet can be found at: devnet.solana.com. No additional permissioning is required to publish to devnet.
@@ -56,7 +56,7 @@ The certification environment (pythnet) can be found at the IP address 44.232.27
 You can also publish to solana using the pythd server. Start up the server using the same key-store directory and host specification:
 
 ```
-./pythd -k $KDIR -r $KHOST
+./pythd -k $KDIR -r $KHOST -t $KHOST
 ```
 
 Run the test_publish.py example program on the same host to connect to the pythd server:

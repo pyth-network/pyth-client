@@ -1521,7 +1521,6 @@ price::price( const pub_key& acc, product *prod )
   preq_->set_account( &apub_ );
   areq_->set_sub( this );
   sreq_->set_sub( this );
-  preq_->set_sub( this );
 }
 
 bool price::init_publish()
@@ -1612,7 +1611,7 @@ uint64_t price::get_pub_slot() const
 
 bool price::get_is_ready_publish() const
 {
-  return st_ == e_publish;
+  return st_ == e_publish && get_manager()->get_is_tx_connect();
 }
 
 void price::reset()
@@ -1671,30 +1670,22 @@ bool price::update(
   if ( PC_UNLIKELY( !has_publisher() ) ) {
     return false;
   }
-  if ( PC_UNLIKELY( st_ != e_publish ) ) {
+  if ( PC_UNLIKELY( !get_is_ready_publish() ) ) {
     return false;
   }
-  st_ = e_pend_publish;
   manager *mgr = get_manager();
   add_send( mgr->get_slot(), mgr->get_curr_time() );
   preq_->set_price( price, conf, st, mgr->get_slot(), is_agg );
-  mgr->submit( this );
+  preq_->set_block_hash( mgr->get_recent_block_hash() );
+  mgr->submit( preq_ );
   return true;
 }
 
 void price::submit()
 {
-  manager *pptr = get_manager();
-  rpc_client  *cptr = get_rpc_client();
-  if ( st_ == e_pend_publish ) {
-    if ( PC_UNLIKELY( get_is_err() ) ) {
-      return;
-    }
-    st_ = e_sent_publish;
-    preq_->set_block_hash( pptr->get_recent_block_hash() );
-    cptr->send( preq_ );
-  } else if ( st_ == e_subscribe ) {
+  if ( st_ == e_subscribe ) {
     // subscribe first
+    rpc_client  *cptr = get_rpc_client();
     cptr->send( sreq_ );
     cptr->send( areq_ );
     pkey_ = get_manager()->get_publish_pub_key();
@@ -1710,17 +1701,6 @@ void price::on_response( rpc::get_account_info *res )
 void price::on_response( rpc::account_subscribe *res )
 {
   update( res );
-}
-
-void price::on_response( rpc::upd_price *res )
-{
-  if ( res->get_is_err() ) {
-    on_error_sub( res->get_err_msg(), this );
-    st_ = e_error;
-    return;
-  } else if ( st_ == e_sent_publish ) {
-    st_ = e_publish;
-  }
 }
 
 void price::log_update( const char *title )

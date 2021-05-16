@@ -17,6 +17,8 @@
 #define PC_RPC_ERROR_NO_SNAPSHOT               -32008
 #define PC_RPC_ERROR_LONG_TERM_SLOT_SKIPPED    -32009
 
+#define PC_TPU_PROTO_ID 0xb1ab
+
 namespace pc
 {
 
@@ -211,6 +213,20 @@ namespace pc
     int64_t     recv_ts_;
   };
 
+  struct tx_hdr
+  {
+    uint16_t proto_id_;
+    uint16_t size_;
+  };
+
+  // transaction builder
+  class tx_request : public error
+  {
+  public:
+    virtual ~tx_request();
+    virtual void build( net_wtr& ) = 0;
+  };
+
   class rpc_subscription : public rpc_request
   {
   public:
@@ -315,6 +331,51 @@ namespace pc
       size_t   sz_;
       uint64_t lamports_;
     };
+
+    // get mapping of node id to ip address and port
+    class get_cluster_nodes : public rpc_request
+    {
+    public:
+      bool get_ip_addr( const pub_key&, ip_addr& );
+      void request( json_wtr& ) override;
+      void response( const jtree&p) override;
+    private:
+      struct trait_node {
+        static const size_t hsize_ = 859UL;
+        typedef uint32_t        idx_t;
+        typedef pub_key         key_t;
+        typedef const pub_key&  keyref_t;
+        typedef ip_addr         val_t;
+        struct hash_t {
+          idx_t operator() ( keyref_t a ) {
+            uint64_t *i = (uint64_t*)a.data();
+            return i[0];
+          }
+        };
+      };
+      typedef hash_map<trait_node> node_map_t;
+      node_map_t nmap_;
+    };
+
+    // get id of leader node by slot
+    class get_slot_leaders : public rpc_request
+    {
+    public:
+      get_slot_leaders();
+      void set_slot(uint64_t slot);
+      void set_limit( uint64_t limit );
+      pub_key *get_leader( uint64_t );
+      uint64_t get_last_slot() const;
+      void request( json_wtr& ) override;
+      void response( const jtree&p) override;
+    private:
+      typedef std::vector<pub_key> ldr_vec_t;
+      uint64_t  rslot_;
+      uint64_t  limit_;
+      uint64_t  lslot_;
+      ldr_vec_t lvec_;
+    };
+
 
     // find out when slots update
     class slot_subscribe : public rpc_subscription
@@ -654,9 +715,8 @@ namespace pc
       signature  sig_;
     };
 
-
     // set new component price
-    class upd_price : public rpc_request
+    class upd_price : public tx_request
     {
     public:
       upd_price();
@@ -667,12 +727,8 @@ namespace pc
       void set_block_hash( hash * );
       void set_price( int64_t px, uint64_t conf, symbol_status,
                       uint64_t pub_slot, bool is_aggregate );
+      void build( net_wtr& ) override;
 
-      // results
-      signature *get_signature();
-
-      void request( json_wtr& ) override;
-      void response( const jtree& ) override;
     private:
       hash         *bhash_;
       key_pair     *pkey_;
@@ -683,7 +739,6 @@ namespace pc
       uint64_t      pub_slot_;;
       command_t     cmd_;
       symbol_status st_;
-      signature     sig_;
     };
 
   }

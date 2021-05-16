@@ -35,6 +35,9 @@ namespace pc
   int64_t get_now();
   char *nsecs_to_utc6( int64_t ts, char *cptr );
 
+  // get host/port from <host>[:port1[:port2]] convention
+  std::string get_host_port( const std::string& host, int&port1, int&port2);
+
   // string as char pointer plus length
   struct str
   {

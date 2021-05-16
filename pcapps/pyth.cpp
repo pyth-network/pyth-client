@@ -57,9 +57,15 @@ int usage()
   std::cerr << "options include:" << std::endl;
   std::cerr << "  -r <rpc_host (default " << get_rpc_host() << ")>"
              << std::endl;
+  std::cerr << "     Host name or IP address of solana rpc node in the form "
+               "host_name[:rpc_port[:ws_port]]\n" << std::endl;
   std::cerr << "  -k <key_store_directory (default "
             << get_key_store() << ">" << std::endl;
+  std::cerr << "     Directory name housing publishing, mapping and program"
+               " key files\n" << std::endl;
   std::cerr << "  -c <commitment_level (default confirmed)>" << std::endl;
+  std::cerr << "     Options include processed, confirmed and finalized\n"
+            << std::endl;
   return 1;
 }
 
@@ -108,6 +114,7 @@ int submit_request( const std::string& rpc_host,
   manager mgr;
   mgr.set_rpc_host( rpc_host );
   mgr.set_dir( key_dir );
+  mgr.set_do_tx( false );
   if ( !mgr.init() || !mgr.bootstrap() ) {
     std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
     return 1;
@@ -215,6 +222,7 @@ int on_init_mapping( int argc, char **argv )
   manager mgr;
   mgr.set_rpc_host( rpc_host );
   mgr.set_dir( key_dir );
+  mgr.set_do_tx( false );
   if ( !mgr.init() || !mgr.bootstrap() ) {
     std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
     return 1;
@@ -360,6 +368,7 @@ int on_add_product( int argc, char **argv )
   manager mgr;
   mgr.set_rpc_host( rpc_host );
   mgr.set_dir( key_dir );
+  mgr.set_do_tx( false );
   if ( !mgr.init() || !mgr.bootstrap() ) {
     std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
     return 1;
@@ -447,6 +456,7 @@ int on_upd_product( int argc, char **argv )
   manager mgr;
   mgr.set_rpc_host( rpc_host );
   mgr.set_dir( key_dir );
+  mgr.set_do_tx( false );
   if ( !mgr.init() || !mgr.bootstrap() ) {
     std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
     return 1;
@@ -523,6 +533,7 @@ int on_add_price( int argc, char **argv )
   manager mgr;
   mgr.set_rpc_host( rpc_host );
   mgr.set_dir( key_dir );
+  mgr.set_do_tx( false );
   if ( !mgr.init() || !mgr.bootstrap() ) {
     std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
     return 1;
@@ -616,6 +627,7 @@ int on_init_price( int argc, char **argv )
   manager mgr;
   mgr.set_rpc_host( rpc_host );
   mgr.set_dir( key_dir );
+  mgr.set_do_tx( false );
   if ( !mgr.init() || !mgr.bootstrap() ) {
     std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
     return 1;
@@ -691,6 +703,7 @@ int on_upd_price( int argc, char **argv )
   manager mgr;
   mgr.set_rpc_host( rpc_host );
   mgr.set_dir( key_dir );
+  mgr.set_do_tx( false );
   if ( !mgr.init() || !mgr.bootstrap() ) {
     std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
     return 1;
@@ -756,6 +769,7 @@ int on_upd_publisher( int argc, char **argv, bool is_add )
   manager mgr;
   mgr.set_rpc_host( rpc_host );
   mgr.set_dir( key_dir );
+  mgr.set_do_tx( false );
   if ( !mgr.init() || !mgr.bootstrap() ) {
     std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
     return 1;
@@ -821,16 +835,30 @@ int on_get_pub_key( int argc, char **argv )
   return 0;
 }
 
+static void print_json( json_wtr& wtr )
+{
+  net_buf *hd, *tl;
+  wtr.detach( hd, tl );
+  for( net_buf *ptr = hd; ptr; ) {
+    net_buf *nxt = ptr->next_;
+    std::cout.write( ptr->buf_, ptr->size_ );
+    ptr->dealloc();
+    ptr = nxt;
+  }
+}
+
 int on_get_product_list( int argc, char **argv )
 {
   int opt = 0;
+  bool do_json = false;
   std::string rpc_host = get_rpc_host();
   std::string key_dir  = get_key_store();
-  while( (opt = ::getopt(argc,argv, "r:k:c:dh" )) != -1 ) {
+  while( (opt = ::getopt(argc,argv, "r:k:c:djh" )) != -1 ) {
     switch(opt) {
       case 'r': rpc_host = optarg; break;
       case 'k': key_dir = optarg; break;
       case 'd': log::set_level( PC_LOG_DBG_LVL ); break;
+      case 'j': do_json = true; break;
       case 'c': break;
       default: return usage();
     }
@@ -840,60 +868,41 @@ int on_get_product_list( int argc, char **argv )
   manager mgr;
   mgr.set_rpc_host( rpc_host );
   mgr.set_dir( key_dir );
+  mgr.set_do_tx( false );
   if ( !mgr.init() || !mgr.bootstrap() ) {
     std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
     return 1;
   }
   // list key/symbol pairs
-  std::string astr;
-  std::cout << "account,symbol" << std::endl;
-  for(unsigned i=0; i != mgr.get_num_product(); ++i ) {
-    product *prod = mgr.get_product(i);
-    pub_key *akey = prod->get_account();
-    akey->enc_base58( astr );
-    std::cout << astr << ',' << prod->get_symbol().as_string()<< std::endl;
+  if ( !do_json ) {
+    std::string astr;
+    std::cout << "account,symbol" << std::endl;
+    for(unsigned i=0; i != mgr.get_num_product(); ++i ) {
+      product *prod = mgr.get_product(i);
+      pub_key *akey = prod->get_account();
+      akey->enc_base58( astr );
+      std::cout << astr << ',' << prod->get_symbol().as_string()<< std::endl;
+    }
+  } else {
+    json_wtr wtr;
+    wtr.add_val( json_wtr::e_arr );
+    for(unsigned i=0; i != mgr.get_num_product(); ++i ) {
+      product *prod = mgr.get_product(i);
+      pub_key *akey = prod->get_account();
+      wtr.add_val( json_wtr::e_obj );
+      wtr.add_key( "account", *akey );
+      wtr.add_key( "symbol", prod->get_symbol() );
+      wtr.pop();
+    }
+    wtr.pop();
+    print_json( wtr );
   }
   return 0;
 }
 
-int on_get_product( int argc, char **argv )
+static void print_product( product *prod )
 {
-  if ( argc < 2 ) {
-    return usage();
-  }
-  std::string pkey( argv[1] );
-  pub_key pub;
-  pub.init_from_text( pkey );
-  argc -= 1;
-  argv += 1;
-
-  int opt = 0;
-  std::string rpc_host = get_rpc_host();
-  std::string key_dir  = get_key_store();
-  while( (opt = ::getopt(argc,argv, "r:k:c:dh" )) != -1 ) {
-    switch(opt) {
-      case 'r': rpc_host = optarg; break;
-      case 'k': key_dir = optarg; break;
-      case 'd': log::set_level( PC_LOG_DBG_LVL ); break;
-      case 'c': break;
-      default: return usage();
-    }
-  }
-
-  // initialize connection to block-chain
-  manager mgr;
-  mgr.set_rpc_host( rpc_host );
-  mgr.set_dir( key_dir );
-  if ( !mgr.init() || !mgr.bootstrap() ) {
-    std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
-    return 1;
-  }
-  // get product and serialize to stdout
-  product *prod = mgr.get_product( pub );
-  if ( !prod ) {
-    std::cerr << "pyth: failed to find product key=" << pkey << std::endl;
-    return 1;
-  }
+  std::string pkey;
   std::cout << "product details:" << std::endl;
   print( "product account", 2 );
   pub_key pacc( *prod->get_account() );
@@ -949,6 +958,104 @@ int on_get_product( int argc, char **argv )
       print( "slot", 6 );
       std::cout << ptr->get_publisher_slot(j) << std::endl;
     }
+  }
+}
+
+static void print_product_json( product *prod )
+{
+  json_wtr wtr;
+  wtr.add_val( json_wtr::e_obj );
+  wtr.add_key( "account", *prod->get_account() );
+  wtr.add_key( "attr_dict", json_wtr::e_obj );
+  str vstr, kstr;
+  for( unsigned id=1, i=0; i != prod->get_num_attr(); ) {
+    attr_id aid( id++ );
+    if ( !prod->get_attr( aid, vstr ) ) {
+      continue;
+    }
+    kstr = aid.get_str();
+    wtr.add_key( kstr, vstr );
+    ++i;
+  }
+  wtr.pop();
+  wtr.add_key( "price_accounts", json_wtr::e_arr );
+  wtr.add_val( json_wtr::e_arr );
+  for( unsigned i=0; i != prod->get_num_price(); ++i ) {
+    wtr.add_val( json_wtr::e_obj );
+    price *ptr = prod->get_price( i );
+    wtr.add_key( "account", *ptr->get_account() );
+    wtr.add_key( "price_type", price_type_to_str( ptr->get_price_type() ));
+    wtr.add_key( "price_exponent", ptr->get_price_exponent() );
+    wtr.add_key( "status", symbol_status_to_str( ptr->get_status() ) );
+    wtr.add_key( "price", ptr->get_price() );
+    wtr.add_key( "conf", ptr->get_conf() );
+    wtr.add_key( "valid_slot", ptr->get_valid_slot() );
+    wtr.add_key( "pub_slot", ptr->get_pub_slot() );
+    wtr.add_key( "publisher_accounts", json_wtr::e_arr );
+    for( unsigned j=0; j != ptr->get_num_publisher(); ++j ) {
+      wtr.add_val( json_wtr::e_obj );
+      wtr.add_key( "account", *ptr->get_publisher( j ) );
+      wtr.add_key( "status", symbol_status_to_str(
+            ptr->get_publisher_status(j) ) );
+      wtr.add_key( "price", ptr->get_publisher_price(j) );
+      wtr.add_key( "conf", ptr->get_publisher_conf(j) );
+      wtr.add_key( "slot", ptr->get_publisher_slot(j) );
+      wtr.pop();
+    }
+    wtr.pop();
+    wtr.pop();
+  }
+  wtr.pop();
+  wtr.pop();
+  wtr.pop();
+  print_json( wtr );
+}
+
+int on_get_product( int argc, char **argv )
+{
+  if ( argc < 2 ) {
+    return usage();
+  }
+  std::string pkey( argv[1] );
+  pub_key pub;
+  pub.init_from_text( pkey );
+  argc -= 1;
+  argv += 1;
+
+  int opt = 0;
+  bool do_json = false;
+  std::string rpc_host = get_rpc_host();
+  std::string key_dir  = get_key_store();
+  while( (opt = ::getopt(argc,argv, "r:k:c:djh" )) != -1 ) {
+    switch(opt) {
+      case 'r': rpc_host = optarg; break;
+      case 'k': key_dir = optarg; break;
+      case 'd': log::set_level( PC_LOG_DBG_LVL ); break;
+      case 'j': do_json = true;
+      case 'c': break;
+      default: return usage();
+    }
+  }
+
+  // initialize connection to block-chain
+  manager mgr;
+  mgr.set_rpc_host( rpc_host );
+  mgr.set_dir( key_dir );
+  mgr.set_do_tx( false );
+  if ( !mgr.init() || !mgr.bootstrap() ) {
+    std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
+    return 1;
+  }
+  // get product and serialize to stdout
+  product *prod = mgr.get_product( pub );
+  if ( !prod ) {
+    std::cerr << "pyth: failed to find product key=" << pkey << std::endl;
+    return 1;
+  }
+  if ( !do_json ) {
+    print_product( prod );
+  } else {
+    print_product_json( prod );
   }
   return 0;
 }

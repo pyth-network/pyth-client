@@ -35,6 +35,9 @@ namespace pc
     // up to a maximum of 32 slots
     void get_slot_quartiles( uint32_t q[4] ) const;
 
+    // clear-down statistics
+    void clear_stats();
+
   private:
 
     struct slot_time {

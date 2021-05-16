@@ -33,6 +33,7 @@ namespace pc
 
     // add values to buffer
     void add( uint8_t );
+    void add( uint16_t );
     void add( uint32_t );
     void add( uint64_t );
     void add( int32_t );
@@ -115,6 +116,11 @@ namespace pc
     T *p = (T*)&buf_[idx_];
     p[0] = val;
     idx_ += sizeof( T );
+  }
+
+  inline void bincode::add( uint16_t val )
+  {
+    add_val_T( val );
   }
 
   inline void bincode::add( uint32_t val )

@@ -2,6 +2,7 @@
 #include <openssl/sha.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <arpa/inet.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <netdb.h>
@@ -607,16 +608,12 @@ static bool get_hname_addr( const std::string& name, sockaddr *saddr )
   addrinfo hints[1];
   memset( hints, 0, sizeof( addrinfo ) );
   hints->ai_family   = AF_INET;
-  hints->ai_socktype = SOCK_STREAM;
-  hints->ai_protocol = IPPROTO_TCP;
   addrinfo *ainfo[1] = { nullptr };
   if ( 0 > ::getaddrinfo( name.c_str(), nullptr, nullptr, ainfo ) ) {
     return false;
   }
   for( addrinfo *aptr = ainfo[0]; aptr; aptr = aptr->ai_next ) {
-    if ( aptr->ai_family == hints->ai_family &&
-         aptr->ai_socktype == hints->ai_socktype &&
-         aptr->ai_protocol == hints->ai_protocol ) {
+    if ( aptr->ai_family == hints->ai_family ) {
       __builtin_memcpy( saddr, aptr->ai_addr, sizeof( sockaddr ) );
       has_addr = true;
       break;
@@ -749,6 +746,64 @@ bool tcp_listen::init()
   }
   set_fd( fd );
   return net_listen::init();
+}
+
+///////////////////////////////////////////////////////////////////////////
+// udp_socket
+
+ip_addr::ip_addr()
+{
+  i_[0] = i_[1] = 0UL;
+}
+
+ip_addr::ip_addr( const ip_addr& obj )
+{
+  i_[0] = obj.i_[0];
+  i_[1] = obj.i_[1];
+}
+
+ip_addr& ip_addr::operator=( const ip_addr& obj )
+{
+  i_[0] = obj.i_[0];
+  i_[1] = obj.i_[1];
+  return *this;
+}
+
+ip_addr::ip_addr( str ap )
+{
+  i_[0] = i_[1] = 0UL;
+  char buf[64];
+  sockaddr_in *sptr = (sockaddr_in*)buf_;
+  sptr->sin_family = AF_INET;
+  for( unsigned i=0; i != ap.len_; ++i ) {
+    buf[i] = ap.str_[i];
+    if ( buf[i] == ':' ) {
+      buf[i++] = '\0';
+      sptr->sin_addr.s_addr = ::inet_addr( buf );
+      sptr->sin_port = htons( str_to_int( &ap.str_[i], ap.len_ - i ) );
+      break;
+    }
+  }
+}
+
+bool udp_socket::init()
+{
+  teardown();
+  reset_err();
+  int fd = ::socket( AF_INET, SOCK_DGRAM, IPPROTO_UDP );
+  if ( fd < 0 ) {
+    return set_err_msg( "failed to construct udp socket", errno );
+  }
+  set_fd( fd );
+  set_block( false );
+  return true;
+}
+
+void udp_socket::send( ip_addr *ap, const char *buf, size_t len )
+{
+  sockaddr *saddr = (sockaddr*)ap->buf_;
+  ::sendto( get_fd(), buf, len, MSG_NOSIGNAL,
+      saddr, sizeof( sockaddr_in ) );
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -1035,6 +1090,66 @@ void http_server::parse_content( const char *, size_t )
 }
 
 ///////////////////////////////////////////////////////////////////////////
+// tx_connect
+
+tx_sub::~tx_sub()
+{
+}
+
+tx_connect::tx_connect()
+: has_conn_( false ),
+  wait_conn_( true ),
+  cts_( 0L ),
+  ctimeout_( PC_NSECS_IN_SEC ),
+  sub_( nullptr )
+{
+}
+
+void tx_connect::set_sub( tx_sub*sub )
+{
+  sub_ = sub;
+}
+
+void tx_connect::reconnect()
+{
+  // waiting to connect
+  if ( get_is_wait() ) {
+    check();
+    if ( get_is_wait() ) {
+      return;
+    }
+  }
+
+  // check for successful (re)connect
+  if ( !get_is_err() ) {
+    has_conn_ = true;
+    ctimeout_ = PC_NSECS_IN_SEC;
+    if ( sub_ ) sub_->on_connect();
+    return;
+  }
+
+  // log failure to reconnect
+  if ( wait_conn_ || has_conn_ ) {
+    wait_conn_ = false;
+    if ( has_conn_ && sub_ ) sub_->on_disconnect();
+  }
+
+  // wait for reconnect timeout
+  has_conn_ = false;
+  int64_t ts = get_now();
+  if ( ctimeout_ > (ts-cts_) ) {
+    return;
+  }
+
+  // attempt to reconnect
+  cts_ = ts;
+  ctimeout_ += ctimeout_;
+  ctimeout_ = std::min( ctimeout_, 120L*PC_NSECS_IN_SEC );
+  wait_conn_ = true;
+  init();
+}
+
+///////////////////////////////////////////////////////////////////////////
 // ws_connect
 
 ws_connect::ws_connect()
@@ -1059,6 +1174,7 @@ bool ws_connect::init()
   http_request msg;
   msg.init( "GET", "/" );
   msg.add_hdr( "Connection", "Upgrade" );
+  msg.add_hdr( "Upgrade", "websocket" );
   msg.add_hdr( "Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ==" );
   msg.add_hdr( "Sec-WebSocket-Version", "13" );
   msg.commit();

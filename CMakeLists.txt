@@ -73,6 +73,8 @@ add_executable( pyth pcapps/pyth.cpp )
 target_link_libraries( pyth ${PC_DEP} )
 add_executable( pyth_csv pcapps/pyth_csv.cpp )
 target_link_libraries( pyth_csv ${PC_DEP} )
+add_executable( pyth_tx pcapps/tx_svr.cpp pcapps/pyth_tx.cpp )
+target_link_libraries( pyth_tx ${PC_DEP} )
 
 #
 # install

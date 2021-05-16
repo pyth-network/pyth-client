@@ -4,9 +4,14 @@
 using namespace pc;
 
 pub_stats::pub_stats()
-: num_sent_( 0 ),
-  num_recv_( 0 )
 {
+  clear_stats();
+}
+
+void pub_stats::clear_stats()
+{
+  slots_.clear();
+  num_sent_ = num_recv_ = 0;
   __builtin_memset( shist_, 0, sizeof( shist_ ) );
   __builtin_memset( thist_, 0, sizeof( shist_ ) );
 }

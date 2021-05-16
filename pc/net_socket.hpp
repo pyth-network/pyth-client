@@ -252,6 +252,24 @@ namespace pc
     int port_; // listening port
   };
 
+  struct ip_addr
+  {
+    ip_addr();
+    ip_addr( str addr_port );
+    ip_addr( const ip_addr& );
+    ip_addr& operator=( const ip_addr&);
+    bool operator==( const ip_addr&) const;
+    union { char buf_[16]; uint64_t i_[2]; };
+  };
+
+  // simple udp sending socket
+  class udp_socket : public net_socket
+  {
+  public:
+    bool init() override;
+    void send( ip_addr *, const char *buf, size_t len );
+  };
+
   // http request message
   class http_request : public net_wtr
   {
@@ -335,6 +353,30 @@ namespace pc
     static const uint8_t pong_id   = 0xa;
 
     void commit( uint8_t opcode, net_wtr&, bool mask );
+  };
+
+  class tx_sub
+  {
+  public:
+    virtual ~tx_sub();
+    virtual void on_connect() = 0;
+    virtual void on_disconnect() =0;
+  };
+
+  // tpu prox connection
+  class tx_connect : public tcp_connect
+  {
+  public:
+    tx_connect();
+    bool get_is_connect() const;
+    void set_sub( tx_sub* );
+    void reconnect();
+  private:
+    bool    has_conn_;
+    bool    wait_conn_;
+    int64_t cts_;
+    int64_t ctimeout_;
+    tx_sub *sub_;
   };
 
   // websocket client connection
@@ -436,6 +478,16 @@ namespace pc
 
   /////////////////////////////////////////////////////////////////////////
   // inline impl.
+
+  inline bool ip_addr::operator==( const ip_addr& obj ) const
+  {
+    return i_[0] == obj.i_[0] && i_[1] == obj.i_[1];
+  }
+
+  inline bool tx_connect::get_is_connect() const
+  {
+    return has_conn_;
+  }
 
   inline unsigned http_server::get_num_header() const
   {
