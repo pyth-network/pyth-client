@@ -31,7 +31,7 @@ Each `product` account refers to the head of a linked-list of `price` accounts. 
 
 ## rust example
 
-The rust example (pcrust/ or crates.io package pyth-client v0.1.1 ) program uses the solana rust RPC API to load and print all pyth product and price data by bootstrapping from the root `mapping` account key. The output looks something like this:
+The rust example (https://github.com/pyth-network/pyth-client-rs or crates.io package pyth-client v0.1.1 ) program uses the solana rust RPC API to load and print all pyth product and price data by bootstrapping from the root `mapping` account key. The output looks something like this:
 
 ```
 product_account .. 4SxmcsbJWVBWvuP2cRQDjFtAgdqzWWLbHESnUTH4CegT
@@ -91,3 +91,4 @@ The pyth price represents an aggregate derived from multiple contributing market
 The pyth program accumulates prices with respect to whatever the current slot is inside the solana node. This is called the "valid_slot" above. As soon as the slot ticks forward by one, the pyth program computes the aggregate price and publishes it with respect to the new "publish_slot" and starts repeating the process with a new "valid_slot".
 
 The aggregate "status" of a price is subject to whether there are any valid contributors (i.e. "unknown" status) or whether any contributors are in a "halted" or "auction" state.
+
