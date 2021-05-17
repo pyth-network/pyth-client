@@ -51,7 +51,7 @@ KHOST=44.232.27.44 # or devnet.solana.com
 ./test_publish -k $KDIR -r $KHOST
 ```
 
-The certification environment can be found at the IP address 44.232.27.44. Solana devnet can be found at: devnet.solana.com
+The certification environment (pythnet) can be found at the IP address 44.232.27.44. Please also provide to the administrator the IP address you plan to publish to pythnet from so that it can be added to the pythnet firewall.  Solana devnet can be found at: devnet.solana.com. No additional permissioning is required to publish to devnet.
 
 You can also publish to solana using the pythd server. Start up the server using the same key-store directory and host specification:
 
