@@ -53,6 +53,14 @@ namespace pc
     void set_rpc_host( const std::string& );
     std::string get_rpc_host() const;
 
+    // solana rpc http port
+    void set_rpc_http_port( int port );
+    int get_rpc_http_port() const;
+
+    // solana rpc websocket port
+    void set_rpc_ws_port( int port );
+    int get_rpc_ws_port() const;
+
     // server listening port
     void set_listen_port( int port );
     int get_listen_port() const;
@@ -183,6 +191,8 @@ namespace pc
     acc_map_t    amap_;     // account to symbol pricing info
     spx_vec_t    svec_;     // symbol price subscriber/publishers
     std::string  rhost_;    // rpc host
+    int          rhport_;   // rpc http port
+    int          rwport_;   // rpc ws port
     std::string  cdir_;     // content directory
     manager_sub *sub_;      // subscription callback
     int          status_;   // status bitmap

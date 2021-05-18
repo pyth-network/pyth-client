@@ -3,8 +3,6 @@
 
 using namespace pc;
 
-#define PC_RPC_HTTP_PORT      8899
-#define PC_RPC_WEBSOCKET_PORT 8900
 #define PC_RECONNECT_TIMEOUT  (120L*1000000000L)
 #define PC_BLOCKHASH_TIMEOUT  3
 #define PC_PUB_INTERVAL       (293L*PC_NSECS_IN_MSEC)
@@ -36,7 +34,9 @@ void manager_sub::on_add_symbol( manager *, price * )
 // manager
 
 manager::manager()
-: sub_( nullptr ),
+: rhport_( 8899 ),
+  rwport_( 8900 ),
+  sub_( nullptr ),
   status_( 0 ),
   num_sub_( 0 ),
   kidx_( (unsigned)-1 ),
@@ -93,6 +93,26 @@ void manager::set_rpc_host( const std::string& rhost )
 std::string manager::get_rpc_host() const
 {
   return rhost_;
+}
+
+void manager::set_rpc_http_port( int port )
+{
+  rhport_ = port;
+}
+
+int manager::get_rpc_http_port() const
+{
+  return rhport_;
+}
+
+void manager::set_rpc_ws_port( int port )
+{
+  rwport_ = port;
+}
+
+int manager::get_rpc_ws_port() const
+{
+  return rwport_;
 }
 
 void manager::set_capture_file( const std::string& cap_file )
@@ -227,11 +247,11 @@ bool manager::init()
   }
 
   // add rpc_client connection to net_loop and initialize
-  hconn_.set_port( PC_RPC_HTTP_PORT );
+  hconn_.set_port( rhport_ );
   hconn_.set_host( rhost_ );
   hconn_.set_net_loop( &nl_ );
   clnt_.set_http_conn( &hconn_ );
-  wconn_.set_port( PC_RPC_WEBSOCKET_PORT );
+  wconn_.set_port( rwport_ );
   wconn_.set_host( rhost_ );
   wconn_.set_net_loop( &nl_ );
   clnt_.set_ws_conn( &wconn_ );

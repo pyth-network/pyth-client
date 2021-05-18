@@ -1059,6 +1059,7 @@ bool ws_connect::init()
   http_request msg;
   msg.init( "GET", "/" );
   msg.add_hdr( "Connection", "Upgrade" );
+  msg.add_hdr( "Upgrade", "websocket" );
   msg.add_hdr( "Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ==" );
   msg.add_hdr( "Sec-WebSocket-Version", "13" );
   msg.commit();
