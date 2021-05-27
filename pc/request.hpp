@@ -341,7 +341,6 @@ namespace pc
     rpc::signature_subscribe sig_[1];
   };
 
-
   // add new price publisher to symbol account
   class add_publisher : public request,
                         public rpc_sub_i<rpc::signature_subscribe>,
@@ -404,6 +403,113 @@ namespace pc
     rpc::del_publisher       req_[1];
     rpc::signature_subscribe sig_[1];
   };
+
+  // initialize parameter account
+  class init_prm : public request,
+                   public rpc_sub_i<rpc::create_account>,
+                   public rpc_sub_i<rpc::init_prm>,
+                   public rpc_sub_i<rpc::upd_prm>,
+                   public rpc_sub_i<rpc::get_account_info>,
+                   public rpc_sub_i<rpc::signature_subscribe>
+  {
+  public:
+    init_prm();
+    void set_lamports( uint64_t );
+    bool get_is_done() const override;
+
+  public:
+    void submit() override;
+    void on_response( rpc::create_account * ) override;
+    void on_response( rpc::init_prm * ) override;
+    void on_response( rpc::upd_prm * ) override;
+    void on_response( rpc::get_account_info * ) override;
+    void on_response( rpc::signature_subscribe * ) override;
+
+  protected:
+    typedef enum {
+      e_create_sent, e_create_sig,
+      e_init_sent, e_init_sig,
+      e_get_prm, e_pend_prm, e_upd_sent, e_done, e_error
+    } state_t;
+
+    void upd_norm( uint32_t );
+
+    state_t                  st_;
+    uint64_t                 slot_;
+    rpc::create_account      creq_[1];
+    rpc::init_prm            ireq_[1];
+    rpc::upd_prm             ureq_[1];
+    rpc::get_account_info    areq_[1];
+    rpc::signature_subscribe sig_[1];
+  };
+
+  // update parameter account (if init_prm failed)
+  class upd_prm : public init_prm
+  {
+  public:
+    void submit() override;
+  };
+
+  // initialize test account
+  class init_test : public request,
+                    public rpc_sub_i<rpc::create_account>,
+                    public rpc_sub_i<rpc::init_test>,
+                    public rpc_sub_i<rpc::signature_subscribe>
+  {
+  public:
+    init_test();
+    void set_lamports( uint64_t );
+    bool get_is_done() const override;
+    key_pair *get_account();
+
+  public:
+    void submit() override;
+    void on_response( rpc::create_account * ) override;
+    void on_response( rpc::init_test * ) override;
+    void on_response( rpc::signature_subscribe * ) override;
+
+  private:
+    typedef enum {
+      e_create_sent, e_create_sig,
+      e_init_sent, e_init_sig, e_done, e_error
+    } state_t;
+
+    state_t                  st_;
+    key_pair                 tkey_;
+    rpc::create_account      creq_[1];
+    rpc::init_test           ireq_[1];
+    rpc::signature_subscribe sig_[1];
+  };
+
+  // run aggregate price test
+  class upd_test : public request,
+                   public rpc_sub_i<rpc::upd_test>,
+                   public rpc_sub_i<rpc::account_subscribe>
+  {
+  public:
+    void set_test_key( const std::string& );
+    bool init_from_file( const std::string& );
+    bool get_is_done() const override;
+
+  public:
+
+    void submit() override;
+    void on_response( rpc::upd_test * ) override;
+    void on_response( rpc::account_subscribe * ) override;
+
+  private:
+    typedef enum {
+      e_upd_sent, e_upd_sig, e_get_sent, e_done, e_error
+    } state_t;
+
+    state_t                  st_;
+    pub_key                  tpub_;
+    key_pair                 tkey_;
+    rpc::create_account      creq_[1];
+    rpc::upd_test            ureq_[1];
+    rpc::account_subscribe   areq_[1];
+  };
+
 
   // transfer SOL from publisher to other account
   class transfer : public request,
@@ -588,6 +694,7 @@ namespace pc
     uint64_t      get_conf() const;
     symbol_status get_status() const;
     uint64_t      get_lamports() const;
+    int64_t       get_deriv( deriv_type ) const;
 
     // get publishers
     unsigned get_num_publisher() const;
@@ -631,6 +738,7 @@ namespace pc
     void init_subscribe( pc_price_t * );
     void init_price( pc_price_t * );
     void log_update( const char *title );
+    void update_pub();
     bool update( int64_t price, uint64_t conf, symbol_status, bool aggr );
 
     bool                   init_;
@@ -646,9 +754,9 @@ namespace pc
     uint64_t               valid_slot_;
     uint64_t               pub_slot_;
     uint64_t               lamports_;
+    int64_t                dpx_[PC_DERIV_SIZE];
     int32_t                aexpo_;
     uint32_t               cnum_;
-    pub_key               *pkey_;
     product               *prod_;
     price_sched            sched_;
     pc_pub_key_t           cpub_[PC_COMP_SIZE];

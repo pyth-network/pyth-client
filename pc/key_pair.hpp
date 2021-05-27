@@ -72,6 +72,18 @@ namespace pc
     uint8_t pk_[len];
   };
 
+  // opaque ssl key handle
+  class key_cache
+  {
+  public:
+    key_cache();
+    ~key_cache();
+    void set( const key_pair& );
+    void *get() const;
+  private:
+    void *ptr_;
+  };
+
   // digital signature
   class signature
   {
@@ -90,6 +102,8 @@ namespace pc
     // sign message given key_pair
     bool sign( const uint8_t* msg, uint32_t msg_len,
                const key_pair& );
+    bool sign( const uint8_t* msg, uint32_t msg_len,
+               const key_cache& );
 
     // verify message given public key
     bool verify( const uint8_t* msg, uint32_t msg_len,

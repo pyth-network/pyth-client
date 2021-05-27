@@ -283,9 +283,9 @@ void tx_svr::on_response( rpc::get_slot_leaders *m )
 void tx_svr::on_response( rpc::get_health *m )
 {
   if ( m->get_is_err() ) {
-    set_err_msg( "failed to get_health"
-        + m->get_err_msg()  + "]" );
-    return;
+    PC_LOG_WRN( "get_health error" )
+      .add( "emsg", m->get_err_msg() )
+      .end();
   }
   PC_LOG_DBG( "health update" ).end();
 }

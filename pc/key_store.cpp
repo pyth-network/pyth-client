@@ -41,7 +41,9 @@ key_store::key_store()
   has_mkey_( false ),
   has_mpub_( false ),
   has_gkey_( false ),
-  has_gpub_( false )
+  has_gpub_( false ),
+  has_akey_( false ),
+  has_apub_( false )
 {
 }
 
@@ -126,6 +128,16 @@ std::string key_store::get_program_pub_key_file() const
   return dir_ + "program_key.json";
 }
 
+std::string key_store::get_param_key_pair_file() const
+{
+  return dir_ + "param_key_pair.json";
+}
+
+std::string key_store::get_param_pub_key_file() const
+{
+  return dir_ + "param_key.json";
+}
+
 key_pair *key_store::create_publish_key_pair()
 {
   pkey_.gen();
@@ -146,8 +158,18 @@ key_pair *key_store::get_publish_key_pair()
     return nullptr;
   }
   has_pkey_ = true;
+  ckey_.set( pkey_ );
   pkey_.get_pub_key( ppub_ );
   return &pkey_;
+}
+
+key_cache *key_store::get_publish_key_cache()
+{
+  if ( get_publish_key_pair() ) {
+    return &ckey_;
+  } else {
+    return nullptr;
+  }
 }
 
 pub_key *key_store::get_publish_pub_key()
@@ -241,6 +263,47 @@ pub_key *key_store::get_program_pub_key()
   }
   has_gpub_ = true;
   return &gpub_;
+}
+
+key_pair *key_store::create_param_key_pair()
+{
+  akey_.gen();
+  if ( !write_key_file( get_param_key_pair_file(), akey_ ) ) {
+    return nullptr;
+  }
+  akey_.get_pub_key( apub_ );
+  has_akey_ = true;
+  has_apub_ = true;
+  return &akey_;
+}
+
+key_pair *key_store::get_param_key_pair()
+{
+  if ( has_akey_ ) {
+    return &akey_;
+  }
+  if ( !akey_.init_from_file( get_param_key_pair_file() ) ) {
+    return nullptr;
+  }
+  akey_.get_pub_key( apub_ );
+  has_akey_ = true;
+  has_apub_ = true;
+  return &akey_;
+}
+
+pub_key *key_store::get_param_pub_key()
+{
+  if ( has_apub_ ) {
+    return &apub_;
+  }
+  if ( get_param_key_pair() ) {
+    return &apub_;
+  }
+  if ( !apub_.init_from_file( get_param_pub_key_file() ) ) {
+    return nullptr;
+  }
+  has_apub_ = true;
+  return &apub_;
 }
 
 bool key_store::create_account_key_pair( key_pair& res )

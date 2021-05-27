@@ -16,12 +16,14 @@ KENV=$1
 KDIR=$2
 case $KENV in
   devnet)
-    MAP_KEY=ArppEFcsybCLE8CRtQJLQ9tLv2peGmQoKWFuiUWm4KBP
-    PGM_KEY=5mkqGkkWSaSk2NL9p4XptwEQu4d5jFTJiurbbzdqYexF
+    MAP_KEY=BmA9Z6FjioHJPpjT39QazZyhDRUdZy2ezwx4GiDdE2u2
+    PGM_KEY=gSbePebfvPy7tRqimPoVecS2UsBvYv46ynrzWocc92s
+    PRM_KEY=AB6Br1PgMUiyy5tnTeBWwoqsZY3A5hxkpqa2TK8aNv6w
     ;;
   pythnet)
-    MAP_KEY=CpmU3oZqTWtPoFatbgpQAJNhmTq816Edp1xZpZAQiTUv
-    PGM_KEY=FKVZxSxY4WnwLTgQQmzMoBF87hpsT2K4BPcMcT9u1YGD
+    MAP_KEY=Fy4NhY7n3yoWHZmVdEwsjjRt6tbHUgPpJ2j22ABVUy4B
+    PGM_KEY=E7g6dJUeKaWJTyYPxKXcaLJhzkkLaK3NwPKNyzLfZSnP
+    PRM_KEY=BcgWPzHix9F3GsSkbhx4aAxZ3aXPZCQCamxYQCUWeYto
     ;;
   *)
     echo "Unknown environment. Please use: devnet, pythnet"
@@ -41,3 +43,5 @@ echo $PGM_KEY > $KDIR/program_key.json
 check "chmod 0400 $KDIR/program_key.json"
 echo $MAP_KEY > $KDIR/mapping_key.json
 check "chmod 0400 $KDIR/mapping_key.json"
+echo $PRM_KEY > $KDIR/param_key.json
+check "chmod 0400 $KDIR/param_key.json"

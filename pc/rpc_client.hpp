@@ -27,13 +27,25 @@ namespace pc
   {
     e_unknown = PC_PTYPE_UNKNOWN,
     e_price   = PC_PTYPE_PRICE,
-    e_twap    = PC_PTYPE_TWAP,
 
     e_last_price_type
   };
 
   price_type str_to_price_type( str );
   str price_type_to_str( price_type );
+
+  // type of derived (from price) calculation
+  enum class deriv_type
+  {
+    e_unknown    = PC_DTYPE_UNKNOWN,
+    e_twap       = PC_DTYPE_TWAP,
+    e_volatility = PC_DTYPE_VOLATILITY,
+
+    e_last_deriv_type
+  };
+
+  deriv_type str_to_deriv_type( str );
+  str deriv_type_to_str( deriv_type );
 
   // current symbol trading status
   enum class symbol_status
@@ -715,6 +727,115 @@ namespace pc
       signature  sig_;
     };
 
+    // initialize parameter account
+    class init_prm : public rpc_request
+    {
+    public:
+      // parameters
+      void set_block_hash( hash * );
+      void set_publish( key_pair * );
+      void set_param( key_pair * );
+      void set_program( pub_key * );
+
+      // results
+      signature *get_signature();
+
+      void request( json_wtr& ) override;
+      void response( const jtree& ) override;
+
+    private:
+      hash     *bhash_;
+      key_pair *pkey_;
+      key_pair *akey_;
+      pub_key  *gkey_;
+      signature sig_;
+    };
+
+    // update portion parameter account
+    class upd_prm : public rpc_request
+    {
+    public:
+      // parameters
+      void set_block_hash( hash * );
+      void set_publish( key_pair * );
+      void set_param( key_pair * );
+      void set_program( pub_key * );
+      void set_from( uint32_t );
+      void set_num( uint32_t );
+      void set_norm( uint32_t i, uint64_t nvalue );
+
+      // results
+      signature *get_signature();
+
+      void request( json_wtr& ) override;
+      void response( const jtree& ) override;
+
+    private:
+      hash     *bhash_;
+      key_pair *pkey_;
+      key_pair *akey_;
+      pub_key  *gkey_;
+      signature sig_;
+      uint32_t  from_;
+      uint32_t  num_;
+      uint64_t  norm_[PC_NORMAL_UPDATE];
+    };
+
+    // initialize test account
+    class init_test : public rpc_request
+    {
+    public:
+      // parameters
+      void set_block_hash( hash * );
+      void set_publish( key_pair * );
+      void set_account( key_pair * );
+      void set_program( pub_key * );
+
+      // results
+      signature *get_signature();
+
+      void request( json_wtr& ) override;
+      void response( const jtree& ) override;
+
+    private:
+      hash     *bhash_;
+      key_pair *pkey_;
+      key_pair *akey_;
+      pub_key  *gkey_;
+      signature sig_;
+    };
+
+    // run aggregate compte test
+    class upd_test : public rpc_request
+    {
+    public:
+      // parameters
+      upd_test();
+      void set_block_hash( hash * );
+      void set_publish( key_pair * );
+      void set_param( pub_key * );
+      void set_account( key_pair * );
+      void set_program( pub_key * );
+      void set_expo( int );
+      void set_slot_diff( int64_t );
+      void set_price( unsigned i, int64_t px, uint64_t conf );
+
+      // results
+      signature *get_signature();
+
+      void request( json_wtr& ) override;
+      void response( const jtree& ) override;
+
+    private:
+      hash     *bhash_;
+      key_pair *pkey_;
+      pub_key  *akey_;
+      key_pair *tkey_;
+      pub_key  *gkey_;
+      signature sig_;
+      cmd_upd_test_t upd_[1];
+    };
+
     // set new component price
     class upd_price : public tx_request
     {
@@ -722,7 +843,9 @@ namespace pc
       upd_price();
       void set_symbol_status( symbol_status );
       void set_publish( key_pair * );
+      void set_pubcache( key_cache * );
       void set_account( pub_key * );
+      void set_params( pub_key * );
       void set_program( pub_key * );
       void set_block_hash( hash * );
       void set_price( int64_t px, uint64_t conf, symbol_status,
@@ -732,8 +855,10 @@ namespace pc
     private:
       hash         *bhash_;
       key_pair     *pkey_;
+      key_cache    *ckey_;
       pub_key      *gkey_;
       pub_key      *akey_;
+      pub_key      *rkey_;
       int64_t       price_;
       uint64_t      conf_;
       uint64_t      pub_slot_;;

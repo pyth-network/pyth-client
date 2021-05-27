@@ -30,6 +30,7 @@ namespace pc
 
     // sign message at position sig for message starting at position msg
     void sign( size_t sig, size_t msg, const key_pair& );
+    void sign( size_t sig, size_t msg, const key_cache& );
 
     // add values to buffer
     void add( uint8_t );
@@ -188,6 +189,12 @@ namespace pc
   }
 
   inline void bincode::sign( size_t sig, size_t msg, const key_pair& kp )
+  {
+    signature *sptr = (signature*)&buf_[sig];
+    sptr->sign( (const uint8_t*)&buf_[msg], idx_ - msg, kp );
+  }
+
+  inline void bincode::sign( size_t sig, size_t msg, const key_cache& kp )
   {
     signature *sptr = (signature*)&buf_[sig];
     sptr->sign( (const uint8_t*)&buf_[msg], idx_ - msg, kp );

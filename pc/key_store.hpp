@@ -29,10 +29,13 @@ namespace pc
     std::string get_mapping_pub_key_file() const;
     std::string get_program_key_pair_file() const;
     std::string get_program_pub_key_file() const;
+    std::string get_param_key_pair_file() const;
+    std::string get_param_pub_key_file() const;
 
     // primary publishing and funding key
     key_pair *create_publish_key_pair();
     key_pair *get_publish_key_pair();
+    key_cache*get_publish_key_cache();
     pub_key  *get_publish_pub_key();
 
     // get mapping key_pair or public key
@@ -45,6 +48,11 @@ namespace pc
     key_pair *get_program_key_pair();
     pub_key  *get_program_pub_key();
 
+    // get parameter account key_pair or public key
+    key_pair *create_param_key_pair();
+    key_pair *get_param_key_pair();
+    pub_key  *get_param_pub_key();
+
     // create new mapping or symbol account
     bool create_account_key_pair( key_pair& );
     bool get_account_key_pair( const pub_key&, key_pair& );
@@ -56,12 +64,17 @@ namespace pc
     bool        has_mpub_;
     bool        has_gkey_;
     bool        has_gpub_;
+    bool        has_akey_;
+    bool        has_apub_;
     key_pair    pkey_; // primary publishing and funding key
     key_pair    mkey_; // mapping account key
     key_pair    gkey_; // program key pair
+    key_pair    akey_; // parameter account key pair
+    key_cache   ckey_; // publishing cache key
     pub_key     ppub_; // publisher public key
     pub_key     mpub_; // mapping account public key
     pub_key     gpub_; // program id
+    pub_key     apub_; // parameter account public key
     std::string dir_;  // key store directory
   };
 

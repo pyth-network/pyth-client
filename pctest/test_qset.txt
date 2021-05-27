@@ -1,0 +1,5 @@
+{"exponent":-9,"price":15000000000,"conf":5102631700}
+{"exponent":-9,"price":55000000000,"conf":44924643000}
+{"exponent":-9,"price":13999999900,"conf":3570739900}
+{"exponent":-9,"price":218376961000,"conf":68736064000}
+{"exponent":2,"price":250000003,"conf":249580880}

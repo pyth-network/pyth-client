@@ -248,6 +248,10 @@ bool manager::init()
   if ( gpub ) {
     PC_LOG_INF( "program_key" ).add( "key_name", *gpub ).end();
   }
+  pub_key *rkey = get_param_pub_key();
+  if ( rkey ) {
+    PC_LOG_INF( "param_key" ).add( "key_name", *rkey ).end();
+  }
 
   // initialize capture
   if ( do_cap_ && !cap_.init() ) {

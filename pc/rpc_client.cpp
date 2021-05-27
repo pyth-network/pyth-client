@@ -1801,6 +1801,393 @@ void rpc::del_publisher::response( const jtree& jt )
 }
 
 ///////////////////////////////////////////////////////////////////////////
+// init_prm
+
+void rpc::init_prm::set_block_hash( hash* bhash )
+{
+  bhash_ = bhash;
+}
+
+void rpc::init_prm::set_publish( key_pair *kp )
+{
+  pkey_ = kp;
+}
+
+void rpc::init_prm::set_param( key_pair *kp )
+{
+  akey_ = kp;
+}
+
+void rpc::init_prm::set_program( pub_key *gkey )
+{
+  gkey_ = gkey;
+}
+
+signature *rpc::init_prm::get_signature()
+{
+  return &sig_;
+}
+
+void rpc::init_prm::request( json_wtr& msg )
+{
+  // construct binary transaction
+  net_buf *bptr = net_buf::alloc();
+  bincode tx( bptr->buf_ );
+
+  // signatures section
+  tx.add_len<2>();      // two signatures (funding and account)
+  size_t pub_idx = tx.reserve_sign();
+  size_t prm_idx = tx.reserve_sign();
+
+  // message header
+  size_t tx_idx = tx.get_pos();
+  tx.add( (uint8_t)2 ); // funding and param account are signing accounts
+  tx.add( (uint8_t)0 ); // read-only signed accounts
+  tx.add( (uint8_t)1 ); // program-id are read-only unsigned accounts
+
+  // accounts
+  tx.add_len<3>();      // 3 accounts: publish, prmping, program
+  tx.add( *pkey_ );     // publish account
+  tx.add( *akey_ );     // param account
+  tx.add( *gkey_ );     // programid
+
+  // recent block hash
+  tx.add( *bhash_ );     // recent block hash
+
+  // instructions section
+  tx.add_len<1>();      // one instruction
+  tx.add( (uint8_t)2);  // program_id index
+  tx.add_len<2>();      // 2 accounts: publish and param
+  tx.add( (uint8_t)0 ); // index of publish account
+  tx.add( (uint8_t)1 ); // index of param account
+
+  // instruction parameter section
+  tx.add_len<sizeof(cmd_hdr)>();     // size of data array
+  tx.add( (uint32_t)PC_VERSION );
+  tx.add( (uint32_t)e_cmd_init_prm );
+
+  // both publish and param sign message
+  tx.sign( pub_idx, tx_idx, *pkey_ );
+  sig_.init_from_buf( (const uint8_t*)(tx.get_buf() + pub_idx) );
+  tx.sign( prm_idx, tx_idx, *akey_ );
+
+  // encode transaction and add to json params
+  send_transaction( msg, tx );
+  bptr->dealloc();
+}
+
+void rpc::init_prm::response( const jtree& jt )
+{
+  if ( on_error( jt, this ) ) return;
+  on_response( this );
+}
+
+///////////////////////////////////////////////////////////////////////////
+// upd_prm
+
+void rpc::upd_prm::set_block_hash( hash* bhash )
+{
+  bhash_ = bhash;
+}
+
+void rpc::upd_prm::set_publish( key_pair *kp )
+{
+  pkey_ = kp;
+}
+
+void rpc::upd_prm::set_param( key_pair *kp )
+{
+  akey_ = kp;
+}
+
+void rpc::upd_prm::set_program( pub_key *gkey )
+{
+  gkey_ = gkey;
+}
+
+void rpc::upd_prm::set_from( uint32_t from )
+{
+  from_ = from;
+}
+
+void rpc::upd_prm::set_num( uint32_t num )
+{
+  num_ = num;
+}
+
+void rpc::upd_prm::set_norm( uint32_t i, uint64_t nvalue )
+{
+  norm_[i] = nvalue;
+}
+
+signature *rpc::upd_prm::get_signature()
+{
+  return &sig_;
+}
+
+void rpc::upd_prm::request( json_wtr& msg )
+{
+  // construct binary transaction
+  net_buf *bptr = net_buf::alloc();
+  bincode tx( bptr->buf_ );
+
+  // signatures section
+  tx.add_len<2>();      // two signatures (funding and account)
+  size_t pub_idx = tx.reserve_sign();
+  size_t prm_idx = tx.reserve_sign();
+
+  // message header
+  size_t tx_idx = tx.get_pos();
+  tx.add( (uint8_t)2 ); // funding and param account are signing accounts
+  tx.add( (uint8_t)0 ); // read-only signed accounts
+  tx.add( (uint8_t)1 ); // program-id are read-only unsigned accounts
+
+  // accounts
+  tx.add_len<3>();      // 3 accounts: publish, prmping, program
+  tx.add( *pkey_ );     // publish account
+  tx.add( *akey_ );     // param account
+  tx.add( *gkey_ );     // programid
+
+  // recent block hash
+  tx.add( *bhash_ );     // recent block hash
+
+  // instructions section
+  tx.add_len<1>();      // one instruction
+  tx.add( (uint8_t)2);  // program_id index
+  tx.add_len<2>();      // 2 accounts: publish and param
+  tx.add( (uint8_t)0 ); // index of publish account
+  tx.add( (uint8_t)1 ); // index of param account
+
+  // instruction parameter section
+  tx.add_len<sizeof(cmd_upd_prm)>();     // size of data array
+  tx.add( (uint32_t)PC_VERSION );
+  tx.add( (uint32_t)e_cmd_upd_prm );
+  tx.add( (uint32_t)from_ );
+  tx.add( (uint32_t)num_ );
+  for( uint32_t i=0; i != PC_NORMAL_UPDATE; ++i ) {
+    tx.add( (uint64_t)norm_[i] );
+  }
+
+  // both publish and param sign message
+  tx.sign( pub_idx, tx_idx, *pkey_ );
+  sig_.init_from_buf( (const uint8_t*)(tx.get_buf() + pub_idx) );
+  tx.sign( prm_idx, tx_idx, *akey_ );
+
+  // encode transaction and add to json params
+  send_transaction( msg, tx );
+  bptr->dealloc();
+}
+
+void rpc::upd_prm::response( const jtree& jt )
+{
+  if ( on_error( jt, this ) ) return;
+  on_response( this );
+}
+
+///////////////////////////////////////////////////////////////////////////
+// init_test
+
+void rpc::init_test::set_block_hash( hash* bhash )
+{
+  bhash_ = bhash;
+}
+
+void rpc::init_test::set_publish( key_pair *kp )
+{
+  pkey_ = kp;
+}
+
+void rpc::init_test::set_account( key_pair *kp )
+{
+  akey_ = kp;
+}
+
+void rpc::init_test::set_program( pub_key *gkey )
+{
+  gkey_ = gkey;
+}
+
+signature *rpc::init_test::get_signature()
+{
+  return &sig_;
+}
+
+void rpc::init_test::request( json_wtr& msg )
+{
+  // construct binary transaction
+  net_buf *bptr = net_buf::alloc();
+  bincode tx( bptr->buf_ );
+
+  // signatures section
+  tx.add_len<2>();      // two signatures (funding and account)
+  size_t pub_idx = tx.reserve_sign();
+  size_t prm_idx = tx.reserve_sign();
+
+  // message header
+  size_t tx_idx = tx.get_pos();
+  tx.add( (uint8_t)2 ); // funding and test account are signing accounts
+  tx.add( (uint8_t)0 ); // read-only signed accounts
+  tx.add( (uint8_t)1 ); // program-id are read-only unsigned accounts
+
+  // accounts
+  tx.add_len<3>();      // 3 accounts: publish, test, program
+  tx.add( *pkey_ );     // publish account
+  tx.add( *akey_ );     // test account
+  tx.add( *gkey_ );     // programid
+
+  // recent block hash
+  tx.add( *bhash_ );     // recent block hash
+
+  // instructions section
+  tx.add_len<1>();      // one instruction
+  tx.add( (uint8_t)2);  // program_id index
+  tx.add_len<2>();      // 2 accounts: publish and test
+  tx.add( (uint8_t)0 ); // index of publish account
+  tx.add( (uint8_t)1 ); // index of param account
+
+  // instruction parameter section
+  tx.add_len<sizeof(cmd_hdr)>();     // size of data array
+  tx.add( (uint32_t)PC_VERSION );
+  tx.add( (uint32_t)e_cmd_init_test );
+
+  // both publish and param sign message
+  tx.sign( pub_idx, tx_idx, *pkey_ );
+  sig_.init_from_buf( (const uint8_t*)(tx.get_buf() + pub_idx) );
+  tx.sign( prm_idx, tx_idx, *akey_ );
+
+  // encode transaction and add to json params
+  send_transaction( msg, tx );
+  bptr->dealloc();
+}
+
+void rpc::init_test::response( const jtree& jt )
+{
+  if ( on_error( jt, this ) ) return;
+  on_response( this );
+}
+
+///////////////////////////////////////////////////////////////////////////
+// upd_test
+
+rpc::upd_test::upd_test()
+{
+  __builtin_memset( upd_, 0, sizeof( upd_ ) );
+  upd_->ver_ = PC_VERSION;
+  upd_->cmd_ = e_cmd_upd_test;
+}
+
+void rpc::upd_test::set_block_hash( hash *bhash )
+{
+  bhash_ = bhash;
+}
+
+void rpc::upd_test::set_publish( key_pair *pkey )
+{
+  pkey_ = pkey;
+}
+
+void rpc::upd_test::set_param( pub_key *akey )
+{
+  akey_ = akey;
+}
+
+void rpc::upd_test::set_account( key_pair *tkey )
+{
+  tkey_ = tkey;
+}
+
+void rpc::upd_test::set_program( pub_key *gkey )
+{
+  gkey_ = gkey;
+}
+
+void rpc::upd_test::set_expo( int expo )
+{
+  upd_->expo_ = expo;
+}
+
+void rpc::upd_test::set_slot_diff( int64_t slot_diff )
+{
+  upd_->slot_diff_ = slot_diff;
+}
+
+void rpc::upd_test::set_price( unsigned i, int64_t px, uint64_t conf )
+{
+  upd_->price_[i] = px;
+  upd_->conf_[i] = conf;
+  upd_->num_ = i+1;
+}
+
+signature *rpc::upd_test::get_signature()
+{
+  return &sig_;
+}
+
+void rpc::upd_test::request( json_wtr& msg )
+{
+  // construct binary transaction
+  net_buf *bptr = net_buf::alloc();
+  bincode tx( bptr->buf_ );
+
+  // signatures section
+  tx.add_len<2>();      // two signatures (funding and account)
+  size_t pub_idx = tx.reserve_sign();
+  size_t tst_idx = tx.reserve_sign();
+
+  // message header
+  size_t tx_idx = tx.get_pos();
+  tx.add( (uint8_t)2 ); // funding, test are signing accounts
+  tx.add( (uint8_t)0 ); // read-only signed accounts
+  tx.add( (uint8_t)2 ); // param and program are read-only unsigned accounts
+
+  // accounts
+  tx.add_len<4>();      // 4 accounts: publish, test, param and program
+  tx.add( *pkey_ );     // publish account
+  tx.add( *tkey_ );     // test account
+  tx.add( *akey_ );     // param account
+  tx.add( *gkey_ );     // programid
+
+  // recent block hash
+  tx.add( *bhash_ );     // recent block hash
+
+  // instructions section
+  tx.add_len<1>();      // one instruction
+  tx.add( (uint8_t)3);  // program_id index
+  tx.add_len<3>();      // 3 accounts: publish, test and param
+  tx.add( (uint8_t)0 ); // index of publish account
+  tx.add( (uint8_t)1 ); // index of test account
+  tx.add( (uint8_t)2 ); // index of param account
+
+  // instruction parameter section
+  tx.add_len<sizeof(cmd_upd_test)>();     // size of data array
+  tx.add( (const char*)upd_, sizeof( upd_ ) );
+
+  // both publish and param sign message
+  tx.sign( pub_idx, tx_idx, *pkey_ );
+  sig_.init_from_buf( (const uint8_t*)(tx.get_buf() + pub_idx) );
+  tx.sign( tst_idx, tx_idx, *tkey_ );
+
+  // encode transaction and add to json params
+  msg.add_key( "method", "sendTransaction" );
+  msg.add_key( "params", json_wtr::e_arr );
+  char buf[4096];
+  size_t buf_len = enc_base64( (const uint8_t*)tx.get_buf(),
+      tx.size(), (uint8_t*)buf );
+  msg.add_val( str( buf, buf_len ) );
+  msg.add_val( json_wtr::e_obj );
+  msg.add_key( "encoding", "base64" );
+  msg.pop();
+  msg.pop();
+  bptr->dealloc();
+}
+
+void rpc::upd_test::response( const jtree& jt )
+{
+  if ( on_error( jt, this ) ) return;
+  on_response( this );
+}
+
+///////////////////////////////////////////////////////////////////////////
 
 tx_request::~tx_request()
 {
@@ -1810,7 +2197,12 @@ tx_request::~tx_request()
 // upd_price
 
 rpc::upd_price::upd_price()
-: cmd_( e_cmd_upd_price )
+: pkey_( nullptr ),
+  ckey_( nullptr ),
+  gkey_( nullptr ),
+  akey_( nullptr ),
+  rkey_( nullptr ),
+  cmd_( e_cmd_upd_price )
 {
 }
 
@@ -1824,9 +2216,19 @@ void rpc::upd_price::set_publish( key_pair *pk )
   pkey_ = pk;
 }
 
+void rpc::upd_price::set_pubcache( key_cache *pk )
+{
+  ckey_ = pk;
+}
+
 void rpc::upd_price::set_account( pub_key *akey )
 {
   akey_ = akey;
+}
+
+void rpc::upd_price::set_params( pub_key *rkey )
+{
+  rkey_ = rkey;
 }
 
 void rpc::upd_price::set_program( pub_key *gkey )
@@ -1881,14 +2283,15 @@ void rpc::upd_price::build( net_wtr& wtr )
   size_t tx_idx = tx.get_pos();
   tx.add( (uint8_t)1 ); // pub is only signing account
   tx.add( (uint8_t)0 ); // read-only signed accounts
-  tx.add( (uint8_t)2 ); // sysvar and program-id are read-only
+  tx.add( (uint8_t)3 ); // params, sysvar and program-id are read-only
                         // unsigned accounts
 
   // accounts
-  tx.add_len<4>();      // 3 accounts: publish, symbol, sysvar, program
+  tx.add_len<5>();      // 5 accounts: publish, symbol, prm, sysvar, program
   tx.add( *pkey_ );     // publish account
   tx.add( *akey_ );     // symbol account
-  tx.add( *(pub_key*)sysvar_clock );
+  tx.add( *rkey_ );     // parameter account
+  tx.add( *(pub_key*)sysvar_clock ); // sysvar account
   tx.add( *gkey_ );     // programid
 
   // recent block hash
@@ -1896,11 +2299,12 @@ void rpc::upd_price::build( net_wtr& wtr )
 
   // instructions section
   tx.add_len<1>();      // one instruction
-  tx.add( (uint8_t)3);  // program_id index
-  tx.add_len<3>();      // 3 accounts: publish, symbol
+  tx.add( (uint8_t)4);  // program_id index
+  tx.add_len<4>();      // 4 accounts: publish, symbol, params, sysvar
   tx.add( (uint8_t)0 ); // index of publish account
   tx.add( (uint8_t)1 ); // index of symbol account
-  tx.add( (uint8_t)2 ); // index of sysvar account
+  tx.add( (uint8_t)2 ); // index of params account
+  tx.add( (uint8_t)3 ); // index of sysvar account
 
   // instruction parameter section
   tx.add_len<sizeof(cmd_upd_price)>();
@@ -1913,6 +2317,6 @@ void rpc::upd_price::build( net_wtr& wtr )
   tx.add( pub_slot_ );
 
   // all accounts need to sign transaction
-  tx.sign( pub_idx, tx_idx, *pkey_ );
+  tx.sign( pub_idx, tx_idx, *ckey_ );
   ((tx_wtr&)wtr).commit( tx );
 }

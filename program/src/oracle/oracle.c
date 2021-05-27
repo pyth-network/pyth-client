@@ -3,6 +3,9 @@
  */
 #include <solana_sdk.h>
 #include "oracle.h"
+#include "pd.h"
+
+static void *heap_start = (void*)PC_HEAP_START;
 
 static bool valid_funding_account( SolAccountInfo *ka )
 {
@@ -382,8 +385,166 @@ static uint64_t del_publisher( SolParameters *prm, SolAccountInfo *ka )
   return ERROR_INVALID_ARGUMENT;
 }
 
+static void init_prm_hdr( pc_prm_t *tptr )
+{
+  tptr->magic_ = PC_MAGIC;
+  tptr->ver_   = PC_VERSION;
+  tptr->type_  = PC_ACCTYPE_PARAMS;
+  tptr->size_  = sizeof( pc_prm_t );
+  uint64_t m = 1UL;
+  for( uint32_t i=0;i != PC_FACTOR_SIZE; ++i ) {
+    tptr->fact_[i] = m;
+    m *= 10UL;
+  }
+  pd_t val[1];
+  for( uint32_t i=0; i != PC_MAX_SEND_LATENCY; ++i ) {
+    pd_new( val, i+1, 0 );
+    pd_sqrt( val, val, tptr->fact_ );
+    pd_adjust( val, val, -9, tptr->fact_ );
+    tptr->cdecay_[i] = val->v_;
+  }
+}
+
+static uint64_t init_prm( SolParameters *prm, SolAccountInfo *ka )
+{
+  // Account (1) is the parameter account
+  // Verify that this is signed, writable with correct ownership
+  // and size
+  cmd_hdr_t *hdr = (cmd_hdr_t*)prm->data;
+  if ( prm->ka_num < 2 ||
+       !valid_funding_account( &ka[0] ) ||
+       !valid_signable_account( prm, &ka[1], sizeof( pc_prm_t ) ) ) {
+    return ERROR_INVALID_ARGUMENT;
+  }
+
+  // Check that the account has not already been initialized
+  pc_prm_t *tptr = (pc_prm_t*)ka[1].data;
+  if ( tptr->magic_ != 0 || tptr->ver_ != 0 ) {
+    return ERROR_INVALID_ARGUMENT;
+  }
+  init_prm_hdr( tptr );
+
+  // initialize account header and price factor table
+  return SUCCESS;
+}
+
+static uint64_t upd_prm( SolParameters *prm, SolAccountInfo *ka )
+{
+  // Account (1) is the parameter account
+  // Verify that this is signed, writable with correct ownership
+  // and size
+  if ( prm->ka_num < 2 ||
+       !valid_funding_account( &ka[0] ) ||
+       !valid_signable_account( prm, &ka[1], sizeof( pc_prm_t ) ) ) {
+    return ERROR_INVALID_ARGUMENT;
+  }
+
+  // validate command params and account header
+  cmd_upd_prm_t *cmd = (cmd_upd_prm_t*)prm->data;
+  pc_prm_t *pptr = (pc_prm_t*)ka[1].data;
+  if ( prm->data_len != sizeof( cmd_upd_prm_t ) ||
+       cmd->from_ >= PC_NORMAL_SIZE ||
+       cmd->from_+cmd->num_ > PC_NORMAL_SIZE ||
+       cmd->num_ > PC_NORMAL_UPDATE ||
+       pptr->magic_ != PC_MAGIC ||
+       pptr->ver_ != cmd->ver_ ||
+       pptr->type_ != PC_ACCTYPE_PARAMS ) {
+    return ERROR_INVALID_ARGUMENT;
+  }
+
+  // update params
+  uint32_t idx = cmd->from_;
+  for( uint32_t i = 0; i != cmd->num_; ++i, ++idx ) {
+    pptr->norm_[idx] = cmd->norm_[i];
+  }
+
+  return SUCCESS;
+}
+
+static uint64_t init_test( SolParameters *prm, SolAccountInfo *ka )
+{
+  // Account (1) is the test account
+  // Verify that this is signed, writable with correct ownership
+  // and size
+  cmd_hdr_t *hdr = (cmd_hdr_t*)prm->data;
+  if ( prm->ka_num < 2 ||
+       !valid_funding_account( &ka[0] ) ||
+       !valid_signable_account( prm, &ka[1], sizeof( pc_test_t ) ) ) {
+    return ERROR_INVALID_ARGUMENT;
+  }
+
+  // Check that the account has not already been initialized
+  pc_test_t *tptr = (pc_test_t*)ka[1].data;
+  if ( tptr->magic_ != 0 || tptr->ver_ != 0 ) {
+    return ERROR_INVALID_ARGUMENT;
+  }
+
+  // initialize account header and price factor table
+  sol_memset( tptr, 0, sizeof( pc_test_t ) );
+  tptr->magic_ = PC_MAGIC;
+  tptr->ver_   = hdr->ver_;
+  tptr->type_  = PC_ACCTYPE_TEST;
+  tptr->size_  = sizeof( pc_test_t );
+  return SUCCESS;
+}
+
+static uint64_t upd_test( SolParameters *prm, SolAccountInfo *ka )
+{
+  // Account (1) is the test account
+  // Account (2) is the parameter account
+  // Verify that this is signed, writable with correct ownership
+  // and size
+  if ( prm->ka_num < 3 ||
+       !valid_funding_account( &ka[0] ) ||
+       !valid_signable_account( prm, &ka[1], sizeof( pc_test_t ) ) ||
+       !valid_readable_account( prm, &ka[2], sizeof( pc_prm_t ) ) ) {
+    return ERROR_INVALID_ARGUMENT;
+  }
+
+  // validate command params and account headers
+  cmd_upd_test_t *cmd = (cmd_upd_test_t*)prm->data;
+  pc_test_t *tptr = (pc_test_t*)ka[1].data;
+  pc_prm_t *pptr = (pc_prm_t*)ka[2].data;
+  if ( prm->data_len != sizeof( cmd_upd_test_t ) ||
+       pptr->magic_ != PC_MAGIC ||
+       pptr->ver_ != cmd->ver_ ||
+       pptr->type_ != PC_ACCTYPE_PARAMS ||
+       tptr->magic_ != PC_MAGIC ||
+       tptr->ver_ != cmd->ver_ ||
+       tptr->type_ != PC_ACCTYPE_TEST ) {
+    return ERROR_INVALID_ARGUMENT;
+  }
+
+  // compute aggregate price using heap for temporary storage
+  pc_qs_t *qs = (pc_qs_t*)heap_start;
+  pc_qs_new( qs, pptr );
+  int64_t slot_diff = cmd->slot_diff_;
+  for( uint32_t i =0; i != cmd->num_; ++i ) {
+    pd_t m[1], s[1], t[1];
+    pd_new( m, cmd->price_[i], cmd->expo_ );
+    pd_new( s, cmd->conf_[i], cmd->expo_ );
+    // scale uncertainty by sqrt of slot age
+    pd_new( t, pptr->cdecay_[slot_diff>0?slot_diff-1:0], -9 );
+    pd_mul( s, s, t );
+    pc_qs_add( qs, m, s );
+  }
+  pc_qs_calc( qs );
+
+  // update account with results
+  int expo = qs->m_->e_ < qs->s_->e_ ? qs->m_->e_ : qs->s_->e_;
+  if ( expo <= 0 ) expo = -9;
+  pd_adjust( qs->m_, qs->m_, expo, pptr->fact_ );
+  pd_adjust( qs->s_, qs->s_, expo, pptr->fact_ );
+  tptr->expo_  = expo;
+  tptr->price_ = qs->m_->v_;
+  tptr->conf_  = qs->s_->v_;
+
+  return SUCCESS;
+}
+
 // update aggregate price
 static void upd_aggregate( pc_price_t *ptr,
+                           pc_prm_t *prm,
                            pc_pub_key_t *kptr,
                            uint64_t slot )
 {
@@ -396,42 +557,40 @@ static void upd_aggregate( pc_price_t *ptr,
   ptr->valid_slot_ = ptr->curr_slot_; // valid slot-time of agg. price
   ptr->curr_slot_ = slot;             // new accumulating slot-time
   pc_pub_key_assign( &ptr->agg_pub_, kptr );
-  int32_t  numa = 0;
-  uint32_t aidx[PC_COMP_SIZE];
+
+  // compute aggregate price using heap for temporary storage
+  pc_qs_t *qs = (pc_qs_t*)heap_start;
+  pc_qs_new( qs, prm );
   for( uint32_t i=0; i != ptr->num_; ++i ) {
     pc_price_comp_t *iptr = &ptr->comp_[i];
     // copy contributing price to aggregate snapshot
     iptr->agg_ = iptr->latest_;
-    // add valid price to sorted permutation array
-    // if it is a recent valid price
+    // add quote to aggregate calc if in trading status, was published
+    // recently and has positive uncertainty
+    int64_t slot_diff = slot - iptr->agg_.pub_slot_;
     if ( iptr->agg_.status_ == PC_STATUS_TRADING &&
-         (slot - iptr->agg_.pub_slot_ ) <= PC_MAX_SEND_LATENCY ) {
-      int64_t ipx = iptr->agg_.price_;
-      uint32_t j = numa++;
-      for( ; j > 0 && ptr->comp_[aidx[j-1]].agg_.price_ > ipx; --j ) {
-        aidx[j] = aidx[j-1];
-      }
-      aidx[j] = i;
+         iptr->agg_.conf_ != 0UL &&
+         slot_diff <= PC_MAX_SEND_LATENCY ) {
+      pd_t m[1], s[1], t[1];
+      pd_new( m, iptr->agg_.price_, ptr->expo_ );
+      pd_new( s, iptr->agg_.conf_, ptr->expo_ );
+      // scale uncertainty by sqrt of slot age
+      pd_new( t, prm->cdecay_[slot_diff>0?slot_diff-1:0], -9 );
+      pd_mul( s, s, t );
+      pc_qs_add( qs, m, s );
     }
   }
   // check for zero contributors
-  if ( numa == 0 ) {
+  if ( qs->num_ == 0 ) {
     ptr->agg_.status_ = PC_STATUS_UNKNOWN;
     return;
   }
-
-  // pick median value
-  uint32_t midx  = numa/2;
-  pc_price_info_t *mptr = &ptr->comp_[aidx[midx]].agg_;
-  int64_t  apx = mptr->price_;
-  uint64_t acf = mptr->conf_;
-  if ( midx && numa%2==0 ) {
-    mptr = &ptr->comp_[aidx[midx-1]].agg_;
-    apx = ( apx + mptr->price_ ) / 2;
-    acf = ( acf + mptr->conf_ ) / 2;
-  }
-  ptr->agg_.price_  = apx;
-  ptr->agg_.conf_   = acf;
+  // compute and assign aggregate price
+  pc_qs_calc( qs );
+  pd_adjust( qs->m_, qs->m_, ptr->expo_, prm->fact_ );
+  pd_adjust( qs->s_, qs->s_, ptr->expo_, prm->fact_ );
+  ptr->agg_.price_  = qs->m_->v_;
+  ptr->agg_.conf_   = qs->s_->v_;
   ptr->agg_.status_ = PC_STATUS_TRADING;
 }
 
@@ -444,13 +603,14 @@ static uint64_t upd_price( SolParameters *prm, SolAccountInfo *ka )
   }
 
   // Account (1) is the price account
-  // Account (2) is the sysvar_clock account
-  // Verify that this is signed, writable with correct ownership
-  // and size
-  if ( prm->ka_num < 3 ||
+  // Account (2) is the parameter account
+  // Account (3) is the sysvar_clock account
+  // Verify that this is signed, writable with correct ownership and size
+  if ( prm->ka_num < 4 ||
        !valid_funding_account( &ka[0] ) ||
        !valid_writable_account( prm, &ka[1], sizeof( pc_price_t ) ) ||
-       !pc_pub_key_equal( (pc_pub_key_t*)ka[2].key,
+       !valid_readable_account( prm, &ka[2], sizeof( pc_prm_t ) ) ||
+       !pc_pub_key_equal( (pc_pub_key_t*)ka[3].key,
                           (pc_pub_key_t*)sysvar_clock ) ) {
     return ERROR_INVALID_ARGUMENT;
   }
@@ -461,6 +621,14 @@ static uint64_t upd_price( SolParameters *prm, SolAccountInfo *ka )
   if ( pptr->magic_ != PC_MAGIC ||
        pptr->ver_ != cptr->ver_ ||
        pptr->type_ != PC_ACCTYPE_PRICE ) {
+    return ERROR_INVALID_ARGUMENT;
+  }
+
+  // verify that this is a good parameter account
+  pc_prm_t *rptr = (pc_prm_t*)ka[2].data;
+  if ( rptr->magic_ != PC_MAGIC ||
+       rptr->ver_ != cptr->ver_ ||
+       rptr->type_ != PC_ACCTYPE_PARAMS ) {
     return ERROR_INVALID_ARGUMENT;
   }
 
@@ -479,7 +647,7 @@ static uint64_t upd_price( SolParameters *prm, SolAccountInfo *ka )
 
   // reject if this price corresponds to the same or earlier time
   pc_price_info_t *fptr = &pptr->comp_[i].latest_;
-  sysvar_clock_t *sptr = (sysvar_clock_t*)ka[2].data;
+  sysvar_clock_t *sptr = (sysvar_clock_t*)ka[3].data;
   if ( cptr->cmd_ == e_cmd_upd_price &&
        cptr->pub_slot_ < fptr->pub_slot_ ) {
     return ERROR_INVALID_ARGUMENT;
@@ -487,7 +655,7 @@ static uint64_t upd_price( SolParameters *prm, SolAccountInfo *ka )
 
   // update aggregate price as necessary
   if ( sptr->slot_ > pptr->curr_slot_ ) {
-    upd_aggregate( pptr, kptr, sptr->slot_ );
+    upd_aggregate( pptr, rptr, kptr, sptr->slot_ );
   }
 
   // update component price if required
@@ -500,70 +668,37 @@ static uint64_t upd_price( SolParameters *prm, SolAccountInfo *ka )
   return SUCCESS;
 }
 
-static uint64_t dispatch_1( SolParameters *prm, SolAccountInfo *ka )
-{
-  uint64_t res = ERROR_INVALID_ARGUMENT;
-  cmd_hdr_t *hdr = (cmd_hdr_t*)prm->data;
-  switch(hdr->cmd_) {
-    case e_cmd_upd_price:
-    case e_cmd_agg_price:{
-      res = upd_price( prm, ka );
-      break;
-    }
-    case e_cmd_init_mapping:{
-      res = init_mapping( prm, ka );
-      break;
-    }
-    case e_cmd_add_mapping:{
-      res = add_mapping( prm, ka );
-      break;
-    }
-    case e_cmd_add_product:{
-      res = add_product( prm, ka );
-      break;
-    }
-    case e_cmd_upd_product:{
-      res = upd_product( prm, ka );
-      break;
-    }
-    case e_cmd_add_price:{
-      res = add_price( prm, ka );
-      break;
-    }
-    case e_cmd_add_publisher:{
-      res = add_publisher( prm, ka );
-      break;
-    }
-    case e_cmd_del_publisher:{
-      res = del_publisher( prm, ka );
-      break;
-    }
-    case e_cmd_init_price:{
-      res = init_price( prm, ka );
-      break;
-    }
-    default: break;
-  }
-  return res;
-}
-
 static uint64_t dispatch( SolParameters *prm, SolAccountInfo *ka )
 {
   if (prm->data_len < sizeof(cmd_hdr_t) ) {
     return ERROR_INVALID_ARGUMENT;
   }
   cmd_hdr_t *hdr = (cmd_hdr_t*)prm->data;
-  uint64_t res = ERROR_INVALID_ARGUMENT;
-  switch( hdr->ver_ ) {
-    case PC_VERSION_1: res = dispatch_1( prm, ka ); break;
-    default: break;
+  if ( hdr->ver_ != PC_VERSION ) {
+    return ERROR_INVALID_ARGUMENT;
   }
-  return res;
+  switch(hdr->cmd_) {
+    case e_cmd_upd_price:
+    case e_cmd_agg_price:     return upd_price( prm, ka );
+    case e_cmd_init_mapping:  return init_mapping( prm, ka );
+    case e_cmd_add_mapping:   return add_mapping( prm, ka );
+    case e_cmd_add_product:   return add_product( prm, ka );
+    case e_cmd_upd_product:   return upd_product( prm, ka );
+    case e_cmd_add_price:     return add_price( prm, ka );
+    case e_cmd_add_publisher: return add_publisher( prm, ka );
+    case e_cmd_del_publisher: return del_publisher( prm, ka );
+    case e_cmd_init_price:    return init_price( prm, ka );
+    case e_cmd_init_prm:      return init_prm( prm, ka );
+    case e_cmd_upd_prm:       return upd_prm( prm, ka );
+    case e_cmd_init_test:     return init_test( prm, ka );
+    case e_cmd_upd_test:      return upd_test( prm, ka );
+    default:                  return ERROR_INVALID_ARGUMENT;
+  }
 }
 
 extern uint64_t entrypoint(const uint8_t *input)
 {
-  SolAccountInfo ka[3];
+  SolAccountInfo ka[4];
   SolParameters prm[1];
   prm->ka = ka;
   if (!sol_deserialize(input, prm, SOL_ARRAY_SIZE(ka))) {
@@ -571,3 +706,4 @@ extern uint64_t entrypoint(const uint8_t *input)
   }
   return dispatch( prm, ka );
 }
+

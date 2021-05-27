@@ -158,8 +158,8 @@ namespace pc
     bool get_is_tx_connect() const;
 
     // rpc callbacks
-    void on_response( rpc::slot_subscribe * );
-    void on_response( rpc::get_recent_block_hash * );
+    void on_response( rpc::slot_subscribe * ) override;
+    void on_response( rpc::get_recent_block_hash * ) override;
     void set_status( int );
     get_mapping *get_last_mapping() const;
 

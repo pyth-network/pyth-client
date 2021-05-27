@@ -1,6 +1,5 @@
 #pragma once
 
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -8,28 +7,33 @@ extern "C" {
 // magic number at head of account
 #define PC_MAGIC 0xa1b2c3d4
 
-// versions available
-#define PC_VERSION_1         1U
-
-// latest program version
-#define PC_VERSION           PC_VERSION_1
+// current program version
+#define PC_VERSION            2
 
 // max latency in slots between send and receive
-#define PC_MAX_SEND_LATENCY   8
+#define PC_MAX_SEND_LATENCY  25
 
 // various size constants
 #define PC_PUBKEY_SIZE       32
 #define PC_PUBKEY_SIZE_64   (PC_PUBKEY_SIZE/sizeof(uint64_t))
 #define PC_MAP_TABLE_SIZE   640
-#define PC_COMP_SIZE         16
+#define PC_COMP_SIZE         32
+#define PC_DERIV_SIZE         8
 #define PC_MAX_NUM_DECIMALS  16
 #define PC_PROD_ACC_SIZE    512
+#define PC_NORMAL_SIZE     6000
+#define PC_FACTOR_SIZE       20
+#define PC_NORMAL_UPDATE     64
+#define PC_HEAP_START 0x300000000
 
 // price types
 #define PC_PTYPE_UNKNOWN      0
 #define PC_PTYPE_PRICE        1
-#define PC_PTYPE_TWAP         2
-#define PC_PTYPE_VOLATILITY   3
+
+// derived types
+#define PC_DTYPE_UNKNOWN      0
+#define PC_DTYPE_TWAP         1
+#define PC_DTYPE_VOLATILITY   2
 
 // symbol status
 #define PC_STATUS_UNKNOWN     0
@@ -41,6 +45,8 @@ extern "C" {
 #define PC_ACCTYPE_MAPPING    1
 #define PC_ACCTYPE_PRODUCT    2
 #define PC_ACCTYPE_PRICE      3
+#define PC_ACCTYPE_PARAMS     4
+#define PC_ACCTYPE_TEST       5
 
 // binary version of sysvar_clock account id
 const uint64_t sysvar_clock[] = {
@@ -129,12 +135,81 @@ typedef struct pc_price
   uint32_t        unused_;
   uint64_t        curr_slot_;         // currently accumulating price slot
   uint64_t        valid_slot_;        // valid on-chain slot of agg. price
+  int64_t         drv_[PC_DERIV_SIZE];// derived calc values
   pc_pub_key_t    prod_;              // product id/ref-account
   pc_pub_key_t    next_;              // next price account in list
-  pc_pub_key_t    agg_pub_;           // aggregate price updater
+  pc_pub_key_t    agg_pub_;           // key of aggregate price updater
   pc_price_info_t agg_;               // aggregate price information
   pc_price_comp_t comp_[PC_COMP_SIZE];// component prices
 } pc_price_t;
+
+// parameters account containing lookup tables for decimal math
+typedef struct pc_prm
+{
+  uint32_t        magic_;
+  uint32_t        ver_;              // program version
+  uint32_t        type_;             // account type
+  uint32_t        size_;             // size of populated region of account
+  uint64_t        fact_[PC_FACTOR_SIZE];// decimal scale factors
+  uint64_t        cdecay_[PC_MAX_SEND_LATENCY];// conf decay by slot diff
+  uint64_t        norm_[PC_NORMAL_SIZE];// normal distro lookup table
+} pc_prm_t;
+
+// results of aggregate price test
+typedef struct pc_test
+{
+  uint32_t        magic_;
+  uint32_t        ver_;              // program version
+  uint32_t        type_;             // account type
+  uint32_t        size_;             // size of populated region of account
+  int32_t         expo_;             // exponent of price quotes
+  int32_t         pad_;
+  int64_t         price_;            // aggregate price
+  int64_t         conf_;             // aggregate confidence interval
+} pc_test_t;
+
+// decimal number format
+typedef struct pd
+{
+  int32_t  e_;
+  int64_t  v_;
+} pd_t;
+
+// quote info for aggregate price calc
+typedef struct pc_q
+{
+  pd_t     a_[1];
+  pd_t     m_[1];
+  pd_t     s_[1];
+  pd_t     s2_[1];
+  pd_t     b_[1];
+  pd_t     l_[1];
+  pd_t     u_[1];
+  uint64_t id_;
+  uint64_t grp_;
+  uint8_t  env_;
+} pc_q_t;
+
+// set of quotes for aggregate price calc
+typedef struct pc_qs
+{
+  pc_q_t    qt_[PC_COMP_SIZE];
+  pc_q_t   *gp_[PC_COMP_SIZE];
+  pc_q_t   *ep_[PC_COMP_SIZE];
+  uint32_t  num_;
+  uint32_t  ngrp_;
+  uint32_t  nenv_;
+  int       exp_;
+  pd_t      xmin_[1];
+  pd_t      xmax_[1];
+  pd_t      p_b_[1];
+  pd_t      nsig_[1];
+  pd_t      thr_[1];
+  pd_t      m_[1];
+  pd_t      s_[1];
+  uint64_t *fact_;
+  uint64_t *norm_;
+} pc_qs_t;
 
 // command enumeration
 typedef enum {
@@ -180,19 +255,42 @@ typedef enum {
   // publish component price
   // key[0] funding account       [signer writable]
   // key[1] price account         [writable]
-  // key[2] sysvar_clock account  [readable]
+  // key[2] param account         [readable]
+  // key[3] sysvar_clock account  [readable]
   e_cmd_upd_price,
 
   // compute aggregate price
   // key[0] funding account       [signer writable]
   // key[1] price account         [writable]
-  // key[2] sysvar_clock account  [readable]
+  // key[2] param account         [readable]
+  // key[3] sysvar_clock account  [readable]
   e_cmd_agg_price,
 
   // (re)initialize price account
   // key[0] funding account       [signer writable]
   // key[1] new price account     [signer writable]
-  e_cmd_init_price
+  e_cmd_init_price,
+
+  // (re)initialize parameter account
+  // key[0] funding account       [signer writable]
+  // key[1] new parameter account [signer writable]
+  e_cmd_init_prm,
+
+  // update parameter account
+  // key[0] funding account       [signer writable]
+  // key[1] parameter account     [signer writable]
+  e_cmd_upd_prm,
+
+  // initialize test account
+  // key[0] funding account       [signer writable]
+  // key[1] test account          [signer writable]
+  e_cmd_init_test,
+
+  // run aggregate price test
+  // key[0] funding account       [signer writable]
+  // key[1] test account          [signer writable]
+  // key[2] parameter account     [readable]
+  e_cmd_upd_test
 
 } command_t;
 
@@ -255,6 +353,26 @@ typedef struct cmd_upd_price
   uint64_t     conf_;
   uint64_t     pub_slot_;
 } cmd_upd_price_t;
+
+typedef struct cmd_upd_prm
+{
+  uint32_t     ver_;
+  int32_t      cmd_;
+  uint32_t     from_;
+  uint32_t     num_;
+  uint64_t     norm_[PC_NORMAL_UPDATE];
+} cmd_upd_prm_t;
+
+typedef struct cmd_upd_test
+{
+  uint32_t     ver_;
+  int32_t      cmd_;
+  uint32_t     num_;
+  int32_t      expo_;
+  int64_t      slot_diff_;
+  int64_t      price_[PC_COMP_SIZE];
+  uint64_t     conf_[PC_COMP_SIZE];
+} cmd_upd_test_t;
 
 // structure of clock sysvar account
 typedef struct sysvar_clock

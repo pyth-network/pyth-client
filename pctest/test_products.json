@@ -1,30 +1,44 @@
 [
-  {
-    "account": "9F6eBgAfktth93C9zmtKDXFXNjZkq6JwJR56VPKqWmJm",
-    "attr_dict":{
-      "symbol": "SYMBOL1/USD",
-      "asset_type": "Equity",
-      "country": "USA",
-      "description": "pyth example product #1",
-      "quote_currency" : "USD",
-      "tenor": "Spot",
-      "cms_symbol": "SYMBOL1",
-      "cqs_symbol": "SYMBOL1",
-      "nasdaq_symbol": "SYMBOL1"
-    }
+ {
+  "account": "F4ApWEDXUrWgrHsV9u7msKdgTLUBBSfVynWfAuMr5pYi",
+  "attr_dict": {
+   "symbol": "SYMBOL1/USD",
+   "asset_type": "Equity",
+   "country": "USA",
+   "description": "pyth example product #1",
+   "quote_currency": "USD",
+   "tenor": "Spot",
+   "cms_symbol": "SYMBOL1",
+   "cqs_symbol": "SYMBOL1",
+   "nasdaq_symbol": "SYMBOL1"
   },
-  {
-    "account": "HCFaDYyz1ajS57HfCaaqzA1cZSaa2oEccQejbHaaofd4",
-    "attr_dict":{
-      "symbol": "SYMBOL2/USD",
-      "asset_type": "Equity",
-      "country": "USA",
-      "description": "pyth example product #2",
-      "quote_currency" : "USD",
-      "tenor": "Spot",
-      "cms_symbol": "SYMBOL2",
-      "cqs_symbol": "SYMBOL2",
-      "nasdaq_symbol": "SYMBOL2"
-    }
-  }
+  "price_accounts": [
+   {
+    "price_exponent": -4,
+    "price_type": "price",
+    "account": "8u5gXUeZcz1QbydwRfgEgF4AphsifFnvFvVZbG1qAiiU"
+   }
+  ]
+ },
+ {
+  "account": "3H1pzmPV6BnfYyjSoMwje47wW735UDseqdxQRo7rQ6uL",
+  "attr_dict": {
+   "symbol": "SYMBOL2/USD",
+   "asset_type": "Equity",
+   "country": "USA",
+   "description": "pyth example product #2",
+   "quote_currency": "USD",
+   "tenor": "Spot",
+   "cms_symbol": "SYMBOL2",
+   "cqs_symbol": "SYMBOL2",
+   "nasdaq_symbol": "SYMBOL2"
+  },
+  "price_accounts": [
+   {
+    "price_exponent": -6,
+    "price_type": "price",
+    "account": "K9yykYWpDnXnt6f36G6dQFKitqxgbESauC8MpFrUyhx"
+   }
+  ]
+ }
 ]

@@ -161,6 +161,31 @@ void key_pair::get_pub_key( pub_key& pk ) const
   pk.init_from_buf( &pk_[pub_key::len] );
 }
 
+key_cache::key_cache()
+: ptr_( nullptr )
+{
+}
+
+key_cache::~key_cache()
+{
+  if ( ptr_ ) {
+    EVP_PKEY_free( (EVP_PKEY*)ptr_ );
+    ptr_ = nullptr;
+  }
+}
+
+void key_cache::set( const key_pair& pk )
+{
+  EVP_PKEY *pkey = EVP_PKEY_new_raw_private_key(
+      EVP_PKEY_ED25519, NULL, pk.data(), pub_key::len );
+  ptr_ = (void*)pkey;
+}
+
+void *key_cache::get() const
+{
+  return ptr_;
+}
+
 void signature::init_from_buf( const uint8_t *buf )
 {
   __builtin_memcpy( sig_, buf, len );
@@ -201,6 +226,23 @@ bool signature::sign(
   }
   EVP_MD_CTX_free( mctx );
   EVP_PKEY_free( pkey );
+  return rc != 0;
+}
+
+bool signature::sign(
+    const uint8_t* msg, uint32_t msg_len, const key_cache& kp )
+{
+  EVP_PKEY *pkey = (EVP_PKEY*)kp.get();
+  if ( !pkey ) {
+    return false;
+  }
+  EVP_MD_CTX *mctx = EVP_MD_CTX_new();
+  int rc = EVP_DigestSignInit( mctx, NULL, NULL, NULL, pkey );
+  if ( rc ) {
+    size_t sig_len[1] = { len };
+    rc = EVP_DigestSign( mctx, sig_, sig_len, msg, msg_len );
+  }
+  EVP_MD_CTX_free( mctx );
   return rc != 0;
 }
 

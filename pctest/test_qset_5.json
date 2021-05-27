@@ -1,0 +1,7 @@
+{
+  "exponent": -2,
+  "quotes":[
+    { "price": 50000, "conf": 1 },
+    { "price": 5000000000000, "conf": 1 }
+  ]
+}

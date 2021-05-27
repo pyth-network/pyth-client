@@ -1,5 +1,6 @@
 #include "oracle.c"
 #include <criterion/criterion.h>
+#include "normal.h"
 
 Test(oracle, init_mapping) {
 
@@ -330,6 +331,7 @@ Test(oracle, pc_size ) {
   cr_assert( sizeof( pc_price_comp_t ) == sizeof( pc_pub_key_t ) +
      2*sizeof( pc_price_info_t ) );
   cr_assert( sizeof( pc_price_t ) == 48 +
+      PC_DERIV_SIZE*sizeof(int64_t) +
       3*sizeof( pc_pub_key_t ) + sizeof( pc_price_info_t ) +
       PC_COMP_SIZE * sizeof( pc_price_comp_t ) );
 }
@@ -343,9 +345,14 @@ Test( oracle, upd_price ) {
     .conf_   = 9L,
     .pub_slot_ = 1
   };
+  // scale factors
+  pc_prm_t tprm[1];
+  init_prm_hdr( tprm );
+
   SolPubkey p_id  = {.x = { 0xff, }};
   SolPubkey p_id2 = {.x = { 0xfe, }};
   SolPubkey pkey = {.x = { 1, }};
+  SolPubkey tkey = {.x = { 7, }};
   SolPubkey skey = {.x = { 3, }};
   sysvar_clock_t cvar = {
     .slot_ = 1
@@ -380,6 +387,16 @@ Test( oracle, upd_price ) {
       .is_writable = true,
       .executable  = false
   },{
+      .key         = &tkey,
+      .lamports    = &sqty,
+      .data_len    = sizeof( pc_prm_t ),
+      .data        = (uint8_t*)tprm,
+      .owner       = &p_id,
+      .rent_epoch  = 0,
+      .is_signer   = false,
+      .is_writable = false,
+      .executable  = false
+  },{
       .key         = (SolPubkey*)sysvar_clock,
       .lamports    = &sqty,
       .data_len    = sizeof( sysvar_clock_t ),
@@ -392,11 +409,15 @@ Test( oracle, upd_price ) {
   }};
   SolParameters prm = {
     .ka         = acc,
-    .ka_num     = 3,
+    .ka_num     = 4,
     .data       = (const uint8_t*)&idata,
     .data_len   = sizeof( idata ),
     .program_id = &p_id
   };
+  // heap storage
+  pc_qs_t tmp[1];
+  heap_start = (void*)tmp;
+
   cr_assert( SUCCESS == dispatch( &prm, acc ) );
   cr_assert( sptr->comp_[0].latest_.price_ == 42L );
   cr_assert( sptr->comp_[0].latest_.conf_ == 9L );
@@ -454,6 +475,24 @@ Test( oracle, upd_price ) {
   cr_assert( ERROR_INVALID_ARGUMENT == dispatch( &prm, acc ) );
 }
 
+void pc_qs_print( pc_qs_t *q )
+{
+  printf( "ngrp=%d,xmin=%ld,%d, xmax=%lde%d\n",
+      q->ngrp_, q->xmin_->v_, q->xmin_->e_,
+      q->xmax_->v_, q->xmax_->e_ );
+  for( unsigned i=0; i != q->num_; ++i ) {
+    pc_q_t *iq = &q->qt_[i];
+    printf( "a=%lde%d,mu=%lde%d,sigma=%lde%d,b=%lde%d,env_=%d,grp=%d\n",
+        iq->a_->v_, iq->a_->e_,
+        iq->m_->v_, iq->m_->e_,
+        iq->s_->v_, iq->s_->e_,
+        iq->b_->v_, iq->b_->e_,
+        iq->env_, iq->grp_ );
+  }
+  printf( "m=%lde%d,s=%lde%d\n", q->m_->v_, q->m_->e_,
+        q->s_->v_, q->s_->e_ );
+}
+
 Test(oracle, upd_aggregate ) {
   pc_pub_key_t pub[1];
   pub->k8_[0] = 11;
@@ -468,12 +507,22 @@ Test(oracle, upd_aggregate ) {
   pc_price_info_t p4 = { .price_=400, .conf_=40,
     .status_ = PC_STATUS_TRADING, .pub_slot_ = 1000 };
 
+  // scale factors
+  pc_prm_t prm[1];
+  init_prm_hdr( prm );
+  for( unsigned i=0;i != PC_NORMAL_SIZE;++i ) {
+    prm->norm_[i] = ntable_[i];
+  }
+
+  // heap storage
+  pc_qs_t tmp[1];
+  heap_start = (void*)tmp;
 
   // single publisher
   px->num_ = 1;
   px->curr_slot_ = 1000;
   px->comp_[0].latest_ = p1;
-  upd_aggregate( px, pub, 1001 );
+  upd_aggregate( px, prm, pub, 1001 );
   cr_assert( px->agg_.price_ == 100 );
   cr_assert( px->agg_.conf_ == 10 );
 
@@ -482,9 +531,9 @@ Test(oracle, upd_aggregate ) {
   px->curr_slot_ = 1000;
   px->comp_[px->num_++].latest_ = p2;
   px->comp_[px->num_++].latest_ = p1;
-  upd_aggregate( px, pub, 1001 );
+  upd_aggregate( px, prm, pub, 1001 );
   cr_assert( px->agg_.price_ == 150 );
-  cr_assert( px->agg_.conf_ == 15 );
+  cr_assert( px->agg_.conf_ == 52 );
 
   // three publishers
   px->num_ = 0;
@@ -492,9 +541,9 @@ Test(oracle, upd_aggregate ) {
   px->comp_[px->num_++].latest_ = p2;
   px->comp_[px->num_++].latest_ = p1;
   px->comp_[px->num_++].latest_ = p3;
-  upd_aggregate( px, pub, 1001 );
-  cr_assert( px->agg_.price_ == 200 );
-  cr_assert( px->agg_.conf_ == 20 );
+  upd_aggregate( px, prm, pub, 1001 );
+  cr_assert( px->agg_.price_ == 218 );
+  cr_assert( px->agg_.conf_ == 41 );
 
   // four publishers
   px->num_ = 0;
@@ -503,15 +552,15 @@ Test(oracle, upd_aggregate ) {
   px->comp_[px->num_++].latest_ = p1;
   px->comp_[px->num_++].latest_ = p4;
   px->comp_[px->num_++].latest_ = p2;
-  upd_aggregate( px, pub, 1001 );
-  cr_assert( px->agg_.price_ == 250 );
-  cr_assert( px->agg_.conf_ == 25 );
+  upd_aggregate( px, prm, pub, 1001 );
+  cr_assert( px->agg_.price_ == 218 );
+  cr_assert( px->agg_.conf_ == 68 );
 
-  upd_aggregate( px, pub, 1008 );
+  upd_aggregate( px, prm, pub, 1025 );
   cr_assert( px->agg_.status_ == PC_STATUS_TRADING );
 
   // check what happens when nothing publishes for a while
-  upd_aggregate( px, pub, 1009 );
+  upd_aggregate( px, prm, pub, 1026 );
   cr_assert( px->agg_.status_ == PC_STATUS_UNKNOWN );
 }
 
