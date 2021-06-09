@@ -353,6 +353,8 @@ void user::on_response( price *rptr, uint64_t idx )
   jw_.add_key( "result", json_wtr::e_obj );
   jw_.add_key( "price", rptr->get_price() );
   jw_.add_key( "conf", rptr->get_conf() );
+  jw_.add_key( "twap", rptr->get_twap() );
+  jw_.add_key( "avol", rptr->get_ann_volatility() );
   jw_.add_key( "status", symbol_status_to_str( rptr->get_status() ) );
   jw_.add_key( "valid_slot", rptr->get_valid_slot() );
   jw_.add_key( "pub_slot", rptr->get_pub_slot() );

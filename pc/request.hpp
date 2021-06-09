@@ -694,7 +694,8 @@ namespace pc
     uint64_t      get_conf() const;
     symbol_status get_status() const;
     uint64_t      get_lamports() const;
-    int64_t       get_deriv( deriv_type ) const;
+    int64_t       get_twap() const;
+    uint64_t      get_ann_volatility() const;
 
     // get publishers
     unsigned get_num_publisher() const;
@@ -751,10 +752,11 @@ namespace pc
     uint32_t               pub_idx_;
     int64_t                apx_;
     uint64_t               aconf_;
+    int64_t                twap_;
+    uint64_t               avol_;
     uint64_t               valid_slot_;
     uint64_t               pub_slot_;
     uint64_t               lamports_;
-    int64_t                dpx_[PC_DERIV_SIZE];
     int32_t                aexpo_;
     uint32_t               cnum_;
     product               *prod_;

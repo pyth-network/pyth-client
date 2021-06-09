@@ -1,6 +1,6 @@
 # Getting started with publishing via pyth-client
 
-The pyth-client repo consists of a C++ library (libpc.a), a command-line administration tool (pyth) and a json/websocket-based server (pythd).
+The pyth-client repo consists of a C++ library (libpc.a), a command-line administration tool (pyth), a json/websocket-based server (pythd) and a gateway/proxy server for price publishing (pyth_tx).
 
 You can integrate with libpc directly in your application. See `pctest/test_publish.cpp` for an example. Or, you can integrate with the pythd server via json/websockets. See `pctest/test_publish.py` for an example.
 
@@ -29,7 +29,7 @@ This will output the public key in base58 encoding and will look something like:
 5rYvdyWAunZgD2EC1aKo7hQbutUUnkt7bBFM6xNq2z7Z
 ```
 
-Once permissioned, you need two additional public keys in the key-store. The id of the mapping-account that contains the directory listing of the on-chain symbols and the id of the on-chain oracle program that you use to publish prices.  Mapping and program accounts are maintained in three separate environments: pythnet, devnet and forthcoming mainnet-beta.
+Once permissioned, you need three additional public keys in the key-store. The id of the mapping-account that contains the directory listing of the on-chain symbols, the id of the on-chain oracle program that you use to publish prices and the id of the parameter-account that contains various math look-up tables used to compute the aggregate price.  Mapping, program and parameter accounts are maintained in three separate environments: pythnet, devnet and forthcoming mainnet-beta.
 
 Use the init_key_store.sh script to initialize these account keys:
 
@@ -41,17 +41,19 @@ KENV=pythnet  # or devnet or mainnet-beta
 
 ```
 
-This creates two files: `$KDIR/program_key.json` and `$KDIR/mapping_key.json`.
+This creates three files: `$KDIR/mapping_key.json`, `$KDIR/program_key.json`,  and `$KDIR/param_key.json`.
 
 Once permissioned, you can test your setup by running the test_publish.cpp example program for publishing and subscribing to two test symbols.  To test publishing on pythnet you need to run:
 
 
 ```
-KHOST=44.232.27.44 # or api.devnet.solana.com
+KHOST=44.232.27.44
 ./test_publish -k $KDIR -r $KHOST -t $KHOST
 ```
 
-The certification environment (pythnet) can be found at the IP address 44.232.27.44. Please also provide to the administrator the IP address you plan to publish to pythnet from so that it can be added to the pythnet firewall.  Solana devnet can be found at: devnet.solana.com. No additional permissioning is required to publish to devnet.
+The -r and -t options correspond to the locations of required solana validator and pyth_tx server instances.
+
+The certification environment (pythnet) can be found at the IP address 44.232.27.44 where the test validator and pyth_tx instances run. Please also provide to the administrator the IP address you plan to publish to pythnet from so that it can be added to the pythnet firewall.
 
 You can also publish to solana using the pythd server. Start up the server using the same key-store directory and host specification:
 
@@ -65,6 +67,25 @@ Run the test_publish.py example program on the same host to connect to the pythd
 ../pctest/test_publish.py
 
 ```
+
+## Running the pyth_tx server
+
+The pyth-client API connects to two separate services via TCP. These include the solana validator and pyth_tx servers. The pyth_tx server is included in the pyth-client repository.
+
+The solana rpc interface is used for tracking slot and account updates. The pyth_tx server is used to submit price transactions directly to solana leader nodes via UDP.
+
+pyth_tx runs as a separate server rather than being integrated directly into the client library to avoid a publisher from having to submit UDP datagrams to hundreds of different IP address from within an organization's firewall. Instead, a pyth_tx server can be deployed outside the firewall and a publisher clienti, running inside the firewall, can make a single TCP connection to it on a dedicated port.
+
+You can run your own pyth_tx instance (recommended) or connect to provided server instances running against pythnet and mainnet-beta environments.
+
+Start up the pyth_tx server as follows:
+
+```
+./pyth_tx -r $KHOST
+```
+
+The -r option points to the IP address of a solana validator node or rpc end-point. It can be the same or different IP address to that passed to test_publish or pythd as long as it corresponds to the same environment.
+
 
 ## Running the dashboard
 

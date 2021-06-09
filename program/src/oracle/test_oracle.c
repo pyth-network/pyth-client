@@ -331,7 +331,7 @@ Test(oracle, pc_size ) {
   cr_assert( sizeof( pc_price_comp_t ) == sizeof( pc_pub_key_t ) +
      2*sizeof( pc_price_info_t ) );
   cr_assert( sizeof( pc_price_t ) == 48 +
-      PC_DERIV_SIZE*sizeof(int64_t) +
+      8*sizeof(int64_t) +
       3*sizeof( pc_pub_key_t ) + sizeof( pc_price_info_t ) +
       PC_COMP_SIZE * sizeof( pc_price_comp_t ) );
 }

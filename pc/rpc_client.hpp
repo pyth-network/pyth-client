@@ -34,19 +34,6 @@ namespace pc
   price_type str_to_price_type( str );
   str price_type_to_str( price_type );
 
-  // type of derived (from price) calculation
-  enum class deriv_type
-  {
-    e_unknown    = PC_DTYPE_UNKNOWN,
-    e_twap       = PC_DTYPE_TWAP,
-    e_volatility = PC_DTYPE_VOLATILITY,
-
-    e_last_deriv_type
-  };
-
-  deriv_type str_to_deriv_type( str );
-  str deriv_type_to_str( deriv_type );
-
   // current symbol trading status
   enum class symbol_status
   {

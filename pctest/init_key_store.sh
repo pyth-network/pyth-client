@@ -45,3 +45,4 @@ echo $MAP_KEY > $KDIR/mapping_key.json
 check "chmod 0400 $KDIR/mapping_key.json"
 echo $PRM_KEY > $KDIR/param_key.json
 check "chmod 0400 $KDIR/param_key.json"
+check "chmod 0700 $KDIR"

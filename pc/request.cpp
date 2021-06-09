@@ -1995,6 +1995,8 @@ price::price( const pub_key& acc, product *prod )
   pub_idx_( (unsigned)-1 ),
   apx_( 0 ),
   aconf_( 0 ),
+  twap_( 0 ),
+  avol_( 0 ),
   valid_slot_( 0 ),
   pub_slot_( 0 ),
   lamports_( 0UL ),
@@ -2004,7 +2006,6 @@ price::price( const pub_key& acc, product *prod )
   sched_( this )
 {
   __builtin_memset( &cpub_, 0, sizeof( cpub_ ) );
-  __builtin_memset( &dpx_, 0, sizeof( dpx_ ) );
   areq_->set_account( &apub_ );
   sreq_->set_account( &apub_ );
   preq_->set_account( &apub_ );
@@ -2072,10 +2073,14 @@ int64_t  price::get_price() const
   return apx_;
 }
 
-int64_t price::get_deriv( deriv_type dtype ) const
+int64_t price::get_twap() const
 {
-  unsigned i = (unsigned)dtype - 1;
-  return i<PC_DERIV_SIZE?dpx_[i] : 0L;
+  return twap_;
+}
+
+uint64_t price::get_ann_volatility() const
+{
+  return avol_;
 }
 
 uint64_t price::get_conf() const
@@ -2227,13 +2232,12 @@ void price::init_price( pc_price_t *pupd )
   version_ = pupd->ver_;
   apx_     = pupd->agg_.price_;
   aconf_   = pupd->agg_.conf_;
+  twap_    = pupd->twap_;
+  avol_    = pupd->avol_;
   sym_st_  = (symbol_status)pupd->agg_.status_;
   pub_slot_   = pupd->agg_.pub_slot_;
   valid_slot_ = pupd->valid_slot_;
   cnum_ = pupd->num_;
-  for( unsigned i=0; i < (unsigned)deriv_type::e_last_deriv_type-1;++i ) {
-    dpx_[i] = pupd->drv_[i];
-  }
   for( unsigned i=0; i != cnum_; ++i ) {
     if ( !pc_pub_key_equal( &cpub_[i], &pupd->comp_[i].pub_ ) ) {
       pc_pub_key_assign( &cpub_[i], &pupd->comp_[i].pub_ );
@@ -2337,12 +2341,11 @@ void price::update( T *res )
   if ( valid_slot_ != pupd->valid_slot_ || valid_slot_ == 0UL ) {
     apx_  = pupd->agg_.price_;
     aconf_ = pupd->agg_.conf_;
+    twap_  = pupd->twap_;
+    avol_   = pupd->avol_;
     sym_st_ = (symbol_status)pupd->agg_.status_;
     pub_slot_ = pupd->agg_.pub_slot_;
     valid_slot_ = pupd->valid_slot_;
-    for( unsigned i=0; i < (unsigned)deriv_type::e_last_deriv_type-1;++i ) {
-      dpx_[i] = pupd->drv_[i];
-    }
 
     // capture aggregate price and components to disk
     mgr->write( (pc_pub_key_t*)apub_.data(), (pc_acc_t*)pupd );
@@ -2444,3 +2447,4 @@ void price_sched::schedule()
 {
   on_response_sub( this );
 }
+

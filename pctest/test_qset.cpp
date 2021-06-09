@@ -54,7 +54,11 @@ int main( int argc,char** argv )
   pd_t m[1], s[1];
   pc_qs_new( qs, prm );
 
-  // construct quotes
+  pc_drv_t qd[1];
+  pc_drv_new( qd, prm );
+  pd_t twap[1], avol[1], prev[1];
+
+  // read scenario file
   mem_map mf;
   std::string file = argv[1];
   mf.set_file(file );
@@ -70,7 +74,24 @@ int main( int argc,char** argv )
               << std::endl;
     return 1;
   }
+
+  // previous values of price, vol and twap
   int expo = pt.get_int( pt.find_val( 1, "exponent" ) );
+  uint32_t vt = pt.find_val( 1, "derived" );
+  if ( vt ) {
+    int64_t iprev = pt.get_int( pt.find_val( vt,  "prev_price"  ) );
+    int64_t itwap = pt.get_int( pt.find_val( vt,  "twap"  ) );
+    int64_t iavol = pt.get_int( pt.find_val( vt,  "avol"  ) );
+    pd_new_scale( prev, iprev, expo );
+    pd_new_scale( twap, itwap, expo );
+    pd_new_scale( avol, iavol, expo );
+  } else {
+    pd_new( prev, 0, 0 );
+    pd_new( twap, 0, 0 );
+    pd_new( avol, 0, 0 );
+  }
+
+  // construct quotes
   uint32_t qt =pt.find_val( 1, "quotes" );
   for( uint32_t it = pt.get_first( qt ); it; it = pt.get_next( it ) ) {
     int64_t px = pt.get_int( pt.find_val( it,  "price"  ) );
@@ -88,11 +109,16 @@ int main( int argc,char** argv )
     pc_qs_add( qs, m, s );
   }
   pc_qs_calc( qs );
+  pc_twap_calc( qd, twap, qs->m_ );
+  pc_avol_calc( qd, avol, qs->m_, prev );
 
+  // scale results
   expo = std::min( qs->m_->e_, qs->s_->e_ );
   if ( expo <= 0 ) expo = -9;
   pd_adjust( qs->m_, qs->m_, expo, prm->fact_ );
   pd_adjust( qs->s_, qs->s_, expo, prm->fact_ );
+  pd_adjust( twap, twap, expo, prm->fact_ );
+  pd_adjust( avol, avol, expo, prm->fact_ );
 
   // generate result
   json_wtr jw;
@@ -100,6 +126,8 @@ int main( int argc,char** argv )
   jw.add_key( "exponent", (int64_t)expo );
   jw.add_key( "price", qs->m_->v_ );
   jw.add_key( "conf", qs->s_->v_ );
+  jw.add_key( "twap", twap->v_ );
+  jw.add_key( "avol", avol->v_ );
   jw.pop();
   net_buf *hd, *tl;
   jw.detach( hd, tl );

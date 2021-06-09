@@ -6,10 +6,18 @@ extern "C" {
 
 #define PD_MAX_NORMAL (6000-1)
 #define PD_EXP_NORMAL -9
-#define PD_SCALE9 (1000000000L)
+#define PD_SCALE9     (1000000000L)
+#define PD_EXP_DECAY0 -8
+#define PD_EXP_DECAY1 -8
+#define PD_EXP_DECAY2 -4
+#define PD_DECAY0     99984128
+#define PD_DECAY1     15872
+#define PD_DECAY2     87594394
+#define PD_ANN_FACT   55188000
 
 #define pd_new( n,v,e ) {(n)->v_=v;(n)->e_=e;}
 #define pd_set( r,n ) (r)[0] = (n)[0]
+#define pd_new_scale(n,v,e) {(n)->v_=v;(n)->e_=e;pd_scale(n);}
 
 static void pd_scale( pd_t *n )
 {
@@ -376,6 +384,48 @@ static void pc_qs_calc( pc_qs_t *q )
   pd_sqrt( q->s_, t1, p );
 }
 
+static void pc_drv_new( pc_drv_t *d, pc_prm_t *prm )
+{
+  pd_new( d->f0_, PD_DECAY0, PD_EXP_DECAY0 );
+  pd_new( d->f1_, PD_DECAY1, PD_EXP_DECAY1 );
+  pd_new( d->f2_, PD_DECAY2, PD_EXP_DECAY2 );
+  d->fact_ = prm->fact_;
+}
+
+static void pc_twap_calc( pc_drv_t *d, pd_t *twap, pd_t *pn )
+{
+  pd_t t[1];
+  if ( twap->v_ ) {
+    pd_mul( twap, twap, d->f0_ );
+    pd_mul( t, pn, d->f1_ );
+    pd_add( twap, twap, t, d->fact_ );
+  } else {
+    // initial twap
+    pd_set( twap, pn );
+  }
+}
+
+static void pc_avol_calc( pc_drv_t *d, pd_t *vol, pd_t *pn, pd_t *pp )
+{
+  // check for previous price
+  if ( pp->v_ == 0 ) {
+    return;
+  }
+  pd_t t[1], fa[1];
+  pd_sub( t, pn, pp, d->fact_ );
+  pd_mul( t, t, t );
+  if ( vol->v_ ) {
+    pd_mul( vol, vol, vol );
+    pd_mul( vol, vol, d->f0_ );
+    pd_mul( t, t, d->f2_ );
+    pd_add( vol, vol, t, d->fact_ );
+  } else {
+    // initial vol
+    pd_new( fa, PD_ANN_FACT, 0 );
+    pd_mul( vol, t, fa );
+  }
+  pd_sqrt( vol, vol, d->fact_ );
+}
 
 #ifdef __cplusplus
 }

@@ -580,18 +580,43 @@ static void upd_aggregate( pc_price_t *ptr,
       pc_qs_add( qs, m, s );
     }
   }
+  pc_drv_t qd[1];
+  pc_drv_new( qd, prm );
+  pd_t twap[1], avol[1], px[1], prev[1];
+  pd_new_scale( twap, ptr->twap_tmp_, PD_EXP_NORMAL );
+  pd_new_scale( avol, ptr->avol_tmp_, PD_EXP_NORMAL );
+  pd_new_scale( prev, ptr->agg_.price_, ptr->expo_ );
+
   // check for zero contributors
   if ( qs->num_ == 0 ) {
     ptr->agg_.status_ = PC_STATUS_UNKNOWN;
+    // decay twap with the same price
+    pd_new_scale( px, ptr->agg_.price_, ptr->expo_ );
+    pc_twap_calc( qd, twap, px );
+    pd_adjust( twap, twap, PD_EXP_NORMAL, prm->fact_ );
+    ptr->twap_tmp_ = twap->v_;
+    pd_adjust( twap, twap, ptr->expo_, prm->fact_ );
+    ptr->twap_ = twap->v_;
     return;
   }
-  // compute and assign aggregate price
+
+  // compute and assign aggregate price and derived values
   pc_qs_calc( qs );
+  pc_twap_calc( qd, twap, qs->m_ );
+  pc_avol_calc( qd, avol, qs->m_, prev );
   pd_adjust( qs->m_, qs->m_, ptr->expo_, prm->fact_ );
   pd_adjust( qs->s_, qs->s_, ptr->expo_, prm->fact_ );
+  pd_adjust( twap, twap, PD_EXP_NORMAL, prm->fact_ );
+  pd_adjust( avol, avol, PD_EXP_NORMAL, prm->fact_ );
   ptr->agg_.price_  = qs->m_->v_;
   ptr->agg_.conf_   = qs->s_->v_;
+  ptr->twap_tmp_    = twap->v_;
+  ptr->avol_tmp_    = avol->v_;
   ptr->agg_.status_ = PC_STATUS_TRADING;
+  pd_adjust( twap, twap, ptr->expo_, prm->fact_ );
+  pd_adjust( avol, avol, ptr->expo_, prm->fact_ );
+  ptr->twap_ = twap->v_;
+  ptr->avol_ = avol->v_;
 }
 
 static uint64_t upd_price( SolParameters *prm, SolAccountInfo *ka )

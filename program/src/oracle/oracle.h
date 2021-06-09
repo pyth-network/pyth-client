@@ -18,7 +18,6 @@ extern "C" {
 #define PC_PUBKEY_SIZE_64   (PC_PUBKEY_SIZE/sizeof(uint64_t))
 #define PC_MAP_TABLE_SIZE   640
 #define PC_COMP_SIZE         32
-#define PC_DERIV_SIZE         8
 #define PC_MAX_NUM_DECIMALS  16
 #define PC_PROD_ACC_SIZE    512
 #define PC_NORMAL_SIZE     6000
@@ -29,11 +28,6 @@ extern "C" {
 // price types
 #define PC_PTYPE_UNKNOWN      0
 #define PC_PTYPE_PRICE        1
-
-// derived types
-#define PC_DTYPE_UNKNOWN      0
-#define PC_DTYPE_TWAP         1
-#define PC_DTYPE_VOLATILITY   2
 
 // symbol status
 #define PC_STATUS_UNKNOWN     0
@@ -135,7 +129,14 @@ typedef struct pc_price
   uint32_t        unused_;
   uint64_t        curr_slot_;         // currently accumulating price slot
   uint64_t        valid_slot_;        // valid on-chain slot of agg. price
-  int64_t         drv_[PC_DERIV_SIZE];// derived calc values
+  int64_t         twap_;              // time-weighted average price
+  int64_t         avol_;              // annualized price volatility
+  int64_t         drv1_;              // space for future derived values
+  int64_t         drv2_;              // space for future derived values
+  int64_t         drv3_;              // space for future derived values
+  int64_t         drv4_;              // space for future derived values
+  int64_t         avol_tmp_;          // avol with higher precision
+  int64_t         twap_tmp_;          // twap with higher precision
   pc_pub_key_t    prod_;              // product id/ref-account
   pc_pub_key_t    next_;              // next price account in list
   pc_pub_key_t    agg_pub_;           // key of aggregate price updater
@@ -210,6 +211,16 @@ typedef struct pc_qs
   uint64_t *fact_;
   uint64_t *norm_;
 } pc_qs_t;
+
+typedef struct pc_drv
+{
+  pd_t      f0_[1];
+  pd_t      f1_[1];
+  pd_t      f2_[1];
+  pd_t      pn_[1];
+  pd_t      pp_[1];
+  uint64_t *fact_;
+} pc_drv_t;
 
 // command enumeration
 typedef enum {

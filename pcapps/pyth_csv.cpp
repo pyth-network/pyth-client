@@ -72,6 +72,8 @@ void csv_print::print_header()
             << ",status"
             << ",price"
             << ",conf"
+            << ",twap"
+            << ",avol"
             << ",valid_slot"
             << ",pub_slot";
   for(unsigned i=0; i != PC_COMP_SIZE; ++i ) {
@@ -130,6 +132,8 @@ void csv_print::parse_price( replay& rep )
   std::cout.write( sstr.str_, sstr.len_ );
   std::cout << ',' << ptr->agg_.price_
             << ',' << ptr->agg_.conf_
+            << ',' << ptr->twap_
+            << ',' << ptr->avol_
             << ',' << ptr->valid_slot_
             << ',' << ptr->agg_.pub_slot_;
   for( unsigned i=0; i != ptr->num_; ++i ) {
