@@ -2319,13 +2319,14 @@ void price::update( T *res )
 
   // update publishers and publisher prices
   lamports_ = res->get_lamports();
+  uint32_t cnum = std::max( cnum_, pupd->num_ );
   if ( PC_UNLIKELY( cnum_ != pupd->num_ ) ) {
     cnum_ = pupd->num_;
     log_update( "modify_publisher" );
   }
   manager *mgr = get_manager();
   bool upd_pub = false;
-  for( unsigned i=0; i != cnum_; ++i ) {
+  for( unsigned i=0; i != cnum; ++i ) {
     cprice_[i] = pupd->comp_[i].agg_;
     if ( PC_UNLIKELY( !pc_pub_key_equal(
             &cpub_[i], &pupd->comp_[i].pub_ ) )  ){
