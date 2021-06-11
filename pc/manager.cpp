@@ -381,7 +381,7 @@ void manager::poll( bool do_wait )
     if ( do_tx_ ) {
       tconn_.poll();
     }
-    if ( lsvr_.get_port() ) {
+    if ( lsvr_.get_port()>0 ) {
       lsvr_.poll();
       for( user *uptr = olist_.first(); uptr; ) {
         user *nptr = uptr->get_next();
