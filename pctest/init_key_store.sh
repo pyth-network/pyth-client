@@ -15,6 +15,11 @@ check()
 KENV=$1
 KDIR=$2
 case $KENV in
+  prodbeta)
+    MAP_KEY=CUK2JnnLRMtJon3kAUXcgVc8wDhFk96HmNTssnaNRbXQ
+    PGM_KEY=9SfxAUWNQKzx85jaivNhhUKG5JTZZmkFydjmdkKakjMo
+    PRM_KEY=2W58ZegzkxqvaKapvvJ6ZzVPeUXT1CMBTZqTCYTcitU1
+    ;;
   devnet)
     MAP_KEY=BmA9Z6FjioHJPpjT39QazZyhDRUdZy2ezwx4GiDdE2u2
     PGM_KEY=gSbePebfvPy7tRqimPoVecS2UsBvYv46ynrzWocc92s
@@ -26,7 +31,7 @@ case $KENV in
     PRM_KEY=BcgWPzHix9F3GsSkbhx4aAxZ3aXPZCQCamxYQCUWeYto
     ;;
   *)
-    echo "Unknown environment. Please use: devnet, pythnet"
+    echo "Unknown environment. Please use: prodbeta, devnet, pythnet"
     exit 1;
 esac
 if [ -z "$KDIR" ] ; then
