@@ -151,7 +151,7 @@ void test_connect::on_add_symbol( pc::manager *, pc::price *sym )
     return;
   }
   // construct publisher for SYMBOL1
-  if ( nsym == "SYMBOL1" && !pub1_ ) {
+  if ( nsym == "AAPL" && !pub1_ ) {
     pub1_ = new test_publish( sym, 10000, 100 );
   }
   // construct publisher for SYMBOL2
@@ -252,6 +252,10 @@ void test_publish::on_response( pc::price *sym, uint64_t )
         .add( "symbol", sym->get_symbol() )
         .add( "price_type", pc::price_type_to_str( sym->get_price_type() ) )
         .add( "num_sent", sym->get_num_sent() )
+        .add( "num_recv", sym->get_num_recv() )
+        .add( "num_tx",   sym->get_num_tx() )
+        .add( "num_coal", sym->get_num_coalesced() )
+        .add( "tx_rate",  sym->get_tx_rate() )
         .add( "hit_rate", sym->get_hit_rate() )
         .add( "secs_p25", time_quartiles[0] )
         .add( "secs_p50", time_quartiles[1] )

@@ -11,7 +11,7 @@ pub_stats::pub_stats()
 void pub_stats::clear_stats()
 {
   slots_.clear();
-  num_sent_ = num_recv_ = 0;
+  num_sent_ = num_recv_ = num_tx_ = num_coal_ = 0;
   __builtin_memset( shist_, 0, sizeof( shist_ ) );
   __builtin_memset( thist_, 0, sizeof( shist_ ) );
 }
@@ -26,14 +26,29 @@ uint64_t pub_stats::get_num_recv() const
   return num_recv_;
 }
 
+uint64_t pub_stats::get_num_tx() const
+{
+  return num_tx_;
+}
+
 uint64_t pub_stats::get_num_drop() const
 {
-  return num_sent_ - num_recv_;
+  return num_sent_ - num_tx_;
+}
+
+uint64_t pub_stats::get_num_coalesced() const
+{
+  return num_coal_;
 }
 
 double pub_stats::get_hit_rate() const
 {
   return (100.*num_recv_)/num_sent_;
+}
+
+double pub_stats::get_tx_rate() const
+{
+  return (100.*num_tx_)/num_sent_;
 }
 
 void pub_stats::add_send( uint64_t slot, int64_t ts )

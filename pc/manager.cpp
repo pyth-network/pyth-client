@@ -79,6 +79,11 @@ manager::~manager()
     delete ptr;
   }
   svec_.clear();
+  while( !slist_.empty() ) {
+    price_sig *ptr = slist_.first();
+    slist_.del( ptr );
+    delete ptr;
+  }
 }
 
 void manager::add_map_sub()
@@ -726,4 +731,20 @@ unsigned manager::get_num_product() const
 product *manager::get_product( unsigned i ) const
 {
   return i < svec_.size() ? svec_[i] : nullptr;
+}
+
+void manager::alloc( price_sig*& ptr )
+{
+  ptr = slist_.last();
+  if ( ptr ) {
+    ptr->reset_notify();
+    slist_.del( ptr );
+  } else {
+    ptr = new price_sig;
+  }
+}
+
+void manager::dealloc( price_sig *ptr )
+{
+  slist_.add( ptr );
 }

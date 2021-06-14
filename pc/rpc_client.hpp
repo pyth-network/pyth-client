@@ -835,6 +835,7 @@ namespace pc
       void set_params( pub_key * );
       void set_program( pub_key * );
       void set_block_hash( hash * );
+      void set_signature( signature * );
       void set_price( int64_t px, uint64_t conf, symbol_status,
                       uint64_t pub_slot, bool is_aggregate );
       void build( net_wtr& ) override;
@@ -846,6 +847,7 @@ namespace pc
       pub_key      *gkey_;
       pub_key      *akey_;
       pub_key      *rkey_;
+      signature    *sig_;
       int64_t       price_;
       uint64_t      conf_;
       uint64_t      pub_slot_;;

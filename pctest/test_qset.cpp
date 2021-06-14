@@ -97,8 +97,8 @@ int main( int argc,char** argv )
     int64_t px = pt.get_int( pt.find_val( it,  "price"  ) );
     int64_t conf = pt.get_uint( pt.find_val( it, "conf" ) );
     int64_t sdiff = pt.get_int( pt.find_val( it, "slot_diff" ) );
-    pd_new( m, px, expo );
-    pd_new( s, conf, expo );
+    pd_new_scale( m, px, expo );
+    pd_new_scale( s, conf, expo );
 
     // multiply by sqrt(slot_diff) since this is what upd_aggregate does
     pd_t t[1];

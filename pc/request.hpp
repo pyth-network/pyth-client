@@ -645,15 +645,31 @@ namespace pc
     uint64_t shash_;
   };
 
+  class price_sig : public rpc::signature_subscribe,
+                    public signature,
+                    public prev_next<price_sig>
+  {
+  public:
+    price_sig();
+    void response( const jtree& jt ) override;
+    bool notify( const jtree& jt ) override;
+    void reset_notify();
+    bool get_is_notify() const;
+  private:
+    bool is_notify_;
+  };
+
   // price subscriber and publisher
   class price : public request,
                 public pub_stats,
                 public rpc_sub_i<rpc::get_account_info>,
-                public rpc_sub_i<rpc::account_subscribe>
+                public rpc_sub_i<rpc::account_subscribe>,
+                public rpc_sub_i<price_sig>
   {
   public:
 
     price( const pub_key&, product *prod );
+    virtual ~price();
 
     // corresponding product definition
     product *get_product() const;
@@ -726,12 +742,15 @@ namespace pc
     void submit() override;
     void on_response( rpc::get_account_info * ) override;
     void on_response( rpc::account_subscribe * ) override;
+    void on_response( price_sig * ) override;
     bool get_is_done() const override;
 
   private:
 
     typedef enum {
       e_subscribe, e_sent_subscribe, e_publish, e_error } state_t;
+
+    typedef dbl_list<price_sig> sig_list_t;
 
     template<class T> void update( T *res );
 
@@ -760,6 +779,7 @@ namespace pc
     int32_t                aexpo_;
     uint32_t               cnum_;
     product               *prod_;
+    sig_list_t             glist_;
     price_sched            sched_;
     pc_pub_key_t           cpub_[PC_COMP_SIZE];
     pc_price_info_t        cprice_[PC_COMP_SIZE];

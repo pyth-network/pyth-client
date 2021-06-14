@@ -1,7 +1,6 @@
 #include "rpc_client.hpp"
 #include "bincode.hpp"
 #include <unistd.h>
-
 #include "log.hpp"
 
 using namespace pc;
@@ -2241,6 +2240,11 @@ void rpc::upd_price::set_block_hash( hash *bhash )
   bhash_ = bhash;
 }
 
+void rpc::upd_price::set_signature( signature *sig )
+{
+  sig_ = sig;
+}
+
 void rpc::upd_price::set_price( int64_t px,
                                 uint64_t conf,
                                 symbol_status st,
@@ -2318,5 +2322,6 @@ void rpc::upd_price::build( net_wtr& wtr )
 
   // all accounts need to sign transaction
   tx.sign( pub_idx, tx_idx, *ckey_ );
+  sig_->init_from_buf( (const uint8_t*)(tx.get_buf() + pub_idx) );
   ((tx_wtr&)wtr).commit( tx );
 }

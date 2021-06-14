@@ -14,6 +14,7 @@ namespace pc
     void add( T * );
     void del( T * );
     T *first() const;
+    T *last() const;
   private:
     T *hd_;
     T *tl_;
@@ -101,6 +102,12 @@ namespace pc
   T *dbl_list<T>::first() const
   {
     return hd_;
+  }
+
+  template<class T>
+  T *dbl_list<T>::last() const
+  {
+    return tl_;
   }
 
   template<class T>

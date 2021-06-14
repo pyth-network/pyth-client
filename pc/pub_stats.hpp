@@ -22,10 +22,21 @@ namespace pc
     // get publish stats details
     uint64_t get_num_sent() const;
     uint64_t get_num_recv() const;
+    uint64_t get_num_tx() const;
     uint64_t get_num_drop() const;
 
+    // number of detected coalesce events (i.e. where valid slot does
+    // not match publish slot of previous update). Does not indicate
+    // how many submissions (transactions) were actually coalesced
+    uint64_t get_num_coalesced() const;
+
     // hit rate is percentage of quotes sent that appeared in an aggregate
+    // this may be undercounted because some submissions may be coalesced
+    // into a single slot
     double get_hit_rate() const;
+
+    // tx rate is the percentage of quotes send that are confirmed
+    double get_tx_rate() const;
 
     // get (rough) quartiles of publish end-to-end latency in seconds
     // to a max of 16 seconds
@@ -37,6 +48,12 @@ namespace pc
 
     // clear-down statistics
     void clear_stats();
+
+    // increment signature count
+    void inc_tx();
+
+    // increment coalesce event count
+    void inc_coalesce();
 
   private:
 
@@ -53,9 +70,21 @@ namespace pc
 
     slots_t  slots_;
     uint64_t num_sent_;
+    uint64_t num_tx_;
     uint64_t num_recv_;
+    uint64_t num_coal_;
     uint32_t thist_[num_buckets];
     uint32_t shist_[num_buckets];
   };
+
+  inline void pub_stats::inc_tx()
+  {
+    ++num_tx_;
+  }
+
+  inline void pub_stats::inc_coalesce()
+  {
+    ++num_coal_;
+  }
 
 }

@@ -1982,7 +1982,60 @@ price *product::get_price( price_type pt ) const
 }
 
 ///////////////////////////////////////////////////////////////////////////
+// price_sig
+
+price_sig::price_sig()
+: is_notify_( false )
+{
+  set_commitment( commitment::e_confirmed );
+  set_signature( this );
+}
+
+void price_sig::response( const jtree& jt )
+{
+  is_notify_ = true;
+  add_notify( jt );
+}
+
+bool price_sig::notify( const jtree& )
+{
+  ((price*)get_sub())->on_response( this );
+  return false;
+}
+
+void price_sig::reset_notify()
+{
+  is_notify_ = false;
+}
+
+bool price_sig::get_is_notify() const
+{
+  return is_notify_;
+}
+
+///////////////////////////////////////////////////////////////////////////
 // price
+
+void price::on_response( price_sig *res )
+{
+  // update transaction receive count
+  inc_tx();
+
+  // remove everything up to and including this result
+  for( price_sig *ptr = glist_.first(); ptr; ) {
+    price_sig *nxt = ptr->get_next();
+    if ( ptr->get_is_notify() ) {
+      ptr->remove_notify();
+      glist_.del( ptr );
+      get_manager()->dealloc( ptr );
+    }
+    if ( ptr != res ) {
+      ptr = nxt;
+    } else {
+      break;
+    }
+  }
+}
 
 price::price( const pub_key& acc, product *prod )
 : init_( false ),
@@ -2011,6 +2064,15 @@ price::price( const pub_key& acc, product *prod )
   preq_->set_account( &apub_ );
   areq_->set_sub( this );
   sreq_->set_sub( this );
+}
+
+price::~price()
+{
+  while( !glist_.empty() ) {
+    price_sig *ptr = glist_.first();
+    glist_.del( ptr );
+    delete ptr;
+  }
 }
 
 bool price::init_publish()
@@ -2178,11 +2240,18 @@ bool price::update(
   if ( PC_UNLIKELY( !get_is_ready_publish() ) ) {
     return false;
   }
+  price_sig *sig;
   manager *mgr = get_manager();
+  mgr->alloc( sig );
   add_send( mgr->get_slot(), mgr->get_curr_time() );
   preq_->set_price( price, conf, st, mgr->get_slot(), is_agg );
   preq_->set_block_hash( mgr->get_recent_block_hash() );
+  preq_->set_signature( sig );
   mgr->submit( preq_ );
+  // subscribe to signature
+  sig->set_sub( this );
+  get_rpc_client()->send( sig );
+  glist_.add( sig );
   return true;
 }
 
@@ -2345,6 +2414,9 @@ void price::update( T *res )
     twap_  = pupd->twap_;
     avol_   = pupd->avol_;
     sym_st_ = (symbol_status)pupd->agg_.status_;
+    if ( pub_slot_ < pupd->valid_slot_ ) {
+      inc_coalesce();
+    }
     pub_slot_ = pupd->agg_.pub_slot_;
     valid_slot_ = pupd->valid_slot_;
 

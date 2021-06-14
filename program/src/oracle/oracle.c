@@ -572,8 +572,8 @@ static void upd_aggregate( pc_price_t *ptr,
          iptr->agg_.conf_ != 0UL &&
          slot_diff <= PC_MAX_SEND_LATENCY ) {
       pd_t m[1], s[1], t[1];
-      pd_new( m, iptr->agg_.price_, ptr->expo_ );
-      pd_new( s, iptr->agg_.conf_, ptr->expo_ );
+      pd_new_scale( m, iptr->agg_.price_, ptr->expo_ );
+      pd_new_scale( s, iptr->agg_.conf_, ptr->expo_ );
       // scale uncertainty by sqrt of slot age
       pd_new( t, prm->cdecay_[slot_diff>0?slot_diff-1:0], -9 );
       pd_mul( s, s, t );

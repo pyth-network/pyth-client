@@ -170,8 +170,6 @@ static void pc_qs_add( pc_qs_t *q, pd_t *minp, pd_t *sinp )
   iq->env_ = 0;
   pd_set( iq->m_, minp );
   pd_set( iq->s_, sinp );
-  pd_scale( iq->m_ );
-  pd_scale( iq->s_ );
   pd_mul( iq->s2_, iq->s_, iq->s_ );
 
   // update bounds for all quotes

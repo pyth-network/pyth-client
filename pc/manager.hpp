@@ -151,6 +151,8 @@ namespace pc
     void del_map_sub();
     void schedule( price_sched* );
     void write( pc_pub_key_t *, pc_acc_t *ptr );
+    void alloc( price_sig*& );
+    void dealloc( price_sig* );
 
     // tx_sub callbacks
     void on_connect() override;
@@ -181,6 +183,7 @@ namespace pc
 
     typedef dbl_list<user>            user_list_t;
     typedef dbl_list<request>         req_list_t;
+    typedef dbl_list<price_sig>       sig_list_t;
     typedef std::vector<get_mapping*> map_vec_t;
     typedef std::vector<product*>     spx_vec_t;
     typedef std::vector<price_sched*> kpx_vec_t;
@@ -200,6 +203,7 @@ namespace pc
     tx_connect   tconn_;    // tx proxy connection
     user_list_t  olist_;    // open users list
     user_list_t  dlist_;    // to-be-deleted users list
+    sig_list_t   slist_;    // signature reuse list
     req_list_t   plist_;    // pending requests
     map_vec_t    mvec_;     // mapping account updates
     acc_map_t    amap_;     // account to symbol pricing info
