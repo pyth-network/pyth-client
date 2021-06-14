@@ -151,7 +151,7 @@ void test_connect::on_add_symbol( pc::manager *, pc::price *sym )
     return;
   }
   // construct publisher for SYMBOL1
-  if ( nsym == "AAPL" && !pub1_ ) {
+  if ( nsym == "SYMBOL1" && !pub1_ ) {
     pub1_ = new test_publish( sym, 10000, 100 );
   }
   // construct publisher for SYMBOL2
