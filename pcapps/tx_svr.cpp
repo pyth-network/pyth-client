@@ -128,7 +128,10 @@ bool tx_svr::init()
   if ( !tsvr_.init() ) {
     return set_err_msg( tsvr_.get_err_msg() );
   }
-  PC_LOG_INF("listening").add("port",tsvr_.get_port()).end();
+  PC_LOG_INF("initialized")
+    .add("listen_port",tsvr_.get_port())
+    .add("rpc_host", rhost )
+    .end();
   wait_conn_ = true;
   return true;
 }
@@ -241,15 +244,27 @@ void tx_svr::on_response( rpc::slot_subscribe *res )
   avec_.clear();
   pub_key *pkey = nullptr;
   ip_addr iaddr;
-  for( uint64_t slot = slot_-1; slot <= slot_+4; ++slot ) {
+  uint64_t max_slot = std::min( slot_+5, lreq_->get_last_slot() );
+  for( uint64_t slot = slot_-1; slot < max_slot; ++slot ) {
     pub_key *ikey = lreq_->get_leader( slot );
     if ( ikey && ( !pkey || *ikey != *pkey) ) {
       if ( creq_->get_ip_addr( *ikey, iaddr ) ) {
         add_addr( iaddr );
-      } else if ( creq_->get_is_recv() ) {
-        PC_LOG_WRN( "missing leader addr: get_cluster_nodes" )
-          .add( "slot", slot ).end();
-        clnt_.send( creq_ );
+      } else {
+        PC_LOG_WRN( "missing leader addr" )
+          .add( "leader", *ikey )
+          .add( "curr_slot", slot )
+          .add( "start_slot", slot_-1 )
+          .add( "end_slot", slot_+4 )
+          .add( "last_slot", lreq_->get_last_slot() )
+          .end();
+        if ( creq_->get_is_recv() ) {
+          clnt_.send( creq_ );
+        }
+        if ( lreq_->get_is_recv() ) {
+          lreq_->set_slot( slot_ - PC_LEADER_MIN );
+          clnt_.send( lreq_ );
+        }
       }
     }
     pkey = ikey;
@@ -265,9 +280,10 @@ void tx_svr::on_response( rpc::get_cluster_nodes *m )
   if ( m->get_is_err() ) {
     set_err_msg( "failed to get cluster nodes["
         + m->get_err_msg()  + "]" );
+    m->reset_err();
     return;
   }
-  PC_LOG_INF( "received get_cluster_nodes" ).end();
+  PC_LOG_DBG( "received get_cluster_nodes" ).end();
 }
 
 void tx_svr::on_response( rpc::get_slot_leaders *m )
@@ -275,9 +291,12 @@ void tx_svr::on_response( rpc::get_slot_leaders *m )
   if ( m->get_is_err() ) {
     set_err_msg( "failed to get slot leaders ["
         + m->get_err_msg()  + "]" );
+    m->reset_err();
     return;
   }
-  PC_LOG_DBG( "received get_slot_leaders" ).end();
+  PC_LOG_DBG( "received get_slot_leaders" )
+    .add( "curr_slot", slot_ )
+    .add( "last_slot", m->get_last_slot() ).end();
 }
 
 void tx_svr::on_response( rpc::get_health *m )
@@ -286,6 +305,7 @@ void tx_svr::on_response( rpc::get_health *m )
     PC_LOG_WRN( "get_health error" )
       .add( "emsg", m->get_err_msg() )
       .end();
+    m->reset_err();
   }
   PC_LOG_DBG( "health update" ).end();
 }
