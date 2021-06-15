@@ -212,16 +212,6 @@ typedef struct pc_qs
   uint64_t *norm_;
 } pc_qs_t;
 
-typedef struct pc_drv
-{
-  pd_t      f0_[1];
-  pd_t      f1_[1];
-  pd_t      f2_[1];
-  pd_t      pn_[1];
-  pd_t      pp_[1];
-  uint64_t *fact_;
-} pc_drv_t;
-
 // command enumeration
 typedef enum {
 
