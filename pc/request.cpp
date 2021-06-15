@@ -558,7 +558,7 @@ void add_product::submit()
   areq_->set_sender( pkey );
   areq_->set_account( &akey_ );
   areq_->set_owner( gpub );
-  areq_->set_space( sizeof( pc_price_t ) );
+  areq_->set_space( PC_PROD_ACC_SIZE );
   sreq_->set_program( gpub );
   sreq_->set_publish( pkey );
   sreq_->set_account( &akey_ );
@@ -1910,7 +1910,8 @@ void product::update( T *res )
     return;
   }
   pc_prod_t *prod;
-  if ( sizeof( pc_prod_t ) > res->get_data( prod ) ||
+  size_t plen = std::max( sizeof(pc_price_t), (size_t)PC_PROD_ACC_SIZE );
+  if ( sizeof( pc_prod_t ) > res->get_data( prod, plen ) ||
        prod->magic_ != PC_MAGIC ||
        !init_from_account( prod ) ) {
     cptr->set_err_msg( "invalid or corrupt product account" );

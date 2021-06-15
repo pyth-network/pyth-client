@@ -61,13 +61,13 @@ namespace pc
   commitment str_to_commitment( str );
 
   class rpc_request;
-
   // solana rpc REST API client
   class rpc_client : public error
   {
   public:
 
     rpc_client();
+    ~rpc_client();
 
     // rpc http connection
     void set_http_conn( net_connect * );
@@ -90,8 +90,7 @@ namespace pc
     void remove_notify( rpc_request * );
 
     // decode into buffer and return pointer
-    template<class T>
-    size_t get_data( const char *dptr, size_t dlen, T *&ptr );
+    size_t get_data( const char *dptr, size_t dlen, size_t tlen, char*&ptr);
 
     // reset state
     void reset();
@@ -133,7 +132,9 @@ namespace pc
     id_vec_t     reuse_; // reuse id list
     sub_map_t    smap_;  // subscription map
     acc_buf_t    abuf_;  // account decode buffer
+    acc_buf_t    zbuf_;  // account decompress buffer
     uint64_t     id_;    // next request id
+    void        *cxt_;
   };
 
   // rpc response or subscrption callback
@@ -240,16 +241,6 @@ namespace pc
   /////////////////////////////////////////////////////////////////////////
   // wrappers for various solana rpc requests
 
-  template<class T>
-  size_t rpc_client::get_data( const char *dptr, size_t dlen, T *&ptr )
-  {
-    size_t tlen = enc_base64_len( sizeof( T ) );
-    abuf_.resize( std::max( dlen, tlen ) );
-    dec_base64( (const uint8_t*)dptr, dlen, (uint8_t*)&abuf_[0] );
-    ptr = (T*)&abuf_[0];
-    return abuf_.size();
-  }
-
   namespace rpc
   {
     // get account balance, program data and account meta-data
@@ -266,7 +257,7 @@ namespace pc
       uint64_t get_rent_epoch() const;
       bool     get_is_executable() const;
       void     get_owner( const char *&, size_t& ) const;
-      template<class T> size_t get_data( T *& ) const;
+      template<class T> size_t get_data( T *&, size_t len=sizeof(T) ) const;
 
       get_account_info();
       void request( json_wtr& ) override;
@@ -285,9 +276,13 @@ namespace pc
       commitment  cmt_;
     };
 
-    template<class T> size_t get_account_info::get_data( T *&res ) const
+    template<class T>
+    size_t get_account_info::get_data( T *&res, size_t tlen ) const
     {
-      return get_rpc_client()->get_data( dptr_, dlen_, res );
+      char *ptr;
+      size_t len = get_rpc_client()->get_data( dptr_, dlen_, tlen, ptr );
+      res = (T*)ptr;
+      return len;
     }
 
     // recent block hash and fee schedule
@@ -421,7 +416,7 @@ namespace pc
       // results
       uint64_t get_slot() const;
       uint64_t get_lamports() const;
-      template<class T> size_t get_data( T *& ) const;
+      template<class T> size_t get_data( T *&, size_t len=sizeof(T) ) const;
 
       account_subscribe();
       void request( json_wtr& ) override;
@@ -437,9 +432,13 @@ namespace pc
       commitment  cmt_;
     };
 
-    template<class T> size_t account_subscribe::get_data( T *&res ) const
+    template<class T>
+    size_t account_subscribe::get_data( T *&res, size_t tlen ) const
     {
-      return get_rpc_client()->get_data( dptr_, dlen_, res );
+      char *ptr;
+      size_t len = get_rpc_client()->get_data( dptr_, dlen_, tlen, ptr );
+      res = (T*)ptr;
+      return len;
     }
 
     // transaction to transfer funds between accounts

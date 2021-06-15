@@ -2,6 +2,7 @@
 #include "bincode.hpp"
 #include <unistd.h>
 #include "log.hpp"
+#include <zstd.h>
 
 using namespace pc;
 
@@ -123,10 +124,20 @@ static void send_transaction( json_wtr& msg, bincode& tx )
 rpc_client::rpc_client()
 : hptr_( nullptr ),
   wptr_( nullptr ),
-  id_( 0UL )
+  id_( 0UL ),
+  cxt_( nullptr )
 {
   hp_.cp_ = this;
   wp_.cp_ = this;
+  cxt_ = ZSTD_createDCtx();
+}
+
+rpc_client::~rpc_client()
+{
+  if ( cxt_ ) {
+    ZSTD_freeDCtx( (ZSTD_DCtx*)cxt_ );
+    cxt_ = nullptr;
+  }
 }
 
 void rpc_client::set_http_conn( net_connect *hptr )
@@ -250,6 +261,19 @@ void rpc_client::remove_notify( rpc_request *rptr )
   if ( i ) {
     smap_.del( i );
   }
+}
+
+size_t rpc_client::get_data(
+    const char *dptr, size_t dlen, size_t tlen, char *&ptr )
+{
+  tlen = ZSTD_compressBound( tlen );
+  abuf_.resize( dlen );
+  zbuf_.resize( tlen );
+  ZSTD_DCtx *cxt = (ZSTD_DCtx*)cxt_;
+  dlen = dec_base64( (const uint8_t*)dptr, dlen, (uint8_t*)&abuf_[0] );
+  tlen = ZSTD_decompressDCtx( cxt, &zbuf_[0], tlen, &abuf_[0], dlen );
+  ptr = &zbuf_[0];
+  return tlen;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -452,7 +476,7 @@ void rpc::get_account_info::request( json_wtr& msg )
   msg.add_key( "params", json_wtr::e_arr );
   msg.add_val( *acc_ );
   msg.add_val( json_wtr::e_obj );
-  msg.add_key( "encoding", "base64" );
+  msg.add_key( "encoding", "base64+zstd" );
   msg.add_key( "commitment", commitment_to_str( cmt_ ) );
   msg.pop();
   msg.pop();
@@ -790,7 +814,7 @@ void rpc::account_subscribe::request( json_wtr& msg )
   msg.add_key( "params", json_wtr::e_arr );
   msg.add_val( *acc_ );
   msg.add_val( json_wtr::e_obj );
-  msg.add_key( "encoding", "base64" );
+  msg.add_key( "encoding", "base64+zstd" );
   msg.add_key( "commitment", commitment_to_str( cmt_ ) );
   msg.pop();
   msg.pop();

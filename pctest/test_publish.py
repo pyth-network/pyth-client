@@ -125,7 +125,13 @@ async def poll( uri ):
   while True:
     msg = json.loads( await ws.recv() )
 #    print(msg)
-    if 'result' in msg:
+    if 'error' in msg:
+      ts = datetime.datetime.utcnow().isoformat()
+      code = msg['error']['code']
+      emsg = msg['error']['message']
+      print( f'{ts} error code: {code} msg: {emsg}' )
+      sys.exit(1)
+    elif 'result' in msg:
       msgid = msg['id']
       if msgid in allids:
         allids[msgid].parse_reply( msg, allsub )

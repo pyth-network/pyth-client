@@ -8,6 +8,9 @@ apt install libssl-dev
 # depends on libz
 apt install zlib1g zlib1g-dev
 
+# depends on libzstd
+apt install libzstd-dev
+
 # uses cmake to build
 apt install cmake
 

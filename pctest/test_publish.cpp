@@ -302,11 +302,11 @@ void test_publish::on_response( pc::price_sched *ptr, uint64_t sub_id )
       .end();
     // should work once publisher has been permissioned
   } else if ( !sym->get_is_ready_publish() ) {
-    PC_LOG_WRN( "not ready to publish next price" )
+    PC_LOG_WRN( "not ready to publish next price - check pyth_tx connection")
       .add( "symbol", sym->get_symbol() )
       .add( "price_type", pc::price_type_to_str( sym->get_price_type() ) )
       .end();
-    // could be delay in confirmation - try again next time
+    // likely that pyth_tx not yet connected
   } else if ( sym->get_is_err() ) {
     PC_LOG_WRN( "block-chain error" )
       .add( "symbol", sym->get_symbol() )

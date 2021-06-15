@@ -191,7 +191,8 @@ void user::parse_upd_price( uint32_t tok, uint32_t itok )
       jw_.add_key( "result", 0UL );
       add_tail( itok );
     } else if ( !sptr->get_is_ready_publish() ) {
-      add_error( itok, PC_JSON_NOT_READY, "not ready to publish" );
+      add_error( itok, PC_JSON_NOT_READY,
+          "not ready to publish - check pyth_tx connection" );
     } else if ( !sptr->has_publisher() ) {
       add_error( itok, PC_JSON_MISSING_PERMS, "missing publish permission" );
     } else if ( sptr->get_is_err() ) {

@@ -315,6 +315,8 @@ bool manager::init()
   }
   PC_LOG_INF( "initialized" )
     .add( "version", PC_VERSION )
+    .add( "rpc_host", get_rpc_host() )
+    .add( "tx_host", get_tx_host() )
     .add( "capture_file", get_capture_file() )
     .add( "publish_interval(ms)", get_publish_interval() )
     .end();
