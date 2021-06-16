@@ -5,19 +5,69 @@
 
 using namespace pc;
 
-class manager_slot : public manager
+#define PC_LEADER_MAX         256
+#define PC_LEADER_MIN         32
+
+class manager_slot : public manager,
+                     public rpc_sub_i<rpc::get_slot_leaders>
 {
 public:
+  manager_slot();
   void on_response( rpc::slot_subscribe * ) override;
+  void on_response( rpc::get_slot_leaders * ) override;
+private:
+  rpc::get_slot_leaders ldr_[1];
+  uint64_t              last_;
 };
+
+manager_slot::manager_slot()
+: last_( 0L )
+{
+  ldr_->set_sub( this );
+  ldr_->set_limit( PC_LEADER_MAX );
+}
 
 void manager_slot::on_response( rpc::slot_subscribe *res )
 {
   manager::on_response( res );
-  std::cout << get_curr_time()
-            << ','
-            << res->get_slot()
-            << std::endl;
+  uint64_t slot = get_slot();
+  if ( slot != last_ ) {
+    // request next slot leader schedule
+    if ( PC_UNLIKELY( ldr_->get_is_recv() &&
+                      slot > ldr_->get_last_slot() - PC_LEADER_MIN ) ) {
+      ldr_->set_slot( slot );
+      get_rpc_client()->send( ldr_ );
+    }
+
+    // ignore first time
+    if ( !last_ ) {
+      last_ = slot;
+      return;
+    }
+
+    // get leader for this slot
+    std::string pstr;
+    pub_key *pkey = ldr_->get_leader( slot );
+    if ( pkey ) {
+      pkey->enc_base58( pstr );
+    }
+    std::cout << get_curr_time()
+              << ','
+              << slot
+              << ','
+              << pstr
+              << std::endl;
+    last_ = slot;
+  }
+}
+
+void manager_slot::on_response( rpc::get_slot_leaders *m )
+{
+  if ( m->get_is_err() ) {
+    set_err_msg( "failed to get slot leaders ["
+        + m->get_err_msg()  + "]" );
+    return;
+  }
 }
 
 std::string get_rpc_host()
@@ -66,6 +116,7 @@ int main( int argc, char **argv )
   mgr.set_rpc_host( rpc_host );
   mgr.set_dir( key_dir );
   mgr.set_do_tx( false );
+  std::cout << "recv_time,slot,leader" << std::endl;
   if ( !mgr.init() || !mgr.bootstrap() ) {
     std::cerr << "test_slot: " << mgr.get_err_msg() << std::endl;
     return 1;
