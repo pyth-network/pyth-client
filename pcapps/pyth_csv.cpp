@@ -49,11 +49,13 @@ private:
   attr_dict    attr_;
   pub_key      skey_;
   std::string  sym_;
+  bool         do_sym_;
   bool         has_sym_;
 };
 
 csv_print::csv_print()
 : sym_id_( attr_id::add( "symbol" ) ),
+  do_sym_( false ),
   has_sym_( false )
 {
 }
@@ -61,6 +63,7 @@ csv_print::csv_print()
 void csv_print::set_symbol( const std::string& sym )
 {
   sym_ = sym;
+  do_sym_ = !sym_.empty();
 }
 
 void csv_print::print_header()
@@ -103,7 +106,7 @@ void csv_print::parse_product( replay& rep )
   smap_.ref( i ) = sym.as_string();
 
   // check if symbol matches filter
-  if ( sym_ == sym.as_string() ) {
+  if ( do_sym_ && sym_ == sym.as_string() ) {
     has_sym_ = true;
     skey_ = *aptr;
   }
@@ -114,7 +117,7 @@ void csv_print::parse_price( replay& rep )
   pc_price_t *ptr = (pc_price_t*)rep.get_update();
   pub_key *aptr = (pub_key*)&ptr->prod_;
   // filter by symbol
-  if ( has_sym_ && *aptr != skey_ ) {
+  if ( do_sym_ && (!has_sym_ || *aptr != skey_ ) ) {
     return;
   }
   char tbuf[32];
