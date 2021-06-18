@@ -80,8 +80,11 @@ class test_publish:
       price  = res['price']
       spread = res['conf']
       status = res['status']
+      twap   = res['twap']
+      twac   = res['twac']
       print( f'{ts} received aggregate price update symbol=' + self.symbol +
-          f',price={price}, spread={spread}, status={status}' )
+          f',price={price}, spread={spread}, twap={twap}, twac={twac}, '
+          f'status={status}' )
     else:
       # request to submit price
       print( f'{ts} submit price to block-chain symbol=' + self.symbol +

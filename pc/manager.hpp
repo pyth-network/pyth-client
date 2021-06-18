@@ -49,7 +49,8 @@ namespace pc
                   public tx_sub,
                   public rpc_sub,
                   public rpc_sub_i<rpc::slot_subscribe>,
-                  public rpc_sub_i<rpc::get_recent_block_hash>
+                  public rpc_sub_i<rpc::get_recent_block_hash>,
+                  public rpc_sub_i<rpc::program_subscribe>
   {
   public:
 
@@ -71,6 +72,10 @@ namespace pc
     // server listening port
     void set_listen_port( int port );
     int get_listen_port() const;
+
+    // account retrieval/subscription commitment level (default confirmed)
+    void set_commitment( commitment );
+    commitment get_commitment() const;
 
     // content directory (for http content requests if running as server)
     void set_content_dir( const std::string& );
@@ -151,17 +156,17 @@ namespace pc
     void del_map_sub();
     void schedule( price_sched* );
     void write( pc_pub_key_t *, pc_acc_t *ptr );
-    void alloc( price_sig*& );
-    void dealloc( price_sig* );
 
     // tx_sub callbacks
     void on_connect() override;
     void on_disconnect() override;
     bool get_is_tx_connect() const;
+    bool get_is_tx_send() const;
 
     // rpc callbacks
     void on_response( rpc::slot_subscribe * ) override;
     void on_response( rpc::get_recent_block_hash * ) override;
+    void on_response( rpc::program_subscribe * ) override;
     void set_status( int );
     get_mapping *get_last_mapping() const;
 
@@ -181,9 +186,14 @@ namespace pc
       };
     };
 
+    struct tx_parser : public net_parser
+    {
+      bool parse( const char *buf, size_t sz, size_t& len ) override;
+      manager *mgr_;
+    };
+
     typedef dbl_list<user>            user_list_t;
     typedef dbl_list<request>         req_list_t;
-    typedef dbl_list<price_sig>       sig_list_t;
     typedef std::vector<get_mapping*> map_vec_t;
     typedef std::vector<product*>     spx_vec_t;
     typedef std::vector<price_sched*> kpx_vec_t;
@@ -203,7 +213,6 @@ namespace pc
     tx_connect   tconn_;    // tx proxy connection
     user_list_t  olist_;    // open users list
     user_list_t  dlist_;    // to-be-deleted users list
-    sig_list_t   slist_;    // signature reuse list
     req_list_t   plist_;    // pending requests
     map_vec_t    mvec_;     // mapping account updates
     acc_map_t    amap_;     // account to symbol pricing info
@@ -228,10 +237,13 @@ namespace pc
     bool         do_tx_;    // do tx proxy connectivity
     bool         is_pub_;   // is publishing mode
     capture      cap_;      // aggregate price capture
+    tx_parser    txp_;      // handle unexpected errors
+    commitment   cmt_;      // account get/subscribe commitment
 
     // requests
     rpc::slot_subscribe        sreq_[1]; // slot subscription
     rpc::get_recent_block_hash breq_[1]; // block hash request
+    rpc::program_subscribe     preq_[1]; // program account subscription
   };
 
   inline bool manager::get_is_tx_connect() const

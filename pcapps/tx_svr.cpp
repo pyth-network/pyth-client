@@ -220,6 +220,13 @@ void tx_svr::add_addr( const ip_addr& addr )
 
 void tx_svr::on_response( rpc::slot_subscribe *res )
 {
+  // check error
+  if ( PC_UNLIKELY( res->get_is_err() ) ) {
+    set_err_msg( "failed to slot_subscribe ["
+        + res->get_err_msg()  + "]" );
+    return;
+  }
+
   // ignore slots that go back in time
   uint64_t slot = res->get_slot();
   if ( slot <= slot_ ) {
@@ -334,6 +341,7 @@ void tx_svr::reconnect_rpc()
     avec_.clear();
     clnt_.reset();
     ctimeout_ = PC_NSECS_IN_SEC;
+    lreq_->set_recv_time( 0L ); // in case this request was in-flight
 
     // subscribe to slots and cluster addresses
     clnt_.send( sreq_ );

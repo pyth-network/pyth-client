@@ -3,6 +3,7 @@
 #include <pc/log.hpp>
 #include <pc/request.hpp>
 #include "test_error.hpp"
+#include <math.h>
 #include <iostream>
 #include <vector>
 #include <sstream>

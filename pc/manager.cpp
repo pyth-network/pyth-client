@@ -7,7 +7,7 @@ using namespace pc;
 #define PC_RPC_HTTP_PORT      8899
 #define PC_RECONNECT_TIMEOUT  (120L*1000000000L)
 #define PC_BLOCKHASH_TIMEOUT  3
-#define PC_PUB_INTERVAL       (293L*PC_NSECS_IN_MSEC)
+#define PC_PUB_INTERVAL       (227L*PC_NSECS_IN_MSEC)
 #define PC_RPC_HOST           "localhost"
 
 ///////////////////////////////////////////////////////////////////////////
@@ -61,11 +61,15 @@ manager::manager()
   wait_conn_( false ),
   do_cap_( false ),
   do_tx_( true ),
-  is_pub_( false )
+  is_pub_( false ),
+  cmt_( commitment::e_confirmed )
 {
   tconn_.set_sub( this );
   breq_->set_sub( this );
   sreq_->set_sub( this );
+  preq_->set_sub( this );
+  tconn_.set_net_parser( &txp_ );
+  txp_.mgr_ = this;
 }
 
 manager::~manager()
@@ -79,11 +83,13 @@ manager::~manager()
     delete ptr;
   }
   svec_.clear();
-  while( !slist_.empty() ) {
-    price_sig *ptr = slist_.first();
-    slist_.del( ptr );
-    delete ptr;
-  }
+}
+
+bool manager::tx_parser::parse( const char *, size_t len, size_t& res )
+{
+  mgr_->set_err_msg( "not a pyth_tx server - please check address" );
+  res = len;
+  return true;
 }
 
 void manager::add_map_sub()
@@ -173,6 +179,16 @@ int manager::get_listen_port() const
   return lsvr_.get_port();
 }
 
+void manager::set_commitment( commitment cmt )
+{
+  cmt_ = cmt;
+}
+
+commitment manager::get_commitment() const
+{
+  return cmt_;
+}
+
 void manager::set_content_dir( const std::string& cdir )
 {
   cdir_ = cdir;
@@ -253,10 +269,6 @@ bool manager::init()
   if ( gpub ) {
     PC_LOG_INF( "program_key" ).add( "key_name", *gpub ).end();
   }
-  pub_key *rkey = get_param_pub_key();
-  if ( rkey ) {
-    PC_LOG_INF( "param_key" ).add( "key_name", *rkey ).end();
-  }
 
   // initialize capture
   if ( do_cap_ && !cap_.init() ) {
@@ -318,10 +330,16 @@ bool manager::init()
     .add( "rpc_host", get_rpc_host() )
     .add( "tx_host", get_tx_host() )
     .add( "capture_file", get_capture_file() )
+    .add( "commitment", commitment_to_str( get_commitment() ) )
     .add( "publish_interval(ms)", get_publish_interval() )
     .end();
 
   return true;
+}
+
+bool manager::get_is_tx_send() const
+{
+  return tconn_.get_is_send();
 }
 
 bool manager::bootstrap()
@@ -333,26 +351,26 @@ bool manager::bootstrap()
   while( !get_is_err() && !has_status( status ) ) {
     poll();
   }
+  if ( do_tx_ && !get_is_tx_connect() ) {
+    poll();
+  }
   return !get_is_err();
 }
 
 void manager::add_mapping( const pub_key& acc )
 {
-  // check if he have this mapping
-  for( get_mapping *mptr: mvec_ ) {
-    if ( *mptr->get_mapping_key() == acc ) {
-      return;
-    }
+  acc_map_t::iter_t it = amap_.find( acc );
+  if ( !it ) {
+    // construct and submit mapping account info
+    get_mapping *mptr = new get_mapping;
+    mptr->set_mapping_key( acc );
+    amap_.ref( amap_.add( acc ) ) = mptr;
+    mvec_.push_back( mptr );
+    submit( mptr );
+
+    // add mapping subscription count
+    add_map_sub();
   }
-
-  // construct and submit mapping account subscription
-  get_mapping *mptr = new get_mapping;
-  mptr->set_mapping_key( acc );
-  mvec_.push_back( mptr );
-  submit( mptr );
-
-  // add mapping subscription count
-  add_map_sub();
 }
 
 get_mapping *manager::get_last_mapping() const
@@ -402,6 +420,7 @@ void manager::poll( bool do_wait )
   for( request *rptr =plist_.first(); rptr; ) {
     request *nxt = rptr->get_next();
     if ( rptr->get_is_ready() ) {
+      rptr->set_is_submit( false );
       plist_.del( rptr );
       rptr->submit();
     }
@@ -474,17 +493,31 @@ void manager::reconnect_rpc()
     slot_ = 0L;
     num_sub_ = 0;
     clnt_.reset();
-    plist_.clear();
+    for(;;) {
+      request *rptr = plist_.first();
+      if ( rptr ) {
+        rptr->set_is_submit( false );
+        plist_.del( rptr );
+      } else {
+        break;
+      }
+    }
 
     // subscribe to slots and get first block hash
     clnt_.send( sreq_ );
 
-    // resubscribe to mapping and symbol accounts
+    // subscribe to program updates
+    preq_->set_commitment( get_commitment() );
+    preq_->set_program( get_program_pub_key() );
+    clnt_.send( preq_ );
+
+    // gather latest info on mapping accounts
     for( get_mapping *mptr: mvec_ ) {
       mptr->reset();
       submit( mptr );
       add_map_sub();
     }
+    // gather latest info on product and price accounts
     for( product *ptr: svec_ ) {
       ptr->reset();
       submit( ptr );
@@ -497,7 +530,7 @@ void manager::reconnect_rpc()
       }
     }
 
-    // subscribe to mapping account if not done before
+    // add mapping account if not done before
     pub_key *mpub = get_mapping_pub_key();
     if ( mvec_.empty() && mpub ) {
       add_mapping( *mpub );
@@ -603,6 +636,13 @@ void manager::schedule( price_sched *kptr )
 
 void manager::on_response( rpc::slot_subscribe *res )
 {
+  // check error
+  if ( PC_UNLIKELY( res->get_is_err() ) ) {
+    set_err_msg( "failed to slot_subscribe ["
+        + res->get_err_msg()  + "]" );
+    return;
+  }
+
   // ignore slots that go back in time
   uint64_t slot = res->get_slot();
   int64_t ts = res->get_recv_time();
@@ -651,10 +691,28 @@ void manager::on_response( rpc::get_recent_block_hash *m )
 
 }
 
+void manager::on_response( rpc::program_subscribe *m )
+{
+  if ( m->get_is_err() ) {
+    set_err_msg( "failed to program_subscribe ["
+        + m->get_err_msg()  + "]" );
+    return;
+  }
+  // look up by account and dispatch update
+  acc_map_t::iter_t it = amap_.find( *m->get_account() );
+  if ( it ) {
+    amap_.obj( it )->on_response( m );
+  }
+}
+
 void manager::submit( request *req )
 {
+  if ( PC_UNLIKELY( req->get_is_submit() ) ) {
+    return;
+  }
   req->set_manager( this );
   req->set_rpc_client( &clnt_ );
+  req->set_is_submit( true );
   plist_.add( req );
 }
 
@@ -687,7 +745,7 @@ void manager::add_product( const pub_key&acc )
 {
   acc_map_t::iter_t it = amap_.find( acc );
   if ( !it ) {
-    // subscribe to new symbol account
+    // get info for new product account
     product *ptr = new product( acc );
     amap_.ref( amap_.add( acc ) ) = ptr;
     svec_.push_back( ptr );
@@ -708,7 +766,7 @@ void manager::add_price( const pub_key&acc, product *prod )
   // find current symbol account (if any)
   acc_map_t::iter_t it = amap_.find( acc );
   if ( !it ) {
-    // subscribe to new symbol account
+    // get info for new price account
     price *ptr = new price( acc, prod );
     amap_.ref( amap_.add( acc ) ) = ptr;
     submit( ptr );
@@ -733,20 +791,4 @@ unsigned manager::get_num_product() const
 product *manager::get_product( unsigned i ) const
 {
   return i < svec_.size() ? svec_[i] : nullptr;
-}
-
-void manager::alloc( price_sig*& ptr )
-{
-  ptr = slist_.last();
-  if ( ptr ) {
-    ptr->reset_notify();
-    slist_.del( ptr );
-  } else {
-    ptr = new price_sig;
-  }
-}
-
-void manager::dealloc( price_sig *ptr )
-{
-  slist_.add( ptr );
 }

@@ -47,6 +47,7 @@ private:
 class test_publish : public pc::request_sub,
                      public pc::request_sub_i<pc::product>,
                      public pc::request_sub_i<pc::price>,
+                     public pc::request_sub_i<pc::price_init>,
                      public pc::request_sub_i<pc::price_sched>
 {
 public:
@@ -61,6 +62,9 @@ public:
 
   // callback for when to submit new price on-chain
   void on_response( pc::price_sched *, uint64_t ) override;
+
+  // callback for re-initialization of price account (with diff. exponent)
+  void on_response( pc::price_init *, uint64_t ) override;
 
 private:
   void unsubscribe();
@@ -233,7 +237,7 @@ void test_publish::on_response( pc::price *sym, uint64_t )
     .add( "agg_price", price )
     .add( "agg_spread", spread )
     .add( "twap", expo_*(double)sym->get_twap() )
-    .add( "avol", expo_*(double)sym->get_ann_volatility() )
+    .add( "twac", expo_*(double)sym->get_twac() )
     .add( "valid_slot", sym->get_valid_slot() )
     .add( "pub_slot", sym->get_pub_slot() )
     .add( "my_price", my_price )
@@ -244,23 +248,16 @@ void test_publish::on_response( pc::price *sym, uint64_t )
 
   // periodically log publish statistics
   if ( ++rcnt_ % 10 == 0 ) {
-    float    time_quartiles[4];
     uint32_t slot_quartiles[4];
-    sym->get_time_quartiles( time_quartiles );
     sym->get_slot_quartiles( slot_quartiles );
       PC_LOG_INF( "publish statistics" )
         .add( "symbol", sym->get_symbol() )
         .add( "price_type", pc::price_type_to_str( sym->get_price_type() ) )
+        .add( "num_agg", sym->get_num_agg() )
         .add( "num_sent", sym->get_num_sent() )
         .add( "num_recv", sym->get_num_recv() )
-        .add( "num_tx",   sym->get_num_tx() )
-        .add( "num_coal", sym->get_num_coalesced() )
-        .add( "tx_rate",  sym->get_tx_rate() )
+        .add( "num_sub_drop", sym->get_num_sub_drop() )
         .add( "hit_rate", sym->get_hit_rate() )
-        .add( "secs_p25", time_quartiles[0] )
-        .add( "secs_p50", time_quartiles[1] )
-        .add( "secs_p75", time_quartiles[2] )
-        .add( "secs_p99", time_quartiles[3] )
         .add( "slot_p25", slot_quartiles[0] )
         .add( "slot_p50", slot_quartiles[1] )
         .add( "slot_p75", slot_quartiles[2] )
@@ -319,6 +316,15 @@ void test_publish::on_response( pc::price_sched *ptr, uint64_t sub_id )
   }
 }
 
+void test_publish::on_response( pc::price_init *ptr, uint64_t )
+{
+  pc::price *sym = ptr->get_price();
+  PC_LOG_INF( "price account change" )
+    .add( "symbol", sym->get_symbol() )
+    .add( "exponent", sym->get_price_exponent() )
+    .end();
+}
+
 std::string get_rpc_host()
 {
   return "localhost";
@@ -348,6 +354,7 @@ int usage()
             << get_key_store() << ">]" << std::endl;
   std::cerr << "  [-c <capture file>]" << std::endl;
   std::cout << "  [-l <log_file>]" << std::endl;
+  std::cerr << "  [-m <commitment_level>]" << std::endl;
   std::cerr << "  [-n]" << std::endl;
   std::cerr << "  [-d]" << std::endl;
   return 1;
@@ -357,23 +364,30 @@ int main(int argc, char** argv)
 {
   // unpack options
   int opt = 0;
+  pc::commitment cmt = pc::commitment::e_confirmed;
   bool do_wait = true, do_debug = false;
   std::string cap_file, log_file;
   std::string rpc_host = get_rpc_host();
   std::string key_dir  = get_key_store();
   std::string tx_host  = get_rpc_host();
-  while( (opt = ::getopt(argc,argv, "r:t:k:c:l:ndh" )) != -1 ) {
+  while( (opt = ::getopt(argc,argv, "r:t:k:c:l:m:ndh" )) != -1 ) {
     switch(opt) {
       case 'r': rpc_host = optarg; break;
       case 't': tx_host = optarg; break;
       case 'k': key_dir = optarg; break;
       case 'c': cap_file = optarg; break;
       case 'l': log_file = optarg; break;
+      case 'm': cmt = pc::str_to_commitment(optarg); break;
       case 'n': do_wait = false; break;
       case 'd': do_debug = true; break;
       default: return usage();
     }
   }
+  if ( cmt == pc::commitment::e_unknown ) {
+    std::cerr << "pythd: unknown commitment level" << std::endl;
+    return usage();
+  }
+
   // set logging level and disable SIGPIPE
   signal( SIGPIPE, SIG_IGN );
   if ( !log_file.empty() && !pc::log::set_log_file( log_file ) ) {
@@ -399,6 +413,7 @@ int main(int argc, char** argv)
   mgr.set_manager_sub( &sub );
   mgr.set_capture_file( cap_file );
   mgr.set_do_capture( !cap_file.empty() );
+  mgr.set_commitment( cmt );
   if ( !mgr.init() ) {
     std::cerr << "test_publish: " << mgr.get_err_msg() << std::endl;
     return 1;

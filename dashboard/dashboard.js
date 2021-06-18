@@ -41,7 +41,7 @@ class Prices
     let px   = res.price * this.fact[expo];
     let conf = res.conf * this.fact[expo];
     let twap = res.twap * this.fact[expo];
-    let avol = res.avol * this.fact[expo];
+    let twac = res.twac * this.fact[expo];
     let color = 'cornsilk';
     if ( res.status == 'unknown' ) {
       color = '#c0392b';
@@ -53,7 +53,7 @@ class Prices
     this.draw_cell( row.cells[col++], px.toFixed(expo), color );
     this.draw_cell( row.cells[col++], conf.toFixed(expo), color );
     this.draw_cell( row.cells[col++], twap.toFixed(expo), color );
-    this.draw_cell( row.cells[col++], avol.toFixed(expo), color );
+    this.draw_cell( row.cells[col++], twac.toFixed(expo), color );
     this.draw_cell( row.cells[col++], res.status, color );
     this.draw_cell( row.cells[col++], res.valid_slot, color );
     this.draw_cell( row.cells[col++], res.pub_slot, color );

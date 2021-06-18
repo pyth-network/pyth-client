@@ -18,17 +18,14 @@ case $KENV in
   prodbeta)
     MAP_KEY=CUK2JnnLRMtJon3kAUXcgVc8wDhFk96HmNTssnaNRbXQ
     PGM_KEY=9SfxAUWNQKzx85jaivNhhUKG5JTZZmkFydjmdkKakjMo
-    PRM_KEY=2W58ZegzkxqvaKapvvJ6ZzVPeUXT1CMBTZqTCYTcitU1
     ;;
   devnet)
     MAP_KEY=BmA9Z6FjioHJPpjT39QazZyhDRUdZy2ezwx4GiDdE2u2
     PGM_KEY=gSbePebfvPy7tRqimPoVecS2UsBvYv46ynrzWocc92s
-    PRM_KEY=AB6Br1PgMUiyy5tnTeBWwoqsZY3A5hxkpqa2TK8aNv6w
     ;;
   pythnet)
     MAP_KEY=Fy4NhY7n3yoWHZmVdEwsjjRt6tbHUgPpJ2j22ABVUy4B
     PGM_KEY=E7g6dJUeKaWJTyYPxKXcaLJhzkkLaK3NwPKNyzLfZSnP
-    PRM_KEY=BcgWPzHix9F3GsSkbhx4aAxZ3aXPZCQCamxYQCUWeYto
     ;;
   *)
     echo "Unknown environment. Please use: prodbeta, devnet, pythnet"
@@ -48,6 +45,4 @@ echo $PGM_KEY > $KDIR/program_key.json
 check "chmod 0400 $KDIR/program_key.json"
 echo $MAP_KEY > $KDIR/mapping_key.json
 check "chmod 0400 $KDIR/mapping_key.json"
-echo $PRM_KEY > $KDIR/param_key.json
-check "chmod 0400 $KDIR/param_key.json"
 check "chmod 0700 $KDIR"

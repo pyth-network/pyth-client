@@ -37,9 +37,6 @@ setup_admin()
   # setup mapping account
   check "$PYTH init_mapping $OPT"
 
-  # setup parameter account
-  check "$PYTH init_param $OPT"
-
   # setup test account
   check "$PYTH init_test $OPT"
 }

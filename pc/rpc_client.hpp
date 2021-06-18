@@ -89,8 +89,12 @@ namespace pc
     void add_notify( rpc_request * );
     void remove_notify( rpc_request * );
 
-    // decode into buffer and return pointer
-    size_t get_data( const char *dptr, size_t dlen, size_t tlen, char*&ptr);
+    // decode into internal buffer and return pointer
+    size_t get_data_ref(
+        const char *dptr, size_t dlen, size_t tlen, char*&ptr);
+    // decode into provided buffer
+    size_t get_data_val(
+        const char *dptr, size_t dlen, size_t tlen, char*ptr);
 
     // reset state
     void reset();
@@ -257,7 +261,10 @@ namespace pc
       uint64_t get_rent_epoch() const;
       bool     get_is_executable() const;
       void     get_owner( const char *&, size_t& ) const;
-      template<class T> size_t get_data( T *&, size_t len=sizeof(T) ) const;
+      template<class T>
+      size_t get_data_ref( T *&, size_t srclen=sizeof(T) ) const;
+      template<class T>
+      size_t get_data_val( T *, size_t srclen=sizeof(T) ) const;
 
       get_account_info();
       void request( json_wtr& ) override;
@@ -277,11 +284,19 @@ namespace pc
     };
 
     template<class T>
-    size_t get_account_info::get_data( T *&res, size_t tlen ) const
+    size_t get_account_info::get_data_ref( T *&res, size_t tlen ) const
     {
       char *ptr;
-      size_t len = get_rpc_client()->get_data( dptr_, dlen_, tlen, ptr );
+      size_t len = get_rpc_client()->get_data_ref( dptr_, dlen_, tlen, ptr );
       res = (T*)ptr;
+      return len;
+    }
+
+    template<class T>
+    size_t get_account_info::get_data_val( T *res, size_t tlen ) const
+    {
+      char *ptr = (char*)res;
+      size_t len = get_rpc_client()->get_data_val( dptr_, dlen_, tlen, ptr );
       return len;
     }
 
@@ -416,7 +431,10 @@ namespace pc
       // results
       uint64_t get_slot() const;
       uint64_t get_lamports() const;
-      template<class T> size_t get_data( T *&, size_t len=sizeof(T) ) const;
+      template<class T>
+      size_t get_data_ref( T *&, size_t srclen=sizeof(T) ) const;
+      template<class T>
+      size_t get_data_val( T *, size_t srclen=sizeof(T) ) const;
 
       account_subscribe();
       void request( json_wtr& ) override;
@@ -433,11 +451,68 @@ namespace pc
     };
 
     template<class T>
-    size_t account_subscribe::get_data( T *&res, size_t tlen ) const
+    size_t account_subscribe::get_data_ref( T *&res, size_t tlen ) const
     {
       char *ptr;
-      size_t len = get_rpc_client()->get_data( dptr_, dlen_, tlen, ptr );
+      size_t len = get_rpc_client()->get_data_ref( dptr_, dlen_, tlen, ptr );
       res = (T*)ptr;
+      return len;
+    }
+
+    template<class T>
+    size_t account_subscribe::get_data_val( T *res, size_t tlen ) const
+    {
+      char *ptr = (char*)res;
+      size_t len = get_rpc_client()->get_data_val( dptr_, dlen_, tlen, ptr );
+      return len;
+    }
+
+    // program subscription
+    class program_subscribe : public rpc_subscription
+    {
+    public:
+      // parameters
+      void set_program( pub_key * );
+      void set_commitment( commitment );
+
+      // results
+      uint64_t get_slot() const;
+      uint64_t get_lamports() const;
+      pub_key *get_account();
+      template<class T>
+      size_t get_data_ref( T *&, size_t srclen=sizeof(T) ) const;
+      template<class T>
+      size_t get_data_val( T *, size_t srclen=sizeof(T) ) const;
+
+      program_subscribe();
+      void request( json_wtr& ) override;
+      void response( const jtree& ) override;
+      bool notify( const jtree& ) override;
+
+    private:
+      pub_key    *pgm_;
+      pub_key     acc_;
+      uint64_t    slot_;
+      uint64_t    lamports_;
+      size_t      dlen_;
+      const char *dptr_;
+      commitment  cmt_;
+    };
+
+    template<class T>
+    size_t program_subscribe::get_data_ref( T *&res, size_t tlen ) const
+    {
+      char *ptr;
+      size_t len = get_rpc_client()->get_data_ref( dptr_, dlen_, tlen, ptr );
+      res = (T*)ptr;
+      return len;
+    }
+
+    template<class T>
+    size_t program_subscribe::get_data_val( T *res, size_t tlen ) const
+    {
+      char *ptr = (char*)res;
+      size_t len = get_rpc_client()->get_data_val( dptr_, dlen_, tlen, ptr );
       return len;
     }
 
@@ -713,60 +788,6 @@ namespace pc
       signature  sig_;
     };
 
-    // initialize parameter account
-    class init_prm : public rpc_request
-    {
-    public:
-      // parameters
-      void set_block_hash( hash * );
-      void set_publish( key_pair * );
-      void set_param( key_pair * );
-      void set_program( pub_key * );
-
-      // results
-      signature *get_signature();
-
-      void request( json_wtr& ) override;
-      void response( const jtree& ) override;
-
-    private:
-      hash     *bhash_;
-      key_pair *pkey_;
-      key_pair *akey_;
-      pub_key  *gkey_;
-      signature sig_;
-    };
-
-    // update portion parameter account
-    class upd_prm : public rpc_request
-    {
-    public:
-      // parameters
-      void set_block_hash( hash * );
-      void set_publish( key_pair * );
-      void set_param( key_pair * );
-      void set_program( pub_key * );
-      void set_from( uint32_t );
-      void set_num( uint32_t );
-      void set_norm( uint32_t i, uint64_t nvalue );
-
-      // results
-      signature *get_signature();
-
-      void request( json_wtr& ) override;
-      void response( const jtree& ) override;
-
-    private:
-      hash     *bhash_;
-      key_pair *pkey_;
-      key_pair *akey_;
-      pub_key  *gkey_;
-      signature sig_;
-      uint32_t  from_;
-      uint32_t  num_;
-      uint64_t  norm_[PC_NORMAL_UPDATE];
-    };
-
     // initialize test account
     class init_test : public rpc_request
     {
@@ -799,12 +820,11 @@ namespace pc
       upd_test();
       void set_block_hash( hash * );
       void set_publish( key_pair * );
-      void set_param( pub_key * );
       void set_account( key_pair * );
       void set_program( pub_key * );
       void set_expo( int );
-      void set_slot_diff( int64_t );
-      void set_price( unsigned i, int64_t px, uint64_t conf );
+      void set_num( uint32_t );
+      void set_price( unsigned i, int64_t px, uint64_t conf, int64_t sdiff );
 
       // results
       signature *get_signature();
@@ -815,11 +835,35 @@ namespace pc
     private:
       hash     *bhash_;
       key_pair *pkey_;
-      pub_key  *akey_;
       key_pair *tkey_;
       pub_key  *gkey_;
       signature sig_;
       cmd_upd_test_t upd_[1];
+    };
+
+    // get all (pyth) transactions in a slot
+    class get_block : public rpc_request
+    {
+    public:
+      void set_slot( uint64_t slot );
+      void set_commitment( commitment );
+      void set_program( pub_key * );
+      void request( json_wtr& ) override;
+      void response( const jtree& ) override;
+      unsigned get_num_key() const;
+      pub_key *get_key( unsigned i );
+      char    *get_cmd();
+      bool     get_is_end() const;
+
+    private:
+      typedef std::vector<pub_key> key_vec_t;
+      typedef std::vector<char>    ins_vec_t;
+      uint64_t bslot_;
+      commitment cmt_;
+      pub_key   *gkey_;
+      key_vec_t  kvec_;
+      ins_vec_t  ibuf_;
+      bool       is_end_;
     };
 
     // set new component price
@@ -831,10 +875,8 @@ namespace pc
       void set_publish( key_pair * );
       void set_pubcache( key_cache * );
       void set_account( pub_key * );
-      void set_params( pub_key * );
       void set_program( pub_key * );
       void set_block_hash( hash * );
-      void set_signature( signature * );
       void set_price( int64_t px, uint64_t conf, symbol_status,
                       uint64_t pub_slot, bool is_aggregate );
       void build( net_wtr& ) override;
@@ -845,8 +887,6 @@ namespace pc
       key_cache    *ckey_;
       pub_key      *gkey_;
       pub_key      *akey_;
-      pub_key      *rkey_;
-      signature    *sig_;
       int64_t       price_;
       uint64_t      conf_;
       uint64_t      pub_slot_;;

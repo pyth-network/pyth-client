@@ -59,7 +59,8 @@ namespace pc
   // pyth manager api request
   class request : public prev_next<request>,
                   public error,
-                  public rpc_sub
+                  public rpc_sub,
+                  public rpc_sub_i<rpc::program_subscribe>
   {
   public:
 
@@ -91,6 +92,15 @@ namespace pc
     // submit requests as required
     virtual void submit() = 0;
 
+    // is in submission queue
+    void set_is_submit( bool );
+    bool get_is_submit() const;
+
+    // has received account update
+    void set_is_recv( bool );
+    bool get_is_recv() const;
+    void on_response( rpc::program_subscribe * ) override;
+
   protected:
 
     template<class T> void on_error_sub( const std::string&, T * );
@@ -105,6 +115,8 @@ namespace pc
     rpc_sub    *cb_;
     prev_next_t nd_[1];
     node_list_t slist_;
+    bool        is_submit_;
+    bool        is_recv_;
   };
 
   // create initial mapping acount
@@ -140,8 +152,7 @@ namespace pc
 
   // mapping account subsciption and update
   class get_mapping : public request,
-                      public rpc_sub_i<rpc::get_account_info>,
-                      public rpc_sub_i<rpc::account_subscribe>
+                      public rpc_sub_i<rpc::get_account_info>
   {
   public:
     get_mapping();
@@ -154,7 +165,7 @@ namespace pc
     void reset();
     void submit() override;
     void on_response( rpc::get_account_info * ) override;
-    void on_response( rpc::account_subscribe * ) override;
+    void on_response( rpc::program_subscribe * ) override;
   private:
     typedef enum { e_new, e_init } state_t;
 
@@ -163,8 +174,7 @@ namespace pc
     state_t  st_;
     pub_key  mkey_;
     uint32_t num_sym_;
-    rpc::get_account_info  areq_[1];
-    rpc::account_subscribe sreq_[1];
+    rpc::get_account_info areq_[1];
   };
 
   // add new mapping acount
@@ -404,52 +414,6 @@ namespace pc
     rpc::signature_subscribe sig_[1];
   };
 
-  // initialize parameter account
-  class init_prm : public request,
-                   public rpc_sub_i<rpc::create_account>,
-                   public rpc_sub_i<rpc::init_prm>,
-                   public rpc_sub_i<rpc::upd_prm>,
-                   public rpc_sub_i<rpc::get_account_info>,
-                   public rpc_sub_i<rpc::signature_subscribe>
-  {
-  public:
-    init_prm();
-    void set_lamports( uint64_t );
-    bool get_is_done() const override;
-
-  public:
-    void submit() override;
-    void on_response( rpc::create_account * ) override;
-    void on_response( rpc::init_prm * ) override;
-    void on_response( rpc::upd_prm * ) override;
-    void on_response( rpc::get_account_info * ) override;
-    void on_response( rpc::signature_subscribe * ) override;
-
-  protected:
-    typedef enum {
-      e_create_sent, e_create_sig,
-      e_init_sent, e_init_sig,
-      e_get_prm, e_pend_prm, e_upd_sent, e_done, e_error
-    } state_t;
-
-    void upd_norm( uint32_t );
-
-    state_t                  st_;
-    uint64_t                 slot_;
-    rpc::create_account      creq_[1];
-    rpc::init_prm            ireq_[1];
-    rpc::upd_prm             ureq_[1];
-    rpc::get_account_info    areq_[1];
-    rpc::signature_subscribe sig_[1];
-  };
-
-  // update parameter account (if init_prm failed)
-  class upd_prm : public init_prm
-  {
-  public:
-    void submit() override;
-  };
-
   // initialize test account
   class init_test : public request,
                     public rpc_sub_i<rpc::create_account>,
@@ -560,6 +524,24 @@ namespace pc
     rpc::get_account_info req_[1];
   };
 
+  // get transactions in single block
+  class get_block : public request,
+                    public rpc_sub_i<rpc::get_block>
+  {
+  public:
+    get_block();
+    void set_slot( uint64_t slot );
+    void set_commitment( commitment cmt );
+  public:
+    void submit() override;
+    void on_response( rpc::get_block * ) override;
+    bool get_is_done() const override;
+  protected:
+    typedef enum { e_sent, e_done, e_error } state_t;
+    state_t st_;
+    rpc::get_block req_[1];
+  };
+
   // get minimum balance for rent exemption
   class get_minimum_balance_rent_exemption : public request,
     public rpc_sub_i<rpc::get_minimum_balance_rent_exemption>
@@ -583,8 +565,7 @@ namespace pc
   // product symbol and other reference-data attributes
   class product : public request,
                   public attr_dict,
-                  public rpc_sub_i<rpc::get_account_info>,
-                  public rpc_sub_i<rpc::account_subscribe>
+                  public rpc_sub_i<rpc::get_account_info>
   {
   public:
     // product account number
@@ -606,7 +587,7 @@ namespace pc
     void reset();
     void submit() override;
     void on_response( rpc::get_account_info * ) override;
-    void on_response( rpc::account_subscribe * ) override;
+    void on_response( rpc::program_subscribe * ) override;
     bool get_is_done() const override;
     void add_price( price * );
 
@@ -620,7 +601,6 @@ namespace pc
     prices_t               pvec_;
     state_t                st_;
     rpc::get_account_info  areq_[1];
-    rpc::account_subscribe sreq_[1];
   };
 
   // price submission schedule
@@ -645,26 +625,24 @@ namespace pc
     uint64_t shash_;
   };
 
-  class price_sig : public rpc::signature_subscribe,
-                    public signature,
-                    public prev_next<price_sig>
+  // price account rei-initialized
+  class price_init : public request
   {
   public:
-    price_sig();
-    void response( const jtree& jt ) override;
-    bool notify( const jtree& jt ) override;
-    void reset_notify();
-    bool get_is_notify() const;
+    price_init( price * );
+
+    // get associated symbol price
+    price *get_price() const;
+
+    void submit() override;
   private:
-    bool is_notify_;
+    price *ptr_;
   };
 
   // price subscriber and publisher
   class price : public request,
                 public pub_stats,
-                public rpc_sub_i<rpc::get_account_info>,
-                public rpc_sub_i<rpc::account_subscribe>,
-                public rpc_sub_i<price_sig>
+                public rpc_sub_i<rpc::get_account_info>
   {
   public:
 
@@ -711,7 +689,10 @@ namespace pc
     symbol_status get_status() const;
     uint64_t      get_lamports() const;
     int64_t       get_twap() const;
-    uint64_t      get_ann_volatility() const;
+    uint64_t      get_twac() const;
+    uint64_t      get_prev_slot() const;
+    int64_t       get_prev_price() const;
+    uint64_t      get_prev_conf() const;
 
     // get publishers
     unsigned get_num_publisher() const;
@@ -741,8 +722,7 @@ namespace pc
     void unsubscribe();
     void submit() override;
     void on_response( rpc::get_account_info * ) override;
-    void on_response( rpc::account_subscribe * ) override;
-    void on_response( price_sig * ) override;
+    void on_response( rpc::program_subscribe * ) override;
     bool get_is_done() const override;
 
   private:
@@ -750,13 +730,10 @@ namespace pc
     typedef enum {
       e_subscribe, e_sent_subscribe, e_publish, e_error } state_t;
 
-    typedef dbl_list<price_sig> sig_list_t;
-
     template<class T> void update( T *res );
 
     bool init_publish();
-    void init_subscribe( pc_price_t * );
-    void init_price( pc_price_t * );
+    void init_subscribe();
     void log_update( const char *title );
     void update_pub();
     bool update( int64_t price, uint64_t conf, symbol_status, bool aggr );
@@ -764,28 +741,16 @@ namespace pc
     bool                   init_;
     bool                   isched_;
     state_t                st_;
-    pub_key                apub_;
-    price_type             ptype_;
-    symbol_status          sym_st_;
-    uint32_t               version_;
     uint32_t               pub_idx_;
-    int64_t                apx_;
-    uint64_t               aconf_;
-    int64_t                twap_;
-    uint64_t               avol_;
-    uint64_t               valid_slot_;
-    uint64_t               pub_slot_;
+    pub_key                apub_;
     uint64_t               lamports_;
-    int32_t                aexpo_;
-    uint32_t               cnum_;
+    uint64_t               pub_slot_;
     product               *prod_;
-    sig_list_t             glist_;
     price_sched            sched_;
-    pc_pub_key_t           cpub_[PC_COMP_SIZE];
-    pc_price_info_t        cprice_[PC_COMP_SIZE];
+    price_init             pinit_;
     rpc::get_account_info  areq_[1];
-    rpc::account_subscribe sreq_[1];
     rpc::upd_price         preq_[1];
+    pc_price_t            *pptr_;
   };
 
   template<class T>

@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <math.h>
 #include <iostream>
+#include <zstd.h>
 
 using namespace pc;
 
@@ -78,7 +79,9 @@ void request_sub_set::teardown()
 request::request()
 : svr_( nullptr ),
   clnt_( nullptr ),
-  cb_( nullptr )
+  cb_( nullptr ),
+  is_submit_( false ),
+  is_recv_( false )
 {
 }
 
@@ -126,6 +129,30 @@ void request::del_sub( request_node *sptr )
 request::prev_next_t *request::get_request()
 {
   return nd_;
+}
+
+void request::set_is_submit( bool is_submit )
+{
+  is_submit_ = is_submit;
+}
+
+bool request::get_is_submit() const
+{
+  return is_submit_;
+}
+
+void request::set_is_recv( bool is_recv )
+{
+  is_recv_ = is_recv;
+}
+
+bool request::get_is_recv() const
+{
+  return is_recv_;
+}
+
+void request::on_response( rpc::program_subscribe * )
+{
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -273,28 +300,30 @@ void get_mapping::reset()
 {
   reset_err();
   st_ = e_new;
+  set_is_recv( false );
 }
 
 void get_mapping::submit()
 {
   st_ = e_new;
+  areq_->set_commitment( get_manager()->get_commitment() );
   areq_->set_account( &mkey_ );
-  sreq_->set_account( &mkey_ );
   areq_->set_sub( this );
-  sreq_->set_sub( this );
-  // submit subscription first
-  get_rpc_client()->send( sreq_ );
+  // get account data
   get_rpc_client()->send( areq_ );
 }
 
 void get_mapping::on_response( rpc::get_account_info *res )
 {
+  set_is_recv( true );
   update( res );
 }
 
-void get_mapping::on_response( rpc::account_subscribe *res )
+void get_mapping::on_response( rpc::program_subscribe *res )
 {
-  update( res );
+  if ( get_is_recv( )) {
+    update( res );
+  }
 }
 
 template<class T>
@@ -307,7 +336,7 @@ void get_mapping::update( T *res )
     return;
   }
   pc_map_table_t *tab;
-  if ( sizeof( pc_map_table_t ) > res->get_data( tab ) ||
+  if ( sizeof( pc_map_table_t ) > res->get_data_ref( tab ) ||
        tab->magic_ != PC_MAGIC ) {
     cptr->set_err_msg( "invalid or corrupt mapping account" );
     return;
@@ -317,7 +346,7 @@ void get_mapping::update( T *res )
         std::to_string( tab->ver_ ) );
   }
 
-  // check and subscribe to any new price accounts in mapping table
+  // check and get any new product accounts in mapping table
   num_sym_ = tab->num_;
   PC_LOG_INF( "add_mapping" )
     .add( "account", mkey_ )
@@ -1184,257 +1213,6 @@ bool del_publisher::get_is_done() const
 }
 
 ///////////////////////////////////////////////////////////////////////////
-// init_prm
-
-init_prm::init_prm()
-: st_( e_create_sent )
-{
-}
-
-void init_prm::set_lamports( uint64_t lamports )
-{
-  creq_->set_lamports( lamports );
-}
-
-void init_prm::submit()
-{
-  // get keys
-  manager *sptr = get_manager();
-  key_pair *pkey = sptr->get_publish_key_pair();
-  if ( !pkey ) {
-    on_error_sub( "missing or invalid publish key [" +
-        sptr->get_publish_key_pair_file(), this );
-    return;
-  }
-  key_pair *akey = sptr->get_param_key_pair();
-  if ( akey ) {
-    on_error_sub( "param key pair already exists [" +
-        sptr->get_param_key_pair_file() + "]", this );
-    return;
-  }
-  akey = sptr->create_param_key_pair();
-  if ( !akey ) {
-    on_error_sub( "failed to create param key pair [" +
-        sptr->get_param_key_pair_file() + "]", this );
-    return;
-  }
-  pub_key *gpub = sptr->get_program_pub_key();
-  if ( !gpub ) {
-    on_error_sub( "missing or invalid program public key [" +
-        sptr->get_program_pub_key_file() + "]", this );
-    return;
-  }
-  creq_->set_sub( this );
-  creq_->set_sender( pkey );
-  creq_->set_account( akey );
-  creq_->set_owner( gpub );
-  creq_->set_space( sizeof( pc_prm_t ) );
-
-  ireq_->set_sub( this );
-  ireq_->set_publish( pkey );
-  ireq_->set_param( akey );
-  ireq_->set_program( gpub );
-
-  ureq_->set_sub( this );
-  ureq_->set_publish( pkey );
-  ureq_->set_param( akey );
-  ureq_->set_program( gpub );
-
-  areq_->set_sub( this );
-  areq_->set_account( sptr->get_param_pub_key() );
-
-  sig_->set_sub( this );
-  sig_->set_commitment( commitment::e_finalized );
-
-  // get recent block hash and submit request
-  st_ = e_create_sent;
-  slot_ = 0UL;
-  creq_->set_block_hash( get_manager()->get_recent_block_hash() );
-  get_rpc_client()->send( creq_ );
-}
-
-void init_prm::on_response( rpc::create_account *res )
-{
-  if ( res->get_is_err() ) {
-    on_error_sub( res->get_err_msg(), this );
-    st_ = e_error;
-  } else if ( st_ == e_create_sent ) {
-    PC_LOG_DBG( "successful param account creation" ).end();
-    // subscribe to signature completion
-    st_ = e_create_sig;
-    sig_->set_commitment( commitment::e_finalized );
-    sig_->set_signature( res->get_signature() );
-    get_rpc_client()->send( sig_ );
-  }
-}
-
-void init_prm::on_response( rpc::init_prm *res )
-{
-  if ( res->get_is_err() ) {
-    on_error_sub( res->get_err_msg(), this );
-    st_ = e_error;
-  } else if ( st_ == e_init_sent ) {
-    // subscribe to signature completion
-    PC_LOG_DBG( "successful param account initialize" ).end();
-    st_ = e_init_sig;
-    sig_->set_commitment( commitment::e_finalized );
-    sig_->set_signature( res->get_signature() );
-    get_rpc_client()->send( sig_ );
-  }
-}
-
-void init_prm::on_response( rpc::upd_prm *res )
-{
-  if ( res->get_is_err() ) {
-    on_error_sub( res->get_err_msg(), this );
-    st_ = e_error;
-  } else if ( st_ == e_upd_sent ) {
-    st_ = e_pend_prm;
-    slot_ = 1+get_manager()->get_slot();
-  }
-}
-
-void init_prm::upd_norm(uint32_t idx )
-{
-  double denom = __builtin_sqrt( 2*M_PI);
-  double x = idx * 0.001;
-  ureq_->set_from( idx );
-  for(unsigned i=0; i != PC_NORMAL_UPDATE; ++i ) {
-    if ( idx < PC_NORMAL_SIZE ) {
-      double inorm = __builtin_exp( -.5*x*x)/denom;
-      ureq_->set_num( i+1 );
-      ureq_->set_norm( i, inorm*1e9 );
-      x += 0.001;
-      ++idx;
-    } else {
-      ureq_->set_norm( i, 0.0 );
-    }
-  }
-}
-
-void init_prm::on_response( rpc::signature_subscribe *res )
-{
-  if ( res->get_is_err() ) {
-    on_error_sub( res->get_err_msg(), this );
-    st_ = e_error;
-  } else if ( st_ == e_create_sig ) {
-    PC_LOG_DBG( "completed account creation" ).end();
-    st_ = e_init_sent;
-    ireq_->set_block_hash( get_manager()->get_recent_block_hash() );
-    get_rpc_client()->send( ireq_ );
-  } else if ( st_ == e_init_sig ) {
-    PC_LOG_DBG( "completed account initialize" ).end();
-    st_ = e_get_prm;
-    get_rpc_client()->send( areq_ );
-  }
-}
-
-void init_prm::on_response( rpc::get_account_info *res )
-{
-  if ( res->get_is_err() ) {
-    on_error_sub( res->get_err_msg(), this );
-    st_ = e_error;
-    return;
-  }
-  // decode and verify account values
-  PC_LOG_DBG( "checking param account" ).end();
-  manager *cptr = get_manager();
-  pc_prm_t *prm;
-  if ( sizeof( pc_prm_t ) > res->get_data( prm ) ||
-       prm->magic_ != PC_MAGIC ||
-       prm->type_ != PC_ACCTYPE_PARAMS ) {
-    cptr->set_err_msg( "invalid or corrupt parameter account" );
-    st_ = e_error;
-    return;
-  }
-  if ( prm->ver_ != PC_VERSION ) {
-    cptr->set_err_msg( "invalid parameter account version=" +
-        std::to_string( prm->ver_ ) );
-    st_ = e_error;
-    return;
-  }
-  // verify account parameters
-  uint64_t m = 1UL;
-  for( uint32_t i=0;i != PC_FACTOR_SIZE; ++i ) {
-    if ( prm->fact_[i] != m ) {
-      cptr->set_err_msg( "invalid parameter account factor=" +
-          std::to_string( prm->fact_[i] ) );
-      st_ = e_error;
-      return;
-    }
-    m *= 10L;
-  }
-  // check which values are missing
-  for(unsigned i=0; i != PC_NORMAL_SIZE; ++i ) {
-    if ( prm->norm_[i] == 0UL ) {
-      // send norm values for this section
-      uint64_t idx = i - (i % PC_NORMAL_UPDATE);
-      st_ = e_upd_sent;
-      PC_LOG_DBG( "updating param account" ).add( "idx", idx ).end();
-      upd_norm( idx );
-      ureq_->set_block_hash( get_manager()->get_recent_block_hash() );
-      get_rpc_client()->send( ureq_ );
-      return;
-    }
-  }
-  st_ = e_done;
-}
-
-bool init_prm::get_is_done() const
-{
-  if ( st_ == e_done ) {
-    return true;
-  }
-  if ( st_ == e_pend_prm ) {
-    manager *cptr = get_manager();
-    if ( slot_ < cptr->get_slot() ) {
-      const_cast<state_t&>(st_) = e_get_prm;
-      get_rpc_client()->send( const_cast<rpc::get_account_info*>(areq_) );
-    }
-  }
-  return false;
-}
-
-///////////////////////////////////////////////////////////////////////////
-// upd_prm
-
-void upd_prm::submit()
-{
-  // get keys
-  manager *sptr = get_manager();
-  key_pair *pkey = sptr->get_publish_key_pair();
-  if ( !pkey ) {
-    on_error_sub( "missing or invalid publish key [" +
-        sptr->get_publish_key_pair_file(), this );
-    return;
-  }
-  key_pair *akey = sptr->get_param_key_pair();
-  if ( !akey ) {
-    on_error_sub( "missing param key pair [" +
-        sptr->get_param_key_pair_file() + "]", this );
-    return;
-  }
-  pub_key *gpub = sptr->get_program_pub_key();
-  if ( !gpub ) {
-    on_error_sub( "missing or invalid program public key [" +
-        sptr->get_program_pub_key_file() + "]", this );
-    return;
-  }
-  ureq_->set_sub( this );
-  ureq_->set_publish( pkey );
-  ureq_->set_param( akey );
-  ureq_->set_program( gpub );
-
-  areq_->set_sub( this );
-  areq_->set_account( sptr->get_param_pub_key() );
-
-  // get recent block hash and submit request
-  st_ = e_get_prm;
-  slot_ = 0UL;
-  get_rpc_client()->send( areq_ );
-}
-
-///////////////////////////////////////////////////////////////////////////
 // init_test
 
 init_test::init_test()
@@ -1478,7 +1256,7 @@ void init_test::submit()
   creq_->set_sender( pkey );
   creq_->set_account( &tkey_ );
   creq_->set_owner( gpub );
-  creq_->set_space( sizeof( pc_test_t ) );
+  creq_->set_space( sizeof( pc_price_t ) );
 
   ireq_->set_sub( this );
   ireq_->set_publish( pkey );
@@ -1561,14 +1339,14 @@ bool upd_test::init_from_file( const std::string& file )
     return set_err_msg( "failed to parse file[" + file + "]" );
   }
   ureq_->set_expo( pt.get_int( pt.find_val( 1, "exponent" ) ) );
-  ureq_->set_slot_diff( pt.get_int( pt.find_val( 1, "slot_diff" ) ) );
   unsigned i=0, qt =pt.find_val( 1, "quotes" );
   for( uint32_t it = pt.get_first( qt ); it; it = pt.get_next( it ) ) {
     int64_t px = pt.get_int( pt.find_val( it,  "price"  ) );
     int64_t conf = pt.get_uint( pt.find_val( it, "conf" ) );
-    ureq_->set_price( i, px, conf );
-    ++i;
+    int64_t sdiff = pt.get_int( pt.find_val( it, "slot_diff" ) );
+    ureq_->set_price( i++, px, conf, sdiff );
   }
+  ureq_->set_num( i );
   return true;
 }
 
@@ -1587,12 +1365,6 @@ void upd_test::submit()
         sptr->get_publish_key_pair_file(), this );
     return;
   }
-  pub_key *akey = sptr->get_param_pub_key();
-  if ( !akey ) {
-    on_error_sub( "missing param pulic bkey [" +
-        sptr->get_param_key_pair_file() + "]", this );
-    return;
-  }
   pub_key *gpub = sptr->get_program_pub_key();
   if ( !gpub ) {
     on_error_sub( "missing or invalid program public key [" +
@@ -1607,7 +1379,6 @@ void upd_test::submit()
 
   ureq_->set_sub( this );
   ureq_->set_publish( pkey );
-  ureq_->set_param( akey );
   ureq_->set_account( &tkey_ );
   ureq_->set_program( gpub );
 
@@ -1638,8 +1409,8 @@ void upd_test::on_response( rpc::account_subscribe *res )
     return;
   }
   manager *cptr = get_manager();
-  pc_test_t *tptr;
-  if ( sizeof( pc_test_t ) > res->get_data( tptr ) ||
+  pc_price_t *tptr;
+  if ( sizeof( pc_price_t ) != res->get_data_ref( tptr ) ||
        tptr->magic_ != PC_MAGIC ||
        tptr->type_ != PC_ACCTYPE_TEST ) {
     cptr->set_err_msg( "invalid or corrupt test account" );
@@ -1655,8 +1426,8 @@ void upd_test::on_response( rpc::account_subscribe *res )
   json_wtr jw;
   jw.add_val( json_wtr::e_obj );
   jw.add_key( "exponent", (int64_t)tptr->expo_ );
-  jw.add_key( "price", tptr->price_ );
-  jw.add_key( "conf", tptr->conf_ );
+  jw.add_key( "price", tptr->agg_.price_ );
+  jw.add_key( "conf", tptr->agg_.conf_ );
   jw.pop();
   net_buf *hd, *tl;
   jw.detach( hd, tl );
@@ -1787,12 +1558,54 @@ void balance::submit()
   }
   st_ = e_sent;
   req_->set_sub( this );
+  req_->set_commitment( get_manager()->get_commitment() );
   get_rpc_client()->send( req_ );
 }
 
 bool balance::get_is_done() const
 {
   return st_ == e_done;
+}
+
+///////////////////////////////////////////////////////////////////////////
+// get_block
+
+get_block::get_block()
+: st_( e_sent )
+{
+}
+
+void get_block::set_slot( uint64_t slot )
+{
+  req_->set_slot( slot );
+}
+
+void get_block::set_commitment( commitment cmt )
+{
+  req_->set_commitment( cmt );
+}
+
+void get_block::on_response( rpc::get_block *res )
+{
+  if ( res->get_is_err() ) {
+    on_error_sub( res->get_err_msg(), this );
+    st_ = e_error;
+  } else if ( st_ == e_sent && res->get_is_end() ) {
+    st_ = e_done;
+  }
+}
+
+bool get_block::get_is_done() const
+{
+  return st_ == e_done;
+}
+
+void get_block::submit()
+{
+  st_ = e_sent;
+  req_->set_sub( this );
+  req_->set_program( get_manager()->get_program_pub_key() );
+  get_rpc_client()->send( req_ );
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -1845,9 +1658,7 @@ product::product( const pub_key& acc )
   st_( e_subscribe )
 {
   areq_->set_account( &acc_ );
-  sreq_->set_account( &acc_ );
   areq_->set_sub( this );
-  sreq_->set_sub( this );
 }
 
 product::~product()
@@ -1874,6 +1685,7 @@ void product::reset()
 {
   reset_err();
   st_ = e_subscribe;
+  set_is_recv( false );
 }
 
 void product::add_price( price *px )
@@ -1884,19 +1696,22 @@ void product::add_price( price *px )
 void product::submit()
 {
   rpc_client  *cptr = get_rpc_client();
+  areq_->set_commitment( get_manager()->get_commitment() );
   st_ = e_subscribe;
-  cptr->send( sreq_ );
   cptr->send( areq_ );
 }
 
 void product::on_response( rpc::get_account_info *res )
 {
+  set_is_recv( true );
   update( res );
 }
 
-void product::on_response( rpc::account_subscribe *res )
+void product::on_response( rpc::program_subscribe *res )
 {
-  update( res );
+  if ( get_is_recv() ) {
+    update( res );
+  }
 }
 
 template<class T>
@@ -1911,7 +1726,7 @@ void product::update( T *res )
   }
   pc_prod_t *prod;
   size_t plen = std::max( sizeof(pc_price_t), (size_t)PC_PROD_ACC_SIZE );
-  if ( sizeof( pc_prod_t ) > res->get_data( prod, plen ) ||
+  if ( sizeof( pc_prod_t ) > res->get_data_ref( prod, plen ) ||
        prod->magic_ != PC_MAGIC ||
        !init_from_account( prod ) ) {
     cptr->set_err_msg( "invalid or corrupt product account" );
@@ -1983,97 +1798,33 @@ price *product::get_price( price_type pt ) const
 }
 
 ///////////////////////////////////////////////////////////////////////////
-// price_sig
-
-price_sig::price_sig()
-: is_notify_( false )
-{
-  set_commitment( commitment::e_confirmed );
-  set_signature( this );
-}
-
-void price_sig::response( const jtree& jt )
-{
-  is_notify_ = true;
-  add_notify( jt );
-}
-
-bool price_sig::notify( const jtree& )
-{
-  ((price*)get_sub())->on_response( this );
-  return false;
-}
-
-void price_sig::reset_notify()
-{
-  is_notify_ = false;
-}
-
-bool price_sig::get_is_notify() const
-{
-  return is_notify_;
-}
-
-///////////////////////////////////////////////////////////////////////////
 // price
-
-void price::on_response( price_sig *res )
-{
-  // update transaction receive count
-  inc_tx();
-
-  // remove everything up to and including this result
-  for( price_sig *ptr = glist_.first(); ptr; ) {
-    price_sig *nxt = ptr->get_next();
-    if ( ptr->get_is_notify() ) {
-      ptr->remove_notify();
-      glist_.del( ptr );
-      get_manager()->dealloc( ptr );
-    }
-    if ( ptr != res ) {
-      ptr = nxt;
-    } else {
-      break;
-    }
-  }
-}
 
 price::price( const pub_key& acc, product *prod )
 : init_( false ),
   isched_( false ),
   st_( e_subscribe ),
-  apub_( acc ),
-  ptype_( price_type::e_unknown ),
-  sym_st_( symbol_status::e_unknown ),
-  version_( 0 ),
   pub_idx_( (unsigned)-1 ),
-  apx_( 0 ),
-  aconf_( 0 ),
-  twap_( 0 ),
-  avol_( 0 ),
-  valid_slot_( 0 ),
-  pub_slot_( 0 ),
+  apub_( acc ),
   lamports_( 0UL ),
-  aexpo_( 0 ),
-  cnum_( 0 ),
+  pub_slot_( 0UL ),
   prod_( prod ),
-  sched_( this )
+  sched_( this ),
+  pinit_( this ),
+  pptr_(nullptr)
 {
-  __builtin_memset( &cpub_, 0, sizeof( cpub_ ) );
   areq_->set_account( &apub_ );
-  sreq_->set_account( &apub_ );
   preq_->set_account( &apub_ );
   areq_->set_sub( this );
-  sreq_->set_sub( this );
+  size_t tlen = ZSTD_compressBound( sizeof(pc_price_t) );
+  pptr_ = (pc_price_t*)new char[tlen];
+  __builtin_memset( pptr_, 0, tlen );
 }
 
 price::~price()
 {
-  while( !glist_.empty() ) {
-    price_sig *ptr = glist_.first();
-    glist_.del( ptr );
-    delete ptr;
-  }
+  delete [] (char*)pptr_;
+  pptr_ = nullptr;
 }
 
 bool price::init_publish()
@@ -2091,17 +1842,9 @@ bool price::init_publish()
         cptr->get_program_pub_key_file() + "]", this );
     return false;
   }
-  pub_key *rkey = cptr->get_param_pub_key();
-  if ( !rkey ) {
-    on_error_sub( "missing or invalid param public key [" +
-        cptr->get_param_pub_key_file() + "]", this );
-    return false;
-  }
-
   preq_->set_publish( pkey );
   preq_->set_pubcache( cptr->get_publish_key_cache() );
   preq_->set_program( gpub );
-  preq_->set_params( rkey );
   init_ = true;
   return true;
 }
@@ -2128,42 +1871,57 @@ pub_key *price::get_account()
 
 uint32_t price::get_version() const
 {
-  return version_;
+  return pptr_->ver_;
 }
 
 int64_t  price::get_price() const
 {
-  return apx_;
-}
-
-int64_t price::get_twap() const
-{
-  return twap_;
-}
-
-uint64_t price::get_ann_volatility() const
-{
-  return avol_;
+  return pptr_->agg_.price_;
 }
 
 uint64_t price::get_conf() const
 {
-  return aconf_;
+  return pptr_->agg_.conf_;
+}
+
+int64_t price::get_twap() const
+{
+  return pptr_->twap_.val_;
+}
+
+uint64_t price::get_twac() const
+{
+  return pptr_->twac_.val_;
+}
+
+uint64_t price::get_prev_slot() const
+{
+  return pptr_->prev_slot_;
+}
+
+int64_t price::get_prev_price() const
+{
+  return pptr_->prev_price_;
+}
+
+uint64_t price::get_prev_conf() const
+{
+  return pptr_->prev_conf_;
 }
 
 int64_t price::get_price_exponent() const
 {
-  return aexpo_;
+  return pptr_->expo_;
 }
 
 price_type price::get_price_type() const
 {
-  return ptype_;
+  return(price_type) pptr_->ptype_;
 }
 
 symbol_status price::get_status() const
 {
-  return sym_st_;
+  return (symbol_status)pptr_->agg_.status_;
 }
 
 uint64_t price::get_lamports() const
@@ -2173,12 +1931,12 @@ uint64_t price::get_lamports() const
 
 uint64_t price::get_valid_slot() const
 {
-  return valid_slot_;
+  return pptr_->valid_slot_;
 }
 
 uint64_t price::get_pub_slot() const
 {
-  return pub_slot_;
+  return pptr_->agg_.pub_slot_;
 }
 
 bool price::get_is_ready_publish() const
@@ -2190,6 +1948,7 @@ void price::reset()
 {
   st_ = e_subscribe;
   reset_err();
+  set_is_recv( false );
 }
 
 bool price::has_publisher()
@@ -2200,8 +1959,8 @@ bool price::has_publisher()
 bool price::has_publisher( const pub_key& key )
 {
   pc_pub_key_t *pk = (pc_pub_key_t*)key.data();
-  for(uint32_t i=0; i != cnum_; ++i ) {
-    pc_pub_key_t *ikey = &cpub_[i];
+  for(uint32_t i=0; i != pptr_->num_; ++i ) {
+    pc_pub_key_t *ikey = &pptr_->comp_[i].pub_;
     if ( pc_pub_key_equal( ikey, pk ) ) {
       return true;
     }
@@ -2241,18 +2000,11 @@ bool price::update(
   if ( PC_UNLIKELY( !get_is_ready_publish() ) ) {
     return false;
   }
-  price_sig *sig;
   manager *mgr = get_manager();
-  mgr->alloc( sig );
-  add_send( mgr->get_slot(), mgr->get_curr_time() );
   preq_->set_price( price, conf, st, mgr->get_slot(), is_agg );
   preq_->set_block_hash( mgr->get_recent_block_hash() );
-  preq_->set_signature( sig );
   mgr->submit( preq_ );
-  // subscribe to signature
-  sig->set_sub( this );
-  get_rpc_client()->send( sig );
-  glist_.add( sig );
+  inc_sent();
   return true;
 }
 
@@ -2260,8 +2012,8 @@ void price::submit()
 {
   if ( st_ == e_subscribe ) {
     // subscribe first
+    areq_->set_commitment( get_manager()->get_commitment() );
     rpc_client  *cptr = get_rpc_client();
-    cptr->send( sreq_ );
     cptr->send( areq_ );
     st_ = e_sent_subscribe;
   }
@@ -2269,12 +2021,15 @@ void price::submit()
 
 void price::on_response( rpc::get_account_info *res )
 {
+  set_is_recv( true );
   update( res );
 }
 
-void price::on_response( rpc::account_subscribe *res )
+void price::on_response( rpc::program_subscribe *res )
 {
-  update( res );
+  if ( get_is_recv() ) {
+    update( res );
+  }
 }
 
 void price::log_update( const char *title )
@@ -2283,79 +2038,44 @@ void price::log_update( const char *title )
     .add( "account", *get_account() )
     .add( "product", *prod_->get_account() )
     .add( "symbol", get_symbol() )
-    .add( "price_type", price_type_to_str( ptype_ ) )
-    .add( "version", version_ )
-    .add( "exponent", aexpo_ )
-    .add( "num_publishers", cnum_ )
+    .add( "price_type", price_type_to_str( get_price_type() ) )
+    .add( "version", get_version() )
+    .add( "exponent", get_price_exponent() )
+    .add( "num_publishers", get_num_publisher() )
     .end();
 }
 
 void price::unsubscribe()
 {
+  set_is_recv( false );
 }
 
-void price::init_price( pc_price_t *pupd )
+void price::init_subscribe()
 {
-  // (re) initialize all values
-  aexpo_   = pupd->expo_;
-  ptype_   = (price_type)pupd->ptype_;
-  version_ = pupd->ver_;
-  apx_     = pupd->agg_.price_;
-  aconf_   = pupd->agg_.conf_;
-  twap_    = pupd->twap_;
-  avol_    = pupd->avol_;
-  sym_st_  = (symbol_status)pupd->agg_.status_;
-  pub_slot_   = pupd->agg_.pub_slot_;
-  valid_slot_ = pupd->valid_slot_;
-  cnum_ = pupd->num_;
-  for( unsigned i=0; i != cnum_; ++i ) {
-    if ( !pc_pub_key_equal( &cpub_[i], &pupd->comp_[i].pub_ ) ) {
-      pc_pub_key_assign( &cpub_[i], &pupd->comp_[i].pub_ );
-    }
-    cprice_[i] = pupd->comp_[i].agg_;
-  }
-  // log new price object
-  log_update( "init_price" );
-}
-
-void price::init_subscribe( pc_price_t *pupd )
-{
-  // update initial values
-  aexpo_   = pupd->expo_;
-  ptype_   = (price_type)pupd->ptype_;
-  version_ = pupd->ver_;
+  // switch state
   st_ = e_publish;
 
-  // initial assignment
-  cnum_ = pupd->num_;
-  manager *cptr = get_manager();
-  for( unsigned i=0; i != cnum_; ++i ) {
-    pc_pub_key_assign( &cpub_[i], &pupd->comp_[i].pub_ );
-  }
+  // update publisher index
   update_pub();
-  apx_  = pupd->agg_.price_;
-  aconf_ = pupd->agg_.conf_;
-  sym_st_ = (symbol_status)pupd->agg_.status_;
-  pub_slot_ = pupd->agg_.pub_slot_;
-  valid_slot_ = pupd->valid_slot_;
 
   // subscribe to next symbol in chain
-  if ( !pc_pub_key_is_zero( &pupd->next_ ) ) {
-    cptr->add_price( *(pub_key*)&pupd->next_, prod_ );
+  manager *mgr = get_manager();
+  if ( !pc_pub_key_is_zero( &pptr_->next_ ) ) {
+    mgr->add_price( *(pub_key*)&pptr_->next_, prod_ );
   }
 
   // log new price object
   log_update( "add_price" );
 
   // callback users on new symbol update
-  manager_sub *sub = cptr->get_manager_sub();
+  manager_sub *sub = mgr->get_manager_sub();
   if ( sub ) {
-    sub->on_add_symbol( cptr, this );
+    sub->on_add_symbol( mgr, this );
   }
 
   // reduce subscription count after we subscribe to next symbol in chain
   // do this last in case this triggers an init callback
-  cptr->del_map_sub();
+  mgr->del_map_sub();
 }
 
 template<class T>
@@ -2369,65 +2089,45 @@ void price::update( T *res )
   }
 
   // get account data
-  pc_price_t *pupd;
-  res->get_data( pupd );
-  if ( PC_UNLIKELY( pupd->magic_ != PC_MAGIC ) ) {
+  size_t tlen = ZSTD_compressBound( sizeof(pc_price_t) );
+  res->get_data_val( pptr_, tlen );
+  if ( PC_UNLIKELY( pptr_->magic_ != PC_MAGIC ) ) {
     on_error_sub( "bad price account header", this );
     st_ = e_error;
     return;
   }
 
   // price account was (re) initialized
-  if ( PC_UNLIKELY( pupd->valid_slot_ == 0L ) ) {
-    init_price( pupd );
+  if ( PC_UNLIKELY( pptr_->agg_.pub_slot_ == 0L ) ) {
+    log_update( "init_price" );
+    on_response_sub( &pinit_ );
   }
 
   // update state and subscribe to next price account in the chain
   if ( PC_UNLIKELY( st_ == e_sent_subscribe ) ) {
-    init_subscribe( pupd );
+    init_subscribe();
   }
 
-  // update publishers and publisher prices
+  // update publishers
+  update_pub();
   lamports_ = res->get_lamports();
-  uint32_t cnum = std::max( cnum_, pupd->num_ );
-  if ( PC_UNLIKELY( cnum_ != pupd->num_ ) ) {
-    cnum_ = pupd->num_;
-    log_update( "modify_publisher" );
-  }
   manager *mgr = get_manager();
-  bool upd_pub = false;
-  for( unsigned i=0; i != cnum; ++i ) {
-    cprice_[i] = pupd->comp_[i].agg_;
-    if ( PC_UNLIKELY( !pc_pub_key_equal(
-            &cpub_[i], &pupd->comp_[i].pub_ ) )  ){
-      pc_pub_key_assign( &cpub_[i], &pupd->comp_[i].pub_ );
-      upd_pub = true;
-    }
-  }
-  if ( PC_UNLIKELY( upd_pub ) ) {
-    update_pub();
-  }
 
   // update aggregate price and status if changed
-  if ( valid_slot_ != pupd->valid_slot_ || valid_slot_ == 0UL ) {
-    apx_  = pupd->agg_.price_;
-    aconf_ = pupd->agg_.conf_;
-    twap_  = pupd->twap_;
-    avol_   = pupd->avol_;
-    sym_st_ = (symbol_status)pupd->agg_.status_;
-    if ( pub_slot_ < pupd->valid_slot_ ) {
-      inc_coalesce();
+  if ( pub_slot_ != pptr_->agg_.pub_slot_ || pub_slot_ == 0UL ) {
+    // subscription service dropped an update
+    if ( pub_slot_ < pptr_->valid_slot_ && pub_slot_ != 0UL ) {
+      inc_sub_drop();
     }
-    pub_slot_ = pupd->agg_.pub_slot_;
-    valid_slot_ = pupd->valid_slot_;
+    pub_slot_ = pptr_->agg_.pub_slot_;
 
     // capture aggregate price and components to disk
-    mgr->write( (pc_pub_key_t*)apub_.data(), (pc_acc_t*)pupd );
+    mgr->write( (pc_pub_key_t*)apub_.data(), (pc_acc_t*)pptr_ );
 
     // add slot/time latency statistics
     if ( pub_idx_ != (unsigned)-1 ) {
-      uint64_t pub_slot = cprice_[pub_idx_].pub_slot_;
-      add_recv( mgr->get_slot(), pub_slot, res->get_recv_time() );
+      uint64_t pub_slot = pptr_->comp_[pub_idx_].agg_.pub_slot_;
+      add_recv( mgr->get_slot(), pub_slot_, pub_slot );
     }
 
     // ping subscribers with new aggregate price
@@ -2440,9 +2140,10 @@ void price::update_pub()
   // update publishing index
   pub_idx_ = (unsigned)-1;
   pub_key *pkey = get_manager()->get_publish_pub_key();
-  for( unsigned i=0; i != cnum_; ++i ) {
-    if ( pc_pub_key_equal( &cpub_[i], (pc_pub_key_t*)pkey ) ) {
+  for( unsigned i=0; i != pptr_->num_; ++i ) {
+    if ( pc_pub_key_equal( &pptr_->comp_[i].pub_, (pc_pub_key_t*)pkey ) ) {
       pub_idx_ = i;
+      break;
     }
   }
 }
@@ -2454,32 +2155,32 @@ bool price::get_is_done() const
 
 unsigned price::get_num_publisher() const
 {
-  return cnum_;
+  return pptr_->num_;
 }
 
 const pub_key *price::get_publisher( unsigned i ) const
 {
-  return (const pub_key*)&cpub_[i];
+  return (const pub_key*)&pptr_->comp_[i].pub_;
 }
 
 int64_t price::get_publisher_price( unsigned i ) const
 {
-  return cprice_[i].price_;
+  return pptr_->comp_[i].agg_.price_;
 }
 
 uint64_t price::get_publisher_conf( unsigned i ) const
 {
-  return cprice_[i].conf_;
+  return pptr_->comp_[i].agg_.conf_;
 }
 
 uint64_t price::get_publisher_slot( unsigned i ) const
 {
-  return cprice_[i].pub_slot_;
+  return pptr_->comp_[i].agg_.pub_slot_;
 }
 
 symbol_status price::get_publisher_status( unsigned i ) const
 {
-  return (symbol_status)cprice_[i].status_;
+  return (symbol_status)pptr_->comp_[i].agg_.status_;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -2522,3 +2223,19 @@ void price_sched::schedule()
   on_response_sub( this );
 }
 
+///////////////////////////////////////////////////////////////////////////
+// price_init
+
+price_init::price_init( price *ptr )
+: ptr_( ptr )
+{
+}
+
+price *price_init::get_price() const
+{
+  return ptr_;
+}
+
+void price_init::submit()
+{
+}

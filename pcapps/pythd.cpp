@@ -57,6 +57,9 @@ int usage()
   std::cerr << "  -x" << std::endl;
   std::cerr << "     Disable connection to pyth_tx transaction proxy server"
                "\n" << std::endl;
+  std::cerr << "  -m <commitment_level>" << std::endl;
+  std::cerr << "     Subscription commitment level: processed, confirmed or "
+               "finalized\n" << std::endl;
   std::cerr << "  -d" << std::endl;
   std::cerr << "     Turn on debug logging. Can also toggle this on/off via "
                "kill -s SIGUSR1 <pid>\n" << std::endl;
@@ -83,6 +86,7 @@ void sig_toggle( int )
 int main(int argc, char **argv)
 {
   // command-line parsing
+  commitment cmt = commitment::e_confirmed;
   std::string cnt_dir, cap_file, log_file;
   std::string rpc_host = get_rpc_host();
   std::string key_dir  = get_key_store();
@@ -90,7 +94,7 @@ int main(int argc, char **argv)
   int pyth_port = get_port();
   int opt = 0;
   bool do_wait = true, do_tx = true, do_debug = false;
-  while( (opt = ::getopt(argc,argv, "r:t:p:k:w:c:l:dnxh" )) != -1 ) {
+  while( (opt = ::getopt(argc,argv, "r:t:p:k:w:c:l:m:dnxh" )) != -1 ) {
     switch(opt) {
       case 'r': rpc_host = optarg; break;
       case 't': tx_host = optarg; break;
@@ -99,11 +103,16 @@ int main(int argc, char **argv)
       case 'c': cap_file = optarg; break;
       case 'w': cnt_dir = optarg; break;
       case 'l': log_file = optarg; break;
+      case 'm': cmt = str_to_commitment(optarg); break;
       case 'n': do_wait = false; break;
       case 'x': do_tx = false; break;
       case 'd': do_debug = true; break;
       default: return usage();
     }
+  }
+  if ( cmt == commitment::e_unknown ) {
+    std::cerr << "pythd: unknown commitment level" << std::endl;
+    return usage();
   }
 
   // set up logging and disable SIGPIPE
@@ -125,6 +134,7 @@ int main(int argc, char **argv)
   mgr.set_capture_file( cap_file );
   mgr.set_do_tx( do_tx );
   mgr.set_do_capture( !cap_file.empty() );
+  mgr.set_commitment( cmt );
   if ( !mgr.init() ) {
     std::cerr << "pythd: " << mgr.get_err_msg() << std::endl;
     return 1;

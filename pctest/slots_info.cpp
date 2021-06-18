@@ -83,7 +83,7 @@ std::string get_key_store()
 
 int usage()
 {
-  std::cerr << "usage: test_slot [options]" << std::endl;
+  std::cerr << "usage: slots_info [options]" << std::endl;
   std::cerr << "options include:" << std::endl;
   std::cerr << "  -r <rpc_host (default " << get_rpc_host() << ")>"
              << std::endl;
@@ -118,14 +118,14 @@ int main( int argc, char **argv )
   mgr.set_do_tx( false );
   std::cout << "recv_time,slot,leader" << std::endl;
   if ( !mgr.init() || !mgr.bootstrap() ) {
-    std::cerr << "test_slot: " << mgr.get_err_msg() << std::endl;
+    std::cerr << "slots_info: " << mgr.get_err_msg() << std::endl;
     return 1;
   }
   while( !mgr.get_is_err() ) {
     mgr.poll();
   }
   if ( mgr.get_is_err() ) {
-    std::cerr << "test_slot: " << mgr.get_err_msg() << std::endl;
+    std::cerr << "slots_info: " << mgr.get_err_msg() << std::endl;
     return 1;
   }
   return 0;

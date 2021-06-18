@@ -1,6 +1,7 @@
+char heap_start[8192];
+#define PC_HEAP_START (heap_start)
 #include "oracle.c"
 #include <criterion/criterion.h>
-#include "normal.h"
 
 Test(oracle, init_mapping) {
 
@@ -88,6 +89,7 @@ Test(oracle, add_mapping ) {
   tptr->magic_ = PC_MAGIC;
   tptr->ver_ = PC_VERSION;
   tptr->num_ = PC_MAP_TABLE_SIZE;
+  tptr->type_ = PC_ACCTYPE_MAPPING;
 
   SolPubkey p_id  = {.x = { 0xff, }};
   SolPubkey pkey = {.x = { 1, }};
@@ -345,14 +347,9 @@ Test( oracle, upd_price ) {
     .conf_   = 9L,
     .pub_slot_ = 1
   };
-  // scale factors
-  pc_prm_t tprm[1];
-  init_prm_hdr( tprm );
-
   SolPubkey p_id  = {.x = { 0xff, }};
   SolPubkey p_id2 = {.x = { 0xfe, }};
   SolPubkey pkey = {.x = { 1, }};
-  SolPubkey tkey = {.x = { 7, }};
   SolPubkey skey = {.x = { 3, }};
   sysvar_clock_t cvar = {
     .slot_ = 1
@@ -387,16 +384,6 @@ Test( oracle, upd_price ) {
       .is_writable = true,
       .executable  = false
   },{
-      .key         = &tkey,
-      .lamports    = &sqty,
-      .data_len    = sizeof( pc_prm_t ),
-      .data        = (uint8_t*)tprm,
-      .owner       = &p_id,
-      .rent_epoch  = 0,
-      .is_signer   = false,
-      .is_writable = false,
-      .executable  = false
-  },{
       .key         = (SolPubkey*)sysvar_clock,
       .lamports    = &sqty,
       .data_len    = sizeof( sysvar_clock_t ),
@@ -409,93 +396,61 @@ Test( oracle, upd_price ) {
   }};
   SolParameters prm = {
     .ka         = acc,
-    .ka_num     = 4,
+    .ka_num     = 3,
     .data       = (const uint8_t*)&idata,
     .data_len   = sizeof( idata ),
     .program_id = &p_id
   };
-  // heap storage
-  pc_qs_t tmp[1];
-  heap_start = (void*)tmp;
-
   cr_assert( SUCCESS == dispatch( &prm, acc ) );
   cr_assert( sptr->comp_[0].latest_.price_ == 42L );
   cr_assert( sptr->comp_[0].latest_.conf_ == 9L );
   cr_assert( sptr->comp_[0].latest_.pub_slot_ == 1 );
   cr_assert( sptr->agg_.pub_slot_ == 1 );
   cr_assert( sptr->valid_slot_ == 0 );
-  cr_assert( sptr->curr_slot_ == 1 );
 
-  // add some prices for current slot
+  // add some prices for current slot - get rejected
   idata.price_ = 43;
-  cr_assert( SUCCESS == dispatch( &prm, acc ) );
-  cr_assert( sptr->comp_[0].latest_.price_ == 43L );
-  cr_assert( sptr->comp_[0].agg_.price_ == 0L );
-  idata.price_ = 44;
-  cr_assert( SUCCESS == dispatch( &prm, acc ) );
-  cr_assert( sptr->comp_[0].latest_.price_ == 44L );
-  cr_assert( sptr->comp_[0].agg_.price_ == 0L );
-  cr_assert( sptr->comp_[0].latest_.pub_slot_ == 1 );
-  cr_assert( sptr->agg_.pub_slot_ == 1 );
+  cr_assert( ERROR_INVALID_ARGUMENT == dispatch( &prm, acc ) );
+  cr_assert( sptr->comp_[0].latest_.price_ == 42L );
+  cr_assert( sptr->comp_[0].agg_.price_ == 0 );
 
   // add next price in new slot triggering snapshot and aggregate calc
   idata.price_ = 81;
+  idata.pub_slot_ = 2;
   cvar.slot_ = 3;
   cr_assert( SUCCESS == dispatch( &prm, acc ) );
   cr_assert( sptr->comp_[0].latest_.price_ == 81L );
-  cr_assert( sptr->comp_[0].agg_.price_ == 44L );
-  cr_assert( sptr->comp_[0].latest_.pub_slot_ == 1 );
+  cr_assert( sptr->comp_[0].agg_.price_ == 42L );
+  cr_assert( sptr->comp_[0].latest_.pub_slot_ == 2 );
   cr_assert( sptr->agg_.pub_slot_ == 3 );
   cr_assert( sptr->valid_slot_ == 1 );
-  cr_assert( sptr->curr_slot_ == 3 );
 
   // next price doesnt change but slot does
   cvar.slot_ = 4;
-  idata.pub_slot_ = 2;
+  idata.pub_slot_ = 3;
   cr_assert( SUCCESS == dispatch( &prm, acc ) );
   cr_assert( sptr->comp_[0].latest_.price_ == 81L );
   cr_assert( sptr->comp_[0].agg_.price_ == 81L );
-  cr_assert( sptr->comp_[0].latest_.pub_slot_ == 2 );
+  cr_assert( sptr->comp_[0].latest_.pub_slot_ == 3 );
   cr_assert( sptr->agg_.pub_slot_ == 4 );
   cr_assert( sptr->valid_slot_ == 3 );
-  cr_assert( sptr->curr_slot_ == 4 );
 
   // next price doesnt change and neither does aggregate but slot does
+  idata.pub_slot_ = 4;
   cvar.slot_ = 5;
   cr_assert( SUCCESS == dispatch( &prm, acc ) );
   cr_assert( sptr->comp_[0].latest_.price_ == 81L );
   cr_assert( sptr->comp_[0].agg_.price_ == 81L );
-  cr_assert( sptr->comp_[0].latest_.pub_slot_ == 2 );
+  cr_assert( sptr->comp_[0].latest_.pub_slot_ == 4 );
   cr_assert( sptr->agg_.pub_slot_ == 5 );
   cr_assert( sptr->valid_slot_ == 4 );
-  cr_assert( sptr->curr_slot_ == 5 );
 
   // try to publish back-in-time
   idata.pub_slot_ = 1;
   cr_assert( ERROR_INVALID_ARGUMENT == dispatch( &prm, acc ) );
 }
 
-void pc_qs_print( pc_qs_t *q )
-{
-  printf( "ngrp=%d,xmin=%ld,%d, xmax=%lde%d\n",
-      q->ngrp_, q->xmin_->v_, q->xmin_->e_,
-      q->xmax_->v_, q->xmax_->e_ );
-  for( unsigned i=0; i != q->num_; ++i ) {
-    pc_q_t *iq = &q->qt_[i];
-    printf( "a=%lde%d,mu=%lde%d,sigma=%lde%d,b=%lde%d,env_=%d,grp=%d\n",
-        iq->a_->v_, iq->a_->e_,
-        iq->m_->v_, iq->m_->e_,
-        iq->s_->v_, iq->s_->e_,
-        iq->b_->v_, iq->b_->e_,
-        iq->env_, iq->grp_ );
-  }
-  printf( "m=%lde%d,s=%lde%d\n", q->m_->v_, q->m_->e_,
-        q->s_->v_, q->s_->e_ );
-}
-
-Test(oracle, upd_aggregate ) {
-  pc_pub_key_t pub[1];
-  pub->k8_[0] = 11;
+Test( oracle, upd_aggregate ) {
   pc_price_t px[1];
   sol_memset( px, 0, sizeof( pc_price_t ) );
   pc_price_info_t p1 = { .price_=100, .conf_=10,
@@ -507,61 +462,65 @@ Test(oracle, upd_aggregate ) {
   pc_price_info_t p4 = { .price_=400, .conf_=40,
     .status_ = PC_STATUS_TRADING, .pub_slot_ = 1000 };
 
-  // scale factors
-  pc_prm_t prm[1];
-  init_prm_hdr( prm );
-  for( unsigned i=0;i != PC_NORMAL_SIZE;++i ) {
-    prm->norm_[i] = ntable_[i];
-  }
-
-  // heap storage
-  pc_qs_t tmp[1];
-  heap_start = (void*)tmp;
-
   // single publisher
   px->num_ = 1;
-  px->curr_slot_ = 1000;
+  px->last_slot_ = 1000;
+  px->agg_.pub_slot_ = 1000;
   px->comp_[0].latest_ = p1;
-  upd_aggregate( px, prm, pub, 1001 );
+  upd_aggregate( px, 1001 );
   cr_assert( px->agg_.price_ == 100 );
-  cr_assert( px->agg_.conf_ == 10 );
+  cr_assert( px->agg_.conf_ == 50 );
+  cr_assert( px->twap_.val_ == 100 );
+  cr_assert( px->twac_.val_ == 50 );
 
   // two publishers
   px->num_ = 0;
-  px->curr_slot_ = 1000;
+  px->last_slot_ = 1000;
+  px->agg_.pub_slot_ = 1000;
   px->comp_[px->num_++].latest_ = p2;
   px->comp_[px->num_++].latest_ = p1;
-  upd_aggregate( px, prm, pub, 1001 );
-  cr_assert( px->agg_.price_ == 150 );
-  cr_assert( px->agg_.conf_ == 52 );
+  upd_aggregate( px, 1001 );
+  cr_assert( px->agg_.price_ == 147 );
+  cr_assert( px->agg_.conf_ == 48 );
+  cr_assert( px->twap_.val_ == 123 );
+  cr_assert( px->twac_.val_ == 48 );
 
   // three publishers
   px->num_ = 0;
-  px->curr_slot_ = 1000;
+  px->last_slot_ = 1000;
+  px->agg_.pub_slot_ = 1000;
   px->comp_[px->num_++].latest_ = p2;
   px->comp_[px->num_++].latest_ = p1;
   px->comp_[px->num_++].latest_ = p3;
-  upd_aggregate( px, prm, pub, 1001 );
-  cr_assert( px->agg_.price_ == 218 );
-  cr_assert( px->agg_.conf_ == 41 );
+  upd_aggregate( px, 1001 );
+  cr_assert( px->agg_.price_ == 191 );
+  cr_assert( px->agg_.conf_ == 74 );
+  cr_assert( px->twap_.val_ == 146 );
+  cr_assert( px->twac_.val_ == 57 );
 
   // four publishers
   px->num_ = 0;
-  px->curr_slot_ = 1000;
+  px->last_slot_ = 1000;
+  px->agg_.pub_slot_ = 1000;
   px->comp_[px->num_++].latest_ = p3;
   px->comp_[px->num_++].latest_ = p1;
   px->comp_[px->num_++].latest_ = p4;
   px->comp_[px->num_++].latest_ = p2;
-  upd_aggregate( px, prm, pub, 1001 );
-  cr_assert( px->agg_.price_ == 218 );
-  cr_assert( px->agg_.conf_ == 68 );
+  upd_aggregate( px, 1001 );
+  cr_assert( px->agg_.price_ == 235 );
+  cr_assert( px->agg_.conf_ == 99 );
+  cr_assert( px->twap_.val_ == 168 );
+  cr_assert( px->twac_.val_ == 67 );
+  cr_assert( px->last_slot_ == 1001 );
 
-  upd_aggregate( px, prm, pub, 1025 );
+  upd_aggregate( px, 1025 );
   cr_assert( px->agg_.status_ == PC_STATUS_TRADING );
+  cr_assert( px->last_slot_ == 1025 );
 
   // check what happens when nothing publishes for a while
-  upd_aggregate( px, prm, pub, 1026 );
+  upd_aggregate( px, 1026 );
   cr_assert( px->agg_.status_ == PC_STATUS_UNKNOWN );
+  cr_assert( px->last_slot_ == 1025 );
 }
 
 Test( oracle, del_publisher ) {
