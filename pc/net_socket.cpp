@@ -1177,6 +1177,7 @@ bool ws_connect::init()
   msg.add_hdr( "Upgrade", "websocket" );
   msg.add_hdr( "Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ==" );
   msg.add_hdr( "Sec-WebSocket-Version", "13" );
+  msg.add_hdr( "Host", get_host() );
   msg.commit();
   add_send( msg );
 
