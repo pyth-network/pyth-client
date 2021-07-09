@@ -123,7 +123,7 @@ class Prices
 let ws = null;
 let px = null;
 window.onload = function() {
-  ws = new WebSocket('ws://localhost:8910')
+  ws = new WebSocket(`ws://${window.location.hostname}:${window.location.port}`)
   px = new Prices
   ws.onopen = function(e) {
     let n = document.getElementById('notify');
