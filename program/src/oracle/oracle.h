@@ -135,7 +135,7 @@ typedef struct pc_price
   uint32_t        ptype_;             // price or calculation type
   int32_t         expo_;              // price exponent
   uint32_t        num_;               // number of component prices
-  uint32_t        unused_;
+  uint32_t        num_qt_;            // number of quoters that make up aggregate
   uint64_t        last_slot_;         // slot of last valid aggregate price
   uint64_t        valid_slot_;        // valid on-chain slot of agg. price
   pc_ema_t        twap_;              // time-weighted average price

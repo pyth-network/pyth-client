@@ -687,6 +687,7 @@ namespace pc
     int64_t       get_price() const;
     uint64_t      get_conf() const;
     symbol_status get_status() const;
+    uint32_t      get_num_qt() const;
     uint64_t      get_lamports() const;
     int64_t       get_twap() const;
     uint64_t      get_twac() const;

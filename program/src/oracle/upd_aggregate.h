@@ -301,7 +301,8 @@ static void upd_aggregate( pc_price_t *ptr, uint64_t slot )
     }
   }
 
-  // zero quotes
+  // zero quoters
+  ptr->num_qt_ = numa;
   if ( numa == 0 ) {
     ptr->agg_.status_ = PC_STATUS_UNKNOWN;
     upd_twap( ptr, agg_diff, qs );
@@ -311,10 +312,12 @@ static void upd_aggregate( pc_price_t *ptr, uint64_t slot )
   // update status and publish slot of last trading status price
   ptr->agg_.status_ = PC_STATUS_TRADING;
   ptr->last_slot_ = slot;
+
+  // single quoter
   if ( numa == 1 ) {
-    int64_t price = ptr->comp_[aidx[0]].agg_.price_;
-    ptr->agg_.price_ = price;
-    ptr->agg_.conf_ = (price>0?price:-price)/2L;
+    pc_price_comp_t *iptr = &ptr->comp_[aidx[0]];
+    ptr->agg_.price_ = iptr->agg_.price_;
+    ptr->agg_.conf_  = iptr->agg_.conf_;
     upd_twap( ptr, agg_diff, qs );
     return;
   }

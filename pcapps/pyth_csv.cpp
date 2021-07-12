@@ -77,6 +77,7 @@ void csv_print::print_header()
             << ",conf"
             << ",twap"
             << ",twac"
+            << ",num_qt"
             << ",valid_slot"
             << ",pub_slot"
             << ",prev_slot"
@@ -140,6 +141,7 @@ void csv_print::parse_price( replay& rep )
             << ',' << ptr->agg_.conf_
             << ',' << ptr->twap_.val_
             << ',' << ptr->twac_.val_
+            << ',' << ptr->num_qt_
             << ',' << ptr->valid_slot_
             << ',' << ptr->agg_.pub_slot_
             << ',' << ptr->prev_slot_

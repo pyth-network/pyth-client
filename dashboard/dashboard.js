@@ -55,6 +55,7 @@ class Prices
     this.draw_cell( row.cells[col++], twap.toFixed(expo), color );
     this.draw_cell( row.cells[col++], twac.toFixed(expo), color );
     this.draw_cell( row.cells[col++], res.status, color );
+    this.draw_cell( row.cells[col++], res.num_qt, color );
     this.draw_cell( row.cells[col++], res.valid_slot, color );
     this.draw_cell( row.cells[col++], res.pub_slot, color );
     row.cells[col++].style.color = color;
@@ -97,6 +98,7 @@ class Prices
         row.appendChild( this.get_title( att, 'country') );
         row.appendChild( this.get_title( att, 'symbol') );
         row.appendChild( this.get_title( pxa, 'price_type') );
+        row.appendChild( document.createElement( 'TD' ) );
         row.appendChild( document.createElement( 'TD' ) );
         row.appendChild( document.createElement( 'TD' ) );
         row.appendChild( document.createElement( 'TD' ) );

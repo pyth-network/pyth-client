@@ -1924,6 +1924,11 @@ symbol_status price::get_status() const
   return (symbol_status)pptr_->agg_.status_;
 }
 
+uint32_t price::get_num_qt() const
+{
+  return pptr_->num_qt_;
+}
+
 uint64_t price::get_lamports() const
 {
   return lamports_;

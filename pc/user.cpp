@@ -357,6 +357,7 @@ void user::on_response( price *rptr, uint64_t idx )
   jw_.add_key( "twap", rptr->get_twap() );
   jw_.add_key( "twac", rptr->get_twac() );
   jw_.add_key( "status", symbol_status_to_str( rptr->get_status() ) );
+  jw_.add_key( "num_qt", (uint64_t)rptr->get_num_qt() );
   jw_.add_key( "valid_slot", rptr->get_valid_slot() );
   jw_.add_key( "pub_slot", rptr->get_pub_slot() );
   jw_.pop();

@@ -469,9 +469,10 @@ Test( oracle, upd_aggregate ) {
   px->comp_[0].latest_ = p1;
   upd_aggregate( px, 1001 );
   cr_assert( px->agg_.price_ == 100 );
-  cr_assert( px->agg_.conf_ == 50 );
+  cr_assert( px->agg_.conf_ == 10 );
   cr_assert( px->twap_.val_ == 100 );
-  cr_assert( px->twac_.val_ == 50 );
+  cr_assert( px->twac_.val_ == 10 );
+  cr_assert( px->num_qt_ == 1 );
 
   // two publishers
   px->num_ = 0;
@@ -483,7 +484,8 @@ Test( oracle, upd_aggregate ) {
   cr_assert( px->agg_.price_ == 147 );
   cr_assert( px->agg_.conf_ == 48 );
   cr_assert( px->twap_.val_ == 123 );
-  cr_assert( px->twac_.val_ == 48 );
+  cr_assert( px->twac_.val_ == 29 );
+  cr_assert( px->num_qt_ == 2 );
 
   // three publishers
   px->num_ = 0;
@@ -496,7 +498,8 @@ Test( oracle, upd_aggregate ) {
   cr_assert( px->agg_.price_ == 191 );
   cr_assert( px->agg_.conf_ == 74 );
   cr_assert( px->twap_.val_ == 146 );
-  cr_assert( px->twac_.val_ == 57 );
+  cr_assert( px->twac_.val_ == 44 );
+  cr_assert( px->num_qt_ == 3 );
 
   // four publishers
   px->num_ = 0;
@@ -510,17 +513,20 @@ Test( oracle, upd_aggregate ) {
   cr_assert( px->agg_.price_ == 235 );
   cr_assert( px->agg_.conf_ == 99 );
   cr_assert( px->twap_.val_ == 168 );
-  cr_assert( px->twac_.val_ == 67 );
+  cr_assert( px->twac_.val_ == 57 );
   cr_assert( px->last_slot_ == 1001 );
+  cr_assert( px->num_qt_ == 4 );
 
   upd_aggregate( px, 1025 );
   cr_assert( px->agg_.status_ == PC_STATUS_TRADING );
   cr_assert( px->last_slot_ == 1025 );
+  cr_assert( px->num_qt_ == 4 );
 
   // check what happens when nothing publishes for a while
   upd_aggregate( px, 1026 );
   cr_assert( px->agg_.status_ == PC_STATUS_UNKNOWN );
   cr_assert( px->last_slot_ == 1025 );
+  cr_assert( px->num_qt_ == 0 );
 }
 
 Test( oracle, del_publisher ) {
