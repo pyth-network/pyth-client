@@ -8,6 +8,12 @@ if( NOT CMAKE_BUILD_TYPE )
   set( CMAKE_BUILD_TYPE Release )
 endif()
 
+set( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake )
+
+find_package( OpenSSL REQUIRED )
+find_package( ZLIB REQUIRED )
+find_package( ZSTD REQUIRED )
+
 # use root directory as include
 set( CMAKE_INCLUDE_CURRENT_DIR ON )
 
@@ -59,9 +65,11 @@ set( PC_HDR
   pc/user.hpp )
 
 add_library( pc STATIC ${PC_SRC} )
+target_include_directories( pc PUBLIC ${OPENSSL_INCLUDE_DIR} )
+target_include_directories( pc PUBLIC ${ZLIB_INCLUDE_DIRS} )
 
 # dependencies
-set( PC_DEP pc ssl crypto z zstd )
+set( PC_DEP pc OpenSSL::SSL OpenSSL::Crypto ZLIB::ZLIB ${ZSTD_LIBRARY} )
 
 #
 # applications
