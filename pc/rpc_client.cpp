@@ -2155,6 +2155,21 @@ char *rpc::get_block::get_cmd()
   return &ibuf_[0];
 }
 
+bool rpc::get_block::get_is_tx_err() const
+{
+  return is_tx_err_;
+}
+
+uint64_t rpc::get_block::get_tx_fee() const
+{
+  return fee_;
+}
+
+str rpc::get_block::get_tx_err() const
+{
+  return tx_err_;
+}
+
 bool rpc::get_block::get_is_end() const
 {
   return is_end_;
@@ -2182,6 +2197,18 @@ void rpc::get_block::response( const jtree& jt )
       }
     }
     if ( !found ) continue;
+    // get meta-data
+    is_tx_err_ = false;
+    fee_ = 0UL;
+    uint32_t mx = jt.find_val( it, "meta" );
+    if ( mx && jt.get_type( mx ) == jtree::e_obj ) {
+      fee_ = jt.get_uint( jt.find_val( mx, "fee" ) );
+      uint32_t ex = jt.find_val( mx, "err" );
+      if ( ex && jt.get_type( ex ) == jtree::e_obj ) {
+        is_tx_err_ = true;
+        tx_err_ = jt.get_str( jt.get_key( jt.get_first( ex ) ) );
+      }
+    }
     // get transaction details
     uint32_t ix = jt.find_val( ms, "instructions" );
     str idata = jt.get_str( jt.find_val( jt.get_first( ix ), "data" ) );

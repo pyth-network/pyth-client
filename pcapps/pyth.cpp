@@ -1246,6 +1246,12 @@ public:
     std::cout << cmd->conf_ << std::endl;
     print( "pub_slot", 2 );
     std::cout << cmd->pub_slot_ << std::endl;
+    print( "tx_fee", 2 );
+    std::cout << res->get_tx_fee() << std::endl;
+    if ( res->get_is_tx_err() ) {
+      print( "tx_error", 2 );
+      std::cout << res->get_tx_err().as_string() << std::endl;
+    }
     std::cout << std::endl;
   }
   void on_response( rpc::get_block *res ) override {
@@ -1288,6 +1294,10 @@ public:
     wtr_.add_key( "price", cmd->price_ );
     wtr_.add_key( "conf", cmd->conf_ );
     wtr_.add_key( "pub_slot", cmd->pub_slot_ );
+    wtr_.add_key( "tx_fee", res->get_tx_fee() );
+    if ( res->get_is_tx_err() ) {
+      wtr_.add_key( "tx_error", res->get_tx_err() );
+    }
     wtr_.pop();
   }
   void on_response( rpc::get_block *res ) override {
