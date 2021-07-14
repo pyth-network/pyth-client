@@ -341,7 +341,7 @@ void tx_svr::reconnect_rpc()
     avec_.clear();
     clnt_.reset();
     ctimeout_ = PC_NSECS_IN_SEC;
-    lreq_->set_recv_time( 0L ); // in case this request was in-flight
+    lreq_->set_recv_time( lreq_->get_sent_time() );
 
     // subscribe to slots and cluster addresses
     clnt_.send( sreq_ );
