@@ -138,7 +138,7 @@ static void pd_sqrt( pd_t *r, pd_t *val, const uint64_t *f )
 }
 
 // initialize quote-set temporary data in heap area
-static pc_qset_t *qset_new()
+static pc_qset_t *qset_new( int expo )
 {
   // allocate off heap
   pc_qset_t *qs = (pc_qset_t*)PC_HEAP_START;
@@ -191,42 +191,49 @@ static pc_qset_t *qset_new()
   qs->fact_[16]  = 10000000000000000UL;
   qs->fact_[17]  = 100000000000000000UL;
 
+  qs->num_ = 0;
+  qs->expo_ = expo;
+
   return qs;
 }
 
 static void upd_ema(
-    pc_ema_t *ptr, int64_t v, int e, int64_t nslot, pc_qset_t *qs)
+    pc_ema_t *ptr, pd_t *val, pd_t *conf, int64_t nslot, pc_qset_t *qs)
 {
-  pd_t val[1], numer[1], denom[1], decay[1], diff[1], one[1];
-  pd_new( one, PD_SCALE9, PD_EMA_EXPO );
-  pd_new_scale( val, v, e );
-  pd_new_scale( numer, ptr->numer_, PD_EMA_EXPO );
-  pd_new_scale( denom, ptr->denom_, PD_EMA_EXPO );
-  if ( nslot > PD_EMA_MAX_DIFF ) {
-    ptr->val_   = v;
-    pd_adjust( val, PD_EMA_EXPO, qs->fact_ );
-    ptr->numer_ = val->v_;
-    ptr->denom_ = one->v_;
-    return;
+  pd_t numer[1], denom[1], cwgt[1], wval[1], decay[1], diff[1], one[1];
+  pd_new( one, 100000000L, -8 );
+  if ( conf->v_ ) {
+    pd_div( cwgt, one, conf );
+  } else {
+    pd_set( cwgt, one );
   }
-  // compute decay factor
-  pd_new( diff, nslot, 0 );
-  pd_new( decay, PD_EMA_DECAY, PD_EMA_EXPO );
-  pd_mul( decay, decay, diff );
-  pd_add( decay, decay, one, qs->fact_ );
+  if ( nslot > PD_EMA_MAX_DIFF ) {
+    // initial condition
+    pd_mul( numer, val, cwgt );
+    pd_set( denom, cwgt );
+  } else {
+    // compute decay factor
+    pd_new( diff, nslot, 0 );
+    pd_new( decay, PD_EMA_DECAY, PD_EMA_EXPO );
+    pd_mul( decay, decay, diff );
+    pd_add( decay, decay, one, qs->fact_ );
 
-  // compute numerator/denominator and new value from decay factor
-  pd_mul( numer, numer, decay );
-  pd_add( numer, numer, val, qs->fact_ );
-  pd_mul( denom, denom, decay );
-  pd_add( denom, denom, one, qs->fact_ );
-  pd_div( val, numer, denom );
+    // compute numer/denom and new value from decay factor
+    pd_new_scale( numer, ptr->numer_, PD_EMA_EXPO );
+    pd_new_scale( denom, ptr->denom_, PD_EMA_EXPO );
+    pd_mul( numer, numer, decay );
+    pd_mul( wval, val, cwgt );
+    pd_add( numer, numer, wval, qs->fact_ );
+    pd_mul( denom, denom, decay );
+    pd_add( denom, denom, cwgt, qs->fact_ );
+    pd_div( val, numer, denom );
+  }
 
   // adjust and store results
-  pd_adjust( val, e, qs->fact_ );
+  pd_adjust( val, qs->expo_, qs->fact_ );
   pd_adjust( numer, PD_EMA_EXPO, qs->fact_ );
   pd_adjust( denom, PD_EMA_EXPO, qs->fact_ );
-  ptr->val_ = val->v_;
+  ptr->val_   = val->v_;
   ptr->numer_ = numer->v_;
   ptr->denom_ = denom->v_;
 }
@@ -234,8 +241,11 @@ static void upd_ema(
 static inline void upd_twap(
     pc_price_t *ptr, int64_t nslots, pc_qset_t *qs )
 {
-  upd_ema( &ptr->twap_, ptr->agg_.price_, ptr->expo_, nslots, qs );
-  upd_ema( &ptr->twac_, ptr->agg_.conf_, ptr->expo_, nslots, qs );
+  pd_t px[1], conf[1];
+  pd_new_scale( px, ptr->agg_.price_, ptr->expo_ );
+  pd_new_scale( conf, ptr->agg_.conf_, ptr->expo_ );
+  upd_ema( &ptr->twap_, px, conf, nslots, qs );
+  upd_ema( &ptr->twac_, conf, conf, nslots, qs );
 }
 
 // compute weighted percentile
@@ -266,7 +276,7 @@ static void upd_aggregate( pc_price_t *ptr, uint64_t slot )
   if ( slot <= ptr->agg_.pub_slot_ ) {
     return;
   }
-  pc_qset_t *qs = qset_new();
+  pc_qset_t *qs = qset_new( ptr->expo_ );
 
   // get number of slots from last published valid price
   int64_t agg_diff = slot - ptr->last_slot_;

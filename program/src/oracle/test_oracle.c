@@ -454,17 +454,17 @@ Test( oracle, upd_aggregate ) {
   pc_price_t px[1];
   sol_memset( px, 0, sizeof( pc_price_t ) );
   pc_price_info_t p1 = { .price_=100, .conf_=10,
-    .status_ = PC_STATUS_TRADING, .pub_slot_ = 1000 };
+    .status_ = PC_STATUS_TRADING, .corp_act_status_= 0, .pub_slot_ = 1000 };
   pc_price_info_t p2 = { .price_=200, .conf_=20,
-    .status_ = PC_STATUS_TRADING, .pub_slot_ = 1000 };
+    .status_ = PC_STATUS_TRADING, .corp_act_status_= 0, .pub_slot_ = 1000 };
   pc_price_info_t p3 = { .price_=300, .conf_=30,
-    .status_ = PC_STATUS_TRADING, .pub_slot_ = 1000 };
+    .status_ = PC_STATUS_TRADING, .corp_act_status_= 0, .pub_slot_ = 1000 };
   pc_price_info_t p4 = { .price_=400, .conf_=40,
-    .status_ = PC_STATUS_TRADING, .pub_slot_ = 1000 };
+    .status_ = PC_STATUS_TRADING, .corp_act_status_= 0, .pub_slot_ = 1000 };
 
   // single publisher
   px->num_ = 1;
-  px->last_slot_ = 1000;
+  px->last_slot_ = -10000;
   px->agg_.pub_slot_ = 1000;
   px->comp_[0].latest_ = p1;
   upd_aggregate( px, 1001 );
@@ -483,8 +483,8 @@ Test( oracle, upd_aggregate ) {
   upd_aggregate( px, 1001 );
   cr_assert( px->agg_.price_ == 147 );
   cr_assert( px->agg_.conf_ == 48 );
-  cr_assert( px->twap_.val_ == 123 );
-  cr_assert( px->twac_.val_ == 29 );
+  cr_assert( px->twap_.val_ == 108 );
+  cr_assert( px->twac_.val_ == 16 );
   cr_assert( px->num_qt_ == 2 );
 
   // three publishers
@@ -497,8 +497,8 @@ Test( oracle, upd_aggregate ) {
   upd_aggregate( px, 1001 );
   cr_assert( px->agg_.price_ == 191 );
   cr_assert( px->agg_.conf_ == 74 );
-  cr_assert( px->twap_.val_ == 146 );
-  cr_assert( px->twac_.val_ == 44 );
+  cr_assert( px->twap_.val_ == 116 );
+  cr_assert( px->twac_.val_ == 22 );
   cr_assert( px->num_qt_ == 3 );
 
   // four publishers
@@ -512,8 +512,8 @@ Test( oracle, upd_aggregate ) {
   upd_aggregate( px, 1001 );
   cr_assert( px->agg_.price_ == 235 );
   cr_assert( px->agg_.conf_ == 99 );
-  cr_assert( px->twap_.val_ == 168 );
-  cr_assert( px->twac_.val_ == 57 );
+  cr_assert( px->twap_.val_ == 124 );
+  cr_assert( px->twac_.val_ == 27 );
   cr_assert( px->last_slot_ == 1001 );
   cr_assert( px->num_qt_ == 4 );
 

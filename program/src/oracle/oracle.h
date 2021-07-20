@@ -170,6 +170,7 @@ typedef struct pc_qset
   uint64_t  decay_[1+PC_MAX_SEND_LATENCY];
   uint64_t  fact_[PC_FACTOR_SIZE];
   uint32_t  num_;
+  int32_t   expo_;
 } pc_qset_t;
 
 // command enumeration
