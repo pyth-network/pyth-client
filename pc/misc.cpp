@@ -380,6 +380,8 @@ static std::string get_rpc_end_point( const std::string& rhost )
     return rhost + ":80:80";
   } else if ( rhost == "api.mainnet-beta.solana.com" ) {
     return rhost + ":80:80";
+  } else if ( rhost == "api.testnet.solana.com" ) {
+    return rhost + ":80:80";
   } else {
     return rhost;
   }
