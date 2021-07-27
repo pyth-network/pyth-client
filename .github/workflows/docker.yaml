@@ -18,11 +18,6 @@ jobs:
       - run: echo "DOCKER_TAG=${BRANCH}" >> $GITHUB_ENV
       - run: echo "DOCKER_IMAGE=$( echo ${GITHUB_REPOSITORY}:${DOCKER_TAG} )" >> $GITHUB_ENV
       - run: docker build -f docker/Dockerfile --build-arg SOLANA_VERSION=${{ env.SOLANA_VERSION }} --tag ${{ env.DOCKER_IMAGE }} .
-      # publish to ghcr.io
-      - run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-      - run: docker image tag ${DOCKER_IMAGE} ghcr.io/${DOCKER_IMAGE}
-      - run: docker image push ghcr.io/${{ env.DOCKER_IMAGE }}
-        if: startsWith( github.ref, 'refs/tags/' )
       # publish to docker.io
       - run: echo "${{ secrets.DOCKER_IO_PASS }}" | docker login docker.io -u ${{ secrets.DOCKER_IO_USER }} --password-stdin
       - run: docker image tag ${DOCKER_IMAGE} docker.io/pythfoundation/pyth-client:${DOCKER_TAG}
