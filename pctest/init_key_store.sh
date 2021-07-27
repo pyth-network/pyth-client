@@ -23,12 +23,12 @@ case $KENV in
     MAP_KEY=BmA9Z6FjioHJPpjT39QazZyhDRUdZy2ezwx4GiDdE2u2
     PGM_KEY=gSbePebfvPy7tRqimPoVecS2UsBvYv46ynrzWocc92s
     ;;
-  pythnet)
-    MAP_KEY=Fy4NhY7n3yoWHZmVdEwsjjRt6tbHUgPpJ2j22ABVUy4B
-    PGM_KEY=E7g6dJUeKaWJTyYPxKXcaLJhzkkLaK3NwPKNyzLfZSnP
+  testnet)
+    MAP_KEY=AFmdnt9ng1uVxqCmqwQJDAYC5cKTkw8gJKSM5PnzuF6z
+    PGM_KEY=8tfDNiaEyrV6Q1U4DEXrEigs9DoDtkugzFbybENEbCDz
     ;;
   *)
-    echo "Unknown environment. Please use: prodbeta, devnet, pythnet"
+    echo "Unknown environment. Please use: prodbeta, devnet, testnet"
     exit 1;
 esac
 if [ -z "$KDIR" ] ; then
