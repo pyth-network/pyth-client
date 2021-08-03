@@ -210,8 +210,9 @@ void user::parse_sub_price( uint32_t tok, uint32_t itok )
   do {
     // unpack and verify parameters
     uint32_t ntok,ptok = jp_.find_val( tok, "params" );
-    if ( ptok == 0 || jp_.get_type(ptok) != jtree::e_obj ) break;
-    if ( 0 == (ntok = jp_.find_val( ptok, "account" ) ) ) break;
+    if ( ptok == 0 || jp_.get_type(ptok) != jtree::e_arr ) break;
+    if ( 0 == (ntok = jp_.get_first( ptok ))) break;
+    if ( 0 == (ntok = jp_.find_val( ntok , "account" ) ) ) break;
     pub_key pkey;
     pkey.init_from_text( jp_.get_str( ntok ) );
     price *sptr = sptr_->get_price( pkey );
@@ -222,9 +223,7 @@ void user::parse_sub_price( uint32_t tok, uint32_t itok )
 
     // create result
     add_header();
-    jw_.add_key( "result", json_wtr::e_obj );
-    jw_.add_key( "subscription", sub_id );
-    jw_.pop();
+    jw_.add_key( "result", sub_id );
     add_tail( itok );
 
     // add subscription
@@ -240,8 +239,9 @@ void user::parse_sub_price_sched( uint32_t tok, uint32_t itok )
   do {
     // unpack and verify parameters
     uint32_t ntok,ptok = jp_.find_val( tok, "params" );
-    if ( ptok == 0 || jp_.get_type(ptok) != jtree::e_obj ) break;
-    if ( 0 == (ntok = jp_.find_val( ptok, "account" ) ) ) break;
+    if ( ptok == 0 || jp_.get_type(ptok) != jtree::e_arr ) break;
+    if ( 0 == (ntok = jp_.get_first( ptok ))) break;
+    if ( 0 == (ntok = jp_.find_val( ntok , "account" ) ) ) break;
     pub_key pkey;
     pkey.init_from_text( jp_.get_str( ntok ) );
     price *sptr = sptr_->get_price( pkey );
@@ -252,9 +252,7 @@ void user::parse_sub_price_sched( uint32_t tok, uint32_t itok )
 
     // create result
     add_header();
-    jw_.add_key( "result", json_wtr::e_obj );
-    jw_.add_key( "subscription", sub_id );
-    jw_.pop();
+    jw_.add_key( "result", sub_id );
     add_tail( itok );
     return;
   } while( 0 );
