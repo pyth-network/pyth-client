@@ -48,7 +48,7 @@ namespace pc
                   public net_accept,
                   public tx_sub,
                   public rpc_sub,
-                  public rpc_sub_i<rpc::slot_subscribe>,
+                  public rpc_sub_i<rpc::get_slot>,
                   public rpc_sub_i<rpc::get_recent_block_hash>,
                   public rpc_sub_i<rpc::program_subscribe>
   {
@@ -164,7 +164,7 @@ namespace pc
     bool get_is_tx_send() const;
 
     // rpc callbacks
-    void on_response( rpc::slot_subscribe * ) override;
+    void on_response( rpc::get_slot * ) override;
     void on_response( rpc::get_recent_block_hash * ) override;
     void on_response( rpc::program_subscribe * ) override;
     void set_status( int );
@@ -228,6 +228,7 @@ namespace pc
     int64_t      ctimeout_; // connection timeout
     uint64_t     slot_;     // current slot
     uint64_t     slot_cnt_; // slot count
+    int64_t      slot_ts_;  // current slot time
     int64_t      curr_ts_;  // current time
     int64_t      pub_ts_;   // start publish time
     int64_t      pub_int_;  // publish interval
@@ -241,7 +242,7 @@ namespace pc
     commitment   cmt_;      // account get/subscribe commitment
 
     // requests
-    rpc::slot_subscribe        sreq_[1]; // slot subscription
+    rpc::get_slot              sreq_[1]; // slot subscription
     rpc::get_recent_block_hash breq_[1]; // block hash request
     rpc::program_subscribe     preq_[1]; // program account subscription
   };

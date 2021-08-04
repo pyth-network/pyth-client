@@ -638,6 +638,38 @@ void rpc::get_cluster_nodes::response( const jtree& jt )
 }
 
 ///////////////////////////////////////////////////////////////////////////
+// get_slot
+
+rpc::get_slot::get_slot( commitment const cmt )
+: cmt_{ cmt }
+, cslot_( 0UL )
+{
+}
+
+uint64_t rpc::get_slot::get_current_slot() const
+{
+  return cslot_;
+}
+
+void rpc::get_slot::request( json_wtr& msg )
+{
+  msg.add_key( "method", "getSlot" );
+  msg.add_key( "params", json_wtr::e_arr );
+  msg.add_val( json_wtr::e_obj );
+  msg.add_key( "commitment", commitment_to_str( cmt_ ) );
+  msg.pop();
+  msg.pop();
+}
+
+void rpc::get_slot::response( const jtree& jt )
+{
+  if ( on_error( jt, this ) ) return;
+  uint32_t rtok = jt.find_val( 1, "result" );
+  cslot_ = jt.get_uint( rtok );
+  on_response( this );
+}
+
+///////////////////////////////////////////////////////////////////////////
 // get_slot_leaders
 
 rpc::get_slot_leaders::get_slot_leaders()
