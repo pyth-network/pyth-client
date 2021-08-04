@@ -62,7 +62,8 @@ manager::manager()
   do_cap_( false ),
   do_tx_( true ),
   is_pub_( false ),
-  cmt_( commitment::e_confirmed )
+  cmt_( commitment::e_confirmed ),
+  sreq_{ { commitment::e_processed } }
 {
   tconn_.set_sub( this );
   breq_->set_sub( this );
@@ -433,6 +434,15 @@ void manager::poll( bool do_wait )
   // get current time
   curr_ts_ = get_now();
 
+  // get current slot
+  if ( curr_ts_ - slot_ts_ > 200 * PC_NSECS_IN_MSEC ) {
+    if ( sreq_->get_is_recv() ) {
+      if ( has_status( PC_PYTH_RPC_CONNECTED ) ) {
+        clnt_.send( sreq_ );
+      }
+    }
+  }
+
   // try to (re)connect to tx proxy
   if ( do_tx_ && ( !tconn_.get_is_connect() || tconn_.get_is_err() ) ) {
     tconn_.reconnect();
@@ -489,8 +499,9 @@ void manager::reconnect_rpc()
     kidx_ = 0;
     ctimeout_ = PC_NSECS_IN_SEC;
     pub_ts_ = 0L;
-    slot_cnt_ = 0UL;
     slot_ = 0L;
+    slot_cnt_ = 0UL;
+    slot_ts_ = 0L;
     num_sub_ = 0;
     clnt_.reset();
     for(;;) {
@@ -634,23 +645,30 @@ void manager::schedule( price_sched *kptr )
   }
 }
 
-void manager::on_response( rpc::slot_subscribe *res )
+void manager::on_response( rpc::get_slot *res )
 {
   // check error
   if ( PC_UNLIKELY( res->get_is_err() ) ) {
-    set_err_msg( "failed to slot_subscribe ["
+    set_err_msg( "failed to get slot ["
         + res->get_err_msg()  + "]" );
     return;
   }
 
   // ignore slots that go back in time
-  uint64_t slot = res->get_slot();
+  uint64_t slot = res->get_current_slot();
   int64_t ts = res->get_recv_time();
   if ( slot <= slot_ ) {
     return;
   }
   slot_ = slot;
-  PC_LOG_DBG( "receive slot" ).add( "slot", slot_ ).end();
+  slot_ts_ = ts;
+
+  int64_t ack_ts = res->get_recv_time() - res->get_sent_time();
+
+  PC_LOG_DBG( "received get_slot" )
+    .add( "slot", slot_ )
+    .add( "rount_trip_time(ms)", 1e-6*ack_ts )
+    .end();
 
   // submit block hash every N slots
   if ( slot_cnt_++ % PC_BLOCKHASH_TIMEOUT == 0 ) {
