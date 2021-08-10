@@ -518,9 +518,15 @@ void manager::reconnect_rpc()
     clnt_.send( sreq_ );
 
     // subscribe to program updates
-    preq_->set_commitment( get_commitment() );
-    preq_->set_program( get_program_pub_key() );
-    clnt_.send( preq_ );
+    pub_key *gpub = get_program_pub_key();
+    if ( !gpub ) {
+      set_err_msg( "missing or invalid program public key [" +
+          get_program_pub_key_file() + "]" );
+    } else {
+      preq_->set_commitment( get_commitment() );
+      preq_->set_program( gpub );
+      clnt_.send( preq_ );
+    }
 
     // gather latest info on mapping accounts
     for( get_mapping *mptr: mvec_ ) {
