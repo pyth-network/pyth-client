@@ -74,6 +74,8 @@ int usage()
   std::cerr << "  -j\n"
             << "     Output results in json format where applicable\n"
             << std::endl;
+  std::cerr << "  -d" << std::endl;
+  std::cerr << "     Turn on debug logging\n" << std::endl;
   return 1;
 }
 
@@ -311,12 +313,13 @@ int on_get_balance( int argc, char **argv )
   commitment cmt = commitment::e_confirmed;
   std::string rpc_host = get_rpc_host();
   std::string key_dir  = get_key_store();
-  while( (opt = ::getopt(argc,argv, "r:k:p:c:h" )) != -1 ) {
+  while( (opt = ::getopt(argc,argv, "r:k:p:c:dh" )) != -1 ) {
     switch(opt) {
       case 'r': rpc_host = optarg; break;
       case 'k': key_dir = optarg; break;
       case 'p': knm = optarg; break;
       case 'c': cmt = str_to_commitment(optarg); break;
+      case 'd': log::set_level( PC_LOG_DBG_LVL ); break;
       default: return usage();
     }
   }
