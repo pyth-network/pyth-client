@@ -2145,10 +2145,12 @@ void price::update_pub()
   // update publishing index
   pub_idx_ = (unsigned)-1;
   pub_key *pkey = get_manager()->get_publish_pub_key();
-  for( unsigned i=0; i != pptr_->num_; ++i ) {
-    if ( pc_pub_key_equal( &pptr_->comp_[i].pub_, (pc_pub_key_t*)pkey ) ) {
-      pub_idx_ = i;
-      break;
+  if ( pkey ) {
+    for( unsigned i=0; i != pptr_->num_; ++i ) {
+      if ( pc_pub_key_equal( &pptr_->comp_[i].pub_, (pc_pub_key_t*)pkey ) ) {
+        pub_idx_ = i;
+        break;
+      }
     }
   }
 }

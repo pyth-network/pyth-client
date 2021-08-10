@@ -1014,6 +1014,11 @@ int on_get_product_list( int argc, char **argv )
     std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
     return 1;
   }
+  if ( !mgr.has_status( PC_PYTH_HAS_MAPPING ) ) {
+    std::cerr << "pyth: mapping not ready, check mapping key ["
+              << mgr.get_mapping_pub_key_file() << "]" << std::endl;
+    return 1;
+  }
   // list key/symbol pairs
   if ( !do_json ) {
     std::string astr;
@@ -1204,6 +1209,11 @@ int on_get_product( int argc, char **argv )
   mgr.set_commitment( cmt );
   if ( !mgr.init() || !mgr.bootstrap() ) {
     std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
+    return 1;
+  }
+  if ( !mgr.has_status( PC_PYTH_HAS_MAPPING ) ) {
+    std::cerr << "pyth: mapping not ready, check mapping key ["
+              << mgr.get_mapping_pub_key_file() << "]" << std::endl;
     return 1;
   }
   // get product and serialize to stdout
