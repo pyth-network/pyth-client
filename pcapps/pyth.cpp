@@ -55,6 +55,7 @@ int usage()
   std::cerr << "  get_block        <slot_number> [options]" << std::endl;
   std::cerr << "  get_product      <prod_key> [options]" << std::endl;
   std::cerr << "  get_product_list [options]" << std::endl;
+  std::cerr << "  get_all_products [options]" << std::endl;
   std::cerr << "  get_pub_key      <key_pair_file>" << std::endl;
   std::cerr << "  version" << std::endl;
   std::cerr << std::endl;
@@ -1230,6 +1231,68 @@ int on_get_product( int argc, char **argv )
   return 0;
 }
 
+int on_get_all_products( int argc, char **argv )
+{
+  int opt = 0;
+  bool do_json = false;
+  commitment cmt = commitment::e_confirmed;
+  std::string rpc_host = get_rpc_host();
+  std::string key_dir  = get_key_store();
+  while( (opt = ::getopt(argc,argv, "r:k:c:djh" )) != -1 ) {
+    switch(opt) {
+      case 'r': rpc_host = optarg; break;
+      case 'k': key_dir = optarg; break;
+      case 'd': log::set_level( PC_LOG_DBG_LVL ); break;
+      case 'j': do_json = true; break;
+      case 'c': cmt = str_to_commitment(optarg); break;
+      default: return usage();
+    }
+  }
+  if ( cmt == commitment::e_unknown ) {
+    std::cerr << "pyth: unknown commitment level" << std::endl;
+    return usage();
+  }
+
+  // initialize connection to block-chain
+  manager mgr;
+  mgr.set_rpc_host( rpc_host );
+  mgr.set_dir( key_dir );
+  mgr.set_do_tx( false );
+  mgr.set_commitment( cmt );
+  if ( !mgr.init() || !mgr.bootstrap() ) {
+    std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
+    return 1;
+  }
+  if ( !mgr.has_status( PC_PYTH_HAS_MAPPING ) ) {
+    std::cerr << "pyth: mapping not ready, check mapping key ["
+              << mgr.get_mapping_pub_key_file() << "]" << std::endl;
+    return 1;
+  }
+
+  // get all products and serialize to stdout
+  if ( !do_json ) {
+    for (unsigned i=0; i != mgr.get_num_product(); ++i ) {
+      product *prod = mgr.get_product(i);
+      print_product( prod );
+      std::cout << std::endl;
+    }
+  } else {
+    std::cout << "[";
+    bool first = true;
+    for (unsigned i=0; i != mgr.get_num_product(); ++i ) {
+      product *prod = mgr.get_product(i);
+      if ( !first ) {
+        std::cout << ",";
+      }
+      print_product_json( prod );
+      first = false;
+    }
+    std::cout << "]";
+  }
+
+  return 0;
+}
+
 class get_block_print : public get_block
 {
 public:
@@ -1447,6 +1510,8 @@ int main(int argc, char **argv)
     rc = on_get_product( argc, argv );
   } else if ( cmd == "get_product_list" ) {
     rc = on_get_product_list( argc, argv );
+  } else if ( cmd == "get_all_products" ) {
+    rc = on_get_all_products( argc, argv );
   } else if ( cmd == "get_block" ) {
     rc = on_get_block( argc, argv );
   } else if ( cmd == "version" ) {
