@@ -570,6 +570,7 @@ namespace pc
   public:
     // product account number
     pub_key *get_account();
+    const pub_key *get_account() const;
 
     // symbol from attr_dict
     str get_symbol();
@@ -579,6 +580,9 @@ namespace pc
     unsigned get_num_price() const;
     price *get_price( unsigned i ) const;
     price *get_price( price_type ) const;
+
+    // output full set of data to json writer
+    void dump_json( json_wtr& wtr ) const;
 
   public:
 
@@ -680,20 +684,21 @@ namespace pc
     price_sched *get_sched();
 
     // various accessors
-    pub_key      *get_account();
-    price_type    get_price_type() const;
-    int64_t       get_price_exponent() const;
-    uint32_t      get_version() const;
-    int64_t       get_price() const;
-    uint64_t      get_conf() const;
-    symbol_status get_status() const;
-    uint32_t      get_num_qt() const;
-    uint64_t      get_lamports() const;
-    int64_t       get_twap() const;
-    uint64_t      get_twac() const;
-    uint64_t      get_prev_slot() const;
-    int64_t       get_prev_price() const;
-    uint64_t      get_prev_conf() const;
+    pub_key       *get_account();
+    const pub_key *get_account() const;
+    price_type     get_price_type() const;
+    int64_t        get_price_exponent() const;
+    uint32_t       get_version() const;
+    int64_t        get_price() const;
+    uint64_t       get_conf() const;
+    symbol_status  get_status() const;
+    uint32_t       get_num_qt() const;
+    uint64_t       get_lamports() const;
+    int64_t        get_twap() const;
+    uint64_t       get_twac() const;
+    uint64_t       get_prev_slot() const;
+    int64_t        get_prev_price() const;
+    uint64_t       get_prev_conf() const;
 
     // get publishers
     unsigned get_num_publisher() const;
@@ -709,6 +714,9 @@ namespace pc
 
     // slot of last aggregate price
     uint64_t      get_pub_slot() const;
+
+    // output full set of data to json writer
+    void dump_json( json_wtr& wtr ) const;
 
   public:
 
