@@ -13,7 +13,7 @@ class manager_slot : public manager,
 {
 public:
   manager_slot();
-  void on_response( rpc::slot_subscribe * ) override;
+  void on_response( rpc::get_slot * ) override;
   void on_response( rpc::get_slot_leaders * ) override;
 private:
   rpc::get_slot_leaders ldr_[1];
@@ -27,10 +27,10 @@ manager_slot::manager_slot()
   ldr_->set_limit( PC_LEADER_MAX );
 }
 
-void manager_slot::on_response( rpc::slot_subscribe *res )
+void manager_slot::on_response( rpc::get_slot *res )
 {
   manager::on_response( res );
-  uint64_t slot = get_slot();
+  uint64_t const slot = get_slot();
   if ( slot != last_ ) {
     // request next slot leader schedule
     if ( PC_UNLIKELY( ldr_->get_is_recv() &&

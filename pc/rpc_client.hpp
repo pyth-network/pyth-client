@@ -366,6 +366,19 @@ namespace pc
       node_map_t nmap_;
     };
 
+    // get current slot
+    class get_slot : public rpc_request
+    {
+    public:
+      get_slot( commitment = e_finalized );
+      uint64_t get_current_slot() const;
+      void request( json_wtr& ) override;
+      void response( const jtree& ) override;
+    private:
+      commitment const cmt_; // param
+      uint64_t cslot_; // result
+    };
+
     // get id of leader node by slot
     class get_slot_leaders : public rpc_request
     {
@@ -376,7 +389,7 @@ namespace pc
       pub_key *get_leader( uint64_t );
       uint64_t get_last_slot() const;
       void request( json_wtr& ) override;
-      void response( const jtree&p) override;
+      void response( const jtree& ) override;
     private:
       typedef std::vector<pub_key> ldr_vec_t;
       uint64_t  rslot_;
