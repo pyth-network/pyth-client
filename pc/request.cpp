@@ -1674,6 +1674,11 @@ pub_key *product::get_account()
   return &acc_;
 }
 
+const pub_key *product::get_account() const
+{
+  return &acc_;
+}
+
 str product::get_symbol()
 {
   str sym;
@@ -1797,6 +1802,23 @@ price *product::get_price( price_type pt ) const
   return nullptr;
 }
 
+void product::dump_json( json_wtr& wtr ) const
+{
+  // assumes the json_wtr has already started an object structure
+  wtr.add_key( "account", *get_account() );
+  wtr.add_key( "attr_dict", json_wtr::e_obj );
+  write_json( wtr );
+  wtr.pop();
+  wtr.add_key( "price_accounts", json_wtr::e_arr );
+  for( unsigned i=0; i != get_num_price(); ++i ) {
+    wtr.add_val( json_wtr::e_obj );
+    price *ptr = get_price( i );
+    ptr->dump_json( wtr );
+    wtr.pop();
+  }
+  wtr.pop();
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // price
 
@@ -1865,6 +1887,11 @@ bool price::get_attr( attr_id aid, str& val ) const
 }
 
 pub_key *price::get_account()
+{
+  return &apub_;
+}
+
+const pub_key *price::get_account() const
 {
   return &apub_;
 }
@@ -2188,6 +2215,36 @@ uint64_t price::get_publisher_slot( unsigned i ) const
 symbol_status price::get_publisher_status( unsigned i ) const
 {
   return (symbol_status)pptr_->comp_[i].agg_.status_;
+}
+
+void price::dump_json( json_wtr& wtr ) const
+{
+  // assumes the json_wtr has already started an object structure
+  wtr.add_key( "account", *get_account() );
+  wtr.add_key( "price_type", price_type_to_str( get_price_type() ));
+  wtr.add_key( "price_exponent", get_price_exponent() );
+  wtr.add_key( "status", symbol_status_to_str( get_status() ) );
+  wtr.add_key( "price", get_price() );
+  wtr.add_key( "conf", get_conf() );
+  wtr.add_key( "twap", get_twap() );
+  wtr.add_key( "twac", get_twac() );
+  wtr.add_key( "valid_slot", get_valid_slot() );
+  wtr.add_key( "pub_slot", get_pub_slot() );
+  wtr.add_key( "prev_slot", get_prev_slot() );
+  wtr.add_key( "prev_price", get_prev_price() );
+  wtr.add_key( "prev_conf", get_prev_conf() );
+  wtr.add_key( "publisher_accounts", json_wtr::e_arr );
+  for( unsigned i=0; i != get_num_publisher(); ++i ) {
+    wtr.add_val( json_wtr::e_obj );
+    wtr.add_key( "account", *get_publisher( i ) );
+    wtr.add_key( "status", symbol_status_to_str(
+          get_publisher_status(i) ) );
+    wtr.add_key( "price", get_publisher_price(i) );
+    wtr.add_key( "conf", get_publisher_conf(i) );
+    wtr.add_key( "slot", get_publisher_slot(i) );
+    wtr.pop();
+  }
+  wtr.pop();
 }
 
 ///////////////////////////////////////////////////////////////////////////

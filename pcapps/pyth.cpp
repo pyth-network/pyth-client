@@ -1122,51 +1122,7 @@ static void print_product_json( product *prod )
 {
   json_wtr wtr;
   wtr.add_val( json_wtr::e_obj );
-  wtr.add_key( "account", *prod->get_account() );
-  wtr.add_key( "attr_dict", json_wtr::e_obj );
-  str vstr, kstr;
-  for( unsigned id=1, i=0; i != prod->get_num_attr(); ) {
-    attr_id aid( id++ );
-    if ( !prod->get_attr( aid, vstr ) ) {
-      continue;
-    }
-    kstr = aid.get_str();
-    wtr.add_key( kstr, vstr );
-    ++i;
-  }
-  wtr.pop();
-  wtr.add_key( "price_accounts", json_wtr::e_arr );
-  for( unsigned i=0; i != prod->get_num_price(); ++i ) {
-    wtr.add_val( json_wtr::e_obj );
-    price *ptr = prod->get_price( i );
-    wtr.add_key( "account", *ptr->get_account() );
-    wtr.add_key( "price_type", price_type_to_str( ptr->get_price_type() ));
-    wtr.add_key( "price_exponent", ptr->get_price_exponent() );
-    wtr.add_key( "status", symbol_status_to_str( ptr->get_status() ) );
-    wtr.add_key( "price", ptr->get_price() );
-    wtr.add_key( "conf", ptr->get_conf() );
-    wtr.add_key( "twap", ptr->get_twap() );
-    wtr.add_key( "twac", ptr->get_twac() );
-    wtr.add_key( "valid_slot", ptr->get_valid_slot() );
-    wtr.add_key( "pub_slot", ptr->get_pub_slot() );
-    wtr.add_key( "prev_slot", ptr->get_prev_slot() );
-    wtr.add_key( "prev_price", ptr->get_prev_price() );
-    wtr.add_key( "prev_conf", ptr->get_prev_conf() );
-    wtr.add_key( "publisher_accounts", json_wtr::e_arr );
-    for( unsigned j=0; j != ptr->get_num_publisher(); ++j ) {
-      wtr.add_val( json_wtr::e_obj );
-      wtr.add_key( "account", *ptr->get_publisher( j ) );
-      wtr.add_key( "status", symbol_status_to_str(
-            ptr->get_publisher_status(j) ) );
-      wtr.add_key( "price", ptr->get_publisher_price(j) );
-      wtr.add_key( "conf", ptr->get_publisher_conf(j) );
-      wtr.add_key( "slot", ptr->get_publisher_slot(j) );
-      wtr.pop();
-    }
-    wtr.pop();
-    wtr.pop();
-  }
-  wtr.pop();
+  prod->dump_json( wtr );
   wtr.pop();
   print_json( wtr );
 }

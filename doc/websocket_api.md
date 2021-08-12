@@ -1,10 +1,12 @@
 # pyth-client websocket API
-The pythd daemon supports a websocket interface based on the jsoni-rpc 2.0 standard.  Methods include:
+The pythd daemon supports a websocket interface based on the json-rpc 2.0 standard.  Methods include:
 
 - [get_product_list](#get_product_list)
 - [update_price](#update_price)
 - [subscribe_price](#subscribe_price)
 - [subscribe_price_sched](#subscribe_price_sched)
+- [get_product](#get_product)
+- [get_all_products](#get_all_products)
 
 Batch requests are processed in the order the requests appear within the batch.
 
@@ -194,5 +196,180 @@ Where the result is an integer corresponding to a subscription identifier. All s
   "params": {
     "subscription" : 1234
   }
+}
+```
+
+## get_product
+
+Get full set of data for the given product.
+
+Request looks like:
+```
+{
+  "jsonrpc": "2.0",
+  "method": "get_product",
+  "params": {
+    "account": "4aDoSXJ5o3AuvL7QFeR6h44jALQfTmUUCTVGDD6aoJTM"
+  },
+  "id" : 1
+}
+```
+
+A successful response looks something like:
+```
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "account": "4aDoSXJ5o3AuvL7QFeR6h44jALQfTmUUCTVGDD6aoJTM",
+    "attr_dict": {
+      "asset_type": "Crypto",
+      "symbol": "BTC/USD",
+      "country": "US",
+      "quote_currency": "USD",
+      "description": "BTC/USD",
+      "tenor": "Spot",
+      "generic_symbol": "BTCUSD"
+    },
+    "price_accounts": [
+      {
+        "account": "GVXRSBjFk6e6J3NbVPXohDJetcTjaeeuykUpbQF8UoMU",
+        "price_type": "price",
+        "price_exponent": -8,
+        "status": "trading",
+        "price": 4426101900000,
+        "conf": 4271150000,
+        "twap": 4433467600000,
+        "twac": 1304202670,
+        "valid_slot": 91402257,
+        "pub_slot": 91402259,
+        "prev_slot": 91402256,
+        "prev_price": 4425895500000,
+        "prev_conf": 3315350000,
+        "publisher_accounts": [
+          {
+            "account": "HekM1hBawXQu6wK6Ah1yw1YXXeMUDD2bfCHEzo25vnEB",
+            "status": "trading",
+            "price": 4426958500000,
+            "conf": 1492500000,
+            "slot": 91402255
+          },
+          {
+            "account": "GKNcUmNacSJo4S2Kq3DuYRYRGw3sNUfJ4tyqd198t6vQ",
+            "status": "trading",
+            "price": 4424690000000,
+            "conf": 3690000000,
+            "slot": 91402256
+          }
+        ]
+      }
+    ]
+  },
+  "id": 1
+}
+```
+
+## get_all_products
+
+Get full set of data for all products.
+
+Request looks like:
+```
+{
+  "jsonrpc": "2.0",
+  "method": "get_all_products",
+  "id" : 1
+}
+```
+
+A successful response looks something like:
+```
+{
+  "jsonrpc": "2.0",
+  "result": [
+    {
+      "account": "5uKdRzB3FzdmwyCHrqSGq4u2URja617jqtKkM71BVrkw",
+      "attr_dict": {
+        "asset_type": "Crypto",
+        "symbol": "BCH/USD",
+        "country": "US",
+        "quote_currency": "USD",
+        "description": "BCH/USD",
+        "tenor": "Spot",
+        "generic_symbol": "BCHUSD"
+      },
+      "price_accounts": [
+        {
+          "account": "5ALDzwcRJfSyGdGyhP3kP628aqBNHZzLuVww7o9kdspe",
+          "price_type": "price",
+          "price_exponent": -8,
+          "status": "trading",
+          "price": 60282000000,
+          "conf": 26000000,
+          "twap": 60321475000,
+          "twac": 22504746,
+          "valid_slot": 91402601,
+          "pub_slot": 91402604,
+          "prev_slot": 91402600,
+          "prev_price": 60282000000,
+          "prev_conf": 26000000,
+          "publisher_accounts": [
+            {
+              "account": "HekM1hBawXQu6wK6Ah1yw1YXXeMUDD2bfCHEzo25vnEB",
+              "status": "trading",
+              "price": 60282000000,
+              "conf": 26000000,
+              "slot": 91402599
+            },
+            {
+              "account": "2V7t5NaKY7aGkwytCWQgvUYZfEr9XMwNChhJEakTExk6",
+              "status": "unknown",
+              "price": 0,
+              "conf": 0,
+              "slot": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "account": "3nuELNFBkbXqsXtnCzphRPCX6toKKYxVDnkyr9pTwB1K",
+      "attr_dict": {
+        "asset_type": "Crypto",
+        "symbol": "SABER/USD",
+        "country": "US",
+        "quote_currency": "USD",
+        "description": "SABER/USD",
+        "tenor": "Spot",
+        "generic_symbol": "SABERUSD"
+      },
+      "price_accounts": [
+        {
+          "account": "8Td9VML1nHxQK6M8VVyzsHo32D7VBk72jSpa9U861z2A",
+          "price_type": "price",
+          "price_exponent": -8,
+          "status": "trading",
+          "price": 5785000,
+          "conf": 5000,
+          "twap": 5856365,
+          "twac": 10241,
+          "valid_slot": 91402601,
+          "pub_slot": 91402604,
+          "prev_slot": 91402600,
+          "prev_price": 5785000,
+          "prev_conf": 5000,
+          "publisher_accounts": [
+            {
+              "account": "GKNcUmNacSJo4S2Kq3DuYRYRGw3sNUfJ4tyqd198t6vQ",
+              "status": "trading",
+              "price": 5785000,
+              "conf": 5000,
+              "slot": 91402601
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "id": 1
 }
 ```
