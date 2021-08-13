@@ -30,7 +30,7 @@ if __name__ == '__main__':
     # add publisher to each price account
     for pxa in prod['price_accounts']:
       px_acct = pxa['account']
-      cmds = [ './pyth', 'add_publisher', pub_key, px_acct,
+      cmds = [ './pyth_admin', 'add_publisher', pub_key, px_acct,
           '-k', key_store, '-r', rpc_host, '-n' ]
       print( cmds, file=sys.stderr )
       res = subprocess.run( cmds, capture_output=True, text=True )

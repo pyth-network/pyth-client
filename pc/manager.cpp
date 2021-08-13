@@ -793,6 +793,30 @@ void manager::submit( tx_request *req )
   tconn_.add_send( msg );
 }
 
+bool manager::submit_poll( request *req )
+{
+  // submit request and poll for completion or error
+  submit( req );
+  while( !req->get_is_done() &&
+         !req->get_is_err() &&
+         !get_is_err() ) {
+    poll();
+  }
+  if ( req->get_is_err() ) {
+    PC_LOG_ERR( "request error")
+      .add( "error", req->get_err_msg() )
+      .end();
+    return false;
+  }
+  if ( get_is_err() ) {
+    PC_LOG_ERR( "request error")
+      .add( "error", get_err_msg() )
+      .end();
+    return false;
+  }
+  return true;
+}
+
 void manager::on_connect()
 {
   // callback user with connection status

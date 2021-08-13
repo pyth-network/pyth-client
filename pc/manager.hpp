@@ -132,6 +132,9 @@ namespace pc
     void submit( request * );
     void submit( tx_request * );
 
+    // submit pyth client api request and poll until finished
+    bool submit_poll( request * );
+
     // check status condition
     bool has_status( int status ) const;
 

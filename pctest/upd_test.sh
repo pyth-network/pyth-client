@@ -1,6 +1,6 @@
 #!/bin/bash
 
-BIN=./pyth
+BIN=./pyth_admin
 TESTS=(
   test_qset_1.json
   test_qset_2.json

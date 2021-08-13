@@ -1,6 +1,7 @@
 #!/bin/bash
 
 PYTH=./pyth
+PYTH_ADMIN=./pyth_admin
 SOLANA=../../solana/target/release/solana
 SOL_OPT="-u localhost --commitment finalized"
 RPC="-r localhost"
@@ -29,16 +30,16 @@ setup_admin()
   check "$SOLANA airdrop 10 -k $DIR/publish_key_pair.json $SOL_OPT"
 
   # create program key
-  check "$PYTH init_program $OPT"
+  check "$PYTH_ADMIN init_program $OPT"
 
   # setup program key and deploy
   check "$SOLANA program deploy ../target/oracle.so -k $DIR/publish_key_pair.json --program-id $DIR/program_key_pair.json $SOL_OPT"
 
   # setup mapping account
-  check "$PYTH init_mapping $OPT"
+  check "$PYTH_ADMIN init_mapping $OPT"
 
   # setup test account
-  check "$PYTH init_test $OPT"
+  check "$PYTH_ADMIN init_test $OPT"
 }
 
 # create key_store directory and initialize key, program and mapping
