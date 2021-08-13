@@ -296,25 +296,25 @@ void user::parse_get_product_list( uint32_t itok )
 
 void user::parse_get_product( uint32_t tok, uint32_t itok )
 {
-  do {
-    // unpack and verify parameters
-    uint32_t ntok,ptok = jp_.find_val( tok, "params" );
-    if ( ptok == 0 || jp_.get_type(ptok) != jtree::e_obj ) break;
-    if ( 0 == (ntok = jp_.find_val( ptok, "account" ) ) ) break;
-    pub_key pkey;
-    pkey.init_from_text( jp_.get_str( ntok ) );
-    product *prod = sptr_->get_product( pkey );
-    if ( PC_UNLIKELY( !prod ) ) { add_unknown_symbol(itok); return; }
+  // unpack and verify parameters
+  uint32_t ptok = jp_.find_val( tok, "params" );
+  if ( ptok == 0 || jp_.get_type(ptok) != jtree::e_obj )
+    return add_invalid_params( itok );
+  uint32_t ntok = jp_.find_val( ptok, "account" );
+  if ( ntok == 0 )
+    return add_invalid_params( itok );
+  pub_key pkey;
+  pkey.init_from_text( jp_.get_str( ntok ) );
+  product *prod = sptr_->get_product( pkey );
+  if ( PC_UNLIKELY( !prod ) )
+    return add_unknown_symbol( itok );
 
-    // create result
-    add_header();
-    jw_.add_key( "result", json_wtr::e_obj );
-    prod->dump_json( jw_ );
-    jw_.pop();
-    add_tail( itok );
-    return;
-  } while( 0 );
-  add_invalid_params( itok );
+  // create result
+  add_header();
+  jw_.add_key( "result", json_wtr::e_obj );
+  prod->dump_json( jw_ );
+  jw_.pop();
+  add_tail( itok );
 }
 
 void user::parse_get_all_products( uint32_t itok )
