@@ -35,7 +35,7 @@ if __name__ == '__main__':
   # process each product
   for prod in pd:
     # create product account
-    cmds = [ './pyth', 'add_product', '-k', key_store, '-r', rpc_host,
+    cmds = [ './pyth_admin', 'add_product', '-k', key_store, '-r', rpc_host,
         '-c', 'finalized' ]
     res = run_cmd( cmds )
     prod_acct = res.stdout.strip()
@@ -45,7 +45,7 @@ if __name__ == '__main__':
     for pxa in prod['price_accounts']:
       px_type = pxa['price_type']
       px_expo = pxa['price_exponent']
-      cmds = [ './pyth', 'add_price', prod['account'], px_type,
+      cmds = [ './pyth_admin', 'add_price', prod['account'], px_type,
           '-e', str(px_expo), '-k', key_store, '-r', rpc_host,
           '-c', 'finalized', '-n' ]
       res = run_cmd( cmds )
@@ -53,7 +53,7 @@ if __name__ == '__main__':
 
       # add corresponding publishers
       for pub in pxa['publisher_accounts']:
-        cmds = [ './pyth', 'add_publisher', pub['account'], pxa['account'],
+        cmds = [ './pyth_admin', 'add_publisher', pub['account'], pxa['account'],
           '-k', key_store, '-r', rpc_host, '-c', 'finalized', '-n' ]
         run_cmd( cmds )
 
@@ -63,6 +63,6 @@ if __name__ == '__main__':
   pf.close()
 
   # finally generate product reference data
-  cmds = [ './pyth', 'upd_product', prod_file,
+  cmds = [ './pyth_admin', 'upd_product', prod_file,
            '-k', key_store, '-r', rpc_host ]
   res = run_cmd( cmds )

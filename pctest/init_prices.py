@@ -37,6 +37,6 @@ if __name__ == '__main__':
     # update each  price accounts for this product
     for pxa in prod['price_accounts']:
       px_expo = pxa['price_exponent']
-      cmds = [ './pyth', 'init_price', pxa['account'],
+      cmds = [ './pyth_admin', 'init_price', pxa['account'],
           '-e', str(px_expo), '-k', key_store, '-r', rpc_host, '-n' ]
       run_cmd( cmds )

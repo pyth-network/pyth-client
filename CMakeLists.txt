@@ -71,6 +71,8 @@ add_executable( pythd pcapps/pythd.cpp )
 target_link_libraries( pythd ${PC_DEP} )
 add_executable( pyth pcapps/pyth.cpp )
 target_link_libraries( pyth ${PC_DEP} )
+add_executable( pyth_admin pcapps/pyth_admin.cpp )
+target_link_libraries( pyth_admin ${PC_DEP} )
 add_executable( pyth_csv pcapps/pyth_csv.cpp )
 target_link_libraries( pyth_csv ${PC_DEP} )
 add_executable( pyth_tx pcapps/tx_svr.cpp pcapps/pyth_tx.cpp )
@@ -81,7 +83,7 @@ target_link_libraries( pyth_tx ${PC_DEP} )
 #
 
 install( TARGETS pc DESTINATION lib )
-install( TARGETS pyth pythd pyth_csv pyth_tx DESTINATION bin )
+install( TARGETS pyth pyth_admin pythd pyth_csv pyth_tx DESTINATION bin )
 install( FILES ${PC_HDR} DESTINATION include/pc )
 install( FILES program/src/oracle/oracle.h DESTINATION include/oracle )
 

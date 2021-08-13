@@ -1,6 +1,6 @@
 #!/bin/bash
 
-BIN=./pyth
+BIN=./pyth_admin
 KDIR=$1
 if [ -z "$KDIR" ] ; then
   echo "test_agg.sh <key_store_directory>"

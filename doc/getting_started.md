@@ -1,6 +1,6 @@
 # Getting started with publishing via pyth-client
 
-The pyth-client repo consists of a C++ library (libpc.a), a command-line administration tool (pyth), a json/websocket-based server (pythd) and a gateway/proxy server for price publishing (pyth_tx).
+The pyth-client repo consists of a C++ library (libpc.a), two command-line administration tools (pyth & pyth_admin), a json/websocket-based server (pythd) and a gateway/proxy server for price publishing (pyth_tx).
 
 You can integrate with libpc directly in your application. See `pctest/test_publish.cpp` for an example. Or, you can integrate with the pythd server via json/websockets. See `pctest/test_publish.py` for an example.
 
@@ -34,7 +34,7 @@ Once permissioned, you need two additional public keys in the key-store. The id 
 Use the init_key_store.sh script to initialize these account keys:
 
 ```
-KENV=devnet  # or mainnet-beta
+KENV=devnet  # or testnet, prodbeta
 
 # initialize keys for solana devnet
 ../pctest/init_key_store.sh $KENV $KDIR
@@ -47,9 +47,9 @@ Once permissioned, you can test your setup by running the test_publish.cpp examp
 
 
 ```
-KHOST=api.devnet.solana.com
+RHOST=api.devnet.solana.com
 THOST=<your_pyth_tx_host>
-./test_publish -k $KDIR -r $KHOST -t $THOST
+./test_publish -k $KDIR -r $RHOST -t $THOST
 ```
 
 The -r and -t options correspond to the locations of required solana validator and pyth_tx server instances.
@@ -57,7 +57,7 @@ The -r and -t options correspond to the locations of required solana validator a
 You can also publish to solana using the pythd server. Start up the server using the same key-store directory and host specification:
 
 ```
-./pythd -k $KDIR -r $KHOST -t $THOST
+./pythd -k $KDIR -r $RHOST -t $THOST
 ```
 
 Run the test_publish.py example program on the same host to connect to the pythd server:
@@ -80,7 +80,7 @@ You can run your own pyth_tx instance (recommended) or connect to provided serve
 Start up the pyth_tx server as follows:
 
 ```
-./pyth_tx -r $KHOST
+./pyth_tx -r $RHOST
 ```
 
 The -r option points to the IP address of a solana validator node or rpc end-point. It can be the same or different IP address to that passed to test_publish or pythd as long as it corresponds to the same environment.
@@ -91,7 +91,7 @@ The -r option points to the IP address of a solana validator node or rpc end-poi
 The pythd server also exports a dashboard web page for watching the ticking pyth prices.  The public key you create above does not need publish-permission to watch the ticking pyth prices.  To activate the dashboard page include an additional `-w` argument to pythd pointing at the html/javscript code directory:
 
 ```
-./pythd -k $KDIR -r $KHOST -w ../dashboard
+./pythd -k $KDIR -r $RHOST -w ../dashboard
 ```
 
 Connect to the dashboard via http://localhost:8910.
