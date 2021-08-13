@@ -2,6 +2,7 @@
 
 PYTH=./pyth
 SOLANA=../../solana/target/release/solana
+SOLANA_KEYGEN=../../solana/target/release/solana-keygen
 SOL_OPT="-u localhost --commitment finalized"
 RPC="-r localhost"
 FINAL="-c finalized"
@@ -30,19 +31,14 @@ setup_pub()
   check "$SOLANA airdrop 10 -k $DIR/publish_key_pair.json $SOL_OPT"
 
   # get program public key
-  prog_id=$($PYTH get_pub_key $ADM/program_key_pair.json)
+  prog_id=$($SOLANA_KEYGEN pubkey $ADM/program_key_pair.json)
   echo $prog_id > $DIR/program_key.json
   chmod 0400 $DIR/program_key.json
 
   # get mapping public key
-  map_id=$($PYTH get_pub_key $ADM/mapping_key_pair.json)
+  map_id=$($SOLANA_KEYGEN pubkey $ADM/mapping_key_pair.json)
   echo $map_id > $DIR/mapping_key.json
   chmod 0400 $DIR/mapping_key.json
-
-  # get parameter public key
-  map_id=$($PYTH get_pub_key $ADM/param_key_pair.json)
-  echo $map_id > $DIR/param_key.json
-  chmod 0400 $DIR/param_key.json
 }
 
 ADIR=$1

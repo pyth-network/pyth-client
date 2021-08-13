@@ -20,7 +20,7 @@ This creates the directory (if it didnt already exist) and creates a key-pair fi
 Please extract the public key from this key-pair and send it to the administrator so it can be permissioned for your symbols of interest. The public key can be extracted as follows:
 
 ```
-./pyth get_pub_key $KDIR/publish_key_pair.json
+solana-keygen pubkey $KDIR/publish_key_pair.json
 ```
 
 This will output the public key in base58 encoding and will look something like:
