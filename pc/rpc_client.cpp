@@ -11,7 +11,6 @@ enum system_instruction : uint32_t
 {
   e_create_account,
   e_assign,
-  e_transfer
 };
 
 static hash gen_sys_id()
@@ -726,97 +725,6 @@ void rpc::get_slot_leaders::response( const jtree& jt )
     pkey.init_from_text( jt.get_str( tok ) );
     lvec_.push_back( pkey );
   }
-  on_response( this );
-}
-
-///////////////////////////////////////////////////////////////////////////
-// transfer
-
-void rpc::transfer::set_block_hash( hash *bhash )
-{
-  bhash_ = bhash;
-}
-
-void rpc::transfer::set_sender( key_pair *snd )
-{
-  snd_ = snd;
-}
-
-void rpc::transfer::set_receiver( pub_key *rcv )
-{
-  rcv_ = rcv;
-}
-
-void rpc::transfer::set_lamports( uint64_t funds )
-{
-  lamports_ = funds;
-}
-
-signature *rpc::transfer::get_signature()
-{
-  return &sig_;
-}
-
-void rpc::transfer::enc_signature( std::string& sig )
-{
-  sig_.enc_base58( sig );
-}
-
-
-rpc::transfer::transfer()
-: lamports_( 0UL )
-{
-}
-
-void rpc::transfer::request( json_wtr& msg )
-{
-  // construct binary transaction
-  net_buf *bptr = net_buf::alloc();
-  bincode tx( bptr->buf_ );
-
-  // signatures section
-  tx.add_len<1>();      // one signature
-  size_t sign_idx = tx.reserve_sign();
-
-  // message header
-  size_t tx_idx = tx.get_pos();
-  tx.add( (uint8_t)1 ); // signing accounts
-  tx.add( (uint8_t)0 ); // read-only signed accounts
-  tx.add( (uint8_t)1 ); // read-only unsigned accounts
-
-  // accounts
-  tx.add_len<3>();      // 3 accounts: sender, receiver, program
-  tx.add( *snd_ );      // sender account
-  tx.add( *rcv_ );      // receiver account
-  tx.add( sys_id );     // system programid
-
-  // recent block hash
-  tx.add( *bhash_ );    // recent block hash
-
-  // instructions section
-  tx.add_len<1>();      // one instruction
-  tx.add( (uint8_t)2);  // program_id index
-  tx.add_len<2>();      // 2 accounts: sender, receiver
-  tx.add( (uint8_t)0 ); // index of sender account
-  tx.add( (uint8_t)1 ); // index of receiver account
-
-  // instruction parameter section
-  tx.add_len<12>();     // size of data array
-  tx.add( (uint32_t)system_instruction::e_transfer );
-  tx.add( (uint64_t)lamports_ );
-
-  // sign message
-  tx.sign( sign_idx, tx_idx, *snd_ );
-  sig_.init_from_buf( (const uint8_t*)(tx.get_buf() + sign_idx) );
-
-  // encode transaction and add to json params
-  send_transaction( msg, tx, false );
-  bptr->dealloc();
-}
-
-void rpc::transfer::response( const jtree& jt )
-{
-  if ( on_error( jt, this ) ) return;
   on_response( this );
 }
 

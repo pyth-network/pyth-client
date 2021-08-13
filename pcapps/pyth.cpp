@@ -41,8 +41,6 @@ int usage()
             << "[-e <price_exponent (default " << get_exponent()
             << ")>] [options]" << std::endl;
   std::cerr << "  init_test        [options]" << std::endl;
-  std::cerr << "  transfer         <pub_key> <amount> [options]"
-            << std::endl;
   std::cerr << "  add_product      [options]" << std::endl;
   std::cerr << "  add_price        <prod_key> <price_type> "
             << "[-e <price_exponent (default " << get_exponent()
@@ -58,7 +56,6 @@ int usage()
             << std::endl;
   std::cerr << "  upd_test         <test_key> <test.json> [options]"
             << std::endl;
-  std::cerr << "  get_balance      [<pub_key>] [options]" << std::endl;
   std::cerr << "  get_block        <slot_number> [options]" << std::endl;
   std::cerr << "  get_product      <prod_key> [options]" << std::endl;
   std::cerr << "  get_product_list [options]" << std::endl;
@@ -252,128 +249,6 @@ int on_init_mapping( int argc, char **argv )
     return 1;
   }
   return 0;
-}
-
-int on_transfer( int argc, char **argv )
-{
-  // get input parameters
-  if ( argc < 3 ) {
-    return usage();
-  }
-  pub_key pub;
-  pub.init_from_text( str( argv[1] ) );
-  int64_t lamports = str_to_dec( argv[2], -9 );
-  if ( lamports <= 0 ) {
-    return usage();
-  }
-  argc -= 2;
-  argv += 2;
-  int opt = 0;
-  commitment cmt = commitment::e_confirmed;
-  std::string rpc_host = get_rpc_host();
-  std::string key_dir  = get_key_store();
-  while( (opt = ::getopt(argc,argv, "r:k:c:dh" )) != -1 ) {
-    switch(opt) {
-      case 'r': rpc_host = optarg; break;
-      case 'k': key_dir = optarg; break;
-      case 'd': log::set_level( PC_LOG_DBG_LVL ); break;
-      case 'c': cmt = str_to_commitment(optarg); break;
-      default: return usage();
-    }
-  }
-  if ( cmt == commitment::e_unknown ) {
-    std::cerr << "pyth: unknown commitment level" << std::endl;
-    return usage();
-  }
-  std::string knm;
-  pub.enc_base58( knm );
-  std::cout << "transfer to account:" << std::endl;
-  print( "account", 2 );
-  std::cout << knm << std::endl;
-  print( "amount", 2 );
-  printf( "%.9f\n", 1e-9*lamports );
-  std::cout << "are you sure? [y/n] ";
-  char ch;
-  std::cin >> ch;
-  if ( ch != 'y' && ch != 'Y' ) {
-    return 1;
-  }
-  manager mgr;
-  mgr.set_rpc_host( rpc_host );
-  mgr.set_dir( key_dir );
-  mgr.set_do_tx( false );
-  mgr.set_commitment( cmt );
-  if ( !mgr.init() || !mgr.bootstrap() ) {
-    std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
-    return 1;
-  }
-
-  // submit request
-  transfer req[1];
-  req->set_lamports( lamports );
-  req->set_commitment( cmt );
-  req->set_receiver( &pub );
-  return submit_request( mgr, req );
-}
-
-int on_get_balance( int argc, char **argv )
-{
-  pub_key pub;
-  std::string knm;
-  if ( argc > 1 && argv[1][0] != '-' ) {
-    knm = argv[1];
-  }
-  int opt = 0;
-  commitment cmt = commitment::e_confirmed;
-  std::string rpc_host = get_rpc_host();
-  std::string key_dir  = get_key_store();
-  while( (opt = ::getopt(argc,argv, "r:k:p:c:dh" )) != -1 ) {
-    switch(opt) {
-      case 'r': rpc_host = optarg; break;
-      case 'k': key_dir = optarg; break;
-      case 'p': knm = optarg; break;
-      case 'c': cmt = str_to_commitment(optarg); break;
-      case 'd': log::set_level( PC_LOG_DBG_LVL ); break;
-      default: return usage();
-    }
-  }
-  if ( cmt == commitment::e_unknown ) {
-    std::cerr << "pyth: unknown commitment level" << std::endl;
-    return usage();
-  }
-
-  if ( knm.empty() ) {
-    key_store mgr;
-    mgr.set_dir( key_dir );
-    if ( !mgr.init() ) {
-      std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
-      return 1;
-    }
-    pub = *mgr.get_publish_pub_key();
-  } else {
-    pub.init_from_text( knm );
-  }
-  manager mgr;
-  mgr.set_rpc_host( rpc_host );
-  mgr.set_dir( key_dir );
-  mgr.set_do_tx( false );
-  mgr.set_commitment( cmt );
-  if ( !mgr.init() || !mgr.bootstrap() ) {
-    std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
-    return 1;
-  }
-  balance req[1];
-  req->set_pub_key( &pub );
-  int ret = submit_request( mgr, req );
-  if ( ret == 0 ) {
-    std::cout << "balance details:" << std::endl;
-    pub.enc_base58( knm );
-    print( "account", 2 );
-    std::cout << knm << std::endl;
-    print( "balance", 2 );
-    printf( "%.9f\n", 1e-9*req->get_lamports() );
-  }
-  return ret;
 }
 
 int on_add_product( int argc, char **argv )
@@ -1563,10 +1438,6 @@ int main(int argc, char **argv)
     rc = on_init_price( argc, argv );
   } else if ( cmd == "init_test" ) {
     rc = on_init_test( argc, argv );
-  } else if ( cmd == "transfer" ) {
-    rc = on_transfer( argc, argv );
-  } else if ( cmd == "get_balance" ) {
-    rc = on_get_balance( argc, argv );
   } else if ( cmd == "add_product" ) {
     rc = on_add_product( argc, argv );
   } else if ( cmd == "add_price" ) {

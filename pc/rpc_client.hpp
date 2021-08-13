@@ -529,32 +529,6 @@ namespace pc
       commitment  cmt_;
     };
 
-    // transaction to transfer funds between accounts
-    class transfer : public rpc_request
-    {
-    public:
-      // parameters
-      void set_block_hash( hash * );
-      void set_sender( key_pair * );
-      void set_receiver( pub_key * );
-      void set_lamports( uint64_t funds );
-
-      // results
-      signature *get_signature();
-      void enc_signature( std::string& );
-
-      transfer();
-      void request( json_wtr& ) override;
-      void response( const jtree& ) override;
-
-    private:
-      hash     *bhash_;
-      key_pair *snd_;
-      pub_key  *rcv_;
-      uint64_t  lamports_;
-      signature sig_;
-    };
-
     // create new account and assign ownership to some (program) key
     class create_account : public rpc_request
     {
