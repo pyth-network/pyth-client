@@ -60,7 +60,6 @@ int usage()
   std::cerr << "  get_product      <prod_key> [options]" << std::endl;
   std::cerr << "  get_product_list [options]" << std::endl;
   std::cerr << "  get_all_products [options]" << std::endl;
-  std::cerr << "  get_pub_key      <key_pair_file>" << std::endl;
   std::cerr << "  version" << std::endl;
   std::cerr << std::endl;
 
@@ -949,24 +948,6 @@ int on_upd_publisher( int argc, char **argv, bool is_add )
   }
 }
 
-int on_get_pub_key( int argc, char **argv )
-{
-  if ( argc < 2 ) {
-    return usage();
-  }
-  key_pair kp;
-  if ( !kp.init_from_file( argv[1] ) ) {
-    std::cerr << "pyth: failed to init key_pair from " << argv[1]
-              << std::endl;
-    return 1;
-  }
-  pub_key pk( kp );
-  std::string pnm;
-  pk.enc_base58( pnm );
-  std::cout << pnm << std::endl;
-  return 0;
-}
-
 static void print_json( json_wtr& wtr )
 {
   net_buf *hd, *tl;
@@ -1454,8 +1435,6 @@ int main(int argc, char **argv)
     rc = on_upd_price_val( argc, argv );
   } else if ( cmd == "upd_test" ) {
     rc = on_upd_test( argc, argv );
-  } else if ( cmd == "get_pub_key" ) {
-    rc = on_get_pub_key( argc, argv );
   } else if ( cmd == "get_product" ) {
     rc = on_get_product( argc, argv );
   } else if ( cmd == "get_product_list" ) {
