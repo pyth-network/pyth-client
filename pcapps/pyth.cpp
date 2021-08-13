@@ -49,6 +49,8 @@ int usage()
   std::cerr << "  upd_product      <product.json> [options]" << std::endl;
   std::cerr << "  upd_price        <price_key> [options]"
             << std::endl;
+  std::cerr << "  upd_price_val    <price_key> <value> <confidence> <status> [options]"
+            << std::endl;
   std::cerr << "  upd_test         <test_key> <test.json> [options]"
             << std::endl;
   std::cerr << "  get_balance      [<pub_key>] [options]" << std::endl;
@@ -804,9 +806,12 @@ int on_upd_price( int argc, char **argv )
   if ( argc < 2 ) {
     return usage();
   }
+
+  // Price Key
   std::string pkey( argv[1] );
   pub_key pub;
   pub.init_from_text( pkey );
+
   argc -= 1;
   argv += 1;
 
@@ -852,6 +857,91 @@ int on_upd_price( int argc, char **argv )
     return 1;
   }
   ptr->update();
+  while( mgr.get_is_tx_send() && !mgr.get_is_err() ) {
+    mgr.poll();
+  }
+  if ( ptr->get_is_err() ) {
+    std::cerr << "pyth: " << ptr->get_err_msg() << std::endl;
+    return 1;
+  }
+  if ( mgr.get_is_err() ) {
+    std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
+    return 1;
+  }
+  return 0;
+}
+
+int on_upd_price_val( int argc, char **argv )
+{
+  if ( argc < 5 ) {
+    return usage();
+  }
+
+  // Price Key
+  std::string pkey( argv[1] );
+  pub_key pub;
+  pub.init_from_text( pkey );
+
+  // Price Value
+  uint64_t price_value = atoll( argv[2] );
+
+  // Confidence
+  uint64_t confidence = atoll( argv[3] );
+
+  // Status
+  symbol_status price_status = str_to_symbol_status( argv[4] );
+
+  // Make sure an unknown status was requested explicitly
+  if ( price_status == symbol_status::e_unknown && argv[4] != std::string("unknown") ) {
+    std::cerr << "pyth: unrecognized symbol status " << '"' << argv[4] << '"' << std::endl;
+    return 1;
+  }
+
+  argc -= 4;
+  argv += 4;
+
+  int opt = 0;
+  commitment cmt = commitment::e_confirmed;
+  std::string rpc_host = get_rpc_host();
+  std::string tx_host  = get_rpc_host();
+  std::string key_dir  = get_key_store();
+  while( (opt = ::getopt(argc,argv, "r:t:k:c:dh" )) != -1 ) {
+    switch(opt) {
+      case 'r': rpc_host = optarg; break;
+      case 't': tx_host = optarg; break;
+      case 'k': key_dir = optarg; break;
+      case 'd': log::set_level( PC_LOG_DBG_LVL ); break;
+      case 'c': cmt = str_to_commitment(optarg); break;
+      default: return usage();
+    }
+  }
+  if ( cmt == commitment::e_unknown ) {
+    std::cerr << "pyth: unknown commitment level" << std::endl;
+    return usage();
+  }
+
+  // initialize connection to block-chain
+  manager mgr;
+  mgr.set_rpc_host( rpc_host );
+  mgr.set_tx_host( tx_host );
+  mgr.set_dir( key_dir );
+  mgr.set_do_tx( true );
+  mgr.set_commitment( cmt );
+  if ( !mgr.init() || !mgr.bootstrap() ) {
+    std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
+    return 1;
+  }
+  // get price and crank
+  price *ptr = mgr.get_price( pub );
+  if ( !ptr ) {
+    std::cerr << "pyth: failed to find price key=" << pkey << std::endl;
+    return 1;
+  }
+  if ( !ptr->has_publisher() ) {
+    std::cerr << "pyth: missing publisher permission" << std::endl;
+    return 1;
+  }
+  ptr->update(price_value, confidence, price_status);
   while( mgr.get_is_tx_send() && !mgr.get_is_err() ) {
     mgr.poll();
   }
@@ -1502,6 +1592,8 @@ int main(int argc, char **argv)
     rc = on_upd_product( argc, argv );
   } else if ( cmd == "upd_price" ) {
     rc = on_upd_price( argc, argv );
+  } else if ( cmd == "upd_price_val" ) {
+    rc = on_upd_price_val( argc, argv );
   } else if ( cmd == "upd_test" ) {
     rc = on_upd_test( argc, argv );
   } else if ( cmd == "get_pub_key" ) {
