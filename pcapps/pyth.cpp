@@ -8,100 +8,120 @@
 
 // pyth command-line tool
 
-int get_exponent()
-{
-  return -5;
-}
-
-std::string get_rpc_host()
-{
-  return "localhost";
-}
-
-std::string get_tx_host()
-{
-  return "localhost";
-}
-
-std::string get_key_store()
-{
-  std::string dir = getenv("HOME");
-  return dir + "/.pythd/";
-}
-
 using namespace pc;
+
+static const int         DEFAULT_EXPONENT  = -5;
+static const std::string DEFAULT_RPC_HOST  = "localhost";
+static const std::string DEFAULT_TX_HOST   = "localhost";
+static const std::string DEFAULT_KEY_STORE = std::string( getenv( "HOME" ) ) + "/.pythd/";
 
 int usage()
 {
-  std::cerr << "usage: pyth " << std::endl;
-  std::cerr << "  init_key         [options]" << std::endl;
-  std::cerr << "  init_program     [options]" << std::endl;
-  std::cerr << "  init_mapping     [options]" << std::endl;
-  std::cerr << "  init_price       <price_key> "
-            << "[-e <price_exponent (default " << get_exponent()
-            << ")>] [options]" << std::endl;
-  std::cerr << "  init_test        [options]" << std::endl;
-  std::cerr << "  add_product      [options]" << std::endl;
-  std::cerr << "  add_price        <prod_key> <price_type> "
-            << "[-e <price_exponent (default " << get_exponent()
-            << ")>] [options]" << std::endl;
-  std::cerr << "  add_publisher    <pub_key> <price_key> [options]"
-            << std::endl;
-  std::cerr << "  del_publisher    <pub_key> <price_key> [options]"
-            << std::endl;
-  std::cerr << "  upd_product      <product.json> [options]" << std::endl;
-  std::cerr << "  upd_price        <price_key> [options]"
-            << std::endl;
-  std::cerr << "  upd_price_val    <price_key> <value> <confidence> <status> [options]"
-            << std::endl;
-  std::cerr << "  upd_test         <test_key> <test.json> [options]"
-            << std::endl;
-  std::cerr << "  get_block        <slot_number> [options]" << std::endl;
-  std::cerr << "  get_product      <prod_key> [options]" << std::endl;
-  std::cerr << "  get_product_list [options]" << std::endl;
-  std::cerr << "  get_all_products [options]" << std::endl;
-  std::cerr << "  version" << std::endl;
-  std::cerr << std::endl;
+  using namespace std;
+  cerr << "usage: pyth " << endl;
+  cerr << "  init_key         [options]" << endl;
+  cerr << "  init_program     [options]" << endl;
+  cerr << "  init_mapping     [options]" << endl;
+  cerr << "  init_price       <price_key> "
+       << "[-e <price_exponent (default " << DEFAULT_EXPONENT
+       << ")>] [options]" << endl;
+  cerr << "  init_test        [options]" << endl;
+  cerr << "  add_product      [options]" << endl;
+  cerr << "  add_price        <product_key> <price_type> "
+       << "[-e <price_exponent (default " << DEFAULT_EXPONENT
+       << ")>] [options]" << endl;
+  cerr << "  add_publisher    <pub_key> <price_key> [options]" << endl;
+  cerr << "  del_publisher    <pub_key> <price_key> [options]" << endl;
+  cerr << "  upd_product      <product.json> [options]" << endl;
+  cerr << "  upd_price        <price_key> [options]" << endl;
+  cerr << "  upd_price_val    <price_key> <value> <confidence> <status> [options]" << endl;
+  cerr << "  upd_test         <test_key> <test.json> [options]" << endl;
+  cerr << "  get_block        <slot_number> [options]" << endl;
+  cerr << "  get_product      <product_key> [options]" << endl;
+  cerr << "  get_product_list [options]" << endl;
+  cerr << "  get_all_products [options]" << endl;
+  cerr << "  version" << endl;
+  cerr << endl;
 
-  std::cerr << "options include:" << std::endl;
-  std::cerr << "  -r <rpc_host (default " << get_rpc_host() << ")>"
-            << std::endl;
-  std::cerr << "     Host name or IP address of solana rpc node in the form "
-               "host_name[:rpc_port[:ws_port]]\n" << std::endl;
-  std::cerr << "  -k <key_store_directory (default "
-            << get_key_store() << ")>" << std::endl;
-  std::cerr << "     Directory name housing publishing, mapping and program"
-               " key files\n" << std::endl;
-  std::cerr << "  -c <commitment_level (default confirmed)>" << std::endl;
-  std::cerr << "     Options include processed, confirmed and finalized\n"
-            << std::endl;
-  std::cerr << "  -j\n"
-            << "     Output results in json format where applicable\n"
-            << std::endl;
-  std::cerr << "  -d" << std::endl;
-  std::cerr << "     Turn on debug logging\n" << std::endl;
+  cerr << "options include:" << endl;
+  cerr << "  -r <rpc_host (default " << DEFAULT_RPC_HOST << ")>" << endl;
+  cerr << "     Host name or IP address of solana rpc node in the form "
+               "host_name[:rpc_port[:ws_port]]\n" << endl;
+  cerr << "  -k <key_store_directory (default "
+            << DEFAULT_KEY_STORE << ">" << endl;
+  cerr << "     Directory name housing publishing, mapping and program"
+               " key files\n" << endl;
+  cerr << "  -c <commitment_level (default confirmed)>" << endl;
+  cerr << "     Options include processed, confirmed and finalized\n" << endl;
+  cerr << "  -j\n"
+            << "     Output results in json format where applicable\n" << endl;
+  cerr << "  -d" << endl;
+  cerr << "     Turn on debug logging\n" << endl;
+  cerr << "  -h" << endl;
+  cerr << "     Output this help text\n" << endl;
 
-  std::cerr << "options only for upd_price / upd_price_val include:" << std::endl;
-  std::cerr << "  -x" << std::endl;
-  std::cerr << "     Disable connection to pyth_tx transaction proxy server\n" << std::endl;
-  std::cerr << "  -t <tx proxy host (default " << get_tx_host() << ")>" << std::endl
-            << "     Host name or IP address of running pyth_tx server" << std::endl;
+  cerr << "options only for upd_price / upd_price_val include:" << endl;
+  cerr << "  -x" << endl;
+  cerr << "     Disable connection to pyth_tx transaction proxy server\n" << endl;
+  cerr << "  -t <tx proxy host (default " << DEFAULT_TX_HOST << ")>" << endl
+            << "     Host name or IP address of running pyth_tx server" << endl;
   return 1;
 }
 
-static const char spaces[] =
-"..........................................................................";
-
-static const char dots[] =
-"                                                                          ";
-
-void print( str val, size_t sp=0 )
+struct pyth_arguments
 {
+  pyth_arguments( int argc, char **argv );
+
+  bool         invalid_    = false;
+  std::string  rpc_host_   = DEFAULT_RPC_HOST;
+  std::string  tx_host_    = DEFAULT_TX_HOST;
+  std::string  key_dir_    = DEFAULT_KEY_STORE;
+  commitment   cmt_        = commitment::e_confirmed;
+  bool         do_json_    = false;
+  int          exponent_   = DEFAULT_EXPONENT;
+  bool         do_prompt_  = true;
+  bool         do_tx_      = true;
+};
+
+pyth_arguments::pyth_arguments( int argc, char **argv )
+{
+  int opt = 0;
+  while ( (opt = ::getopt( argc, argv, "r:t:k:c:jde:nxh" )) != -1 ) {
+    switch (opt) {
+      case 'r': rpc_host_ = optarg; break;
+      case 't': tx_host_ = optarg; break;
+      case 'k': key_dir_ = optarg; break;
+      case 'c': cmt_ = str_to_commitment( optarg ); break;
+      case 'j': do_json_ = true; break;
+      case 'd': log::set_level( PC_LOG_DBG_LVL ); break;
+      case 'e': exponent_ = ::atoi( optarg ); break;
+      case 'n': do_prompt_ = false; break;
+      case 'x': do_tx_ = false; break;
+      default:
+        usage();
+        invalid_ = true;
+    }
+  }
+
+  if ( cmt_ == commitment::e_unknown ) {
+    std::cerr << "pyth: unknown commitment level" << std::endl;
+    invalid_ = true;
+    usage();
+  }
+}
+
+void print_val( str val, size_t sp=0 )
+{
+  static const char spaces[] =
+  "                                                                          ";
+  static const char dots[] =
+  "..........................................................................";
+
   size_t num = 20 - sp;
-  std::cout.write( dots, sp );
+  std::cout.write( spaces, sp );
   std::cout.write( val.str_, val.len_ );
   if ( num > val.len_ ) {
-    std::cout.write( spaces, num - val.len_ );
+    std::cout.write( dots, num - val.len_ );
   }
   std::cout << ' ';
 }
@@ -128,20 +148,12 @@ int submit_request( manager& mgr, request *req )
 
 int on_init_key( int argc, char **argv )
 {
-  int opt = 0;
-  std::string rpc_host = get_rpc_host();
-  std::string key_dir  = get_key_store();
-  while( (opt = ::getopt(argc,argv, "r:k:c:dh" )) != -1 ) {
-    switch(opt) {
-      case 'r': rpc_host = optarg; break;
-      case 'k': key_dir = optarg; break;
-      case 'd': log::set_level( PC_LOG_DBG_LVL ); break;
-      case 'c': break;
-      default: return usage();
-    }
-  }
+  pyth_arguments args( argc, argv );
+  if ( args.invalid_ )
+    return 1;
+
   key_store kst;
-  kst.set_dir( key_dir );
+  kst.set_dir( args.key_dir_ );
   if ( !kst.create() ) {
     std::cerr << "pyth: " << kst.get_err_msg() << std::endl;
     return 1;
@@ -167,20 +179,12 @@ int on_init_key( int argc, char **argv )
 
 int on_init_program( int argc, char **argv )
 {
-  int opt = 0;
-  std::string rpc_host = get_rpc_host();
-  std::string key_dir  = get_key_store();
-  while( (opt = ::getopt(argc,argv, "r:k:c:dh" )) != -1 ) {
-    switch(opt) {
-      case 'r': rpc_host = optarg; break;
-      case 'k': key_dir = optarg; break;
-      case 'd': log::set_level( PC_LOG_DBG_LVL ); break;
-      case 'c': break;
-      default: return usage();
-    }
-  }
+  pyth_arguments args( argc, argv );
+  if ( args.invalid_ )
+    return 1;
+
   key_store kst;
-  kst.set_dir( key_dir );
+  kst.set_dir( args.key_dir_ );
   if ( !kst.init() ) {
     std::cerr << "pyth: " << kst.get_err_msg() << std::endl;
     return 1;
@@ -202,32 +206,18 @@ int on_init_program( int argc, char **argv )
 
 int on_init_mapping( int argc, char **argv )
 {
-  // get input parameters
-  int opt = 0;
-  commitment cmt = commitment::e_confirmed;
-  std::string rpc_host = get_rpc_host();
-  std::string key_dir  = get_key_store();
-  while( (opt = ::getopt(argc,argv, "r:k:c:dh" )) != -1 ) {
-    switch(opt) {
-      case 'r': rpc_host = optarg; break;
-      case 'k': key_dir = optarg; break;
-      case 'd': log::set_level( PC_LOG_DBG_LVL ); break;
-      case 'c': cmt = str_to_commitment(optarg); break;
-      default: return usage();
-    }
-  }
-  if ( cmt == commitment::e_unknown ) {
-    std::cerr << "pyth: unknown commitment level" << std::endl;
-    return usage();
-  }
+  pyth_arguments args( argc, argv );
+  if ( args.invalid_ )
+    return 1;
+
   std::cerr << "this might take take up to 30 seconds..." << std::endl;
 
   // initialize connection to block-chain
   manager mgr;
-  mgr.set_rpc_host( rpc_host );
-  mgr.set_dir( key_dir );
+  mgr.set_rpc_host( args.rpc_host_ );
+  mgr.set_dir( args.key_dir_ );
   mgr.set_do_tx( false );
-  mgr.set_commitment( cmt );
+  mgr.set_commitment( args.cmt_ );
   if ( !mgr.init() || !mgr.bootstrap() ) {
     std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
     return 1;
@@ -243,41 +233,28 @@ int on_init_mapping( int argc, char **argv )
   // submit init_mapping request
   init_mapping req_i[1];
   req_i->set_lamports( req_r->get_lamports() );
-  req_i->set_commitment( cmt );
+  req_i->set_commitment( args.cmt_ );
   if( submit_request( mgr, req_i ) ) {
     return 1;
   }
+
   return 0;
 }
 
 int on_add_product( int argc, char **argv )
 {
-  // get input parameters
-  int opt = 0;
-  std::string rpc_host = get_rpc_host();
-  std::string key_dir  = get_key_store();
-  commitment cmt = commitment::e_confirmed;
-  while( (opt = ::getopt(argc,argv, "e:r:k:c:dh" )) != -1 ) {
-    switch(opt) {
-      case 'r': rpc_host = optarg; break;
-      case 'k': key_dir = optarg; break;
-      case 'c': cmt = str_to_commitment(optarg); break;
-      case 'd': log::set_level( PC_LOG_DBG_LVL ); break;
-      default: return usage();
-    }
-  }
-  if ( cmt == commitment::e_unknown ) {
-    std::cerr << "pyth: unknown commitment level" << std::endl;
-    return usage();
-  }
+  pyth_arguments args( argc, argv );
+  if ( args.invalid_ )
+    return 1;
+
   std::cerr << "this might take take up to 30 seconds..." << std::endl;
 
   // initialize connection to block-chain
   manager mgr;
-  mgr.set_rpc_host( rpc_host );
-  mgr.set_dir( key_dir );
+  mgr.set_rpc_host( args.rpc_host_ );
+  mgr.set_dir( args.key_dir_ );
   mgr.set_do_tx( false );
-  mgr.set_commitment( cmt );
+  mgr.set_commitment( args.cmt_ );
   if ( !mgr.init() || !mgr.bootstrap() ) {
     std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
     return 1;
@@ -310,7 +287,7 @@ int on_add_product( int argc, char **argv )
   // add new product account
   add_product req_a[1];
   req_a->set_lamports( req_r->get_lamports() );
-  req_a->set_commitment( cmt );
+  req_a->set_commitment( args.cmt_ );
   if( submit_request( mgr, req_a ) ) {
     return 1;
   }
@@ -335,20 +312,9 @@ int on_upd_product( int argc, char **argv )
   argc -= 1;
   argv += 1;
 
-  // get other options
-  int opt = 0;
-  std::string rpc_host = get_rpc_host();
-  std::string key_dir  = get_key_store();
-  commitment cmt = commitment::e_confirmed;
-  while( (opt = ::getopt(argc,argv, "r:k:c:dh" )) != -1 ) {
-    switch(opt) {
-      case 'r': rpc_host = optarg; break;
-      case 'k': key_dir = optarg; break;
-      case 'c': cmt = str_to_commitment(optarg); break;
-      case 'd': log::set_level( PC_LOG_DBG_LVL ); break;
-      default: return usage();
-    }
-  }
+  pyth_arguments args( argc, argv );
+  if ( args.invalid_ )
+    return 1;
 
   // parse config file
   if ( !cfg.init() ) {
@@ -363,10 +329,10 @@ int on_upd_product( int argc, char **argv )
 
   // initialize connection to block-chain
   manager mgr;
-  mgr.set_rpc_host( rpc_host );
-  mgr.set_dir( key_dir );
+  mgr.set_rpc_host( args.rpc_host_ );
+  mgr.set_dir( args.key_dir_ );
   mgr.set_do_tx( false );
-  mgr.set_commitment( cmt );
+  mgr.set_commitment( args.cmt_ );
   if ( !mgr.init() || !mgr.bootstrap() ) {
     std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
     return 1;
@@ -376,7 +342,7 @@ int on_upd_product( int argc, char **argv )
   attr_dict adict;
   pub_key   pub;
   upd_product req[1];
-  req->set_commitment( cmt );
+  req->set_commitment( args.cmt_ );
   req->set_attr_dict( &adict );
   for( uint32_t tok = pt.get_first(1); tok; tok = pt.get_next(tok) ) {
     uint32_t acc_id = pt.find_val( tok, "account" );
@@ -420,33 +386,16 @@ int on_add_price( int argc, char **argv )
   }
   argc -= 2;
   argv += 2;
-  bool do_prompt = true;
-  int opt = 0, exponent = get_exponent();
-  std::string rpc_host = get_rpc_host();
-  std::string key_dir  = get_key_store();
-  commitment cmt = commitment::e_confirmed;
-  while( (opt = ::getopt(argc,argv, "e:r:k:c:ndh" )) != -1 ) {
-    switch(opt) {
-      case 'r': rpc_host = optarg; break;
-      case 'k': key_dir = optarg; break;
-      case 'c': cmt = str_to_commitment(optarg); break;
-      case 'd': log::set_level( PC_LOG_DBG_LVL ); break;
-      case 'e': exponent = ::atoi( optarg ); break;
-      case 'n': do_prompt = false; break;
-      default: return usage();
-    }
-  }
-  if ( cmt == commitment::e_unknown ) {
-    std::cerr << "pyth: unknown commitment level" << std::endl;
-    return usage();
-  }
+  pyth_arguments args( argc, argv );
+  if ( args.invalid_ )
+    return 1;
 
   // initialize connection to block-chain
   manager mgr;
-  mgr.set_rpc_host( rpc_host );
-  mgr.set_dir( key_dir );
+  mgr.set_rpc_host( args.rpc_host_ );
+  mgr.set_dir( args.key_dir_ );
   mgr.set_do_tx( false );
-  mgr.set_commitment( cmt );
+  mgr.set_commitment( args.cmt_ );
   if ( !mgr.init() || !mgr.bootstrap() ) {
     std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
     return 1;
@@ -460,20 +409,20 @@ int on_add_price( int argc, char **argv )
   }
 
   // are you sure prompt
-  if ( do_prompt ) {
+  if ( args.do_prompt_ ) {
     std::cout << "adding new price account:" << std::endl;
-    print( "product account", 2 );
+    print_val( "product account", 2 );
     pub_key pacc( *prod->get_account() );
     pacc.enc_base58( pkey );
     std::cout << pkey << std::endl;
-    print( "symbol", 2 );
+    print_val( "symbol", 2 );
     std::cout << prod->get_symbol().as_string() << std::endl;
-    print( "price_type", 2 );
+    print_val( "price_type", 2 );
     std::cout << price_type_to_str( ptype ).as_string() << std::endl;
-    print( "version", 2 );
+    print_val( "version", 2 );
     std::cout << PC_VERSION << std::endl;
-    print( "exponent", 2 );
-    std::cout << exponent << std::endl;
+    print_val( "exponent", 2 );
+    std::cout << args.exponent_ << std::endl;
     std::cout << "are you sure? [y/n] ";
     char ch;
     std::cin >> ch;
@@ -491,10 +440,10 @@ int on_add_price( int argc, char **argv )
   }
   // add new symbol account
   add_price req_a[1];
-  req_a->set_exponent( exponent );
+  req_a->set_exponent( args.exponent_ );
   req_a->set_price_type( ptype );
   req_a->set_lamports( req_r->get_lamports() );
-  req_a->set_commitment( cmt );
+  req_a->set_commitment( args.cmt_ );
   req_a->set_product( prod );
   if( submit_request( mgr, req_a ) ) {
     return 1;
@@ -519,33 +468,16 @@ int on_init_price( int argc, char **argv )
   pub.init_from_text( pkey );
   argc -= 1;
   argv += 1;
-  bool do_prompt = true;
-  int opt = 0, exponent = get_exponent();
-  std::string rpc_host = get_rpc_host();
-  std::string key_dir  = get_key_store();
-  commitment cmt = commitment::e_confirmed;
-  while( (opt = ::getopt(argc,argv, "e:r:k:c:ndh" )) != -1 ) {
-    switch(opt) {
-      case 'r': rpc_host = optarg; break;
-      case 'k': key_dir = optarg; break;
-      case 'c': cmt = str_to_commitment(optarg); break;
-      case 'd': log::set_level( PC_LOG_DBG_LVL ); break;
-      case 'e': exponent = ::atoi( optarg ); break;
-      case 'n': do_prompt = false; break;
-      default: return usage();
-    }
-  }
-  if ( cmt == commitment::e_unknown ) {
-    std::cerr << "pyth: unknown commitment level" << std::endl;
-    return usage();
-  }
+  pyth_arguments args( argc, argv );
+  if ( args.invalid_ )
+    return 1;
 
   // initialize connection to block-chain
   manager mgr;
-  mgr.set_rpc_host( rpc_host );
-  mgr.set_dir( key_dir );
+  mgr.set_rpc_host( args.rpc_host_ );
+  mgr.set_dir( args.key_dir_ );
   mgr.set_do_tx( false );
-  mgr.set_commitment( cmt );
+  mgr.set_commitment( args.cmt_ );
   if ( !mgr.init() || !mgr.bootstrap() ) {
     std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
     return 1;
@@ -559,21 +491,21 @@ int on_init_price( int argc, char **argv )
   }
 
   // are you sure prompt
-  if ( do_prompt ) {
+  if ( args.do_prompt_ ) {
     std::cout << "initialize price account:" << std::endl;
-    print( "price account", 2 );
+    print_val( "price account", 2 );
     pub_key pacc( *px->get_account() );
     pacc.enc_base58( pkey );
     std::cout << pkey << std::endl;
-    print( "symbol", 2 );
+    print_val( "symbol", 2 );
     std::cout << px->get_symbol().as_string() << std::endl;
-    print( "price_type", 2 );
+    print_val( "price_type", 2 );
     std::cout << price_type_to_str( px->get_price_type() ).as_string()
               << std::endl;
-    print( "version", 2 );
+    print_val( "version", 2 );
     std::cout << PC_VERSION << std::endl;
-    print( "exponent", 2 );
-    std::cout << exponent << std::endl;
+    print_val( "exponent", 2 );
+    std::cout << args.exponent_ << std::endl;
     std::cout << "are you sure? [y/n] ";
     char ch;
     std::cin >> ch;
@@ -584,34 +516,26 @@ int on_init_price( int argc, char **argv )
 
   // add new symbol account
   init_price req_i[1];
-  req_i->set_exponent( exponent );
-  req_i->set_commitment( cmt );
+  req_i->set_exponent( args.exponent_ );
+  req_i->set_commitment( args.cmt_ );
   req_i->set_price( px );
   if( submit_request( mgr, req_i ) ) {
     return 1;
   }
+
   return 0;
 }
 
 int on_init_test( int argc, char **argv )
 {
-  // get input parameters
-  int opt = 0;
-  std::string rpc_host = get_rpc_host();
-  std::string key_dir  = get_key_store();
-  while( (opt = ::getopt(argc,argv, "e:r:k:c:dh" )) != -1 ) {
-    switch(opt) {
-      case 'r': rpc_host = optarg; break;
-      case 'k': key_dir = optarg; break;
-      case 'c': break;
-      case 'd': log::set_level( PC_LOG_DBG_LVL ); break;
-      default: return usage();
-    }
-  }
+  pyth_arguments args( argc, argv );
+  if ( args.invalid_ )
+    return 1;
+
   // initialize connection to block-chain
   manager mgr;
-  mgr.set_rpc_host( rpc_host );
-  mgr.set_dir( key_dir );
+  mgr.set_rpc_host( args.rpc_host_ );
+  mgr.set_dir( args.key_dir_ );
   mgr.set_do_tx( false );
   if ( !mgr.init() || !mgr.bootstrap() ) {
     std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
@@ -651,22 +575,14 @@ int on_upd_test( int argc, char **argv )
   std::string test_file = argv[2];
   argc -= 2;
   argv += 2;
-  int opt = 0;
-  std::string rpc_host = get_rpc_host();
-  std::string key_dir  = get_key_store();
-  while( (opt = ::getopt(argc,argv, "e:r:k:c:dh" )) != -1 ) {
-    switch(opt) {
-      case 'r': rpc_host = optarg; break;
-      case 'k': key_dir = optarg; break;
-      case 'c': break;
-      case 'd': log::set_level( PC_LOG_DBG_LVL ); break;
-      default: return usage();
-    }
-  }
+  pyth_arguments args( argc, argv );
+  if ( args.invalid_ )
+    return 1;
+
   // initialize connection to block-chain
   manager mgr;
-  mgr.set_rpc_host( rpc_host );
-  mgr.set_dir( key_dir );
+  mgr.set_rpc_host( args.rpc_host_ );
+  mgr.set_dir( args.key_dir_ );
   mgr.set_do_tx( false );
   if ( !mgr.init() || !mgr.bootstrap() ) {
     std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
@@ -683,6 +599,7 @@ int on_upd_test( int argc, char **argv )
   if( submit_request( mgr, req_u ) ) {
     return 1;
   }
+
   return 0;
 }
 
@@ -700,35 +617,17 @@ int on_upd_price( int argc, char **argv )
   argc -= 1;
   argv += 1;
 
-  int opt = 0;
-  bool do_tx = true;
-  commitment cmt = commitment::e_confirmed;
-  std::string rpc_host = get_rpc_host();
-  std::string tx_host  = get_tx_host();
-  std::string key_dir  = get_key_store();
-  while( (opt = ::getopt( argc, argv, "r:t:k:c:dxh" )) != -1 ) {
-    switch(opt) {
-      case 'r': rpc_host = optarg; break;
-      case 't': tx_host = optarg; break;
-      case 'k': key_dir = optarg; break;
-      case 'd': log::set_level( PC_LOG_DBG_LVL ); break;
-      case 'c': cmt = str_to_commitment(optarg); break;
-      case 'x': do_tx = false; break;
-      default: return usage();
-    }
-  }
-  if ( cmt == commitment::e_unknown ) {
-    std::cerr << "pyth: unknown commitment level" << std::endl;
-    return usage();
-  }
+  pyth_arguments args( argc, argv );
+  if ( args.invalid_ )
+    return 1;
 
   // initialize connection to block-chain
   manager mgr;
-  mgr.set_rpc_host( rpc_host );
-  mgr.set_tx_host( tx_host );
-  mgr.set_dir( key_dir );
-  mgr.set_do_tx( do_tx );
-  mgr.set_commitment( cmt );
+  mgr.set_rpc_host( args.rpc_host_ );
+  mgr.set_tx_host( args.tx_host_ );
+  mgr.set_dir( args.key_dir_ );
+  mgr.set_do_tx( args.do_tx_ );
+  mgr.set_commitment( args.cmt_ );
   if ( !mgr.init() || !mgr.bootstrap() ) {
     std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
     return 1;
@@ -744,7 +643,7 @@ int on_upd_price( int argc, char **argv )
     return 1;
   }
   ptr->update();
-  if ( do_tx ) {
+  if ( args.do_tx_ ) {
     while( mgr.get_is_tx_send() && !mgr.get_is_err() )
       mgr.poll();
   } else {
@@ -795,35 +694,17 @@ int on_upd_price_val( int argc, char **argv )
   argc -= 4;
   argv += 4;
 
-  int opt = 0;
-  bool do_tx = true;
-  commitment cmt = commitment::e_confirmed;
-  std::string rpc_host = get_rpc_host();
-  std::string tx_host  = get_tx_host();
-  std::string key_dir  = get_key_store();
-  while( (opt = ::getopt( argc, argv, "r:t:k:c:dxh" )) != -1 ) {
-    switch(opt) {
-      case 'r': rpc_host = optarg; break;
-      case 't': tx_host = optarg; break;
-      case 'k': key_dir = optarg; break;
-      case 'd': log::set_level( PC_LOG_DBG_LVL ); break;
-      case 'c': cmt = str_to_commitment(optarg); break;
-      case 'x': do_tx = false; break;
-      default: return usage();
-    }
-  }
-  if ( cmt == commitment::e_unknown ) {
-    std::cerr << "pyth: unknown commitment level" << std::endl;
-    return usage();
-  }
+  pyth_arguments args( argc, argv );
+  if ( args.invalid_ )
+    return 1;
 
   // initialize connection to block-chain
   manager mgr;
-  mgr.set_rpc_host( rpc_host );
-  mgr.set_tx_host( tx_host );
-  mgr.set_dir( key_dir );
-  mgr.set_do_tx( do_tx );
-  mgr.set_commitment( cmt );
+  mgr.set_rpc_host( args.rpc_host_ );
+  mgr.set_tx_host( args.tx_host_ );
+  mgr.set_dir( args.key_dir_ );
+  mgr.set_do_tx( args.do_tx_ );
+  mgr.set_commitment( args.cmt_ );
   if ( !mgr.init() || !mgr.bootstrap() ) {
     std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
     return 1;
@@ -839,7 +720,7 @@ int on_upd_price_val( int argc, char **argv )
     return 1;
   }
   ptr->update(price_value, confidence, price_status);
-  if ( do_tx ) {
+  if ( args.do_tx_ ) {
     while( mgr.get_is_tx_send() && !mgr.get_is_err() )
       mgr.poll();
   } else {
@@ -858,6 +739,7 @@ int on_upd_price_val( int argc, char **argv )
     std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
     return 1;
   }
+
   return 0;
 }
 
@@ -873,32 +755,16 @@ int on_upd_publisher( int argc, char **argv, bool is_add )
   prc_key.init_from_text( prc_str );
   argc -= 2;
   argv += 2;
-  int opt = 0;
-  bool do_prompt = true;
-  std::string rpc_host = get_rpc_host();
-  std::string key_dir  = get_key_store();
-  commitment cmt = commitment::e_confirmed;
-  while( (opt = ::getopt(argc,argv, "e:r:k:c:ndh" )) != -1 ) {
-    switch(opt) {
-      case 'r': rpc_host = optarg; break;
-      case 'k': key_dir = optarg; break;
-      case 'd': log::set_level( PC_LOG_DBG_LVL ); break;
-      case 'c': cmt = str_to_commitment(optarg); break;
-      case 'n': do_prompt = false; break;
-      default: return usage();
-    }
-  }
-  if ( cmt == commitment::e_unknown ) {
-    std::cerr << "pyth: unknown commitment level" << std::endl;
-    return usage();
-  }
+  pyth_arguments args( argc, argv );
+  if ( args.invalid_ )
+    return 1;
 
   // initialize connection to block-chain
   manager mgr;
-  mgr.set_rpc_host( rpc_host );
-  mgr.set_dir( key_dir );
+  mgr.set_rpc_host( args.rpc_host_ );
+  mgr.set_dir( args.key_dir_ );
   mgr.set_do_tx( false );
-  mgr.set_commitment( cmt );
+  mgr.set_commitment( args.cmt_ );
   if ( !mgr.init() || !mgr.bootstrap() ) {
     std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
     return 1;
@@ -910,19 +776,19 @@ int on_upd_publisher( int argc, char **argv, bool is_add )
   }
 
   // are you sure prompt
-  if ( do_prompt ) {
+  if ( args.do_prompt_ ) {
     std::cout << (is_add?"adding new":"delete")
               << " price publisher:" << std::endl;
-    print( "publisher account", 2 );
+    print_val( "publisher account", 2 );
     std::cout << pub_str << std::endl;
-    print( "price account", 2 );
+    print_val( "price account", 2 );
     std::cout << prc_str << std::endl;
-    print( "symbol", 2 );
+    print_val( "symbol", 2 );
     std::cout << ptr->get_symbol().as_string() << std::endl;
-    print( "price_type", 2 );
+    print_val( "price_type", 2 );
     std::cout << price_type_to_str( ptr->get_price_type() ).as_string()
               << std::endl;
-    print( "price_exponent", 2 );
+    print_val( "price_exponent", 2 );
     std::cout << ptr->get_price_exponent() << std::endl;
     std::cout << "are you sure? [y/n] ";
     char ch;
@@ -937,13 +803,13 @@ int on_upd_publisher( int argc, char **argv, bool is_add )
     add_publisher req[1];
     req->set_price( ptr );
     req->set_publisher( pub_key );
-    req->set_commitment( cmt );
+    req->set_commitment( args.cmt_ );
     return submit_request( mgr, req );
   } else {
     del_publisher req[1];
     req->set_price( ptr );
     req->set_publisher( pub_key );
-    req->set_commitment( cmt );
+    req->set_commitment( args.cmt_ );
     return submit_request( mgr, req );
   }
 }
@@ -962,32 +828,16 @@ static void print_json( json_wtr& wtr )
 
 int on_get_product_list( int argc, char **argv )
 {
-  int opt = 0;
-  bool do_json = false;
-  commitment cmt = commitment::e_confirmed;
-  std::string rpc_host = get_rpc_host();
-  std::string key_dir  = get_key_store();
-  while( (opt = ::getopt(argc,argv, "r:k:c:djh" )) != -1 ) {
-    switch(opt) {
-      case 'r': rpc_host = optarg; break;
-      case 'k': key_dir = optarg; break;
-      case 'd': log::set_level( PC_LOG_DBG_LVL ); break;
-      case 'j': do_json = true; break;
-      case 'c': cmt = str_to_commitment(optarg); break;
-      default: return usage();
-    }
-  }
-  if ( cmt == commitment::e_unknown ) {
-    std::cerr << "pyth: unknown commitment level" << std::endl;
-    return usage();
-  }
+  pyth_arguments args( argc, argv );
+  if ( args.invalid_ )
+    return 1;
 
   // initialize connection to block-chain
   manager mgr;
-  mgr.set_rpc_host( rpc_host );
-  mgr.set_dir( key_dir );
+  mgr.set_rpc_host( args.rpc_host_ );
+  mgr.set_dir( args.key_dir_ );
   mgr.set_do_tx( false );
-  mgr.set_commitment( cmt );
+  mgr.set_commitment( args.cmt_ );
   if ( !mgr.init() || !mgr.bootstrap() ) {
     std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
     return 1;
@@ -998,7 +848,7 @@ int on_get_product_list( int argc, char **argv )
     return 1;
   }
   // list key/symbol pairs
-  if ( !do_json ) {
+  if ( !args.do_json_ ) {
     std::string astr;
     std::cout << "account,symbol" << std::endl;
     for(unsigned i=0; i != mgr.get_num_product(); ++i ) {
@@ -1021,6 +871,7 @@ int on_get_product_list( int argc, char **argv )
     wtr.pop();
     print_json( wtr );
   }
+
   return 0;
 }
 
@@ -1028,11 +879,11 @@ static void print_product( product *prod )
 {
   std::string pkey;
   std::cout << "product details:" << std::endl;
-  print( "product account", 2 );
+  print_val( "product account", 2 );
   pub_key pacc( *prod->get_account() );
   pacc.enc_base58( pkey );
   std::cout << pkey << std::endl;
-  print( "num_price", 2 );
+  print_val( "num_price", 2 );
   std::cout << prod->get_num_price() << std::endl;
   str vstr, kstr;
   for( unsigned id=1, i=0; i != prod->get_num_attr(); ) {
@@ -1041,55 +892,55 @@ static void print_product( product *prod )
       continue;
     }
     kstr = aid.get_str();
-    print( kstr, 2 );
+    print_val( kstr, 2 );
     std::cout << vstr.as_string() << std::endl;
     ++i;
   }
   for( unsigned i=0; i != prod->get_num_price(); ++i ) {
     std::string ikey;
     price *ptr = prod->get_price( i );
-    print( "price account", 2 );
+    print_val( "price account", 2 );
     pub_key pacc( *ptr->get_account() );
     pacc.enc_base58( ikey );
     std::cout << ikey << std::endl;
-    print( "price_type", 4 );
+    print_val( "price_type", 4 );
     std::cout << price_type_to_str( ptr->get_price_type() ).as_string()
               << std::endl;
-    print( "price_exponent", 4 );
+    print_val( "price_exponent", 4 );
     std::cout << ptr->get_price_exponent() << std::endl;
-    print( "status", 4 );
+    print_val( "status", 4 );
     std::cout << symbol_status_to_str( ptr->get_status() ).as_string()
               << std::endl;
-    print( "price", 4 );
+    print_val( "price", 4 );
     std::cout << ptr->get_price() << std::endl;
-    print( "conf", 4 );
+    print_val( "conf", 4 );
     std::cout << ptr->get_conf() << std::endl;
-    print( "twap", 4 );
+    print_val( "twap", 4 );
     std::cout << ptr->get_twap() << std::endl;
-    print( "twac", 4 );
+    print_val( "twac", 4 );
     std::cout << ptr->get_twac() << std::endl;
-    print( "valid_slot", 4 );
+    print_val( "valid_slot", 4 );
     std::cout << ptr->get_valid_slot() << std::endl;
-    print( "pub_slot", 4 );
+    print_val( "pub_slot", 4 );
     std::cout << ptr->get_pub_slot() << std::endl;
-    print( "prev_slot", 4 );
+    print_val( "prev_slot", 4 );
     std::cout << ptr->get_prev_slot() << std::endl;
-    print( "prev_price", 4 );
+    print_val( "prev_price", 4 );
     std::cout << ptr->get_prev_price() << std::endl;
-    print( "prev_conf", 4 );
+    print_val( "prev_conf", 4 );
     std::cout << ptr->get_prev_conf() << std::endl;
     for( unsigned j=0; j != ptr->get_num_publisher(); ++j ) {
       ptr->get_publisher( j )->enc_base58( ikey );
-      print( "publisher", 4 );
+      print_val( "publisher", 4 );
       std::cout << ikey << std::endl;
-      print( "status", 6 );
+      print_val( "status", 6 );
       std::cout << symbol_status_to_str( ptr->get_publisher_status(j) )
         .as_string() << std::endl;
-      print( "price", 6 );
+      print_val( "price", 6 );
       std::cout << ptr->get_publisher_price(j) << std::endl;
-      print( "conf", 6 );
+      print_val( "conf", 6 );
       std::cout << ptr->get_publisher_conf(j) << std::endl;
-      print( "slot", 6 );
+      print_val( "slot", 6 );
       std::cout << ptr->get_publisher_slot(j) << std::endl;
     }
   }
@@ -1114,33 +965,16 @@ int on_get_product( int argc, char **argv )
   pub.init_from_text( pkey );
   argc -= 1;
   argv += 1;
-
-  int opt = 0;
-  bool do_json = false;
-  commitment cmt = commitment::e_confirmed;
-  std::string rpc_host = get_rpc_host();
-  std::string key_dir  = get_key_store();
-  while( (opt = ::getopt(argc,argv, "r:k:c:djh" )) != -1 ) {
-    switch(opt) {
-      case 'r': rpc_host = optarg; break;
-      case 'k': key_dir = optarg; break;
-      case 'd': log::set_level( PC_LOG_DBG_LVL ); break;
-      case 'j': do_json = true; break;
-      case 'c': cmt = str_to_commitment(optarg); break;
-      default: return usage();
-    }
-  }
-  if ( cmt == commitment::e_unknown ) {
-    std::cerr << "pyth: unknown commitment level" << std::endl;
-    return usage();
-  }
+  pyth_arguments args( argc, argv );
+  if ( args.invalid_ )
+    return 1;
 
   // initialize connection to block-chain
   manager mgr;
-  mgr.set_rpc_host( rpc_host );
-  mgr.set_dir( key_dir );
+  mgr.set_rpc_host( args.rpc_host_ );
+  mgr.set_dir( args.key_dir_ );
   mgr.set_do_tx( false );
-  mgr.set_commitment( cmt );
+  mgr.set_commitment( args.cmt_ );
   if ( !mgr.init() || !mgr.bootstrap() ) {
     std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
     return 1;
@@ -1156,42 +990,27 @@ int on_get_product( int argc, char **argv )
     std::cerr << "pyth: failed to find product key=" << pkey << std::endl;
     return 1;
   }
-  if ( !do_json ) {
+  if ( !args.do_json_ ) {
     print_product( prod );
   } else {
     print_product_json( prod );
   }
+
   return 0;
 }
 
 int on_get_all_products( int argc, char **argv )
 {
-  int opt = 0;
-  bool do_json = false;
-  commitment cmt = commitment::e_confirmed;
-  std::string rpc_host = get_rpc_host();
-  std::string key_dir  = get_key_store();
-  while( (opt = ::getopt(argc,argv, "r:k:c:djh" )) != -1 ) {
-    switch(opt) {
-      case 'r': rpc_host = optarg; break;
-      case 'k': key_dir = optarg; break;
-      case 'd': log::set_level( PC_LOG_DBG_LVL ); break;
-      case 'j': do_json = true; break;
-      case 'c': cmt = str_to_commitment(optarg); break;
-      default: return usage();
-    }
-  }
-  if ( cmt == commitment::e_unknown ) {
-    std::cerr << "pyth: unknown commitment level" << std::endl;
-    return usage();
-  }
+  pyth_arguments args( argc, argv );
+  if ( args.invalid_ )
+    return 1;
 
   // initialize connection to block-chain
   manager mgr;
-  mgr.set_rpc_host( rpc_host );
-  mgr.set_dir( key_dir );
+  mgr.set_rpc_host( args.rpc_host_ );
+  mgr.set_dir( args.key_dir_ );
   mgr.set_do_tx( false );
-  mgr.set_commitment( cmt );
+  mgr.set_commitment( args.cmt_ );
   if ( !mgr.init() || !mgr.bootstrap() ) {
     std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
     return 1;
@@ -1203,7 +1022,7 @@ int on_get_all_products( int argc, char **argv )
   }
 
   // get all products and serialize to stdout
-  if ( !do_json ) {
+  if ( !args.do_json_ ) {
     for (unsigned i=0; i != mgr.get_num_product(); ++i ) {
       product *prod = mgr.get_product(i);
       print_product( prod );
@@ -1234,31 +1053,31 @@ public:
   void on_upd_price( rpc::get_block *res ) {
     std::string kstr;
     std::cout << "upd_price:" << std::endl;
-    print( "publisher", 2 );
+    print_val( "publisher", 2 );
     res->get_key( 0 )->enc_base58( kstr );
     std::cout << kstr << std::endl;
-    print( "price_account", 2 );
+    print_val( "price_account", 2 );
     res->get_key( 1 )->enc_base58( kstr );
     std::cout << kstr << std::endl;
     price *px = mgr_->get_price( *res->get_key(1) );
     if ( px ) {
-      print( "symbol", 2 );
+      print_val( "symbol", 2 );
       std::cout << px->get_symbol().as_string() << std::endl;
     }
     cmd_upd_price *cmd = (cmd_upd_price*)res->get_cmd();
-    print( "status", 2 );
+    print_val( "status", 2 );
     std::cout << symbol_status_to_str(
         (symbol_status)cmd->status_ ).as_string() << std::endl;
-    print( "price", 2 );
+    print_val( "price", 2 );
     std::cout << cmd->price_ << std::endl;
-    print( "conf_interval", 2 );
+    print_val( "conf_interval", 2 );
     std::cout << cmd->conf_ << std::endl;
-    print( "pub_slot", 2 );
+    print_val( "pub_slot", 2 );
     std::cout << cmd->pub_slot_ << std::endl;
-    print( "tx_fee", 2 );
+    print_val( "tx_fee", 2 );
     std::cout << res->get_tx_fee() << std::endl;
     if ( res->get_is_tx_err() ) {
-      print( "tx_error", 2 );
+      print_val( "tx_error", 2 );
       std::cout << res->get_tx_err().as_string() << std::endl;
     }
     std::cout << std::endl;
@@ -1343,32 +1162,16 @@ int on_get_block( int argc, char **argv )
   argc -= 1;
   argv += 1;
 
-  int opt = 0;
-  bool do_json = false;
-  commitment cmt = commitment::e_finalized;
-  std::string rpc_host = get_rpc_host();
-  std::string key_dir  = get_key_store();
-  while( (opt = ::getopt(argc,argv, "r:k:c:djh" )) != -1 ) {
-    switch(opt) {
-      case 'r': rpc_host = optarg; break;
-      case 'k': key_dir = optarg; break;
-      case 'd': log::set_level( PC_LOG_DBG_LVL ); break;
-      case 'j': do_json = true; break;
-      case 'c': cmt = str_to_commitment(optarg); break;
-      default: return usage();
-    }
-  }
-  if ( cmt == commitment::e_unknown ) {
-    std::cerr << "pyth: unknown commitment level" << std::endl;
-    return usage();
-  }
+  pyth_arguments args( argc, argv );
+  if ( args.invalid_ )
+    return 1;
 
   // initialize connection to block-chain
   manager mgr;
-  mgr.set_rpc_host( rpc_host );
-  mgr.set_dir( key_dir );
+  mgr.set_rpc_host( args.rpc_host_ );
+  mgr.set_dir( args.key_dir_ );
   mgr.set_do_tx( false );
-  mgr.set_commitment( cmt );
+  mgr.set_commitment( args.cmt_ );
   if ( !mgr.init() || !mgr.bootstrap() ) {
     std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
     return 1;
@@ -1376,19 +1179,19 @@ int on_get_block( int argc, char **argv )
 
   // get transaction
   int ret = 0;
-  if ( do_json ) {
+  if ( args.do_json_ ) {
     json_wtr wtr;
     wtr.add_val( json_wtr::e_arr );
     get_block_json req( &mgr, wtr );
     req.set_slot( slot );
-    req.set_commitment( cmt );
+    req.set_commitment( args.cmt_ );
     ret = submit_request( mgr, &req );
     wtr.pop();
     print_json( wtr );
   } else {
     get_block_print req( &mgr );
     req.set_slot( slot );
-    req.set_commitment( cmt );
+    req.set_commitment( args.cmt_ );
     ret = submit_request( mgr, &req );
   }
   return ret;
@@ -1407,7 +1210,7 @@ int main(int argc, char **argv)
   log::set_level( PC_LOG_ERR_LVL );
 
   // dispatch by command
-  str cmd( argv[0] );
+  std::string cmd( argv[0] );
   int rc = 0;
   if ( cmd == "init_key" ) {
     rc = on_init_key( argc, argv );
