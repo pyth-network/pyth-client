@@ -55,6 +55,7 @@ manager::manager()
   ctimeout_( PC_NSECS_IN_SEC ),
   slot_( 0UL ),
   slot_cnt_( 0UL ),
+  slot_ts_{ 0UL },
   curr_ts_( 0L ),
   pub_ts_( 0L ),
   pub_int_( PC_PUB_INTERVAL ),
