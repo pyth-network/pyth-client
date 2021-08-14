@@ -1,3 +1,4 @@
+#include "admin_request.hpp"
 #include <pc/manager.hpp>
 #include <pc/log.hpp>
 #include <pc/mem_map.hpp>
