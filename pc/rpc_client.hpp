@@ -22,6 +22,7 @@
 namespace pc
 {
   class bincode;
+  class rpc_request;
 
   // type of "price" calculation represented by account
   enum class price_type
@@ -61,7 +62,6 @@ namespace pc
   str commitment_to_str( commitment );
   commitment str_to_commitment( str );
 
-  class rpc_request;
   // solana rpc REST API client
   class rpc_client : public error
   {
@@ -146,7 +146,7 @@ namespace pc
   class rpc_sub
   {
   public:
-    virtual ~rpc_sub();
+    virtual ~rpc_sub() {}
   };
 
   // rpc subscription callback for request type T
@@ -228,7 +228,7 @@ namespace pc
   class tx_request : public error
   {
   public:
-    virtual ~tx_request();
+    virtual ~tx_request() {}
     virtual void build( net_wtr& ) = 0;
   };
 
@@ -248,59 +248,6 @@ namespace pc
 
   namespace rpc
   {
-    // get account balance, program data and account meta-data
-    class get_account_info : public rpc_request
-    {
-    public:
-      // parameters
-      void set_account( pub_key * );
-      void set_commitment( commitment );
-
-      // results
-      uint64_t get_slot() const;
-      uint64_t get_lamports() const;
-      uint64_t get_rent_epoch() const;
-      bool     get_is_executable() const;
-      void     get_owner( const char *&, size_t& ) const;
-      template<class T>
-      size_t get_data_ref( T *&, size_t srclen=sizeof(T) ) const;
-      template<class T>
-      size_t get_data_val( T *, size_t srclen=sizeof(T) ) const;
-
-      get_account_info();
-      void request( json_wtr& ) override;
-      void response( const jtree& ) override;
-
-    private:
-      pub_key    *acc_;
-      uint64_t    slot_;
-      uint64_t    lamports_;
-      uint64_t    rent_epoch_;
-      const char *dptr_;
-      size_t      dlen_;
-      const char *optr_;
-      size_t      olen_;
-      bool        is_exec_;
-      commitment  cmt_;
-    };
-
-    template<class T>
-    size_t get_account_info::get_data_ref( T *&res, size_t tlen ) const
-    {
-      char *ptr;
-      size_t len = get_rpc_client()->get_data_ref( dptr_, dlen_, tlen, ptr );
-      res = (T*)ptr;
-      return len;
-    }
-
-    template<class T>
-    size_t get_account_info::get_data_val( T *res, size_t tlen ) const
-    {
-      char *ptr = (char*)res;
-      size_t len = get_rpc_client()->get_data_val( dptr_, dlen_, tlen, ptr );
-      return len;
-    }
-
     // recent block hash and fee schedule
     class get_recent_block_hash : public rpc_request
     {
@@ -320,53 +267,6 @@ namespace pc
       uint64_t  fee_per_sig_;
     };
 
-    // get validator node health
-    class get_health : public rpc_request
-    {
-    public:
-      void request( json_wtr& ) override;
-      void response( const jtree& ) override;
-    };
-
-    // get minimum balance needed to maintain to be exempt rent
-    class get_minimum_balance_rent_exemption : public rpc_request
-    {
-    public:
-      get_minimum_balance_rent_exemption();
-      void set_size( size_t );
-      uint64_t get_lamports() const;
-      void request( json_wtr& ) override;
-      void response( const jtree&p) override;
-    private:
-      size_t   sz_;
-      uint64_t lamports_;
-    };
-
-    // get mapping of node id to ip address and port
-    class get_cluster_nodes : public rpc_request
-    {
-    public:
-      bool get_ip_addr( const pub_key&, ip_addr& );
-      void request( json_wtr& ) override;
-      void response( const jtree&p) override;
-    private:
-      struct trait_node {
-        static const size_t hsize_ = 859UL;
-        typedef uint32_t        idx_t;
-        typedef pub_key         key_t;
-        typedef const pub_key&  keyref_t;
-        typedef ip_addr         val_t;
-        struct hash_t {
-          idx_t operator() ( keyref_t a ) {
-            uint64_t *i = (uint64_t*)a.data();
-            return i[0];
-          }
-        };
-      };
-      typedef hash_map<trait_node> node_map_t;
-      node_map_t nmap_;
-    };
-
     // get current slot
     class get_slot : public rpc_request
     {
@@ -380,60 +280,6 @@ namespace pc
       uint64_t cslot_; // result
     };
 
-    // get id of leader node by slot
-    class get_slot_leaders : public rpc_request
-    {
-    public:
-      get_slot_leaders();
-      void set_slot(uint64_t slot);
-      void set_limit( uint64_t limit );
-      pub_key *get_leader( uint64_t );
-      uint64_t get_last_slot() const;
-      void request( json_wtr& ) override;
-      void response( const jtree& ) override;
-    private:
-      typedef std::vector<pub_key> ldr_vec_t;
-      uint64_t  rslot_;
-      uint64_t  limit_;
-      uint64_t  lslot_;
-      ldr_vec_t lvec_;
-    };
-
-
-    // find out when slots update
-    class slot_subscribe : public rpc_subscription
-    {
-    public:
-      uint64_t get_slot() const;
-      void request( json_wtr& ) override;
-      void response( const jtree& ) override;
-      bool notify( const jtree& ) override;
-    private:
-      uint64_t slot_;
-    };
-
-    // signature (transaction) subscription for tx acknowledgement
-    class signature_subscribe : public rpc_subscription
-    {
-    public:
-      // parameters
-      void set_signature( signature * );
-      void set_commitment( commitment );
-
-      // results
-      uint64_t get_slot() const;
-
-      signature_subscribe();
-      void request( json_wtr& ) override;
-      void response( const jtree& ) override;
-      bool notify( const jtree& ) override;
-
-    private:
-      signature  *sig_;
-      commitment  cmt_;
-      uint64_t    slot_;
-    };
-
     // base class for account updates
     class account_update : public rpc_subscription
     {
@@ -443,6 +289,7 @@ namespace pc
       // parameters / results
       pub_key const* get_account() const;
       void set_account( pub_key * );
+      void set_commitment( commitment );
 
       // results
       uint64_t get_slot() const;
@@ -454,6 +301,7 @@ namespace pc
 
     protected:
       pub_key     acc_;
+      commitment  cmt_;
       uint64_t    slot_;
       uint64_t    lamports_;
       size_t      dlen_;
@@ -477,20 +325,36 @@ namespace pc
       return len;
     }
 
+    // get account balance, program data and account meta-data
+    class get_account_info : public account_update
+    {
+    public:
+      // results
+      uint64_t get_rent_epoch() const;
+      bool     get_is_executable() const;
+      void     get_owner( const char *&, size_t& ) const;
+
+      get_account_info();
+      void request( json_wtr& ) override;
+      void response( const jtree& ) override;
+
+      bool get_is_http() const override;
+
+    private:
+      uint64_t    rent_epoch_;
+      const char *optr_;
+      size_t      olen_;
+      bool        is_exec_;
+    };
+
     // account data subscription
     class account_subscribe : public account_update
     {
     public:
-      // parameters
-      void set_commitment( commitment );
-
       account_subscribe();
       void request( json_wtr& ) override;
       void response( const jtree& ) override;
       bool notify( const jtree& ) override;
-
-    private:
-      commitment  cmt_;
     };
 
     // program subscription
@@ -499,7 +363,6 @@ namespace pc
     public:
       // parameters
       void set_program( pub_key * );
-      void set_commitment( commitment );
 
       program_subscribe();
       void request( json_wtr& ) override;
@@ -508,7 +371,6 @@ namespace pc
 
     private:
       pub_key    *pgm_;
-      commitment  cmt_;
     };
 
     class get_program_accounts : public account_update
@@ -516,7 +378,6 @@ namespace pc
     public:
       // parameters
       void set_program( pub_key * );
-      void set_commitment( commitment );
 
       get_program_accounts();
       void request( json_wtr& ) override;
@@ -526,306 +387,6 @@ namespace pc
 
     private:
       pub_key    *pgm_;
-      commitment  cmt_;
-    };
-
-    // create new account and assign ownership to some (program) key
-    class create_account : public rpc_request
-    {
-    public:
-      // parameters
-      void set_block_hash( hash * );
-      void set_sender( key_pair * );
-      void set_account( key_pair * );
-      void set_owner( pub_key * );
-      void set_lamports( uint64_t funds );
-      void set_space( uint64_t num_bytes );
-
-      // results
-      signature *get_signature();
-
-      create_account();
-      void request( json_wtr& ) override;
-      void response( const jtree& ) override;
-
-    private:
-      hash     *bhash_;
-      key_pair *snd_;
-      key_pair *account_;
-      pub_key  *owner_;
-      uint64_t  lamports_;
-      uint64_t  space_;
-      signature sig_;
-    };
-
-    // initialize mapping account
-    class init_mapping : public rpc_request
-    {
-    public:
-      // parameters
-      void set_block_hash( hash * );
-      void set_publish( key_pair * );
-      void set_mapping( key_pair * );
-      void set_program( pub_key * );
-
-      // results
-      signature *get_signature();
-
-      void request( json_wtr& ) override;
-      void response( const jtree& ) override;
-
-    private:
-      hash     *bhash_;
-      key_pair *pkey_;
-      key_pair *mkey_;
-      pub_key  *gkey_;
-      signature sig_;
-    };
-
-    // add new mapping account
-    class add_mapping : public rpc_request
-    {
-    public:
-      // parameters
-      void set_block_hash( hash * );
-      void set_publish( key_pair * );
-      void set_mapping( key_pair * );
-      void set_account( key_pair * );
-      void set_program( pub_key * );
-
-      // results
-      signature *get_signature();
-
-      void request( json_wtr& ) override;
-      void response( const jtree& ) override;
-
-    private:
-      hash     *bhash_;
-      key_pair *pkey_;
-      key_pair *mkey_;
-      key_pair *akey_;
-      pub_key  *gkey_;
-      signature sig_;
-    };
-
-    // create and add new product account to mapping account
-    class add_product : public rpc_request
-    {
-    public:
-      void set_program( pub_key * );
-      void set_block_hash( hash * );
-      void set_publish( key_pair * );
-      void set_account( key_pair * );
-      void set_mapping( key_pair * );
-      price_type get_price_type() const;
-
-      // results
-      signature *get_signature();
-
-      add_product();
-      void request( json_wtr& ) override;
-      void response( const jtree& ) override;
-
-    private:
-      hash      *bhash_;
-      key_pair  *pkey_;
-      pub_key   *gkey_;
-      key_pair  *akey_;
-      key_pair  *mkey_;
-      signature  sig_;
-    };
-
-    // update product attribute data
-    class upd_product : public rpc_request
-    {
-    public:
-      void set_program( pub_key * );
-      void set_block_hash( hash * );
-      void set_publish( key_pair * );
-      void set_account( key_pair * );
-      void set_attr_dict( attr_dict* );
-      price_type get_price_type() const;
-
-      // results
-      signature *get_signature();
-
-      upd_product();
-      void request( json_wtr& ) override;
-      void response( const jtree& ) override;
-
-    private:
-      hash      *bhash_;
-      key_pair  *pkey_;
-      pub_key   *gkey_;
-      key_pair  *akey_;
-      attr_dict *aptr_;
-      signature  sig_;
-    };
-
-    // create and add new price account to product account
-    class add_price : public rpc_request
-    {
-    public:
-      void set_exponent( int32_t );
-      void set_price_type( price_type );
-      void set_program( pub_key * );
-      void set_block_hash( hash * );
-      void set_publish( key_pair * );
-      void set_account( key_pair * );
-      void set_product( key_pair * );
-      price_type get_price_type() const;
-
-      // results
-      signature *get_signature();
-
-      add_price();
-      void request( json_wtr& ) override;
-      void response( const jtree& ) override;
-
-    private:
-      int32_t    expo_;
-      price_type ptype_;
-      hash      *bhash_;
-      key_pair  *pkey_;
-      pub_key   *gkey_;
-      key_pair  *akey_;
-      key_pair  *skey_;
-      signature  sig_;
-    };
-
-    // (re) initialize price account
-    class init_price : public rpc_request
-    {
-    public:
-      void set_exponent( int32_t );
-      void set_price_type( price_type );
-      void set_program( pub_key * );
-      void set_block_hash( hash * );
-      void set_publish( key_pair * );
-      void set_account( key_pair * );
-      price_type get_price_type() const;
-
-      // results
-      signature *get_signature();
-
-      init_price();
-      void request( json_wtr& ) override;
-      void response( const jtree& ) override;
-
-    private:
-      int32_t    expo_;
-      price_type ptype_;
-      hash      *bhash_;
-      key_pair  *pkey_;
-      pub_key   *gkey_;
-      key_pair  *akey_;
-      signature  sig_;
-    };
-
-    // add new price publisher to symbol account
-    class add_publisher : public rpc_request
-    {
-    public:
-      void set_publisher( const pub_key& );
-      void set_program( pub_key * );
-      void set_block_hash( hash * );
-      void set_publish( key_pair * );
-      void set_account( key_pair * );
-      pub_key *get_publisher();
-
-      // results
-      signature *get_signature();
-
-      void request( json_wtr& ) override;
-      void response( const jtree& ) override;
-
-    private:
-      pub_key    nkey_;
-      hash      *bhash_;
-      key_pair  *pkey_;
-      pub_key   *gkey_;
-      key_pair  *akey_;
-      signature  sig_;
-    };
-
-    // remove price publisher from symbol account
-    class del_publisher : public rpc_request
-    {
-    public:
-      void set_publisher( const pub_key& );
-      void set_program( pub_key * );
-      void set_block_hash( hash * );
-      void set_publish( key_pair * );
-      void set_account( key_pair * );
-      void set_price_type( price_type );
-      pub_key *get_publisher();
-
-      // results
-      signature *get_signature();
-
-      void request( json_wtr& ) override;
-      void response( const jtree& ) override;
-
-    private:
-      pub_key    nkey_;
-      hash      *bhash_;
-      key_pair  *pkey_;
-      pub_key   *gkey_;
-      key_pair  *akey_;
-      signature  sig_;
-    };
-
-    // initialize test account
-    class init_test : public rpc_request
-    {
-    public:
-      // parameters
-      void set_block_hash( hash * );
-      void set_publish( key_pair * );
-      void set_account( key_pair * );
-      void set_program( pub_key * );
-
-      // results
-      signature *get_signature();
-
-      void request( json_wtr& ) override;
-      void response( const jtree& ) override;
-
-    private:
-      hash     *bhash_;
-      key_pair *pkey_;
-      key_pair *akey_;
-      pub_key  *gkey_;
-      signature sig_;
-    };
-
-    // run aggregate compte test
-    class upd_test : public rpc_request
-    {
-    public:
-      // parameters
-      upd_test();
-      void set_block_hash( hash * );
-      void set_publish( key_pair * );
-      void set_account( key_pair * );
-      void set_program( pub_key * );
-      void set_expo( int );
-      void set_num( uint32_t );
-      void set_price( unsigned i, int64_t px, uint64_t conf, int64_t sdiff );
-
-      // results
-      signature *get_signature();
-
-      void request( json_wtr& ) override;
-      void response( const jtree& ) override;
-
-    private:
-      hash     *bhash_;
-      key_pair *pkey_;
-      key_pair *tkey_;
-      pub_key  *gkey_;
-      signature sig_;
-      cmd_upd_test_t upd_[1];
     };
 
     // get all (pyth) transactions in a slot

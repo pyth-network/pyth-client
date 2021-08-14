@@ -1,5 +1,6 @@
 #pragma once
 
+#include "tx_rpc_client.hpp"
 #include <pc/net_socket.hpp>
 #include <pc/rpc_client.hpp>
 #include <pc/dbl_list.hpp>
