@@ -169,6 +169,7 @@ namespace pc
     void on_response( rpc::program_subscribe * ) override;
     void set_status( int );
     get_mapping *get_last_mapping() const;
+    bool get_is_rpc_send() const;
 
   private:
 

@@ -646,7 +646,8 @@ namespace pc
   // price subscriber and publisher
   class price : public request,
                 public pub_stats,
-                public rpc_sub_i<rpc::get_account_info>
+                public rpc_sub_i<rpc::get_account_info>,
+                public rpc_sub_i<rpc::upd_price>
   {
   public:
 
@@ -679,6 +680,9 @@ namespace pc
 
     // update aggregate price only
     bool update();
+
+    // are there any update transactions which have not yet been acked
+    bool has_unacked_updates() const;
 
     // get and activate price schedule subscription
     price_sched *get_sched();
@@ -730,6 +734,7 @@ namespace pc
     void reset();
     void unsubscribe();
     void submit() override;
+    void on_response( rpc::upd_price * ) override;
     void on_response( rpc::get_account_info * ) override;
     void on_response( rpc::program_subscribe * ) override;
     bool get_is_done() const override;
@@ -738,6 +743,8 @@ namespace pc
 
     typedef enum {
       e_subscribe, e_sent_subscribe, e_publish, e_error } state_t;
+
+    typedef std::vector<std::pair<std::string,int64_t>> txid_vec_t;
 
     template<class T> void update( T *res );
 
@@ -760,6 +767,7 @@ namespace pc
     rpc::get_account_info  areq_[1];
     rpc::upd_price         preq_[1];
     pc_price_t            *pptr_;
+    txid_vec_t             tvec_;
   };
 
   template<class T>

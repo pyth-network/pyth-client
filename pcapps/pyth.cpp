@@ -18,6 +18,11 @@ std::string get_rpc_host()
   return "localhost";
 }
 
+std::string get_tx_host()
+{
+  return "localhost";
+}
+
 std::string get_key_store()
 {
   std::string dir = getenv("HOME");
@@ -64,11 +69,11 @@ int usage()
 
   std::cerr << "options include:" << std::endl;
   std::cerr << "  -r <rpc_host (default " << get_rpc_host() << ")>"
-             << std::endl;
+            << std::endl;
   std::cerr << "     Host name or IP address of solana rpc node in the form "
                "host_name[:rpc_port[:ws_port]]\n" << std::endl;
   std::cerr << "  -k <key_store_directory (default "
-            << get_key_store() << ">" << std::endl;
+            << get_key_store() << ")>" << std::endl;
   std::cerr << "     Directory name housing publishing, mapping and program"
                " key files\n" << std::endl;
   std::cerr << "  -c <commitment_level (default confirmed)>" << std::endl;
@@ -79,6 +84,12 @@ int usage()
             << std::endl;
   std::cerr << "  -d" << std::endl;
   std::cerr << "     Turn on debug logging\n" << std::endl;
+
+  std::cerr << "options only for upd_price / upd_price_val include:" << std::endl;
+  std::cerr << "  -x" << std::endl;
+  std::cerr << "     Disable connection to pyth_tx transaction proxy server\n" << std::endl;
+  std::cerr << "  -t <tx proxy host (default " << get_tx_host() << ")>" << std::endl
+            << "     Host name or IP address of running pyth_tx server" << std::endl;
   return 1;
 }
 
@@ -816,17 +827,19 @@ int on_upd_price( int argc, char **argv )
   argv += 1;
 
   int opt = 0;
+  bool do_tx = true;
   commitment cmt = commitment::e_confirmed;
   std::string rpc_host = get_rpc_host();
-  std::string tx_host  = get_rpc_host();
+  std::string tx_host  = get_tx_host();
   std::string key_dir  = get_key_store();
-  while( (opt = ::getopt(argc,argv, "r:t:k:c:dh" )) != -1 ) {
+  while( (opt = ::getopt( argc, argv, "r:t:k:c:dxh" )) != -1 ) {
     switch(opt) {
       case 'r': rpc_host = optarg; break;
       case 't': tx_host = optarg; break;
       case 'k': key_dir = optarg; break;
       case 'd': log::set_level( PC_LOG_DBG_LVL ); break;
       case 'c': cmt = str_to_commitment(optarg); break;
+      case 'x': do_tx = false; break;
       default: return usage();
     }
   }
@@ -840,7 +853,7 @@ int on_upd_price( int argc, char **argv )
   mgr.set_rpc_host( rpc_host );
   mgr.set_tx_host( tx_host );
   mgr.set_dir( key_dir );
-  mgr.set_do_tx( true );
+  mgr.set_do_tx( do_tx );
   mgr.set_commitment( cmt );
   if ( !mgr.init() || !mgr.bootstrap() ) {
     std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
@@ -857,8 +870,16 @@ int on_upd_price( int argc, char **argv )
     return 1;
   }
   ptr->update();
-  while( mgr.get_is_tx_send() && !mgr.get_is_err() ) {
-    mgr.poll();
+  if ( do_tx ) {
+    while( mgr.get_is_tx_send() && !mgr.get_is_err() )
+      mgr.poll();
+  } else {
+    const auto send_ts = get_now();
+    while( !mgr.get_is_err() &&
+           !ptr->get_is_err() &&
+           ( get_now() - send_ts < 15e9 ) &&
+           ( mgr.get_is_rpc_send() || ptr->has_unacked_updates() ) )
+      mgr.poll();
   }
   if ( ptr->get_is_err() ) {
     std::cerr << "pyth: " << ptr->get_err_msg() << std::endl;
@@ -901,17 +922,19 @@ int on_upd_price_val( int argc, char **argv )
   argv += 4;
 
   int opt = 0;
+  bool do_tx = true;
   commitment cmt = commitment::e_confirmed;
   std::string rpc_host = get_rpc_host();
-  std::string tx_host  = get_rpc_host();
+  std::string tx_host  = get_tx_host();
   std::string key_dir  = get_key_store();
-  while( (opt = ::getopt(argc,argv, "r:t:k:c:dh" )) != -1 ) {
+  while( (opt = ::getopt( argc, argv, "r:t:k:c:dxh" )) != -1 ) {
     switch(opt) {
       case 'r': rpc_host = optarg; break;
       case 't': tx_host = optarg; break;
       case 'k': key_dir = optarg; break;
       case 'd': log::set_level( PC_LOG_DBG_LVL ); break;
       case 'c': cmt = str_to_commitment(optarg); break;
+      case 'x': do_tx = false; break;
       default: return usage();
     }
   }
@@ -925,7 +948,7 @@ int on_upd_price_val( int argc, char **argv )
   mgr.set_rpc_host( rpc_host );
   mgr.set_tx_host( tx_host );
   mgr.set_dir( key_dir );
-  mgr.set_do_tx( true );
+  mgr.set_do_tx( do_tx );
   mgr.set_commitment( cmt );
   if ( !mgr.init() || !mgr.bootstrap() ) {
     std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
@@ -942,8 +965,16 @@ int on_upd_price_val( int argc, char **argv )
     return 1;
   }
   ptr->update(price_value, confidence, price_status);
-  while( mgr.get_is_tx_send() && !mgr.get_is_err() ) {
-    mgr.poll();
+  if ( do_tx ) {
+    while( mgr.get_is_tx_send() && !mgr.get_is_err() )
+      mgr.poll();
+  } else {
+    const auto send_ts = get_now();
+    while( !mgr.get_is_err() &&
+           !ptr->get_is_err() &&
+           ( get_now() - send_ts < 15e9 ) &&
+           ( mgr.get_is_rpc_send() || ptr->has_unacked_updates() ) )
+      mgr.poll();
   }
   if ( ptr->get_is_err() ) {
     std::cerr << "pyth: " << ptr->get_err_msg() << std::endl;
