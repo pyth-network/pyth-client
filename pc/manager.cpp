@@ -344,6 +344,11 @@ bool manager::get_is_tx_send() const
   return tconn_.get_is_send();
 }
 
+bool manager::get_is_rpc_send() const
+{
+  return hconn_.get_is_send() || wconn_.get_is_send();
+}
+
 bool manager::bootstrap()
 {
   int status = PC_PYTH_RPC_CONNECTED | PC_PYTH_HAS_BLOCK_HASH;
@@ -674,7 +679,7 @@ void manager::on_response( rpc::get_slot *res )
 
   PC_LOG_DBG( "received get_slot" )
     .add( "slot", slot_ )
-    .add( "rount_trip_time(ms)", 1e-6*ack_ts )
+    .add( "round_trip_time(ms)", 1e-6*ack_ts )
     .end();
 
   // submit block hash every N slots

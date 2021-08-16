@@ -21,6 +21,7 @@
 
 namespace pc
 {
+  class bincode;
 
   // type of "price" calculation represented by account
   enum class price_type
@@ -887,10 +888,10 @@ namespace pc
     };
 
     // set new component price
-    class upd_price : public tx_request
+    class upd_price : public tx_request, public rpc_request
     {
     public:
-      upd_price();
+      // parameters
       void set_symbol_status( symbol_status );
       void set_publish( key_pair * );
       void set_pubcache( key_cache * );
@@ -899,19 +900,31 @@ namespace pc
       void set_block_hash( hash * );
       void set_price( int64_t px, uint64_t conf, symbol_status,
                       uint64_t pub_slot, bool is_aggregate );
+
+      // results
+      signature *get_signature();
+      str        get_ack_signature() const;
+
+      upd_price();
       void build( net_wtr& ) override;
+      void request( json_wtr& ) override;
+      void response( const jtree& ) override;
 
     private:
+      void build_tx( bincode& );
+
       hash         *bhash_;
       key_pair     *pkey_;
       key_cache    *ckey_;
       pub_key      *gkey_;
       pub_key      *akey_;
+      signature     sig_;
       int64_t       price_;
       uint64_t      conf_;
-      uint64_t      pub_slot_;;
+      uint64_t      pub_slot_;
       command_t     cmd_;
       symbol_status st_;
+      str           ack_sig_;
     };
 
   }

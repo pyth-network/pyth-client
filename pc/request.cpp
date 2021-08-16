@@ -1838,6 +1838,7 @@ price::price( const pub_key& acc, product *prod )
   areq_->set_account( &apub_ );
   preq_->set_account( &apub_ );
   areq_->set_sub( this );
+  preq_->set_sub( this );
   size_t tlen = ZSTD_compressBound( sizeof(pc_price_t) );
   pptr_ = (pc_price_t*)new char[tlen];
   __builtin_memset( pptr_, 0, tlen );
@@ -1973,7 +1974,14 @@ uint64_t price::get_pub_slot() const
 
 bool price::get_is_ready_publish() const
 {
-  return st_ == e_publish && get_manager()->get_is_tx_connect();
+  if ( st_ != e_publish )
+    return false;
+  manager *cptr = get_manager();
+  if ( cptr->get_do_tx() ) {
+    return cptr->get_is_tx_connect();
+  } else {
+    return cptr->has_status( PC_PYTH_RPC_CONNECTED | PC_PYTH_HAS_BLOCK_HASH );
+  }
 }
 
 void price::reset()
@@ -2033,9 +2041,34 @@ bool price::update(
     return false;
   }
   manager *mgr = get_manager();
-  preq_->set_price( price, conf, st, mgr->get_slot(), is_agg );
+  const uint64_t slot = mgr->get_slot();
+  preq_->set_price( price, conf, st, slot, is_agg );
   preq_->set_block_hash( mgr->get_recent_block_hash() );
-  mgr->submit( preq_ );
+  if ( mgr->get_do_tx() )
+    mgr->submit( preq_ );
+  else {
+    get_rpc_client()->send( preq_ );
+    tvec_.emplace_back( std::string( '\0' , 100 ), preq_->get_sent_time() );
+    preq_->get_signature()->enc_base58( tvec_.back().first );
+    PC_LOG_DBG( "sent price update transaction" )
+      .add( "price_account", *get_account() )
+      .add( "product_account", *prod_->get_account() )
+      .add( "symbol", get_symbol() )
+      .add( "price_type", price_type_to_str( get_price_type() ) )
+      .add( "sig", tvec_.back().first )
+      .add( "pub_slot", slot )
+      .end();
+    if ( PC_UNLIKELY( tvec_.size() >= 100 ) ) {
+      PC_LOG_WRN( "too many unacked price update transactions" )
+        .add( "price_account", *get_account() )
+        .add( "product_account", *prod_->get_account() )
+        .add( "symbol", get_symbol() )
+        .add( "price_type", price_type_to_str( get_price_type() ) )
+        .add( "num_txid", tvec_.size() )
+        .end();
+      tvec_.erase( tvec_.begin(), tvec_.begin() + 50 );
+    }
+  }
   inc_sent();
   return true;
 }
@@ -2049,6 +2082,30 @@ void price::submit()
     cptr->send( areq_ );
     st_ = e_sent_subscribe;
   }
+}
+
+bool price::has_unacked_updates() const
+{
+  return ! tvec_.empty();
+}
+
+void price::on_response( rpc::upd_price *res )
+{
+  std::string txid = res->get_ack_signature().as_string();
+  const auto it = std::find_if( tvec_.begin(), tvec_.end(),
+      [&] ( const std::pair<std::string,int64_t>& m ) { return m.first == txid; } );
+  if ( it == tvec_.end() )
+    return;
+  const int64_t ack_dur = res->get_recv_time() - it->second;
+  tvec_.erase( it );
+  PC_LOG_DBG( "received price update transaction ack" )
+    .add( "price_account", *get_account() )
+    .add( "product_account", *prod_->get_account() )
+    .add( "symbol", get_symbol() )
+    .add( "price_type", price_type_to_str( get_price_type() ) )
+    .add( "sig", txid )
+    .add( "round_trip_time(ms)", 1e-6 * ack_dur )
+    .end();
 }
 
 void price::on_response( rpc::get_account_info *res )

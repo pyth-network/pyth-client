@@ -4,7 +4,8 @@
 #include <string>
 
 #define PC_PACKED        __attribute__((__packed__))
-#define PC_UNLIKELY(ARG) __builtin_expect((ARG),1)
+#define PC_LIKELY(ARG)   __builtin_expect((ARG),1)
+#define PC_UNLIKELY(ARG) __builtin_expect((ARG),0)
 #define PC_NSECS_IN_SEC  1000000000L
 #define PC_NSECS_IN_MSEC 1000000L
 

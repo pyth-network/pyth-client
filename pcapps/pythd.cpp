@@ -13,6 +13,11 @@ std::string get_rpc_host()
   return "localhost";
 }
 
+std::string get_tx_host()
+{
+  return "localhost";
+}
+
 std::string get_key_store()
 {
   std::string dir = getenv("HOME");
@@ -32,7 +37,7 @@ int usage()
             << std::endl;
   std::cerr << "     Host name or IP address of solana rpc node in the form "
                "host_name[:rpc_port[:ws_port]]\n" << std::endl;
-  std::cerr << "  -t <tx proxy host (default " << get_rpc_host() << ")>"
+  std::cerr << "  -t <tx proxy host (default " << get_tx_host() << ")>"
             << std::endl;
   std::cerr << "     Host name or IP address of running pyth_tx server\n"
             << std::endl;
@@ -90,7 +95,7 @@ int main(int argc, char **argv)
   std::string cnt_dir, cap_file, log_file;
   std::string rpc_host = get_rpc_host();
   std::string key_dir  = get_key_store();
-  std::string tx_host  = get_rpc_host();
+  std::string tx_host  = get_tx_host();
   int pyth_port = get_port();
   int opt = 0;
   bool do_wait = true, do_tx = true, do_debug = false;

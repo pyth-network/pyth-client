@@ -107,13 +107,15 @@ namespace pc
 static hash sys_id = gen_sys_id();
 
 // generate json for sendTransaction
-static void send_transaction( json_wtr& msg, bincode& tx )
+static void send_transaction( json_wtr& msg, bincode& tx, bool skipPreflight )
 {
   msg.add_key( "method", "sendTransaction" );
   msg.add_key( "params", json_wtr::e_arr );
   msg.add_val_enc_base64( str( tx.get_buf(), tx.size() ) );
   msg.add_val( json_wtr::e_obj );
   msg.add_key( "encoding", "base64" );
+  if ( skipPreflight )
+    msg.add_key( "skipPreflight", json_wtr::jtrue() );
   msg.pop();
   msg.pop();
 }
@@ -808,7 +810,7 @@ void rpc::transfer::request( json_wtr& msg )
   sig_.init_from_buf( (const uint8_t*)(tx.get_buf() + sign_idx) );
 
   // encode transaction and add to json params
-  send_transaction( msg, tx );
+  send_transaction( msg, tx, false );
   bptr->dealloc();
 }
 
@@ -1140,7 +1142,7 @@ void rpc::create_account::request( json_wtr& msg )
   tx.sign( acct_idx, tx_idx, *account_ );
 
   // encode transaction and add to json params
-  send_transaction( msg, tx );
+  send_transaction( msg, tx, false );
   bptr->dealloc();
 }
 
@@ -1240,7 +1242,7 @@ void rpc::add_product::request( json_wtr& msg )
   tx.sign( sym_idx, tx_idx, *akey_ );
 
   // encode transaction and add to json params
-  send_transaction( msg, tx );
+  send_transaction( msg, tx, false );
   bptr->dealloc();
 }
 
@@ -1344,7 +1346,7 @@ void rpc::upd_product::request( json_wtr& msg )
   tx.sign( sym_idx, tx_idx, *akey_ );
 
   // encode transaction and add to json params
-  send_transaction( msg, tx );
+  send_transaction( msg, tx, false );
   bptr->dealloc();
 }
 
@@ -1464,7 +1466,7 @@ void rpc::add_price::request( json_wtr& msg )
   tx.sign( prc_idx, tx_idx, *akey_ );
 
   // encode transaction and add to json params
-  send_transaction( msg, tx );
+  send_transaction( msg, tx, false );
   bptr->dealloc();
 }
 
@@ -1573,7 +1575,7 @@ void rpc::init_price::request( json_wtr& msg )
   tx.sign( prc_idx, tx_idx, *akey_ );
 
   // encode transaction and add to json params
-  send_transaction( msg, tx );
+  send_transaction( msg, tx, false );
   bptr->dealloc();
 }
 
@@ -1655,7 +1657,7 @@ void rpc::init_mapping::request( json_wtr& msg )
   tx.sign( map_idx, tx_idx, *mkey_ );
 
   // encode transaction and add to json params
-  send_transaction( msg, tx );
+  send_transaction( msg, tx, false );
   bptr->dealloc();
 }
 
@@ -1746,7 +1748,7 @@ void rpc::add_mapping::request( json_wtr& msg )
   tx.sign( acc_idx, tx_idx, *akey_ );
 
   // encode transaction and add to json params
-  send_transaction( msg, tx );
+  send_transaction( msg, tx, false );
   bptr->dealloc();
 }
 
@@ -1839,7 +1841,7 @@ void rpc::add_publisher::request( json_wtr& msg )
   tx.sign( sym_idx, tx_idx, *akey_ );
 
   // encode transaction and add to json params
-  send_transaction( msg, tx );
+  send_transaction( msg, tx, false );
   bptr->dealloc();
 }
 
@@ -1932,7 +1934,7 @@ void rpc::del_publisher::request( json_wtr& msg )
   tx.sign( sym_idx, tx_idx, *akey_ );
 
   // encode transaction and add to json params
-  send_transaction( msg, tx );
+  send_transaction( msg, tx, false );
   bptr->dealloc();
 }
 
@@ -2014,7 +2016,7 @@ void rpc::init_test::request( json_wtr& msg )
   tx.sign( prm_idx, tx_idx, *akey_ );
 
   // encode transaction and add to json params
-  send_transaction( msg, tx );
+  send_transaction( msg, tx, false );
   bptr->dealloc();
 }
 
@@ -2122,16 +2124,7 @@ void rpc::upd_test::request( json_wtr& msg )
   tx.sign( tst_idx, tx_idx, *tkey_ );
 
   // encode transaction and add to json params
-  msg.add_key( "method", "sendTransaction" );
-  msg.add_key( "params", json_wtr::e_arr );
-  char buf[4096];
-  size_t buf_len = enc_base64( (const uint8_t*)tx.get_buf(),
-      tx.size(), (uint8_t*)buf );
-  msg.add_val( str( buf, buf_len ) );
-  msg.add_val( json_wtr::e_obj );
-  msg.add_key( "encoding", "base64" );
-  msg.pop();
-  msg.pop();
+  send_transaction( msg, tx, false );
   bptr->dealloc();
 }
 
@@ -2314,6 +2307,16 @@ void rpc::upd_price::set_price( int64_t px,
   cmd_   = is_agg?e_cmd_agg_price:e_cmd_upd_price;
 }
 
+signature *rpc::upd_price::get_signature()
+{
+  return &sig_;
+}
+
+str rpc::upd_price::get_ack_signature() const
+{
+  return ack_sig_;
+}
+
 class tx_wtr : public net_wtr
 {
 public:
@@ -2329,12 +2332,8 @@ public:
   }
 };
 
-void rpc::upd_price::build( net_wtr& wtr )
+void rpc::upd_price::build_tx( bincode& tx )
 {
-  // construct binary transaction and add header
-  bincode tx;
-  ((tx_wtr&)wtr).init( tx );
-
   // signatures section
   tx.add_len<1>();      // one signature (publish)
   size_t pub_idx = tx.reserve_sign();
@@ -2376,5 +2375,36 @@ void rpc::upd_price::build( net_wtr& wtr )
 
   // all accounts need to sign transaction
   tx.sign( pub_idx, tx_idx, *ckey_ );
+  sig_.init_from_buf( (const uint8_t*)(tx.get_buf() + pub_idx) );
+}
+
+void rpc::upd_price::build( net_wtr& wtr )
+{
+  bincode tx;
+  ((tx_wtr&)wtr).init( tx );
+  build_tx( tx );
   ((tx_wtr&)wtr).commit( tx );
+}
+
+void rpc::upd_price::request( json_wtr& msg )
+{
+  // construct binary transaction
+  net_buf *bptr = net_buf::alloc();
+  bincode tx( bptr->buf_ );
+  build_tx( tx );
+
+  // encode transaction and add to json params
+  send_transaction( msg, tx, true );
+  bptr->dealloc();
+}
+
+void rpc::upd_price::response( const jtree& jt )
+{
+  if ( on_error( jt, this ) )
+    return;
+  uint32_t rtok = jt.find_val( 1, "result" );
+  if ( rtok == 0 )
+    return;
+  ack_sig_ = jt.get_str( rtok );
+  on_response( this );
 }
