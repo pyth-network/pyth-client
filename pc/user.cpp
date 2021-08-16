@@ -75,17 +75,33 @@ void user::parse_content( const char *, size_t )
 {
   str path;
   hsvr_.get_path( path );
+
+  http_response msg;
+
+  // whitelist
+  std::string const relpath{ path.str_, path.len_ };
+  if (
+    relpath != "/"
+    && relpath != "/dashboard.js"
+    && relpath != "/index.html"
+    && relpath != "/style.css"
+  ) {
+    msg.init( "404", "Not Found" );
+    msg.commit();
+    add_send( msg );
+    return;
+  }
+
   std::string cfile = sptr_->get_content_dir();
   if ( cfile.empty() ) {
     cfile += ".";
   }
-  cfile += std::string( path.str_, path.len_ );
-  if ( path == str( "/" ) ) {
+  cfile += relpath;
+  if ( relpath == "/" ) {
     cfile += "index.html";
   }
   mem_map mf;
   mf.set_file( cfile );
-  http_response msg;
   if ( mf.init() ) {
     msg.init( "200", "OK" );
     msg.add_hdr( "Content-Type", get_content_type( cfile ) );
