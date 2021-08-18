@@ -70,6 +70,7 @@ manager::manager()
   breq_->set_sub( this );
   sreq_->set_sub( this );
   preq_->set_sub( this );
+  areq_->set_sub( this );
   tconn_.set_net_parser( &txp_ );
   txp_.mgr_ = this;
 }
@@ -129,6 +130,16 @@ void manager::set_tx_host( const std::string& thost )
 std::string manager::get_tx_host() const
 {
   return thost_;
+}
+
+void manager::set_do_ws( bool do_ws )
+{
+  do_ws_ = do_ws;
+}
+
+bool manager::get_do_ws() const
+{
+  return do_ws_;
 }
 
 void manager::set_do_tx( bool do_tx )
@@ -447,6 +458,13 @@ void manager::poll( bool do_wait )
         clnt_.send( sreq_ );
       }
     }
+    if ( ! get_do_ws() ) {
+      if ( areq_->get_is_recv() ) {
+        if ( has_status( PC_PYTH_RPC_CONNECTED ) ) {
+          clnt_.send( areq_ );
+        }
+      }
+    }
   }
 
   // try to (re)connect to tx proxy
@@ -529,9 +547,15 @@ void manager::reconnect_rpc()
       set_err_msg( "missing or invalid program public key [" +
           get_program_pub_key_file() + "]" );
     } else {
-      preq_->set_commitment( get_commitment() );
-      preq_->set_program( gpub );
-      clnt_.send( preq_ );
+      if ( get_do_ws() ) {
+        preq_->set_commitment( get_commitment() );
+        preq_->set_program( get_program_pub_key() );
+        clnt_.send( preq_ );
+      }
+      else {
+        areq_->set_commitment( get_commitment() );
+        areq_->set_program( get_program_pub_key() );
+      }
     }
 
     // gather latest info on mapping accounts
@@ -716,18 +740,34 @@ void manager::on_response( rpc::get_recent_block_hash *m )
   PC_LOG_INF( "received_recent_block_hash" )
     .add( "curr_slot", slot_ )
     .add( "hash_slot", m->get_slot() )
-    .add( "rount_trip_time(ms)", 1e-6*ack_ts )
+    .add( "round_trip_time(ms)", 1e-6*ack_ts )
     .end();
 
 }
 
-void manager::on_response( rpc::program_subscribe *m )
+void manager::on_response( rpc::account_update *m )
 {
   if ( m->get_is_err() ) {
-    set_err_msg( "failed to program_subscribe ["
+    set_err_msg( "account update failed ["
         + m->get_err_msg()  + "]" );
     return;
   }
+
+  if ( m->get_is_http() ) {
+    int64_t ack_ts = m->get_recv_time() - m->get_sent_time();
+    PC_LOG_DBG( "received account_update" )
+      .add( "account", *m->get_account() )
+      .add( "slot", slot_ )
+      .add( "round_trip_time(ms)", 1e-6*ack_ts )
+      .end();
+  }
+  else {
+    PC_LOG_DBG( "received account_update" )
+      .add( "account", *m->get_account() )
+      .add( "slot", slot_ )
+      .end();
+  }
+
   // look up by account and dispatch update
   acc_map_t::iter_t it = amap_.find( *m->get_account() );
   if ( it ) {

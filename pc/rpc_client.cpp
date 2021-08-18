@@ -821,42 +821,57 @@ void rpc::transfer::response( const jtree& jt )
 }
 
 ///////////////////////////////////////////////////////////////////////////
+// account_update
+
+rpc::account_update::account_update()
+: acc_{},
+  slot_{ 0UL },
+  lamports_{ 0UL },
+  dlen_{ 0UL },
+  dptr_{ nullptr }
+{
+}
+
+pub_key const* rpc::account_update::get_account() const
+{
+  return &acc_;
+}
+
+void rpc::account_update::set_account( pub_key *pkey )
+{
+  acc_ = *pkey;
+}
+
+uint64_t rpc::account_update::get_slot() const
+{
+  return slot_;
+}
+
+uint64_t rpc::account_update::get_lamports() const
+{
+  return lamports_;
+}
+
+///////////////////////////////////////////////////////////////////////////
 // account_subscribe
 
 rpc::account_subscribe::account_subscribe()
-: slot_( 0L ),
-  lamports_( 0L ),
-  dlen_( 0 ),
-  dptr_( nullptr ),
+: account_update{},
   cmt_( commitment::e_confirmed )
 {
 }
 
-void rpc::account_subscribe::set_account( pub_key *pkey )
-{
-  acc_ = pkey;
-}
 
 void rpc::account_subscribe::set_commitment( commitment val )
 {
   cmt_ = val;
 }
 
-uint64_t rpc::account_subscribe::get_slot() const
-{
-  return slot_;
-}
-
-uint64_t rpc::account_subscribe::get_lamports() const
-{
-  return lamports_;
-}
-
 void rpc::account_subscribe::request( json_wtr& msg )
 {
   msg.add_key( "method", "accountSubscribe" );
   msg.add_key( "params", json_wtr::e_arr );
-  msg.add_val( *acc_ );
+  msg.add_val( acc_ );
   msg.add_val( json_wtr::e_obj );
   msg.add_key( "encoding", "base64+zstd" );
   msg.add_key( "commitment", commitment_to_str( cmt_ ) );
@@ -866,7 +881,9 @@ void rpc::account_subscribe::request( json_wtr& msg )
 
 void rpc::account_subscribe::response( const jtree& jt )
 {
-  if ( on_error( jt, this ) ) return;
+  auto* const this_t = static_cast< account_update* >( this );
+
+  if ( on_error( jt, this_t ) ) return;
 
   // add to notification list
   add_notify( jt );
@@ -874,7 +891,9 @@ void rpc::account_subscribe::response( const jtree& jt )
 
 bool rpc::account_subscribe::notify( const jtree& jt )
 {
-  if ( on_error( jt, this ) ) return true;
+  auto* const this_t = static_cast< account_update* >( this );
+
+  if ( on_error( jt, this_t ) ) return true;
 
   uint32_t ptok = jt.find_val( 1, "params" );
   uint32_t rtok = jt.find_val( ptok, "result" );
@@ -885,7 +904,7 @@ bool rpc::account_subscribe::notify( const jtree& jt )
   jt.get_text( jt.get_first( dtok ), dptr_, dlen_ );
   lamports_ = jt.get_uint( jt.find_val( vtok, "lamports" ) );
 
-  on_response( this );
+  on_response( this_t );
   return false;  // keep notification
 }
 
@@ -893,10 +912,7 @@ bool rpc::account_subscribe::notify( const jtree& jt )
 // program_subscribe
 
 rpc::program_subscribe::program_subscribe()
-: slot_( 0L ),
-  lamports_( 0L ),
-  dlen_( 0 ),
-  dptr_( nullptr ),
+: account_update{},
   cmt_( commitment::e_confirmed )
 {
 }
@@ -909,21 +925,6 @@ void rpc::program_subscribe::set_program( pub_key *pkey )
 void rpc::program_subscribe::set_commitment( commitment val )
 {
   cmt_ = val;
-}
-
-uint64_t rpc::program_subscribe::get_slot() const
-{
-  return slot_;
-}
-
-uint64_t rpc::program_subscribe::get_lamports() const
-{
-  return lamports_;
-}
-
-pub_key *rpc::program_subscribe::get_account()
-{
-  return &acc_;
 }
 
 void rpc::program_subscribe::request( json_wtr& msg )
@@ -940,7 +941,9 @@ void rpc::program_subscribe::request( json_wtr& msg )
 
 void rpc::program_subscribe::response( const jtree& jt )
 {
-  if ( on_error( jt, this ) ) return;
+  auto* const this_t = static_cast< account_update* >( this );
+
+  if ( on_error( jt, this_t ) ) return;
 
   // add to notification list
   add_notify( jt );
@@ -948,7 +951,9 @@ void rpc::program_subscribe::response( const jtree& jt )
 
 bool rpc::program_subscribe::notify( const jtree& jt )
 {
-  if ( on_error( jt, this ) ) return true;
+  auto* const this_t = static_cast< account_update* >( this );
+
+  if ( on_error( jt, this_t ) ) return true;
 
   uint32_t ptok = jt.find_val( 1, "params" );
   uint32_t rtok = jt.find_val( ptok, "result" );
@@ -962,8 +967,66 @@ bool rpc::program_subscribe::notify( const jtree& jt )
   jt.get_text( jt.get_first( dtok ), dptr_, dlen_ );
   lamports_ = jt.get_uint( jt.find_val( atok, "lamports" ) );
 
-  on_response( this );
+  on_response( this_t );
   return false;  // keep notification
+}
+
+///////////////////////////////////////////////////////////////////////////
+// get_program_accounts
+
+rpc::get_program_accounts::get_program_accounts()
+: pgm_{ nullptr },
+  cmt_{ commitment::e_confirmed }
+{
+}
+
+void rpc::get_program_accounts::set_program( pub_key *pkey )
+{
+  pgm_ = pkey;
+}
+
+void rpc::get_program_accounts::set_commitment( commitment val )
+{
+  cmt_ = val;
+}
+
+void rpc::get_program_accounts::request( json_wtr& msg )
+{
+  msg.add_key( "method", "getProgramAccounts" );
+  msg.add_key( "params", json_wtr::e_arr );
+  msg.add_val( *pgm_ );
+  msg.add_val( json_wtr::e_obj );
+  msg.add_key( "encoding", "base64+zstd" );
+  msg.add_key( "commitment", commitment_to_str( cmt_ ) );
+  msg.add_key( "withContext", json_wtr::jtrue{} );
+  msg.pop();
+  msg.pop();
+}
+
+void rpc::get_program_accounts::response( const jtree& jt )
+{
+  auto* const this_t = static_cast< account_update* >( this );
+
+  if ( on_error( jt, this_t ) ) return;
+  uint32_t const rtok = jt.find_val( 1, "result" );
+  uint32_t const ctok = jt.find_val( rtok, "context" );
+  slot_ = jt.get_uint( jt.find_val( ctok, "slot" ) );
+  uint32_t const vtok = jt.find_val( rtok, "value" );
+  for ( uint32_t tok = jt.get_first( vtok ); tok; tok = jt.get_next( tok ) ) {
+    str akey = jt.get_str( jt.find_val( tok, "pubkey" ) );
+    acc_.init_from_text( akey );
+    uint32_t const atok = jt.find_val( tok, "account" );
+    lamports_ = jt.get_uint( jt.find_val( atok, "lamports" ) );
+    uint32_t dtok = jt.find_val( atok, "data" );
+    jt.get_text( jt.get_first( dtok ), dptr_, dlen_ );
+
+    on_response( this_t );
+  }
+}
+
+bool rpc::get_program_accounts::get_is_http() const
+{
+  return true;
 }
 
 ///////////////////////////////////////////////////////////////////////////
