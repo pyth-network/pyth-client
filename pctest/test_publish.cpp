@@ -33,9 +33,6 @@ public:
   // have we received an on_init() callback yet
   bool get_is_init() const;
 
-  // get price from map
-  pc::price *get_price( const std::string& ) const;
-
   void teardown();
 
 private:
