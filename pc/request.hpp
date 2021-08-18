@@ -60,7 +60,7 @@ namespace pc
   class request : public prev_next<request>,
                   public error,
                   public rpc_sub,
-                  public rpc_sub_i<rpc::program_subscribe>
+                  public rpc_sub_i<rpc::account_update>
   {
   public:
 
@@ -99,7 +99,7 @@ namespace pc
     // has received account update
     void set_is_recv( bool );
     bool get_is_recv() const;
-    void on_response( rpc::program_subscribe * ) override;
+    void on_response( rpc::account_update * ) override;
 
   protected:
 
@@ -165,7 +165,7 @@ namespace pc
     void reset();
     void submit() override;
     void on_response( rpc::get_account_info * ) override;
-    void on_response( rpc::program_subscribe * ) override;
+    void on_response( rpc::account_update * ) override;
   private:
     typedef enum { e_new, e_init } state_t;
 
@@ -447,8 +447,7 @@ namespace pc
 
   // run aggregate price test
   class upd_test : public request,
-                   public rpc_sub_i<rpc::upd_test>,
-                   public rpc_sub_i<rpc::account_subscribe>
+                   public rpc_sub_i<rpc::upd_test>
   {
   public:
     void set_test_key( const std::string& );
@@ -459,7 +458,7 @@ namespace pc
 
     void submit() override;
     void on_response( rpc::upd_test * ) override;
-    void on_response( rpc::account_subscribe * ) override;
+    void on_response( rpc::account_update * ) override;
 
   private:
     typedef enum {
@@ -591,7 +590,7 @@ namespace pc
     void reset();
     void submit() override;
     void on_response( rpc::get_account_info * ) override;
-    void on_response( rpc::program_subscribe * ) override;
+    void on_response( rpc::account_update * ) override;
     bool get_is_done() const override;
     void add_price( price * );
 
@@ -736,7 +735,7 @@ namespace pc
     void submit() override;
     void on_response( rpc::upd_price * ) override;
     void on_response( rpc::get_account_info * ) override;
-    void on_response( rpc::program_subscribe * ) override;
+    void on_response( rpc::account_update * ) override;
     bool get_is_done() const override;
 
   private:

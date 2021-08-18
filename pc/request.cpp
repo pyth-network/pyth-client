@@ -151,7 +151,7 @@ bool request::get_is_recv() const
   return is_recv_;
 }
 
-void request::on_response( rpc::program_subscribe * )
+void request::on_response( rpc::account_update * )
 {
 }
 
@@ -319,7 +319,7 @@ void get_mapping::on_response( rpc::get_account_info *res )
   update( res );
 }
 
-void get_mapping::on_response( rpc::program_subscribe *res )
+void get_mapping::on_response( rpc::account_update *res )
 {
   if ( get_is_recv( )) {
     update( res );
@@ -1401,7 +1401,7 @@ void upd_test::on_response( rpc::upd_test *res )
   }
 }
 
-void upd_test::on_response( rpc::account_subscribe *res )
+void upd_test::on_response( rpc::account_update *res )
 {
   if ( res->get_is_err() ) {
     on_error_sub( res->get_err_msg(), this );
@@ -1712,7 +1712,7 @@ void product::on_response( rpc::get_account_info *res )
   update( res );
 }
 
-void product::on_response( rpc::program_subscribe *res )
+void product::on_response( rpc::account_update *res )
 {
   if ( get_is_recv() ) {
     update( res );
@@ -2114,7 +2114,7 @@ void price::on_response( rpc::get_account_info *res )
   update( res );
 }
 
-void price::on_response( rpc::program_subscribe *res )
+void price::on_response( rpc::account_update *res )
 {
   if ( get_is_recv() ) {
     update( res );

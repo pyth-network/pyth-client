@@ -434,13 +434,15 @@ namespace pc
       uint64_t    slot_;
     };
 
-    // account data subscription
-    class account_subscribe : public rpc_subscription
+    // base class for account updates
+    class account_update : public rpc_subscription
     {
     public:
-      // parameters
+      account_update();
+
+      // parameters / results
+      pub_key const* get_account() const;
       void set_account( pub_key * );
-      void set_commitment( commitment );
 
       // results
       uint64_t get_slot() const;
@@ -450,22 +452,16 @@ namespace pc
       template<class T>
       size_t get_data_val( T *, size_t srclen=sizeof(T) ) const;
 
-      account_subscribe();
-      void request( json_wtr& ) override;
-      void response( const jtree& ) override;
-      bool notify( const jtree& ) override;
-
-    private:
-      pub_key    *acc_;
+    protected:
+      pub_key     acc_;
       uint64_t    slot_;
       uint64_t    lamports_;
       size_t      dlen_;
       const char *dptr_;
-      commitment  cmt_;
     };
 
     template<class T>
-    size_t account_subscribe::get_data_ref( T *&res, size_t tlen ) const
+    size_t account_update::get_data_ref( T *&res, size_t tlen ) const
     {
       char *ptr;
       size_t len = get_rpc_client()->get_data_ref( dptr_, dlen_, tlen, ptr );
@@ -474,29 +470,36 @@ namespace pc
     }
 
     template<class T>
-    size_t account_subscribe::get_data_val( T *res, size_t tlen ) const
+    size_t account_update::get_data_val( T *res, size_t tlen ) const
     {
       char *ptr = (char*)res;
       size_t len = get_rpc_client()->get_data_val( dptr_, dlen_, tlen, ptr );
       return len;
     }
 
+    // account data subscription
+    class account_subscribe : public account_update
+    {
+    public:
+      // parameters
+      void set_commitment( commitment );
+
+      account_subscribe();
+      void request( json_wtr& ) override;
+      void response( const jtree& ) override;
+      bool notify( const jtree& ) override;
+
+    private:
+      commitment  cmt_;
+    };
+
     // program subscription
-    class program_subscribe : public rpc_subscription
+    class program_subscribe : public account_update
     {
     public:
       // parameters
       void set_program( pub_key * );
       void set_commitment( commitment );
-
-      // results
-      uint64_t get_slot() const;
-      uint64_t get_lamports() const;
-      pub_key *get_account();
-      template<class T>
-      size_t get_data_ref( T *&, size_t srclen=sizeof(T) ) const;
-      template<class T>
-      size_t get_data_val( T *, size_t srclen=sizeof(T) ) const;
 
       program_subscribe();
       void request( json_wtr& ) override;
@@ -505,30 +508,26 @@ namespace pc
 
     private:
       pub_key    *pgm_;
-      pub_key     acc_;
-      uint64_t    slot_;
-      uint64_t    lamports_;
-      size_t      dlen_;
-      const char *dptr_;
       commitment  cmt_;
     };
 
-    template<class T>
-    size_t program_subscribe::get_data_ref( T *&res, size_t tlen ) const
+    class get_program_accounts : public account_update
     {
-      char *ptr;
-      size_t len = get_rpc_client()->get_data_ref( dptr_, dlen_, tlen, ptr );
-      res = (T*)ptr;
-      return len;
-    }
+    public:
+      // parameters
+      void set_program( pub_key * );
+      void set_commitment( commitment );
 
-    template<class T>
-    size_t program_subscribe::get_data_val( T *res, size_t tlen ) const
-    {
-      char *ptr = (char*)res;
-      size_t len = get_rpc_client()->get_data_val( dptr_, dlen_, tlen, ptr );
-      return len;
-    }
+      get_program_accounts();
+      void request( json_wtr& ) override;
+      void response( const jtree& ) override;
+
+      bool get_is_http() const override;
+
+    private:
+      pub_key    *pgm_;
+      commitment  cmt_;
+    };
 
     // transaction to transfer funds between accounts
     class transfer : public rpc_request
