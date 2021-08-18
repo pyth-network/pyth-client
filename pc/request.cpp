@@ -2048,7 +2048,7 @@ bool price::update(
     mgr->submit( preq_ );
   else {
     get_rpc_client()->send( preq_ );
-    tvec_.emplace_back( std::string( '\0' , 100 ), preq_->get_sent_time() );
+    tvec_.emplace_back( std::string( 100, '\0' ), preq_->get_sent_time() );
     preq_->get_signature()->enc_base58( tvec_.back().first );
     PC_LOG_DBG( "sent price update transaction" )
       .add( "price_account", *get_account() )
