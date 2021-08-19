@@ -18,6 +18,11 @@ std::string get_rpc_host()
   return "localhost";
 }
 
+std::string get_tx_host()
+{
+  return "localhost";
+}
+
 std::string get_key_store()
 {
   std::string dir = getenv("HOME");
@@ -49,6 +54,8 @@ int usage()
   std::cerr << "  upd_product      <product.json> [options]" << std::endl;
   std::cerr << "  upd_price        <price_key> [options]"
             << std::endl;
+  std::cerr << "  upd_price_val    <price_key> <value> <confidence> <status> [options]"
+            << std::endl;
   std::cerr << "  upd_test         <test_key> <test.json> [options]"
             << std::endl;
   std::cerr << "  get_balance      [<pub_key>] [options]" << std::endl;
@@ -62,11 +69,11 @@ int usage()
 
   std::cerr << "options include:" << std::endl;
   std::cerr << "  -r <rpc_host (default " << get_rpc_host() << ")>"
-             << std::endl;
+            << std::endl;
   std::cerr << "     Host name or IP address of solana rpc node in the form "
                "host_name[:rpc_port[:ws_port]]\n" << std::endl;
   std::cerr << "  -k <key_store_directory (default "
-            << get_key_store() << ">" << std::endl;
+            << get_key_store() << ")>" << std::endl;
   std::cerr << "     Directory name housing publishing, mapping and program"
                " key files\n" << std::endl;
   std::cerr << "  -c <commitment_level (default confirmed)>" << std::endl;
@@ -77,6 +84,12 @@ int usage()
             << std::endl;
   std::cerr << "  -d" << std::endl;
   std::cerr << "     Turn on debug logging\n" << std::endl;
+
+  std::cerr << "options only for upd_price / upd_price_val include:" << std::endl;
+  std::cerr << "  -x" << std::endl;
+  std::cerr << "     Disable connection to pyth_tx transaction proxy server\n" << std::endl;
+  std::cerr << "  -t <tx proxy host (default " << get_tx_host() << ")>" << std::endl
+            << "     Host name or IP address of running pyth_tx server" << std::endl;
   return 1;
 }
 
@@ -804,24 +817,29 @@ int on_upd_price( int argc, char **argv )
   if ( argc < 2 ) {
     return usage();
   }
+
+  // Price Key
   std::string pkey( argv[1] );
   pub_key pub;
   pub.init_from_text( pkey );
+
   argc -= 1;
   argv += 1;
 
   int opt = 0;
+  bool do_tx = true;
   commitment cmt = commitment::e_confirmed;
   std::string rpc_host = get_rpc_host();
-  std::string tx_host  = get_rpc_host();
+  std::string tx_host  = get_tx_host();
   std::string key_dir  = get_key_store();
-  while( (opt = ::getopt(argc,argv, "r:t:k:c:dh" )) != -1 ) {
+  while( (opt = ::getopt( argc, argv, "r:t:k:c:dxh" )) != -1 ) {
     switch(opt) {
       case 'r': rpc_host = optarg; break;
       case 't': tx_host = optarg; break;
       case 'k': key_dir = optarg; break;
       case 'd': log::set_level( PC_LOG_DBG_LVL ); break;
       case 'c': cmt = str_to_commitment(optarg); break;
+      case 'x': do_tx = false; break;
       default: return usage();
     }
   }
@@ -835,7 +853,7 @@ int on_upd_price( int argc, char **argv )
   mgr.set_rpc_host( rpc_host );
   mgr.set_tx_host( tx_host );
   mgr.set_dir( key_dir );
-  mgr.set_do_tx( true );
+  mgr.set_do_tx( do_tx );
   mgr.set_commitment( cmt );
   if ( !mgr.init() || !mgr.bootstrap() ) {
     std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
@@ -852,8 +870,111 @@ int on_upd_price( int argc, char **argv )
     return 1;
   }
   ptr->update();
-  while( mgr.get_is_tx_send() && !mgr.get_is_err() ) {
-    mgr.poll();
+  if ( do_tx ) {
+    while( mgr.get_is_tx_send() && !mgr.get_is_err() )
+      mgr.poll();
+  } else {
+    const auto send_ts = get_now();
+    while( !mgr.get_is_err() &&
+           !ptr->get_is_err() &&
+           ( get_now() - send_ts < 15e9 ) &&
+           ( mgr.get_is_rpc_send() || ptr->has_unacked_updates() ) )
+      mgr.poll();
+  }
+  if ( ptr->get_is_err() ) {
+    std::cerr << "pyth: " << ptr->get_err_msg() << std::endl;
+    return 1;
+  }
+  if ( mgr.get_is_err() ) {
+    std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
+    return 1;
+  }
+  return 0;
+}
+
+int on_upd_price_val( int argc, char **argv )
+{
+  if ( argc < 5 ) {
+    return usage();
+  }
+
+  // Price Key
+  std::string pkey( argv[1] );
+  pub_key pub;
+  pub.init_from_text( pkey );
+
+  // Price Value
+  uint64_t price_value = atoll( argv[2] );
+
+  // Confidence
+  uint64_t confidence = atoll( argv[3] );
+
+  // Status
+  symbol_status price_status = str_to_symbol_status( argv[4] );
+
+  // Make sure an unknown status was requested explicitly
+  if ( price_status == symbol_status::e_unknown && argv[4] != std::string("unknown") ) {
+    std::cerr << "pyth: unrecognized symbol status " << '"' << argv[4] << '"' << std::endl;
+    return 1;
+  }
+
+  argc -= 4;
+  argv += 4;
+
+  int opt = 0;
+  bool do_tx = true;
+  commitment cmt = commitment::e_confirmed;
+  std::string rpc_host = get_rpc_host();
+  std::string tx_host  = get_tx_host();
+  std::string key_dir  = get_key_store();
+  while( (opt = ::getopt( argc, argv, "r:t:k:c:dxh" )) != -1 ) {
+    switch(opt) {
+      case 'r': rpc_host = optarg; break;
+      case 't': tx_host = optarg; break;
+      case 'k': key_dir = optarg; break;
+      case 'd': log::set_level( PC_LOG_DBG_LVL ); break;
+      case 'c': cmt = str_to_commitment(optarg); break;
+      case 'x': do_tx = false; break;
+      default: return usage();
+    }
+  }
+  if ( cmt == commitment::e_unknown ) {
+    std::cerr << "pyth: unknown commitment level" << std::endl;
+    return usage();
+  }
+
+  // initialize connection to block-chain
+  manager mgr;
+  mgr.set_rpc_host( rpc_host );
+  mgr.set_tx_host( tx_host );
+  mgr.set_dir( key_dir );
+  mgr.set_do_tx( do_tx );
+  mgr.set_commitment( cmt );
+  if ( !mgr.init() || !mgr.bootstrap() ) {
+    std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
+    return 1;
+  }
+  // get price and crank
+  price *ptr = mgr.get_price( pub );
+  if ( !ptr ) {
+    std::cerr << "pyth: failed to find price key=" << pkey << std::endl;
+    return 1;
+  }
+  if ( !ptr->has_publisher() ) {
+    std::cerr << "pyth: missing publisher permission" << std::endl;
+    return 1;
+  }
+  ptr->update(price_value, confidence, price_status);
+  if ( do_tx ) {
+    while( mgr.get_is_tx_send() && !mgr.get_is_err() )
+      mgr.poll();
+  } else {
+    const auto send_ts = get_now();
+    while( !mgr.get_is_err() &&
+           !ptr->get_is_err() &&
+           ( get_now() - send_ts < 15e9 ) &&
+           ( mgr.get_is_rpc_send() || ptr->has_unacked_updates() ) )
+      mgr.poll();
   }
   if ( ptr->get_is_err() ) {
     std::cerr << "pyth: " << ptr->get_err_msg() << std::endl;
@@ -1122,51 +1243,7 @@ static void print_product_json( product *prod )
 {
   json_wtr wtr;
   wtr.add_val( json_wtr::e_obj );
-  wtr.add_key( "account", *prod->get_account() );
-  wtr.add_key( "attr_dict", json_wtr::e_obj );
-  str vstr, kstr;
-  for( unsigned id=1, i=0; i != prod->get_num_attr(); ) {
-    attr_id aid( id++ );
-    if ( !prod->get_attr( aid, vstr ) ) {
-      continue;
-    }
-    kstr = aid.get_str();
-    wtr.add_key( kstr, vstr );
-    ++i;
-  }
-  wtr.pop();
-  wtr.add_key( "price_accounts", json_wtr::e_arr );
-  for( unsigned i=0; i != prod->get_num_price(); ++i ) {
-    wtr.add_val( json_wtr::e_obj );
-    price *ptr = prod->get_price( i );
-    wtr.add_key( "account", *ptr->get_account() );
-    wtr.add_key( "price_type", price_type_to_str( ptr->get_price_type() ));
-    wtr.add_key( "price_exponent", ptr->get_price_exponent() );
-    wtr.add_key( "status", symbol_status_to_str( ptr->get_status() ) );
-    wtr.add_key( "price", ptr->get_price() );
-    wtr.add_key( "conf", ptr->get_conf() );
-    wtr.add_key( "twap", ptr->get_twap() );
-    wtr.add_key( "twac", ptr->get_twac() );
-    wtr.add_key( "valid_slot", ptr->get_valid_slot() );
-    wtr.add_key( "pub_slot", ptr->get_pub_slot() );
-    wtr.add_key( "prev_slot", ptr->get_prev_slot() );
-    wtr.add_key( "prev_price", ptr->get_prev_price() );
-    wtr.add_key( "prev_conf", ptr->get_prev_conf() );
-    wtr.add_key( "publisher_accounts", json_wtr::e_arr );
-    for( unsigned j=0; j != ptr->get_num_publisher(); ++j ) {
-      wtr.add_val( json_wtr::e_obj );
-      wtr.add_key( "account", *ptr->get_publisher( j ) );
-      wtr.add_key( "status", symbol_status_to_str(
-            ptr->get_publisher_status(j) ) );
-      wtr.add_key( "price", ptr->get_publisher_price(j) );
-      wtr.add_key( "conf", ptr->get_publisher_conf(j) );
-      wtr.add_key( "slot", ptr->get_publisher_slot(j) );
-      wtr.pop();
-    }
-    wtr.pop();
-    wtr.pop();
-  }
-  wtr.pop();
+  prod->dump_json( wtr );
   wtr.pop();
   print_json( wtr );
 }
@@ -1502,6 +1579,8 @@ int main(int argc, char **argv)
     rc = on_upd_product( argc, argv );
   } else if ( cmd == "upd_price" ) {
     rc = on_upd_price( argc, argv );
+  } else if ( cmd == "upd_price_val" ) {
+    rc = on_upd_price_val( argc, argv );
   } else if ( cmd == "upd_test" ) {
     rc = on_upd_test( argc, argv );
   } else if ( cmd == "get_pub_key" ) {

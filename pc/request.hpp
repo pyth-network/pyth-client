@@ -60,7 +60,7 @@ namespace pc
   class request : public prev_next<request>,
                   public error,
                   public rpc_sub,
-                  public rpc_sub_i<rpc::program_subscribe>
+                  public rpc_sub_i<rpc::account_update>
   {
   public:
 
@@ -99,7 +99,7 @@ namespace pc
     // has received account update
     void set_is_recv( bool );
     bool get_is_recv() const;
-    void on_response( rpc::program_subscribe * ) override;
+    void on_response( rpc::account_update * ) override;
 
   protected:
 
@@ -165,7 +165,7 @@ namespace pc
     void reset();
     void submit() override;
     void on_response( rpc::get_account_info * ) override;
-    void on_response( rpc::program_subscribe * ) override;
+    void on_response( rpc::account_update * ) override;
   private:
     typedef enum { e_new, e_init } state_t;
 
@@ -447,8 +447,7 @@ namespace pc
 
   // run aggregate price test
   class upd_test : public request,
-                   public rpc_sub_i<rpc::upd_test>,
-                   public rpc_sub_i<rpc::account_subscribe>
+                   public rpc_sub_i<rpc::upd_test>
   {
   public:
     void set_test_key( const std::string& );
@@ -459,7 +458,7 @@ namespace pc
 
     void submit() override;
     void on_response( rpc::upd_test * ) override;
-    void on_response( rpc::account_subscribe * ) override;
+    void on_response( rpc::account_update * ) override;
 
   private:
     typedef enum {
@@ -570,6 +569,7 @@ namespace pc
   public:
     // product account number
     pub_key *get_account();
+    const pub_key *get_account() const;
 
     // symbol from attr_dict
     str get_symbol();
@@ -580,6 +580,9 @@ namespace pc
     price *get_price( unsigned i ) const;
     price *get_price( price_type ) const;
 
+    // output full set of data to json writer
+    void dump_json( json_wtr& wtr ) const;
+
   public:
 
     product( const pub_key& );
@@ -587,7 +590,7 @@ namespace pc
     void reset();
     void submit() override;
     void on_response( rpc::get_account_info * ) override;
-    void on_response( rpc::program_subscribe * ) override;
+    void on_response( rpc::account_update * ) override;
     bool get_is_done() const override;
     void add_price( price * );
 
@@ -642,7 +645,8 @@ namespace pc
   // price subscriber and publisher
   class price : public request,
                 public pub_stats,
-                public rpc_sub_i<rpc::get_account_info>
+                public rpc_sub_i<rpc::get_account_info>,
+                public rpc_sub_i<rpc::upd_price>
   {
   public:
 
@@ -676,24 +680,28 @@ namespace pc
     // update aggregate price only
     bool update();
 
+    // are there any update transactions which have not yet been acked
+    bool has_unacked_updates() const;
+
     // get and activate price schedule subscription
     price_sched *get_sched();
 
     // various accessors
-    pub_key      *get_account();
-    price_type    get_price_type() const;
-    int64_t       get_price_exponent() const;
-    uint32_t      get_version() const;
-    int64_t       get_price() const;
-    uint64_t      get_conf() const;
-    symbol_status get_status() const;
-    uint32_t      get_num_qt() const;
-    uint64_t      get_lamports() const;
-    int64_t       get_twap() const;
-    uint64_t      get_twac() const;
-    uint64_t      get_prev_slot() const;
-    int64_t       get_prev_price() const;
-    uint64_t      get_prev_conf() const;
+    pub_key       *get_account();
+    const pub_key *get_account() const;
+    price_type     get_price_type() const;
+    int64_t        get_price_exponent() const;
+    uint32_t       get_version() const;
+    int64_t        get_price() const;
+    uint64_t       get_conf() const;
+    symbol_status  get_status() const;
+    uint32_t       get_num_qt() const;
+    uint64_t       get_lamports() const;
+    int64_t        get_twap() const;
+    uint64_t       get_twac() const;
+    uint64_t       get_prev_slot() const;
+    int64_t        get_prev_price() const;
+    uint64_t       get_prev_conf() const;
 
     // get publishers
     unsigned get_num_publisher() const;
@@ -710,6 +718,9 @@ namespace pc
     // slot of last aggregate price
     uint64_t      get_pub_slot() const;
 
+    // output full set of data to json writer
+    void dump_json( json_wtr& wtr ) const;
+
   public:
 
     void set_price_type( price_type );
@@ -722,14 +733,17 @@ namespace pc
     void reset();
     void unsubscribe();
     void submit() override;
+    void on_response( rpc::upd_price * ) override;
     void on_response( rpc::get_account_info * ) override;
-    void on_response( rpc::program_subscribe * ) override;
+    void on_response( rpc::account_update * ) override;
     bool get_is_done() const override;
 
   private:
 
     typedef enum {
       e_subscribe, e_sent_subscribe, e_publish, e_error } state_t;
+
+    typedef std::vector<std::pair<std::string,int64_t>> txid_vec_t;
 
     template<class T> void update( T *res );
 
@@ -752,6 +766,7 @@ namespace pc
     rpc::get_account_info  areq_[1];
     rpc::upd_price         preq_[1];
     pc_price_t            *pptr_;
+    txid_vec_t             tvec_;
   };
 
   template<class T>

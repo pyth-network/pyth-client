@@ -51,7 +51,6 @@ class test_publish:
         'method':  'update_price',
         'params':{
           'account': self.account,
-          'price_type': 'price',
           'status': 'trading',
           'price': self.price,
           'conf': self.spread
