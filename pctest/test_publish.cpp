@@ -33,9 +33,6 @@ public:
   // have we received an on_init() callback yet
   bool get_is_init() const;
 
-  // get price from map
-  pc::price *get_price( const std::string& ) const;
-
   void teardown();
 
 private:
@@ -300,7 +297,7 @@ void test_publish::on_response( pc::price_sched *ptr, uint64_t sub_id )
       .end();
     // should work once publisher has been permissioned
   } else if ( !sym->get_is_ready_publish() ) {
-    PC_LOG_WRN( "not ready to publish next price - check pyth_tx connection")
+    PC_LOG_WRN( "not ready to publish next price - check rpc / pyth_tx connection")
       .add( "symbol", sym->get_symbol() )
       .add( "price_type", pc::price_type_to_str( sym->get_price_type() ) )
       .end();
@@ -331,6 +328,11 @@ std::string get_rpc_host()
   return "localhost";
 }
 
+std::string get_tx_host()
+{
+  return "localhost";
+}
+
 std::string get_key_store()
 {
   std::string dir = getenv("HOME");
@@ -349,15 +351,16 @@ int usage()
   std::cerr << "usage: test_publish " << std::endl;
   std::cerr << "  [-r <rpc_host (default " << get_rpc_host() << ")>]"
              << std::endl;
-  std::cerr << "  [-t <pyth_tx host (default " << get_rpc_host() << ")>]"
+  std::cerr << "  [-t <pyth_tx host (default " << get_tx_host() << ")>]"
              << std::endl;
   std::cerr << "  [-k <key_store_directory (default "
-            << get_key_store() << ">]" << std::endl;
+            << get_key_store() << ")>]" << std::endl;
   std::cerr << "  [-c <capture file>]" << std::endl;
   std::cout << "  [-l <log_file>]" << std::endl;
   std::cerr << "  [-m <commitment_level>]" << std::endl;
   std::cerr << "  [-n]" << std::endl;
   std::cerr << "  [-d]" << std::endl;
+  std::cerr << "  [-x]" << std::endl;
   return 1;
 }
 
@@ -366,12 +369,12 @@ int main(int argc, char** argv)
   // unpack options
   int opt = 0;
   pc::commitment cmt = pc::commitment::e_confirmed;
-  bool do_wait = true, do_debug = false;
+  bool do_wait = true, do_debug = false, do_tx = true;
   std::string cap_file, log_file;
   std::string rpc_host = get_rpc_host();
   std::string key_dir  = get_key_store();
-  std::string tx_host  = get_rpc_host();
-  while( (opt = ::getopt(argc,argv, "r:t:k:c:l:m:ndh" )) != -1 ) {
+  std::string tx_host  = get_tx_host();
+  while( (opt = ::getopt(argc,argv, "r:t:k:c:l:m:ndxh" )) != -1 ) {
     switch(opt) {
       case 'r': rpc_host = optarg; break;
       case 't': tx_host = optarg; break;
@@ -381,6 +384,7 @@ int main(int argc, char** argv)
       case 'm': cmt = pc::str_to_commitment(optarg); break;
       case 'n': do_wait = false; break;
       case 'd': do_debug = true; break;
+      case 'x': do_tx = false; break;
       default: return usage();
     }
   }
@@ -410,6 +414,7 @@ int main(int argc, char** argv)
   pc::manager mgr;
   mgr.set_rpc_host( rpc_host );
   mgr.set_tx_host( tx_host );
+  mgr.set_do_tx( do_tx );
   mgr.set_dir( key_dir );
   mgr.set_manager_sub( &sub );
   mgr.set_capture_file( cap_file );

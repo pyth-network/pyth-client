@@ -59,7 +59,7 @@ namespace pc
     void write_account( net_wtr& );
 
     // serialize to json
-    void write_json( json_wtr& );
+    void write_json( json_wtr& ) const;
 
   private:
 

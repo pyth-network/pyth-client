@@ -107,7 +107,7 @@ void attr_dict::write_account( net_wtr& wtr )
   }
 }
 
-void attr_dict::write_json( json_wtr& wtr )
+void attr_dict::write_json( json_wtr& wtr ) const
 {
   str vstr, kstr;
   for( unsigned id=1; id < avec_.size(); ++id ) {

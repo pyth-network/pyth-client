@@ -75,17 +75,33 @@ void user::parse_content( const char *, size_t )
 {
   str path;
   hsvr_.get_path( path );
+
+  http_response msg;
+
+  // whitelist
+  std::string const relpath{ path.str_, path.len_ };
+  if (
+    relpath != "/"
+    && relpath != "/dashboard.js"
+    && relpath != "/index.html"
+    && relpath != "/style.css"
+  ) {
+    msg.init( "404", "Not Found" );
+    msg.commit();
+    add_send( msg );
+    return;
+  }
+
   std::string cfile = sptr_->get_content_dir();
   if ( cfile.empty() ) {
     cfile += ".";
   }
-  cfile += std::string( path.str_, path.len_ );
-  if ( path == str( "/" ) ) {
+  cfile += relpath;
+  if ( relpath == "/" ) {
     cfile += "index.html";
   }
   mem_map mf;
   mf.set_file( cfile );
-  http_response msg;
   if ( mf.init() ) {
     msg.init( "200", "OK" );
     msg.add_hdr( "Content-Type", get_content_type( cfile ) );
@@ -161,6 +177,10 @@ void user::parse_request( uint32_t tok )
     parse_sub_price_sched( tok, itok );
   } else if ( mst == "get_product_list" ) {
     parse_get_product_list( itok );
+  } else if ( mst == "get_product" ) {
+    parse_get_product( tok, itok );
+  } else if ( mst == "get_all_products" ) {
+    parse_get_all_products( itok );
   } else {
     add_error( itok, PC_JSON_UNKNOWN_METHOD, "method not found" );
   }
@@ -192,7 +212,7 @@ void user::parse_upd_price( uint32_t tok, uint32_t itok )
       add_tail( itok );
     } else if ( !sptr->get_is_ready_publish() ) {
       add_error( itok, PC_JSON_NOT_READY,
-          "not ready to publish - check pyth_tx connection" );
+          "not ready to publish - check rpc / pyth_tx connection" );
     } else if ( !sptr->has_publisher() ) {
       add_error( itok, PC_JSON_MISSING_PERMS, "missing publish permission" );
     } else if ( sptr->get_is_err() ) {
@@ -284,6 +304,43 @@ void user::parse_get_product_list( uint32_t itok )
       jw_.pop();
     }
     jw_.pop();
+    jw_.pop();
+  }
+  jw_.pop();
+  add_tail( itok );
+}
+
+void user::parse_get_product( uint32_t tok, uint32_t itok )
+{
+  // unpack and verify parameters
+  uint32_t ptok = jp_.find_val( tok, "params" );
+  if ( ptok == 0 || jp_.get_type(ptok) != jtree::e_obj )
+    return add_invalid_params( itok );
+  uint32_t ntok = jp_.find_val( ptok, "account" );
+  if ( ntok == 0 )
+    return add_invalid_params( itok );
+  pub_key pkey;
+  pkey.init_from_text( jp_.get_str( ntok ) );
+  product *prod = sptr_->get_product( pkey );
+  if ( PC_UNLIKELY( !prod ) )
+    return add_unknown_symbol( itok );
+
+  // create result
+  add_header();
+  jw_.add_key( "result", json_wtr::e_obj );
+  prod->dump_json( jw_ );
+  jw_.pop();
+  add_tail( itok );
+}
+
+void user::parse_get_all_products( uint32_t itok )
+{
+  add_header();
+  jw_.add_key( "result", json_wtr::e_arr );
+  for( unsigned i=0; i != sptr_->get_num_product(); ++i ) {
+    product *prod = sptr_->get_product( i );
+    jw_.add_val( json_wtr::e_obj );
+    prod->dump_json( jw_ );
     jw_.pop();
   }
   jw_.pop();

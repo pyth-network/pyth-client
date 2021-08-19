@@ -151,7 +151,7 @@ bool request::get_is_recv() const
   return is_recv_;
 }
 
-void request::on_response( rpc::program_subscribe * )
+void request::on_response( rpc::account_update * )
 {
 }
 
@@ -319,7 +319,7 @@ void get_mapping::on_response( rpc::get_account_info *res )
   update( res );
 }
 
-void get_mapping::on_response( rpc::program_subscribe *res )
+void get_mapping::on_response( rpc::account_update *res )
 {
   if ( get_is_recv( )) {
     update( res );
@@ -1401,7 +1401,7 @@ void upd_test::on_response( rpc::upd_test *res )
   }
 }
 
-void upd_test::on_response( rpc::account_subscribe *res )
+void upd_test::on_response( rpc::account_update *res )
 {
   if ( res->get_is_err() ) {
     on_error_sub( res->get_err_msg(), this );
@@ -1674,6 +1674,11 @@ pub_key *product::get_account()
   return &acc_;
 }
 
+const pub_key *product::get_account() const
+{
+  return &acc_;
+}
+
 str product::get_symbol()
 {
   str sym;
@@ -1707,7 +1712,7 @@ void product::on_response( rpc::get_account_info *res )
   update( res );
 }
 
-void product::on_response( rpc::program_subscribe *res )
+void product::on_response( rpc::account_update *res )
 {
   if ( get_is_recv() ) {
     update( res );
@@ -1797,6 +1802,23 @@ price *product::get_price( price_type pt ) const
   return nullptr;
 }
 
+void product::dump_json( json_wtr& wtr ) const
+{
+  // assumes the json_wtr has already started an object structure
+  wtr.add_key( "account", *get_account() );
+  wtr.add_key( "attr_dict", json_wtr::e_obj );
+  write_json( wtr );
+  wtr.pop();
+  wtr.add_key( "price_accounts", json_wtr::e_arr );
+  for( unsigned i=0; i != get_num_price(); ++i ) {
+    wtr.add_val( json_wtr::e_obj );
+    price *ptr = get_price( i );
+    ptr->dump_json( wtr );
+    wtr.pop();
+  }
+  wtr.pop();
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // price
 
@@ -1816,6 +1838,7 @@ price::price( const pub_key& acc, product *prod )
   areq_->set_account( &apub_ );
   preq_->set_account( &apub_ );
   areq_->set_sub( this );
+  preq_->set_sub( this );
   size_t tlen = ZSTD_compressBound( sizeof(pc_price_t) );
   pptr_ = (pc_price_t*)new char[tlen];
   __builtin_memset( pptr_, 0, tlen );
@@ -1865,6 +1888,11 @@ bool price::get_attr( attr_id aid, str& val ) const
 }
 
 pub_key *price::get_account()
+{
+  return &apub_;
+}
+
+const pub_key *price::get_account() const
 {
   return &apub_;
 }
@@ -1946,7 +1974,14 @@ uint64_t price::get_pub_slot() const
 
 bool price::get_is_ready_publish() const
 {
-  return st_ == e_publish && get_manager()->get_is_tx_connect();
+  if ( st_ != e_publish )
+    return false;
+  manager *cptr = get_manager();
+  if ( cptr->get_do_tx() ) {
+    return cptr->get_is_tx_connect();
+  } else {
+    return cptr->has_status( PC_PYTH_RPC_CONNECTED | PC_PYTH_HAS_BLOCK_HASH );
+  }
 }
 
 void price::reset()
@@ -2006,9 +2041,34 @@ bool price::update(
     return false;
   }
   manager *mgr = get_manager();
-  preq_->set_price( price, conf, st, mgr->get_slot(), is_agg );
+  const uint64_t slot = mgr->get_slot();
+  preq_->set_price( price, conf, st, slot, is_agg );
   preq_->set_block_hash( mgr->get_recent_block_hash() );
-  mgr->submit( preq_ );
+  if ( mgr->get_do_tx() )
+    mgr->submit( preq_ );
+  else {
+    get_rpc_client()->send( preq_ );
+    tvec_.emplace_back( std::string( 100, '\0' ), preq_->get_sent_time() );
+    preq_->get_signature()->enc_base58( tvec_.back().first );
+    PC_LOG_DBG( "sent price update transaction" )
+      .add( "price_account", *get_account() )
+      .add( "product_account", *prod_->get_account() )
+      .add( "symbol", get_symbol() )
+      .add( "price_type", price_type_to_str( get_price_type() ) )
+      .add( "sig", tvec_.back().first )
+      .add( "pub_slot", slot )
+      .end();
+    if ( PC_UNLIKELY( tvec_.size() >= 100 ) ) {
+      PC_LOG_WRN( "too many unacked price update transactions" )
+        .add( "price_account", *get_account() )
+        .add( "product_account", *prod_->get_account() )
+        .add( "symbol", get_symbol() )
+        .add( "price_type", price_type_to_str( get_price_type() ) )
+        .add( "num_txid", tvec_.size() )
+        .end();
+      tvec_.erase( tvec_.begin(), tvec_.begin() + 50 );
+    }
+  }
   inc_sent();
   return true;
 }
@@ -2024,13 +2084,37 @@ void price::submit()
   }
 }
 
+bool price::has_unacked_updates() const
+{
+  return ! tvec_.empty();
+}
+
+void price::on_response( rpc::upd_price *res )
+{
+  std::string txid = res->get_ack_signature().as_string();
+  const auto it = std::find_if( tvec_.begin(), tvec_.end(),
+      [&] ( const std::pair<std::string,int64_t>& m ) { return m.first == txid; } );
+  if ( it == tvec_.end() )
+    return;
+  const int64_t ack_dur = res->get_recv_time() - it->second;
+  tvec_.erase( it );
+  PC_LOG_DBG( "received price update transaction ack" )
+    .add( "price_account", *get_account() )
+    .add( "product_account", *prod_->get_account() )
+    .add( "symbol", get_symbol() )
+    .add( "price_type", price_type_to_str( get_price_type() ) )
+    .add( "sig", txid )
+    .add( "round_trip_time(ms)", 1e-6 * ack_dur )
+    .end();
+}
+
 void price::on_response( rpc::get_account_info *res )
 {
   set_is_recv( true );
   update( res );
 }
 
-void price::on_response( rpc::program_subscribe *res )
+void price::on_response( rpc::account_update *res )
 {
   if ( get_is_recv() ) {
     update( res );
@@ -2188,6 +2272,36 @@ uint64_t price::get_publisher_slot( unsigned i ) const
 symbol_status price::get_publisher_status( unsigned i ) const
 {
   return (symbol_status)pptr_->comp_[i].agg_.status_;
+}
+
+void price::dump_json( json_wtr& wtr ) const
+{
+  // assumes the json_wtr has already started an object structure
+  wtr.add_key( "account", *get_account() );
+  wtr.add_key( "price_type", price_type_to_str( get_price_type() ));
+  wtr.add_key( "price_exponent", get_price_exponent() );
+  wtr.add_key( "status", symbol_status_to_str( get_status() ) );
+  wtr.add_key( "price", get_price() );
+  wtr.add_key( "conf", get_conf() );
+  wtr.add_key( "twap", get_twap() );
+  wtr.add_key( "twac", get_twac() );
+  wtr.add_key( "valid_slot", get_valid_slot() );
+  wtr.add_key( "pub_slot", get_pub_slot() );
+  wtr.add_key( "prev_slot", get_prev_slot() );
+  wtr.add_key( "prev_price", get_prev_price() );
+  wtr.add_key( "prev_conf", get_prev_conf() );
+  wtr.add_key( "publisher_accounts", json_wtr::e_arr );
+  for( unsigned i=0; i != get_num_publisher(); ++i ) {
+    wtr.add_val( json_wtr::e_obj );
+    wtr.add_key( "account", *get_publisher( i ) );
+    wtr.add_key( "status", symbol_status_to_str(
+          get_publisher_status(i) ) );
+    wtr.add_key( "price", get_publisher_price(i) );
+    wtr.add_key( "conf", get_publisher_conf(i) );
+    wtr.add_key( "slot", get_publisher_slot(i) );
+    wtr.pop();
+  }
+  wtr.pop();
 }
 
 ///////////////////////////////////////////////////////////////////////////

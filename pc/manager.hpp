@@ -50,7 +50,7 @@ namespace pc
                   public rpc_sub,
                   public rpc_sub_i<rpc::get_slot>,
                   public rpc_sub_i<rpc::get_recent_block_hash>,
-                  public rpc_sub_i<rpc::program_subscribe>
+                  public rpc_sub_i<rpc::account_update>
   {
   public:
 
@@ -64,6 +64,10 @@ namespace pc
     // pyth transaction proxy host
     void set_tx_host( const std::string& );
     std::string get_tx_host() const;
+
+    // turn on/off ws subscriptions
+    void set_do_ws( bool );
+    bool get_do_ws() const;
 
     // turn on/off tx proxy mode
     void set_do_tx( bool );
@@ -166,9 +170,10 @@ namespace pc
     // rpc callbacks
     void on_response( rpc::get_slot * ) override;
     void on_response( rpc::get_recent_block_hash * ) override;
-    void on_response( rpc::program_subscribe * ) override;
+    void on_response( rpc::account_update * ) override;
     void set_status( int );
     get_mapping *get_last_mapping() const;
+    bool get_is_rpc_send() const;
 
   private:
 
@@ -235,6 +240,7 @@ namespace pc
     kpx_vec_t    kvec_;     // symbol price scheduling
     bool         wait_conn_;// waiting on connection
     bool         do_cap_;   // do capture flag
+    bool         do_ws_;    // do ws subscriptions
     bool         do_tx_;    // do tx proxy connectivity
     bool         is_pub_;   // is publishing mode
     capture      cap_;      // aggregate price capture
@@ -245,6 +251,7 @@ namespace pc
     rpc::get_slot              sreq_[1]; // slot subscription
     rpc::get_recent_block_hash breq_[1]; // block hash request
     rpc::program_subscribe     preq_[1]; // program account subscription
+    rpc::get_program_accounts  areq_[1]; // alternative to program_subscribe
   };
 
   inline bool manager::get_is_tx_connect() const
