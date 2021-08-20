@@ -61,6 +61,7 @@ manager::manager()
   pub_int_( PC_PUB_INTERVAL ),
   wait_conn_( false ),
   do_cap_( false ),
+  do_ws_( true ),
   do_tx_( true ),
   is_pub_( false ),
   cmt_( commitment::e_confirmed ),
