@@ -8,10 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [upcoming] - TBD
 - [pyth_admin] Separate out admin commands into new binary.
 - [pyth] Consolidate CLI argument parsing.
-- [pyth] Remove get_pub_key command and update docs/scripts.
-- [pyth] Remove transfer and get_balance commands.
+- [pyth] Remove get_pub_key command and update docs/scripts - these should by run using the solana CLI tool.
+- [pyth] Remove transfer and get_balance command line commands - these should by run using the solana CLI tool.
 
-## [2.3] - 2021-08-18]
+## [2.3] - 2021-08-18
 ### Security update
 - [pythd] add whitelist for dashboard static files to http server to prevent directory traversal
 
