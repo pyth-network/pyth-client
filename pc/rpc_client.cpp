@@ -123,7 +123,9 @@ net_connect *rpc_client::get_http_conn() const
 void rpc_client::set_ws_conn( net_connect *wptr )
 {
   wptr_ = wptr;
-  wptr_->set_net_parser( &wp_ );
+  if ( wptr_ ) {
+    wptr_->set_net_parser( &wp_ );
+  }
   wp_.set_net_connect( wptr_ );
 }
 
@@ -171,11 +173,14 @@ void rpc_client::send( rpc_request *rptr )
     msg.add_hdr( "Content-Type", "application/json" );
     msg.commit( jw );
     hptr_->add_send( msg );
-  } else {
+  } else if ( wptr_ ) {
     // submit websocket message
     ws_wtr msg;
     msg.commit( ws_wtr::text_id, jw, true );
     wptr_->add_send( msg );
+  }
+  else {
+    PC_LOG_WRN( "no ws connection to send msg" ).end();
   }
 }
 

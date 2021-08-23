@@ -45,7 +45,8 @@ void manager_sub::on_add_symbol( manager *, price * )
 // manager
 
 manager::manager()
-: thost_( PC_RPC_HOST ),
+: wconn_{ nullptr },
+  thost_( PC_RPC_HOST ),
   rhost_( PC_RPC_HOST ),
   sub_( nullptr ),
   status_( 0 ),
@@ -260,7 +261,12 @@ void manager::teardown()
 
   // destroy rpc connections
   hconn_.close();
-  wconn_.close();
+  if ( wconn_ ) {
+    wconn_->close();
+    delete wconn_;
+    wconn_ = nullptr;
+    clnt_.set_ws_conn( nullptr );
+  }
 }
 
 bool manager::init()
@@ -305,15 +311,18 @@ bool manager::init()
   hconn_.set_host( rhost );
   hconn_.set_net_loop( &nl_ );
   clnt_.set_http_conn( &hconn_ );
-  wconn_.set_port( wport );
-  wconn_.set_host( rhost );
-  wconn_.set_net_loop( &nl_ );
-  clnt_.set_ws_conn( &wconn_ );
+  if ( get_do_ws() ) {
+    wconn_ = new ws_connect{};
+    wconn_->set_port( wport );
+    wconn_->set_host( rhost );
+    wconn_->set_net_loop( &nl_ );
+    clnt_.set_ws_conn( wconn_ );
+  }
   if ( !hconn_.init() ) {
     return set_err_msg( hconn_.get_err_msg() );
   }
-  if ( !wconn_.init() ) {
-    return set_err_msg( wconn_.get_err_msg() );
+  if ( wconn_ && !wconn_->init() ) {
+    return set_err_msg( wconn_->get_err_msg() );
   }
   // connect to pyth_tx server
   if ( do_tx_ ) {
@@ -358,7 +367,7 @@ bool manager::get_is_tx_send() const
 
 bool manager::get_is_rpc_send() const
 {
-  return hconn_.get_is_send() || wconn_.get_is_send();
+  return hconn_.get_is_send() || ( wconn_ && wconn_->get_is_send() );
 }
 
 bool manager::bootstrap()
@@ -420,7 +429,9 @@ void manager::poll( bool do_wait )
   } else {
     if ( has_status( PC_PYTH_RPC_CONNECTED ) ) {
       hconn_.poll();
-      wconn_.poll();
+      if ( wconn_ ) {
+        wconn_->poll();
+      }
     }
     if ( do_tx_ ) {
       tconn_.poll();
@@ -476,7 +487,7 @@ void manager::poll( bool do_wait )
   // submit new quotes while connected
   if ( has_status( PC_PYTH_RPC_CONNECTED ) &&
        !hconn_.get_is_err() &&
-       !wconn_.get_is_err() ) {
+       ( !wconn_ || !wconn_->get_is_err() ) ) {
     poll_schedule();
   } else {
     reconnect_rpc();
@@ -506,15 +517,15 @@ void manager::reconnect_rpc()
   if ( hconn_.get_is_wait() ) {
     hconn_.check();
   }
-  if ( wconn_.get_is_wait() ) {
-    wconn_.check();
+  if ( wconn_ && wconn_->get_is_wait() ) {
+    wconn_->check();
   }
-  if ( hconn_.get_is_wait() || wconn_.get_is_wait() ) {
+  if ( hconn_.get_is_wait() || ( wconn_ && wconn_->get_is_wait() ) ) {
     return;
   }
 
   // check for successful (re)connect
-  if ( !hconn_.get_is_err() && !wconn_.get_is_err() ) {
+  if ( !hconn_.get_is_err() && ( !wconn_ || !wconn_->get_is_err() ) ) {
     PC_LOG_INF( "rpc_connected" ).end();
     set_status( PC_PYTH_RPC_CONNECTED );
 
@@ -613,7 +624,9 @@ void manager::reconnect_rpc()
   ctimeout_ = std::min( ctimeout_, PC_RECONNECT_TIMEOUT );
   wait_conn_ = true;
   hconn_.init();
-  wconn_.init();
+  if ( wconn_ ) {
+    wconn_->init();
+  }
 }
 
 void manager::log_disconnect()
@@ -626,11 +639,11 @@ void manager::log_disconnect()
       .end();
     return;
   }
-  if ( wconn_.get_is_err() ) {
+  if ( wconn_ && wconn_->get_is_err() ) {
     PC_LOG_ERR( "rpc_websocket_reset" )
-      .add( "error", wconn_.get_err_msg() )
+      .add( "error", wconn_->get_err_msg() )
       .add( "host", rhost_ )
-      .add( "port", wconn_.get_port() )
+      .add( "port", wconn_->get_port() )
       .end();
     return;
   }

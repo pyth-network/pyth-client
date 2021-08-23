@@ -215,7 +215,7 @@ namespace pc
 
     net_loop     nl_;       // epoll loop
     tcp_connect  hconn_;    // rpc http connection
-    ws_connect   wconn_;    // rpc websocket sonnection
+    ws_connect  *wconn_;    // rpc websocket sonnection
     tcp_listen   lsvr_;     // listening socket
     rpc_client   clnt_;     // rpc api
     tx_connect   tconn_;    // tx proxy connection
