@@ -34,7 +34,7 @@ Once permissioned, you need two additional public keys in the key-store. The id 
 Use the init_key_store.sh script to initialize these account keys:
 
 ```
-KENV=devnet  # or testnet, prodbeta
+KENV=devnet  # or testnet, mainnet
 
 # initialize keys for solana devnet
 ../pctest/init_key_store.sh $KENV $KDIR

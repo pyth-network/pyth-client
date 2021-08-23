@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [upcoming] - TBD
+- [config] Replaced `prodbeta` with current `mainnet` keys in the `init_key_store.sh`
+- Break out admin-only request/rpc classes into separate files.
 - [pyth_admin] Separate out admin commands into new binary.
 - [pyth] Consolidate CLI argument parsing.
 - [pyth] Remove get_pub_key command and update docs/scripts - these should by run using the solana CLI tool.
