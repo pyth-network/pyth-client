@@ -15,9 +15,9 @@ check()
 KENV=$1
 KDIR=$2
 case $KENV in
-  prodbeta)
-    MAP_KEY=CUK2JnnLRMtJon3kAUXcgVc8wDhFk96HmNTssnaNRbXQ
-    PGM_KEY=9SfxAUWNQKzx85jaivNhhUKG5JTZZmkFydjmdkKakjMo
+  mainnet)
+    MAP_KEY=AHtgzX45WTKfkPG53L6WYhGEXwQkN1BVknET3sVsLL8J
+    PGM_KEY=FsJ3A3u2vn5cTVofAjvy6y5kwABJAqYWpe4975bi2epH
     ;;
   devnet)
     MAP_KEY=BmA9Z6FjioHJPpjT39QazZyhDRUdZy2ezwx4GiDdE2u2
@@ -28,7 +28,7 @@ case $KENV in
     PGM_KEY=8tfDNiaEyrV6Q1U4DEXrEigs9DoDtkugzFbybENEbCDz
     ;;
   *)
-    echo "Unknown environment. Please use: prodbeta, devnet, testnet"
+    echo "Unknown environment. Please use: mainnet, devnet, testnet"
     exit 1;
 esac
 if [ -z "$KDIR" ] ; then
