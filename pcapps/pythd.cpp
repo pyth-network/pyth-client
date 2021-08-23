@@ -62,6 +62,9 @@ int usage()
   std::cerr << "  -x" << std::endl;
   std::cerr << "     Disable connection to pyth_tx transaction proxy server"
                "\n" << std::endl;
+  std::cerr << "  -z" << std::endl;
+  std::cerr << "     Disable WebSocket connection to Solana RPC node"
+               "\n" << std::endl;
   std::cerr << "  -m <commitment_level>" << std::endl;
   std::cerr << "     Subscription commitment level: processed, confirmed or "
                "finalized\n" << std::endl;
@@ -98,8 +101,8 @@ int main(int argc, char **argv)
   std::string tx_host  = get_tx_host();
   int pyth_port = get_port();
   int opt = 0;
-  bool do_wait = true, do_tx = true, do_debug = false;
-  while( (opt = ::getopt(argc,argv, "r:t:p:k:w:c:l:m:dnxh" )) != -1 ) {
+  bool do_wait = true, do_tx = true, do_ws = true, do_debug = false;
+  while( (opt = ::getopt(argc,argv, "r:t:p:k:w:c:l:m:dnxhz" )) != -1 ) {
     switch(opt) {
       case 'r': rpc_host = optarg; break;
       case 't': tx_host = optarg; break;
@@ -111,6 +114,7 @@ int main(int argc, char **argv)
       case 'm': cmt = str_to_commitment(optarg); break;
       case 'n': do_wait = false; break;
       case 'x': do_tx = false; break;
+      case 'z': do_ws = false; break;
       case 'd': do_debug = true; break;
       default: return usage();
     }
@@ -138,6 +142,7 @@ int main(int argc, char **argv)
   mgr.set_content_dir( cnt_dir );
   mgr.set_capture_file( cap_file );
   mgr.set_do_tx( do_tx );
+  mgr.set_do_ws( do_ws );
   mgr.set_do_capture( !cap_file.empty() );
   mgr.set_commitment( cmt );
   if ( !mgr.init() ) {
