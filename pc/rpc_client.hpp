@@ -71,8 +71,8 @@ namespace pc
     ~rpc_client();
 
     // rpc http connection
-    void set_http_conn( net_connect * );
-    net_connect *get_http_conn() const;
+    void set_http_conn( tcp_connect * );
+    tcp_connect *get_http_conn() const;
 
     // rpc web socket connection
     void set_ws_conn( net_connect * );
@@ -128,7 +128,7 @@ namespace pc
     typedef std::vector<char>         acc_buf_t;
     typedef hash_map<trait>           sub_map_t;
 
-    net_connect *hptr_;
+    tcp_connect *hptr_;
     net_connect *wptr_;
     rpc_http     hp_;    // http parser wrapper
     rpc_ws       wp_;    // websocket parser wrapper
