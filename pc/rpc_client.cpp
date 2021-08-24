@@ -109,13 +109,13 @@ rpc_client::~rpc_client()
   }
 }
 
-void rpc_client::set_http_conn( net_connect *hptr )
+void rpc_client::set_http_conn( tcp_connect *hptr )
 {
   hptr_ = hptr;
   hptr_->set_net_parser( &hp_ );
 }
 
-net_connect *rpc_client::get_http_conn() const
+tcp_connect *rpc_client::get_http_conn() const
 {
   return hptr_;
 }
@@ -170,6 +170,7 @@ void rpc_client::send( rpc_request *rptr )
     // submit http POST request
     http_request msg;
     msg.init( "POST", "/" );
+    msg.add_hdr( "Host", hptr_->get_host() );
     msg.add_hdr( "Content-Type", "application/json" );
     msg.commit( jw );
     hptr_->add_send( msg );
