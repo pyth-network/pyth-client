@@ -630,6 +630,7 @@ bool rpc::account_subscribe::notify( const jtree& jt )
 
 rpc::program_subscribe::program_subscribe()
 : account_update{}
+, pgm_{ nullptr }
 {
 }
 
@@ -686,13 +687,20 @@ bool rpc::program_subscribe::notify( const jtree& jt )
 // get_program_accounts
 
 rpc::get_program_accounts::get_program_accounts()
-: pgm_{ nullptr }
+: account_update{}
+, pgm_{ nullptr }
+, acct_type_{ 0 }
 {
 }
 
 void rpc::get_program_accounts::set_program( pub_key *pkey )
 {
   pgm_ = pkey;
+}
+
+void rpc::get_program_accounts::set_account_type( uint32_t const acct_type )
+{
+  acct_type_ = acct_type;
 }
 
 void rpc::get_program_accounts::request( json_wtr& msg )
@@ -703,6 +711,17 @@ void rpc::get_program_accounts::request( json_wtr& msg )
   msg.add_val( json_wtr::e_obj );
   msg.add_key( "encoding", "base64+zstd" );
   msg.add_key( "commitment", commitment_to_str( cmt_ ) );
+  if ( acct_type_ ) {
+    msg.add_key( "filters", json_wtr::e_arr );
+    msg.add_val( json_wtr::e_obj );
+    msg.add_key( "memcmp", json_wtr::e_obj );
+    msg.add_key( "offset", offsetof( pc_acc_t, type_ ) );
+    msg.add_key_enc_base58(
+      "bytes", str( ( char* )&acct_type_, sizeof( acct_type_ ) ) );
+    msg.pop();
+    msg.pop();
+    msg.pop();
+  }
   msg.add_key( "withContext", json_wtr::jtrue{} );
   msg.pop();
   msg.pop();

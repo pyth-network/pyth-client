@@ -378,6 +378,7 @@ namespace pc
     public:
       // parameters
       void set_program( pub_key * );
+      void set_account_type( uint32_t );
 
       get_program_accounts();
       void request( json_wtr& ) override;
@@ -387,6 +388,7 @@ namespace pc
 
     private:
       pub_key    *pgm_;
+      uint32_t    acct_type_;
     };
 
     // get all (pyth) transactions in a slot
