@@ -1471,6 +1471,12 @@ void json_wtr::add_key_verbatim( str key, str val )
   add( val );
 }
 
+void json_wtr::add_key_enc_base58( str key, str val )
+{
+  add_key_only( key );
+  add_enc_base58( val );
+}
+
 void json_wtr::add_key( str key, type_t t )
 {
   add_key_only( key );

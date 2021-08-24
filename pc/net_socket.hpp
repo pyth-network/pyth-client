@@ -446,6 +446,7 @@ namespace pc
     void add_key( str key, jtrue );
     void add_key( str key, jfalse );
     void add_key_verbatim( str key, str );
+    void add_key_enc_base58( str key, str val );
 
     // add array value
     void add_val( str val );
