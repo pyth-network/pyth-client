@@ -10,7 +10,6 @@
 extern "C" {
 #endif
 
-// quote info for aggregate price calc
 typedef struct pc_qset
 {
   pd_t      iprice_[PC_COMP_SIZE];
@@ -103,8 +102,8 @@ static void upd_ema(
     pd_add( decay, decay, one, qs->fact_ );
 
     // compute numer/denom and new value from decay factor
-    pd_new_scale( numer, ptr->numer_, PD_EMA_EXPO );
-    pd_new_scale( denom, ptr->denom_, PD_EMA_EXPO );
+    pd_load( numer, ptr->numer_ );
+    pd_load( denom, ptr->denom_ );
     pd_mul( numer, numer, decay );
     pd_mul( wval, val, cwgt );
     pd_add( numer, numer, wval, qs->fact_ );
@@ -115,11 +114,9 @@ static void upd_ema(
 
   // adjust and store results
   pd_adjust( val, qs->expo_, qs->fact_ );
-  pd_adjust( numer, PD_EMA_EXPO, qs->fact_ );
-  pd_adjust( denom, PD_EMA_EXPO, qs->fact_ );
   ptr->val_   = val->v_;
-  ptr->numer_ = numer->v_;
-  ptr->denom_ = denom->v_;
+  pd_store( &ptr->numer_, numer );
+  pd_store( &ptr->denom_, denom );
 }
 
 static inline void upd_twap(

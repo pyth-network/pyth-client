@@ -10,6 +10,9 @@ extern "C" {
 #define PD_EMA_DECAY   (-117065) // 1e9*-log(2)/5921
 #define PC_FACTOR_SIZE       18
 
+#define EXP_BITS 5
+#define EXP_MASK ( ( 1L << EXP_BITS ) - 1 )
+
 #define pd_new( n,v,e ) {(n)->v_=v;(n)->e_=e;}
 #define pd_set( r,n ) (r)[0] = (n)[0]
 #define pd_new_scale(n,v,e) {(n)->v_=v;(n)->e_=e;pd_scale(n);}
@@ -27,6 +30,39 @@ static void pd_scale( pd_t *n )
   int64_t v = neg ? -n->v_ : n->v_; // make v positive for loop condition
   for( ; v >= ( 1L << 28 ); v /= 10L, ++n->e_ );
   n->v_ = neg ? -v : v;
+}
+
+static bool pd_store( int64_t *r, pd_t const *n )
+{
+  int64_t v = n->v_;
+  int32_t e = n->e_;
+  while ( v <  -( 1L << 58 ) ) {
+    v /= 10;
+    ++e;
+  }
+  while ( v > ( 1L << 58 ) - 1 ) {
+    v /= 10;
+    ++e;
+  }
+  while ( e < -( 1 << ( EXP_BITS - 1 ) ) ) {
+    v /= 10;
+    ++e;
+  }
+  while ( e > ( 1 << ( EXP_BITS - 1 ) ) - 1 ) {
+    v *= 10;
+    if ( v < -( 1L << 58 ) || v > ( 1L << 58 ) - 1 ) {
+      return false;
+    }
+    --e;
+  }
+  *r = ( v << EXP_BITS ) | ( e & EXP_MASK );
+  return true;
+}
+
+void pd_load( pd_t *r, int64_t const n )
+{
+  pd_new( r, n >> EXP_BITS, ( ( n & EXP_MASK ) << 59 ) >> 59 );
+  pd_scale( r );
 }
 
 static void pd_adjust( pd_t *n, int e, const int64_t *p )
