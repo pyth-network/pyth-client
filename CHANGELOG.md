@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [pyth] Consolidate CLI argument parsing.
 - [pyth] Remove get_pub_key command and update docs/scripts - these should by run using the solana CLI tool.
 - [pyth] Remove transfer and get_balance command line commands - these should by run using the solana CLI tool.
+- [pyth] add Host header to RPC requests
+- [pyth] add account filtering to get_program_accounts
+- [pyth] add option to disable ws connection to RPC node
+- [docker] add gcc-multilib package
 
 ## [2.3.1] - 2021-08-20
 - Fixed uninitialized variable in `manager.cpp`
