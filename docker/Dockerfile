@@ -3,7 +3,7 @@ ARG SOLANA_VERSION
 FROM solanalabs/solana:v${SOLANA_VERSION}
 
 RUN apt-get update
-RUN apt-get install -y cmake curl g++ git libzstd1 libzstd-dev sudo zlib1g zlib1g-dev
+RUN apt-get install -y cmake curl g++ gcc-multilib git libzstd1 libzstd-dev sudo zlib1g zlib1g-dev
 
 # Grant sudo access to pyth user
 RUN echo "pyth ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
