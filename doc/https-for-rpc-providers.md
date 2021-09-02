@@ -18,8 +18,9 @@ This lack will be remedied in a future release but in order to address the probl
 1. Make sure `nginx` is installed on your machine, in your VM or, in your container.
 2. Clone a copy of this repository or copy the `nginx-configs` directory to the machine in question.
 3. `cd doc/nginx-configs`
-4. Replace `127.0.0.1` with the appropriate DNS resolver for your network, if necessary.  This can usually be retrived via `grep nameserver /etc/resolv.conf`.
-5. You can then run `nginx` as with the command `nginx -c $(pwd)/standalone-dev-nginx.conf -g 'daemon off;'`
+4. In `standalone-dev-nginx.conf` replace `127.0.0.1` with the appropriate DNS resolver for your network, if necessary.  This can usually be retrived via `grep nameserver /etc/resolv.conf`.
+5. For the RPC provider(s) which you are using, be sure to replace `YOUR_SERVER` and `REPLACE_ME_WITH_YOUR_AUTH_TOKEN` in the appropriate configuration file.
+6. You can then run `nginx` as with the command `nginx -c $(pwd)/standalone-dev-nginx.conf -g 'daemon off;'`
 
 An example follows.
 
