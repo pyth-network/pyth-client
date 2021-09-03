@@ -7,10 +7,10 @@ This lack will be remedied in a future release but in order to address the probl
 | Port number | Provider | protocol notes |
 | ---- | ------------ | ------------------------------- |
 | 7800 | Blockdaemon | websocket only |
-| 7801 | Figment | websocket only |
-| 7802 | TritonOne | websocket only |
 | 7900 | Blockdaemon | HTTP RPC and websocket |
+| 7801 | Figment | websocket only |
 | 7901 | Figment | HTTP RPC and websocket |
+| 7802 | TritonOne | websocket only |
 | 7902 | TritonOne | HTTP RPC and websocket |
 
 ## Running `nginx` as a standalone, unprivileged process
@@ -37,15 +37,40 @@ There are a few caveats.
 1. On most Linux distributions, the error shown above about `/var/log/nginx/error_log` failing to open is normal.  It's a hardcoded default for most builds.  It can be safely ignored.
 2. The full, absolute path must be provided for the configuration file.  Any relative paths are assumed to be relative to `nginx`'s application data directory (usually `/usr/share/nginx/...`).
 
-You can test any of the HTTP RPC interfaces for the providers with the following command line.  Replace `<PORT NUMBER>` with one of the port numbers in the table above.
+You can test any of the HTTP RPC interface for the providers with the following command line.  Replace `<PORT NUMBER>` with one of the port numbers in the table above.
 
 `curl http://localhost:<PORT NUMBER> -X POST -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","id":1,"method":"getHealth"}'`
 
-An example follows.
+An example of the output expected:
 
 ```
 [pyth@pyth-dev-vm nginx-configs]$ curl http://localhost:7901 -X POST -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","id":1,"method":"getHealth"}'
 {"jsonrpc":"2.0","result":"ok","id":1}
+[pyth@pyth-dev-vm nginx-configs]$ 
+```
+
+You can test any of the websocket interface for the providers with the following command line.  Replace `<PORT NUMBER>` with one of the port numbers in the table above.
+
+`curl --include --no-buffer --header "Connection: Upgrade" --header "Upgrade: websocket" --header "Host: api.mainnet-beta.solana.com" --header "Origin: https://api.mainnet-beta.solana.com" --header "Sec-WebSocket-Key: abcdefghijklmnop==" --header "Sec-WebSocket-Version: 13" http://localhost:<PORT NUMBER>/`
+
+An example to test the websocket interface:
+
+```
+[pyth@pyth-dev-vm nginx-configs]$ curl --include \
+    --no-buffer \
+    --header "Connection: Upgrade" \
+    --header "Upgrade: websocket" \
+    --header "Host: api.mainnet-beta.solana.com" \
+    --header "Origin: https://api.mainnet-beta.solana.com" \
+    --header "Sec-WebSocket-Key: abcdefghijklmnop==" \
+    --header "Sec-WebSocket-Version: 13" \
+    http://localhost:7801/
+HTTP/1.1 101 Switching Protocols
+upgrade: websocket
+connection: Upgrade
+sec-websocket-accept: FX/kNn6LL8gnqQea2uak6E6sPOU=
+
+^C
 [pyth@pyth-dev-vm nginx-configs]$ 
 ```
 
