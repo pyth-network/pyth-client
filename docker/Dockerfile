@@ -3,7 +3,7 @@ ARG SOLANA_VERSION
 FROM solanalabs/solana:v${SOLANA_VERSION}
 
 RUN apt-get update
-RUN apt-get install -y cmake curl g++ gcc-multilib git libzstd1 libzstd-dev sudo zlib1g zlib1g-dev
+RUN apt-get install -y cmake curl g++ gcc-multilib git libzstd1 libzstd-dev python3-pytest sudo zlib1g zlib1g-dev
 
 # Grant sudo access to pyth user
 RUN echo "pyth ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
@@ -16,7 +16,11 @@ COPY --chown=pyth:pyth ${GITHUB_WORKSPACE} pyth-client/
 
 RUN cd pyth-client && mkdir build && cd build && cmake .. && make && ctest
 
-RUN echo "\nexport PATH=\$PATH:$HOME/pyth-client/build" >> .bashrc
+RUN echo "\nexport PATH=\$PATH:\$HOME/pyth-client/build" >> .profile
+
+RUN echo "\nexport PYTHONPATH=\${PYTHONPATH:+\${PYTHONPATH}:}\$HOME/pyth-client" >> .profile
+
+RUN /bin/bash -l -c "pytest-3 --pyargs pyth"
 
 # Install Rust
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain none
