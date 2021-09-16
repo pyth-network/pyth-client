@@ -12,6 +12,8 @@ This lack will be remedied in a future release but in order to address the probl
 | 7901 | Figment | HTTP RPC and websocket |
 | 7802 | TritonOne | websocket only |
 | 7902 | TritonOne | HTTP RPC and websocket |
+| 7803 | BisonTrails | websocket only |
+| 7903 | BisonTrails | HTTP RPC and websocket |
 
 ## Running `nginx` as a standalone, unprivileged process
 
