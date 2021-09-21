@@ -27,9 +27,12 @@ def _get_test_class():
   for test_file in glob(test_files):
     test_id = os.path.basename(test_file).rsplit('.')[0]
 
-    def test_func(self):
-      self.run_test(test_id)
-    setattr(TestQset, 'test_%s' % (test_id,), test_func)
+    def get_test_func(test_id):
+      def test_func(self):
+        self.run_test(test_id)
+        return test_func
+
+    setattr(TestQset, 'test_%s' % (test_id,), get_test_func(test_id))
 
   return TestQset
 
