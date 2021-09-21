@@ -301,6 +301,7 @@ static void upd_aggregate( pc_price_t *ptr, uint64_t slot )
     int64_t slot_diff = slot - iptr->agg_.pub_slot_;
     if ( iptr->agg_.status_ == PC_STATUS_TRADING &&
          iptr->agg_.conf_ != 0UL &&
+         iptr->agg_.price_ != 0L &&
          slot_diff >= 0 && slot_diff <= PC_MAX_SEND_LATENCY ) {
       int64_t ipx = iptr->agg_.price_;
       uint32_t j = numa++;
