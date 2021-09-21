@@ -29,7 +29,7 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --de
 RUN mkdir solana && cp -a /usr/bin/sdk solana
 
 # Build the program
-RUN PATH=$PATH:$HOME/.cargo/bin && cd pyth-client/program && make
+RUN PATH=$PATH:$HOME/.cargo/bin && cd pyth-client/program && make V=1
 
 # Print hash of the program
 RUN sha256sum -b pyth-client/target/oracle.so
