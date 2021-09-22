@@ -30,14 +30,6 @@ static bool valid_writable_account( SolParameters *prm,
          ka->data_len >= dlen;
 }
 
-static bool valid_readable_account( SolParameters *prm,
-                                    SolAccountInfo *ka,
-                                    uint64_t dlen )
-{
-  return SolPubkey_same( ka->owner, prm->program_id ) &&
-         ka->data_len >= dlen;
-}
-
 static uint64_t init_mapping( SolParameters *prm, SolAccountInfo *ka )
 {
   // Verify that the new account is signed and writable, with correct
