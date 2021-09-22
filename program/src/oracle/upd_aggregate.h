@@ -15,9 +15,9 @@ extern "C" {
 
 static void pd_scale( pd_t *n )
 {
-  int neg = n->v_ < 0L;
-  uint64_t v = neg?-n->v_:n->v_;
-  for( ;v&0xfffffffff0000000UL; v/= 10UL, ++n->e_ );
+  int const neg = n->v_ < 0L;
+  int64_t v = neg ? -n->v_ : n->v_; // make v positive for loop condition
+  for( ; v >= ( 1L << 28 ); v /= 10L, ++n->e_ );
   n->v_ = neg ? -v : v;
 }
 
