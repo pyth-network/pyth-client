@@ -141,7 +141,7 @@ static uint64_t add_product( SolParameters *prm, SolAccountInfo *ka )
 
 #define PC_ADD_STR \
   tag = (pc_str_t*)src;\
-  tag_len = 1UL + (uint64_t)tag->len_;\
+  tag_len = 1 + tag->len_;\
   if ( &src[tag_len] > end ) return ERROR_INVALID_ARGUMENT;\
   sol_memcpy( tgt, tag, tag_len );\
   tgt += tag_len;\
@@ -179,7 +179,7 @@ static uint64_t upd_product( SolParameters *prm, SolAccountInfo *ka )
   const uint8_t *src = prm->data + sizeof( cmd_upd_product_t );
   const uint8_t *end = prm->data + prm->data_len;
   const pc_str_t *tag;
-  uint64_t tag_len;
+  int tag_len;
   while( src != end ) {
     // check key string
     PC_ADD_STR
