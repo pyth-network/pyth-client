@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5] - 2021-09-22
+- [pyth] fixed signed division in conf interval calculation
+- [pyth] enabled stricter compiler flags and fixed associated warnings
+
 ## [2.4] - 2021-09-21
 - [config] Replaced `prodbeta` with current `mainnet` keys in the `init_key_store.sh`
 - Break out admin-only request/rpc classes into separate files.
