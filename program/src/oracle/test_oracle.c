@@ -236,14 +236,14 @@ Test(oracle, add_product) {
   mptr->magic_ = PC_MAGIC;
   mptr->ver_ = PC_VERSION;
   mptr->type_ = PC_ACCTYPE_MAPPING;
-  for(int i =0;;++i) {
+  for( unsigned i = 0;; ++i ) {
     sol_memset( sptr, 0, PC_PROD_ACC_SIZE );
     uint64_t rc = dispatch( &prm, acc );
     if ( rc != SUCCESS ) {
-      cr_assert( i == (PC_MAP_TABLE_SIZE) );
+      cr_assert( i == ( unsigned )(PC_MAP_TABLE_SIZE) );
       break;
     }
-    cr_assert( mptr->num_ == i+1 );
+    cr_assert( mptr->num_ == i + 1 );
     cr_assert( rc == SUCCESS );
   }
 }
@@ -310,14 +310,14 @@ Test( oracle, add_publisher ) {
   sptr->magic_ = PC_MAGIC;
 
   // fill up price node
-  for(int i =0;;++i) {
-    idata.pub_.k8_[0] = 10+i;
+  for( unsigned i = 0;; ++i ) {
+    idata.pub_.k8_[0] = 10 + i;
     uint64_t rc = dispatch( &prm, acc );
     if ( rc != SUCCESS ) {
-      cr_assert( i == (PC_COMP_SIZE) );
+      cr_assert( i == ( unsigned )(PC_COMP_SIZE) );
       break;
     }
-    cr_assert( sptr->num_ == i+1 );
+    cr_assert( sptr->num_ == i + 1 );
     cr_assert( pc_pub_key_equal( &idata.pub_, &sptr->comp_[i].pub_ ) );
     cr_assert( rc == SUCCESS );
   }

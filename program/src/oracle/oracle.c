@@ -173,8 +173,8 @@ static uint64_t upd_product( SolParameters *prm, SolAccountInfo *ka )
          sizeof( cmd_upd_product_t ) - sizeof( pc_prod_t ) ) {
     return ERROR_INVALID_ARGUMENT;
   }
-  pptr->size_ = sizeof ( pc_prod_t ) + prm->data_len -
-    sizeof( cmd_upd_product_t );
+  pptr->size_ = ( uint32_t )( sizeof( pc_prod_t ) + prm->data_len -
+    sizeof( cmd_upd_product_t ) );
   uint8_t *tgt = (uint8_t*)pptr + sizeof( pc_prod_t );
   const uint8_t *src = prm->data + sizeof( cmd_upd_product_t );
   const uint8_t *end = prm->data + prm->data_len;
