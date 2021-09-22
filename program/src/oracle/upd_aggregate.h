@@ -23,11 +23,15 @@ static void pd_scale( pd_t *n )
 
 static void pd_adjust( pd_t *n, int e, const int64_t *p )
 {
-  int neg = n->v_ < 0L;
-  uint64_t v = neg?-n->v_:n->v_;
+  int64_t v = n->v_;
   int d = n->e_ - e;
-  if ( d>0 ) v *= p[d]; else if ( d<0 ) v /= p[-d];
-  pd_new( n, neg ? -v : v, e );
+  if ( d > 0 ) {
+    v *= p[ d ];
+  }
+  else if ( d < 0 ) {
+    v /= p[ -d ];
+  }
+  pd_new( n, v, e );
 }
 
 static void pd_mul( pd_t *r, pd_t *n1, pd_t *n2 )
@@ -41,11 +45,11 @@ static void pd_div( pd_t *r, pd_t *n1, pd_t *n2 )
 {
   if ( n1->v_ == 0 ) { pd_set( r, n1 ); return; }
   int64_t v1 = n1->v_, v2 = n2->v_;
-  int neg1 = v1<0L, neg2 = v2<0L, m=0;
+  int neg1 = v1 < 0L, neg2 = v2 < 0L, m = 0;
   if ( neg1 ) v1 = -v1;
   if ( neg2 ) v2 = -v2;
-  for( ;0L == (v1&0xfffffffff0000000); v1*= 10L, ++m );
-  r->v_ = (v1 * PD_SCALE9) / v2;
+  for( ; 0UL == ( ( uint64_t )v1 & 0xfffffffff0000000UL ); v1 *= 10L, ++m );
+  r->v_ = ( v1 * PD_SCALE9 ) / v2;
   if ( neg1 ) r->v_ = -r->v_;
   if ( neg2 ) r->v_ = -r->v_;
   r->e_ = n1->e_ - n2->e_ - m - 9;
@@ -243,7 +247,7 @@ static inline void upd_twap(
 {
   pd_t px[1], conf[1];
   pd_new_scale( px, ptr->agg_.price_, ptr->expo_ );
-  pd_new_scale( conf, ptr->agg_.conf_, ptr->expo_ );
+  pd_new_scale( conf, ( int64_t )( ptr->agg_.conf_ ), ptr->expo_ );
   upd_ema( &ptr->twap_, px, conf, nslots, qs );
   upd_ema( &ptr->twac_, conf, conf, nslots, qs );
 }
@@ -279,7 +283,7 @@ static void upd_aggregate( pc_price_t *ptr, uint64_t slot )
   pc_qset_t *qs = qset_new( ptr->expo_ );
 
   // get number of slots from last published valid price
-  int64_t agg_diff = slot - ptr->last_slot_;
+  int64_t agg_diff = ( int64_t )slot - ( int64_t )( ptr->last_slot_ );
 
   // copy previous price
   ptr->prev_slot_  = ptr->valid_slot_;
@@ -298,7 +302,7 @@ static void upd_aggregate( pc_price_t *ptr, uint64_t slot )
     // copy contributing price to aggregate snapshot
     iptr->agg_ = iptr->latest_;
     // add quote to sorted permutation array if it is valid
-    int64_t slot_diff = slot - iptr->agg_.pub_slot_;
+    int64_t slot_diff = ( int64_t )slot - ( int64_t )( iptr->agg_.pub_slot_ );
     if ( iptr->agg_.status_ == PC_STATUS_TRADING &&
          iptr->agg_.conf_ != 0UL &&
          iptr->agg_.price_ != 0L &&
@@ -344,10 +348,10 @@ static void upd_aggregate( pc_price_t *ptr, uint64_t slot )
   for( uint32_t i=0;i != numa; ++i ) {
     pc_price_comp_t *iptr = &ptr->comp_[aidx[i]];
     // scale confidence interval by sqrt of slot age
-    int64_t slot_diff = slot - iptr->agg_.pub_slot_;
+    int64_t slot_diff = ( int64_t )slot - ( int64_t )( iptr->agg_.pub_slot_ );
     pd_t decay[1];
     pd_new( decay, qs->decay_[slot_diff], PC_EXP_DECAY );
-    pd_new_scale( conf, iptr->agg_.conf_, ptr->expo_ );
+    pd_new_scale( conf, ( int64_t )( iptr->agg_.conf_ ), ptr->expo_ );
     pd_mul( conf, conf, decay );
 
     // assign price and upper/lower bounds of price
@@ -434,7 +438,7 @@ static void upd_aggregate( pc_price_t *ptr, uint64_t slot )
   // take confidence interval as larger
   pd_t *cptr = pd_gt( uprice, q3price, qs->fact_ ) ? uprice : q3price;
   pd_adjust( cptr, ptr->expo_, qs->fact_ );
-  ptr->agg_.conf_ = cptr->v_;
+  ptr->agg_.conf_ = ( uint64_t )( cptr->v_ );
   upd_twap( ptr, agg_diff, qs );
 }
 
