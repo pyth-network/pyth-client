@@ -14,7 +14,7 @@ Test(oracle, init_mapping) {
   SolPubkey p_id2 = {.x = { 0xfe, }};
   SolPubkey pkey = {.x = { 1, }};
   SolPubkey mkey = {.x = { 2, }};
-  uint64_t pqty = 100, mqty = 200;
+  uint64_t pqty = 100;
   pc_map_table_t mptr[1];
   sol_memset( mptr, 0, sizeof( pc_map_table_t ) );
   SolAccountInfo acc[] = {{
@@ -95,7 +95,7 @@ Test(oracle, add_mapping ) {
   SolPubkey pkey = {.x = { 1, }};
   SolPubkey tkey = {.x = { 2, }};
   SolPubkey mkey = {.x = { 3, }};
-  uint64_t pqty = 100, tqty = 100, mqty = 200;
+  uint64_t pqty = 100, tqty = 100;
   pc_map_table_t mptr[1];
   sol_memset( mptr, 0, sizeof( pc_map_table_t ) );
   SolAccountInfo acc[] = {{
@@ -160,12 +160,11 @@ Test(oracle, add_product) {
     .cmd_   = e_cmd_add_product,
   };
   SolPubkey p_id  = {.x = { 0xff, }};
-  SolPubkey p_id2 = {.x = { 0xfe, }};
   SolPubkey pkey = {.x = { 1, }};
   SolPubkey mkey = {.x = { 2, }};
   SolPubkey skey = {.x = { 3, }};
   SolPubkey skey2 = {.x = { 4, }};
-  uint64_t pqty = 100, mqty = 200;
+  uint64_t pqty = 100;
   pc_map_table_t mptr[1];
   sol_memset( mptr, 0, sizeof( pc_map_table_t ) );
   mptr->magic_ = PC_MAGIC;
@@ -257,7 +256,6 @@ Test( oracle, add_publisher ) {
     .pub_   = { .k8_ = { 3UL, 4UL, 5UL, 6UL } }
   };
   SolPubkey p_id  = {.x = { 0xff, }};
-  SolPubkey p_id2 = {.x = { 0xfe, }};
   SolPubkey pkey = {.x = { 1, }};
   SolPubkey skey = {.x = { 3, }};
   uint64_t pqty = 100, sqty = 200;
@@ -348,7 +346,6 @@ Test( oracle, upd_price ) {
     .pub_slot_ = 1
   };
   SolPubkey p_id  = {.x = { 0xff, }};
-  SolPubkey p_id2 = {.x = { 0xfe, }};
   SolPubkey pkey = {.x = { 1, }};
   SolPubkey skey = {.x = { 3, }};
   sysvar_clock_t cvar = {
@@ -533,8 +530,6 @@ Test( oracle, del_publisher ) {
   pc_price_info_t p1 = { .price_=100, .conf_=10,
     .status_ = PC_STATUS_TRADING, .pub_slot_ = 42 };
   pc_price_info_t p2 = { .price_=200, .conf_=20,
-    .status_ = PC_STATUS_TRADING, .pub_slot_ = 42 };
-  pc_price_info_t p3 = { .price_=300, .conf_=30,
     .status_ = PC_STATUS_TRADING, .pub_slot_ = 42 };
 
   // start with perfect inputs
