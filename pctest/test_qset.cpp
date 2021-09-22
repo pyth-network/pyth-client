@@ -23,11 +23,11 @@ int usage()
 
 void test_pd()
 {
-  const uint64_t dec_fact[] = {
-    1UL, 10UL, 100UL, 1000UL, 10000UL, 100000UL, 1000000UL, 10000000UL,
-    100000000UL, 1000000000UL, 10000000000UL, 100000000000UL, 1000000000000UL,
-    10000000000000UL, 100000000000000UL, 1000000000000000UL, 10000000000000000UL,
-    100000000000000000UL
+  const int64_t dec_fact[] = {
+    1L, 10L, 100L, 1000L, 10000L, 100000L, 1000000L, 10000000L,
+    100000000L, 1000000000L, 10000000000L, 100000000000L, 1000000000000L,
+    10000000000000L, 100000000000000L, 1000000000000000L, 10000000000000000L,
+    100000000000000000L
   };
   // construct calculator
   pd_t m[1], s[1];
@@ -83,6 +83,14 @@ void test_pd()
   PC_TEST_CHECK( r->v_ == 123 && r->e_ == 27 );
   pd_sub( r, n2, n1, dec_fact );
   PC_TEST_CHECK( r->v_ == -123 && r->e_ == 27 );
+
+  // test add negative numbers
+  pd_new( n1, -140205667, -13 );
+  pd_new( n2, 42901738, -3 );
+  pd_add( r, n1, n2, dec_fact );
+  PC_TEST_CHECK( r->v_ == 42901737 && r->e_ == -3 );
+  pd_add( r, n2, n1, dec_fact );
+  PC_TEST_CHECK( r->v_ == 42901737 && r->e_ == -3 );
 
   pd_new( n1, 1010, -9 );
   pd_new( n2, 102, -8 );

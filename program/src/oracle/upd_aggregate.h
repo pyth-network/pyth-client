@@ -21,7 +21,7 @@ static void pd_scale( pd_t *n )
   n->v_ = neg ? -v : v;
 }
 
-static void pd_adjust( pd_t *n, int e, const uint64_t *p )
+static void pd_adjust( pd_t *n, int e, const int64_t *p )
 {
   int neg = n->v_ < 0L;
   uint64_t v = neg?-n->v_:n->v_;
@@ -52,7 +52,7 @@ static void pd_div( pd_t *r, pd_t *n1, pd_t *n2 )
   pd_scale( r );
 }
 
-static void pd_add( pd_t *r, pd_t *n1, pd_t *n2, const uint64_t *p )
+static void pd_add( pd_t *r, pd_t *n1, pd_t *n2, const int64_t *p )
 {
   int d = n1->e_ - n2->e_;
   if ( d==0 ) {
@@ -78,7 +78,7 @@ static void pd_add( pd_t *r, pd_t *n1, pd_t *n2, const uint64_t *p )
   pd_scale( r );
 }
 
-static void pd_sub( pd_t *r, pd_t *n1, pd_t *n2, const uint64_t *p )
+static void pd_sub( pd_t *r, pd_t *n1, pd_t *n2, const int64_t *p )
 {
   int d = n1->e_ - n2->e_;
   if ( d==0 ) {
@@ -104,21 +104,21 @@ static void pd_sub( pd_t *r, pd_t *n1, pd_t *n2, const uint64_t *p )
   pd_scale( r );
 }
 
-static int pd_lt( pd_t *n1, pd_t *n2, const uint64_t *p )
+static int pd_lt( pd_t *n1, pd_t *n2, const int64_t *p )
 {
   pd_t r[1];
   pd_sub( r, n1, n2, p );
   return r->v_ < 0L;
 }
 
-static int pd_gt( pd_t *n1, pd_t *n2, const uint64_t *p )
+static int pd_gt( pd_t *n1, pd_t *n2, const int64_t *p )
 {
   pd_t r[1];
   pd_sub( r, n1, n2, p );
   return r->v_ > 0L;
 }
 
-static void pd_sqrt( pd_t *r, pd_t *val, const uint64_t *f )
+static void pd_sqrt( pd_t *r, pd_t *val, const int64_t *f )
 {
   pd_t t[1], x[1], hlf[1];
   pd_set( t, val );
@@ -144,52 +144,52 @@ static pc_qset_t *qset_new( int expo )
   pc_qset_t *qs = (pc_qset_t*)PC_HEAP_START;
 
   // sqrt of numbers 1 to 25 for decaying conf. interval based on slot delay
-  qs->decay_[0]  = 1000000000UL;
-  qs->decay_[1]  = 1000000000UL;
-  qs->decay_[2]  = 1414213562UL;
-  qs->decay_[3]  = 1732050807UL;
-  qs->decay_[4]  = 2000000000UL;
-  qs->decay_[5]  = 2236067977UL;
-  qs->decay_[6]  = 2449489742UL;
-  qs->decay_[7]  = 2645751311UL;
-  qs->decay_[8]  = 2828427124UL;
-  qs->decay_[9]  = 3000000000UL;
-  qs->decay_[10] = 3162277660UL;
-  qs->decay_[11] = 3316624790UL;
-  qs->decay_[12] = 3464101615UL;
-  qs->decay_[13] = 3605551275UL;
-  qs->decay_[14] = 3741657386UL;
-  qs->decay_[15] = 3872983346UL;
-  qs->decay_[16] = 4000000000UL;
-  qs->decay_[17] = 4123105625UL;
-  qs->decay_[18] = 4242640687UL;
-  qs->decay_[19] = 4358898943UL;
-  qs->decay_[20] = 4472135954UL;
-  qs->decay_[21] = 4582575694UL;
-  qs->decay_[22] = 4690415759UL;
-  qs->decay_[23] = 4795831523UL;
-  qs->decay_[24] = 4898979485UL;
-  qs->decay_[25] = 5000000000UL;
+  qs->decay_[0]  = 1000000000L;
+  qs->decay_[1]  = 1000000000L;
+  qs->decay_[2]  = 1414213562L;
+  qs->decay_[3]  = 1732050807L;
+  qs->decay_[4]  = 2000000000L;
+  qs->decay_[5]  = 2236067977L;
+  qs->decay_[6]  = 2449489742L;
+  qs->decay_[7]  = 2645751311L;
+  qs->decay_[8]  = 2828427124L;
+  qs->decay_[9]  = 3000000000L;
+  qs->decay_[10] = 3162277660L;
+  qs->decay_[11] = 3316624790L;
+  qs->decay_[12] = 3464101615L;
+  qs->decay_[13] = 3605551275L;
+  qs->decay_[14] = 3741657386L;
+  qs->decay_[15] = 3872983346L;
+  qs->decay_[16] = 4000000000L;
+  qs->decay_[17] = 4123105625L;
+  qs->decay_[18] = 4242640687L;
+  qs->decay_[19] = 4358898943L;
+  qs->decay_[20] = 4472135954L;
+  qs->decay_[21] = 4582575694L;
+  qs->decay_[22] = 4690415759L;
+  qs->decay_[23] = 4795831523L;
+  qs->decay_[24] = 4898979485L;
+  qs->decay_[25] = 5000000000L;
 
   // powers of 10 for use in decimal arithmetic scaling
-  qs->fact_[0]   = 1UL;
-  qs->fact_[1]   = 10UL;
-  qs->fact_[2]   = 100UL;
-  qs->fact_[3]   = 1000UL;
-  qs->fact_[4]   = 10000UL;
-  qs->fact_[5]   = 100000UL;
-  qs->fact_[6]   = 1000000UL;
-  qs->fact_[7]   = 10000000UL;
-  qs->fact_[8]   = 100000000UL;
-  qs->fact_[9]   = 1000000000UL;
-  qs->fact_[10]  = 10000000000UL;
-  qs->fact_[11]  = 100000000000UL;
-  qs->fact_[12]  = 1000000000000UL;
-  qs->fact_[13]  = 10000000000000UL;
-  qs->fact_[14]  = 100000000000000UL;
-  qs->fact_[15]  = 1000000000000000UL;
-  qs->fact_[16]  = 10000000000000000UL;
-  qs->fact_[17]  = 100000000000000000UL;
+  qs->fact_[0]   = 1L;
+  qs->fact_[1]   = 10L;
+  qs->fact_[2]   = 100L;
+  qs->fact_[3]   = 1000L;
+  qs->fact_[4]   = 10000L;
+  qs->fact_[5]   = 100000L;
+  qs->fact_[6]   = 1000000L;
+  qs->fact_[7]   = 10000000L;
+  qs->fact_[8]   = 100000000L;
+  qs->fact_[9]   = 1000000000L;
+  qs->fact_[10]  = 10000000000L;
+  qs->fact_[11]  = 100000000000L;
+  qs->fact_[12]  = 1000000000000L;
+  qs->fact_[13]  = 10000000000000L;
+  qs->fact_[14]  = 100000000000000L;
+  qs->fact_[15]  = 1000000000000000L;
+  qs->fact_[16]  = 10000000000000000L;
+  qs->fact_[17]  = 100000000000000000L;
 
   qs->num_ = 0;
   qs->expo_ = expo;
