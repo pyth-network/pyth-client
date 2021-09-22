@@ -461,7 +461,7 @@ Test( oracle, upd_aggregate ) {
 
   // single publisher
   px->num_ = 1;
-  px->last_slot_ = -10000;
+  px->last_slot_ = 1000;
   px->agg_.pub_slot_ = 1000;
   px->comp_[0].latest_ = p1;
   upd_aggregate( px, 1001 );
