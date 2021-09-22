@@ -167,8 +167,8 @@ typedef struct pc_qset
   pd_t      lprice_[PC_COMP_SIZE];
   pd_t      weight_[PC_COMP_SIZE];
   pd_t      cumwgt_[PC_COMP_SIZE];
-  uint64_t  decay_[1+PC_MAX_SEND_LATENCY];
-  uint64_t  fact_[PC_FACTOR_SIZE];
+  int64_t   decay_[1+PC_MAX_SEND_LATENCY];
+  int64_t   fact_[PC_FACTOR_SIZE];
   uint32_t  num_;
   int32_t   expo_;
 } pc_qset_t;
