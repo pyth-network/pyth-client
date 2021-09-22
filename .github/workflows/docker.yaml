@@ -6,7 +6,7 @@ on:
     branches: [ devnet ]
 
 env:
-  SOLANA_VERSION: 1.7.10
+  SOLANA_VERSION: 1.7.12
 
 jobs:
   build:
