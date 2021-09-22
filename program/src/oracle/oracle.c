@@ -100,7 +100,6 @@ static uint64_t add_mapping( SolParameters *prm, SolAccountInfo *ka )
   nptr->size_  = sizeof( pc_map_table_t ) - sizeof( nptr->prod_ );
 
   // Set last mapping account to point to this mapping account
-  pc_pub_key_t *pkey = (pc_pub_key_t*)ka[1].key;
   pc_pub_key_t *nkey = (pc_pub_key_t*)ka[2].key;
   pc_pub_key_assign( &pptr->next_, nkey );
   return SUCCESS;
@@ -182,7 +181,6 @@ static uint64_t upd_product( SolParameters *prm, SolAccountInfo *ka )
          sizeof( cmd_upd_product_t ) - sizeof( pc_prod_t ) ) {
     return ERROR_INVALID_ARGUMENT;
   }
-  cmd_upd_product_t *cptr = (cmd_upd_product_t*)prm->data;
   pptr->size_ = sizeof ( pc_prod_t ) + prm->data_len -
     sizeof( cmd_upd_product_t );
   uint8_t *tgt = (uint8_t*)pptr + sizeof( pc_prod_t );
