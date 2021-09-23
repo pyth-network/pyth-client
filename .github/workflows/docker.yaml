@@ -6,7 +6,7 @@ on:
     branches: [ main ]
 
 env:
-  SOLANA_VERSION: 1.6.25
+  SOLANA_VERSION: 1.7.12
 
 jobs:
   build:
