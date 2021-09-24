@@ -1,5 +1,9 @@
 #pragma once
 
+#include "sort.h"
+
+#include <limits.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -294,10 +298,10 @@ static void upd_aggregate( pc_price_t *ptr, uint64_t slot )
   ptr->valid_slot_ = ptr->agg_.pub_slot_;// valid slot-time of agg. price
   ptr->agg_.pub_slot_ = slot;            // publish slot-time of agg. price
 
+  uint32_t numv = 0;
+  uint32_t vidx[ PC_COMP_SIZE ];
   // identify valid quotes and order them by price
-  uint32_t numa = 0 ;
-  uint32_t aidx[PC_COMP_SIZE];
-  for( uint32_t i=0; i != ptr->num_; ++i ) {
+  for ( uint32_t i = 0; i != ptr->num_; ++i ) {
     pc_price_comp_t *iptr = &ptr->comp_[i];
     // copy contributing price to aggregate snapshot
     iptr->agg_ = iptr->latest_;
@@ -305,20 +309,48 @@ static void upd_aggregate( pc_price_t *ptr, uint64_t slot )
     int64_t slot_diff = ( int64_t )slot - ( int64_t )( iptr->agg_.pub_slot_ );
     if ( iptr->agg_.status_ == PC_STATUS_TRADING &&
          iptr->agg_.conf_ != 0UL &&
-         iptr->agg_.price_ != 0L &&
+         iptr->agg_.price_ > 0L &&
          slot_diff >= 0 && slot_diff <= PC_MAX_SEND_LATENCY ) {
-      int64_t ipx = iptr->agg_.price_;
-      uint32_t j = numa++;
-      for( ; j > 0 && ptr->comp_[aidx[j-1]].agg_.price_ > ipx; --j ) {
-        aidx[j] = aidx[j-1];
+      vidx[numv++] = i;
+    }
+  }
+
+  uint32_t nprcs = 0;
+  int64_t prcs[ PC_COMP_SIZE * 2 ];
+  for ( uint32_t i = 0; i < numv; ++i ) {
+    pc_price_comp_t const *iptr = &ptr->comp_[ vidx[ i ] ];
+    int64_t const price = iptr->agg_.price_;
+    int64_t const conf = ( int64_t )( iptr->agg_.conf_ );
+    prcs[ nprcs++ ] = price - conf;
+    prcs[ nprcs++ ] = price + conf;
+  }
+  qsort_int64( prcs, nprcs );
+
+  uint32_t numa = 0;
+  uint32_t aidx[PC_COMP_SIZE];
+
+  if ( nprcs ) {
+    int64_t const mprc = ( prcs[ numv - 1 ] + prcs[ numv ] ) / 2;
+    int64_t const lb = mprc / 5;
+    int64_t const ub = ( mprc > LONG_MAX / 5 ) ? LONG_MAX : mprc * 5;
+
+    for ( uint32_t i = 0; i < numv; ++i ) {
+      uint32_t const idx = vidx[ i ];
+      pc_price_comp_t const *iptr = &ptr->comp_[ idx ];
+      int64_t const prc = iptr->agg_.price_;
+      if ( prc >= lb && prc <= ub ) {
+        uint32_t j = numa++;
+        for( ; j > 0 && ptr->comp_[ aidx[ j - 1 ] ].agg_.price_ > prc; --j ) {
+          aidx[ j ] = aidx[ j - 1 ];
+        }
+        aidx[ j ] = idx;
       }
-      aidx[j] = i;
     }
   }
 
   // zero quoters
   ptr->num_qt_ = numa;
-  if ( numa == 0 ) {
+  if ( numa == 0 || numa * 2 <= numv ) {
     ptr->agg_.status_ = PC_STATUS_UNKNOWN;
     upd_twap( ptr, agg_diff, qs );
     return;
