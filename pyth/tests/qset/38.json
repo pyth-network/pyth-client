@@ -1,0 +1,18 @@
+{
+"comment": "zero confidence quotes are rejected. With no valid quotes result should be status unknown",
+"exponent": -3,
+"quotes": [
+  {
+   "price": 10000,
+   "conf": 0
+  },
+  {
+   "price": 10000,
+   "conf": 0
+  },
+  {
+   "price": 10000,
+   "conf": 0
+  }
+]
+}
