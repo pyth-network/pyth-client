@@ -146,12 +146,29 @@ int main( int argc,char** argv )
   }
   upd_aggregate( px, slot+1 );
 
+  char const* status = "invalid value";
+  switch ( px->agg_.status_ ) {
+  case PC_STATUS_UNKNOWN:
+    status = "unknown";
+    break;
+  case PC_STATUS_TRADING:
+    status = "trading";
+    break;
+  case PC_STATUS_HALTED:
+    status = "halted";
+    break;
+  case PC_STATUS_AUCTION:
+    status = "auction";
+    break;
+  }
+
   // generate result
   json_wtr jw;
   jw.add_val( json_wtr::e_obj );
   jw.add_key( "exponent", (int64_t)px->expo_ );
   jw.add_key( "price", px->agg_.price_ );
   jw.add_key( "conf", px->agg_.conf_ );
+  jw.add_key( "status", status );
   jw.pop();
   net_buf *hd, *tl;
   jw.detach( hd, tl );
