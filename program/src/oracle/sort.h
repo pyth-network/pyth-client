@@ -1,9 +1,9 @@
 #pragma once
 
-#ifdef __x86_64__
-#include <stdint.h>
-#else
+#ifdef __bpf__
 #include <solana_sdk.h>
+#else
+#include <stdint.h>
 #endif
 
 #ifdef __cplusplus

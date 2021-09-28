@@ -1,5 +1,9 @@
 #include "sort.h"
 
+#ifndef __bpf__
+#include <assert.h>
+#endif
+
 static inline void swap_int64( int64_t *a, int64_t *b )
 {
   int64_t const temp = *a;
@@ -9,6 +13,13 @@ static inline void swap_int64( int64_t *a, int64_t *b )
 
 static inline int partition_int64( int64_t* v, int i, int j )
 {
+#ifndef __bpf__
+#ifndef NDEBUG
+  int const i0 = i;
+  int const j0 = j;
+#endif
+#endif
+
   int const p = i;
   int64_t const pv = v[ p ];
 
@@ -24,6 +35,20 @@ static inline int partition_int64( int64_t* v, int i, int j )
     }
   }
   swap_int64( &v[ p ], &v[ j ] );
+
+#ifndef __bpf__
+#ifndef NDEBUG
+  int k;
+  for ( k = i0; k < j; ++k ) {
+    assert( v[ k ] <= pv );
+  }
+  assert( v[ j ] == pv );
+  for ( k = j + 1; k <= j0; ++k ) {
+    assert( v[ k ] > pv );
+  }
+#endif
+#endif
+
   return j;
 }
 
@@ -40,5 +65,18 @@ static void qsort_help_int64( int64_t* const v, int i, int j )
 void qsort_int64( int64_t* const v, unsigned const size )
 {
   qsort_help_int64( v, 0, ( int )size - 1 );
+
+#ifndef __bpf__
+#ifndef NDEBUG
+  if ( size ) {
+    int64_t x = v[ 0 ];
+    unsigned i = 1;
+    for ( ; i < size; ++i ) {
+      assert( x <= v[ i ] );
+      x = v[ i ];
+    }
+  }
+#endif
+#endif
 }
 
