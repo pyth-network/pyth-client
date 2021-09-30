@@ -1,5 +1,7 @@
 #pragma once
 
+#include "oracle.h"
+#include "pd.h"
 #include "sort.h"
 
 #include <limits.h>
@@ -8,142 +10,19 @@
 extern "C" {
 #endif
 
-#define PD_SCALE9     (1000000000L)
-#define PD_EMA_MAX_DIFF 4145     // maximum slots before reset
-#define PD_EMA_EXPO     -9       // exponent of temporary storage
-#define PD_EMA_DECAY   (-117065) // 1e9*-log(2)/5921
-
-#define pd_new( n,v,e ) {(n)->v_=v;(n)->e_=e;}
-#define pd_set( r,n ) (r)[0] = (n)[0]
-#define pd_new_scale(n,v,e) {(n)->v_=v;(n)->e_=e;pd_scale(n);}
-
-static void pd_scale( pd_t *n )
+// quote info for aggregate price calc
+typedef struct pc_qset
 {
-  int const neg = n->v_ < 0L;
-  int64_t v = neg ? -n->v_ : n->v_; // make v positive for loop condition
-  for( ; v >= ( 1L << 28 ); v /= 10L, ++n->e_ );
-  n->v_ = neg ? -v : v;
-}
-
-static void pd_adjust( pd_t *n, int e, const int64_t *p )
-{
-  int64_t v = n->v_;
-  int d = n->e_ - e;
-  if ( d > 0 ) {
-    v *= p[ d ];
-  }
-  else if ( d < 0 ) {
-    v /= p[ -d ];
-  }
-  pd_new( n, v, e );
-}
-
-static void pd_mul( pd_t *r, pd_t *n1, pd_t *n2 )
-{
-  r->v_ = n1->v_ * n2->v_;
-  r->e_ = n1->e_ + n2->e_;
-  pd_scale( r );
-}
-
-static void pd_div( pd_t *r, pd_t *n1, pd_t *n2 )
-{
-  if ( n1->v_ == 0 ) { pd_set( r, n1 ); return; }
-  int64_t v1 = n1->v_, v2 = n2->v_;
-  int neg1 = v1 < 0L, neg2 = v2 < 0L, m = 0;
-  if ( neg1 ) v1 = -v1;
-  if ( neg2 ) v2 = -v2;
-  for( ; 0UL == ( ( uint64_t )v1 & 0xfffffffff0000000UL ); v1 *= 10L, ++m );
-  r->v_ = ( v1 * PD_SCALE9 ) / v2;
-  if ( neg1 ) r->v_ = -r->v_;
-  if ( neg2 ) r->v_ = -r->v_;
-  r->e_ = n1->e_ - n2->e_ - m - 9;
-  pd_scale( r );
-}
-
-static void pd_add( pd_t *r, pd_t *n1, pd_t *n2, const int64_t *p )
-{
-  int d = n1->e_ - n2->e_;
-  if ( d==0 ) {
-    pd_new( r, n1->v_ + n2->v_, n1->e_ );
-  } else if ( d>0 ) {
-    if ( d<9 ) {
-      pd_new( r, n1->v_*p[d] + n2->v_, n2->e_ );
-    } else if ( d < PC_FACTOR_SIZE+9 ) {
-      pd_new( r, n1->v_*PD_SCALE9 + n2->v_/p[d-9], n1->e_-9);
-    } else {
-      pd_set( r, n1 );
-    }
-  } else {
-    d = -d;
-    if ( d<9 ) {
-      pd_new( r, n1->v_ + n2->v_*p[d], n1->e_ );
-    } else if ( d < PC_FACTOR_SIZE+9 ) {
-      pd_new( r, n1->v_/p[d-9] + n2->v_*PD_SCALE9, n2->e_-9 );
-    } else {
-      pd_set( r, n2 );
-    }
-  }
-  pd_scale( r );
-}
-
-static void pd_sub( pd_t *r, pd_t *n1, pd_t *n2, const int64_t *p )
-{
-  int d = n1->e_ - n2->e_;
-  if ( d==0 ) {
-    pd_new( r, n1->v_ - n2->v_, n1->e_ );
-  } else if ( d>0 ) {
-    if ( d<9 ) {
-      pd_new( r, n1->v_*p[d] - n2->v_, n2->e_ );
-    } else if ( d < PC_FACTOR_SIZE+9 ) {
-      pd_new( r, n1->v_*PD_SCALE9 - n2->v_/p[d-9], n1->e_-9);
-    } else {
-      pd_set( r, n1 );
-    }
-  } else {
-    d = -d;
-    if ( d<9 ) {
-      pd_new( r, n1->v_ - n2->v_*p[d], n1->e_ );
-    } else if ( d < PC_FACTOR_SIZE+9 ) {
-      pd_new( r, n1->v_/p[d-9] - n2->v_*PD_SCALE9, n2->e_-9 );
-    } else {
-      pd_new( r, -n2->v_, n2->e_ );
-    }
-  }
-  pd_scale( r );
-}
-
-static int pd_lt( pd_t *n1, pd_t *n2, const int64_t *p )
-{
-  pd_t r[1];
-  pd_sub( r, n1, n2, p );
-  return r->v_ < 0L;
-}
-
-static int pd_gt( pd_t *n1, pd_t *n2, const int64_t *p )
-{
-  pd_t r[1];
-  pd_sub( r, n1, n2, p );
-  return r->v_ > 0L;
-}
-
-static void pd_sqrt( pd_t *r, pd_t *val, const int64_t *f )
-{
-  pd_t t[1], x[1], hlf[1];
-  pd_set( t, val );
-  pd_new( r, 1, 0 );
-  pd_add( x, t, r, f );
-  pd_new( hlf, 5, -1 );
-  pd_mul( x, x, hlf );
-  for(;;) {
-    pd_div( r, t, x );
-    pd_add( r, r, x, f );
-    pd_mul( r, r, hlf );
-    if ( x->v_ == r->v_ ) {
-      break;
-    }
-    pd_set( x, r );
-  }
-}
+  pd_t      iprice_[PC_COMP_SIZE];
+  pd_t      uprice_[PC_COMP_SIZE];
+  pd_t      lprice_[PC_COMP_SIZE];
+  pd_t      weight_[PC_COMP_SIZE];
+  pd_t      cumwgt_[PC_COMP_SIZE];
+  int64_t   decay_[1+PC_MAX_SEND_LATENCY];
+  int64_t   fact_[PC_FACTOR_SIZE];
+  uint32_t  num_;
+  int32_t   expo_;
+} pc_qset_t;
 
 // initialize quote-set temporary data in heap area
 static pc_qset_t *qset_new( int expo )
@@ -278,7 +157,7 @@ static void wgt_ptile( pd_t *res, pd_t *prices, pd_t *ptile, pc_qset_t *qs )
 }
 
 // update aggregate price
-static void upd_aggregate( pc_price_t *ptr, uint64_t slot )
+static inline void upd_aggregate( pc_price_t *ptr, uint64_t slot )
 {
   // only re-compute aggregate in next slot
   if ( slot <= ptr->agg_.pub_slot_ ) {
@@ -370,7 +249,7 @@ static void upd_aggregate( pc_price_t *ptr, uint64_t slot )
   }
 
   // assign quotes and compute weights
-  pc_price_comp_t *pptr = NULL;
+  pc_price_comp_t *pptr = 0;
   pd_t price[1], conf[1], weight[1], one[1], wsum[1];
   pd_new( one, 100000000L, -8 );
   pd_new( wsum, 0, 0 );

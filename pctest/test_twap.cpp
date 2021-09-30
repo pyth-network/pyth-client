@@ -1,15 +1,18 @@
 char heap_start[8192];
 #define PC_HEAP_START (heap_start)
 
+#include <iostream>
+
+#include <ctype.h>
+#include <math.h>
 #include <stdint.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
+
+#include <pc/mem_map.hpp>
+
 #include <oracle/oracle.h>
 #include <oracle/upd_aggregate.h>
-#include <pc/mem_map.hpp>
-#include <math.h>
-#include <ctype.h>
-#include <iostream>
 
 using namespace pc;
 
