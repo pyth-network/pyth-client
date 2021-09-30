@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdbool.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -20,7 +22,6 @@ extern "C" {
 #define PC_COMP_SIZE         32
 #define PC_MAX_NUM_DECIMALS  16
 #define PC_PROD_ACC_SIZE    512
-#define PC_FACTOR_SIZE       18
 #define PC_EXP_DECAY         -9
 
 #ifndef PC_HEAP_START
@@ -151,27 +152,6 @@ typedef struct pc_price
   pc_price_info_t agg_;               // aggregate price information
   pc_price_comp_t comp_[PC_COMP_SIZE];// component prices
 } pc_price_t;
-
-// decimal number format
-typedef struct pd
-{
-  int32_t  e_;
-  int64_t  v_;
-} pd_t;
-
-// quote info for aggregate price calc
-typedef struct pc_qset
-{
-  pd_t      iprice_[PC_COMP_SIZE];
-  pd_t      uprice_[PC_COMP_SIZE];
-  pd_t      lprice_[PC_COMP_SIZE];
-  pd_t      weight_[PC_COMP_SIZE];
-  pd_t      cumwgt_[PC_COMP_SIZE];
-  int64_t   decay_[1+PC_MAX_SEND_LATENCY];
-  int64_t   fact_[PC_FACTOR_SIZE];
-  uint32_t  num_;
-  int32_t   expo_;
-} pc_qset_t;
 
 // command enumeration
 typedef enum {
