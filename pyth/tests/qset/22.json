@@ -1,17 +1,17 @@
 {
- "exponent": 0,
+ "exponent": -3,
  "quotes": [
   {
-   "price": 10000,
-   "conf": 5
+   "price": 10000000,
+   "conf": 5000
   },
   {
-   "price": 10010,
-   "conf": 5
+   "price": 10010000,
+   "conf": 5000
   },
   {
-   "price": 10000,
-   "conf": 1
+   "price": 10000000,
+   "conf": 1000
   }
  ]
 }
