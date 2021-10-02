@@ -42,7 +42,7 @@ static void pd_adjust( pd_t *n, int e, const int64_t *p )
   pd_new( n, v, e );
 }
 
-static void pd_mul( pd_t *r, pd_t *n1, pd_t *n2 )
+static void pd_mul( pd_t *r, const pd_t *n1, const pd_t *n2 )
 {
   r->v_ = n1->v_ * n2->v_;
   r->e_ = n1->e_ + n2->e_;
@@ -64,7 +64,7 @@ static void pd_div( pd_t *r, pd_t *n1, pd_t *n2 )
   pd_scale( r );
 }
 
-static void pd_add( pd_t *r, pd_t *n1, pd_t *n2, const int64_t *p )
+static void pd_add( pd_t *r, const pd_t *n1, const pd_t *n2, const int64_t *p )
 {
   int d = n1->e_ - n2->e_;
   if ( d==0 ) {
@@ -123,7 +123,7 @@ static int pd_lt( const pd_t *n1, const pd_t *n2, const int64_t *p )
   return r->v_ < 0L;
 }
 
-static int pd_gt( pd_t *n1, pd_t *n2, const int64_t *p )
+static int pd_gt( const pd_t *n1, const pd_t *n2, const int64_t *p )
 {
   pd_t r[1];
   pd_sub( r, n1, n2, p );

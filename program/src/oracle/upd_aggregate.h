@@ -17,10 +17,8 @@ typedef struct pc_qset
   pd_t      uprice_[PC_COMP_SIZE];
   pd_t      lprice_[PC_COMP_SIZE];
   pd_t      weight_[PC_COMP_SIZE];
-  pd_t      cumwgt_[PC_COMP_SIZE];
   int64_t   decay_[1+PC_MAX_SEND_LATENCY];
   int64_t   fact_[PC_FACTOR_SIZE];
-  uint32_t  num_;
   int32_t   expo_;
 } pc_qset_t;
 
@@ -78,7 +76,6 @@ static pc_qset_t *qset_new( int expo )
   qs->fact_[16]  = 10000000000000000L;
   qs->fact_[17]  = 100000000000000000L;
 
-  qs->num_ = 0;
   qs->expo_ = expo;
 
   return qs;
@@ -136,10 +133,25 @@ static inline void upd_twap(
 }
 
 // compute weighted percentile
-static void wgt_ptile( pd_t *res, pd_t *prices, pd_t *ptile, pc_qset_t *qs )
+static void wgt_ptile(
+  pd_t * const res
+  , const pd_t * const prices, const pd_t * const weights, const uint32_t num
+  , const pd_t * const ptile, pc_qset_t *qs )
 {
-  pd_t *cumwgt = qs->cumwgt_;
-  uint32_t i =0, num = qs->num_;
+  pd_t cumwgt[ PC_COMP_SIZE ];
+
+  pd_t cumwgta[ 1 ], half[ 1 ];
+  pd_new( cumwgta, 0, 0 );
+  pd_new( half, 5, -1 );
+  for ( uint32_t i = 0; i < num; ++i ) {
+    const pd_t * const wptr = &weights[ i ];
+    pd_t weight[ 1 ];
+    pd_mul( weight, wptr, half );
+    pd_add( &cumwgt[ i ], cumwgta, weight, qs->fact_ );
+    pd_add( cumwgta, cumwgta, wptr, qs->fact_ );
+  }
+
+  uint32_t i = 0;
   for( ; i != num && pd_lt( &cumwgt[i], ptile, qs->fact_ ); ++i );
   if ( i == num ) {
     pd_set( res, &prices[num-1] );
@@ -254,7 +266,6 @@ static inline void upd_aggregate( pc_price_t *ptr, uint64_t slot )
   pd_new( one, 100000000L, -8 );
   pd_new( wsum, 0, 0 );
   int64_t ldiff = INT64_MAX;
-  qs->num_  = numa;
   pd_t *wptr = qs->weight_;
   for( uint32_t i=0;i != numa; ++i ) {
     pc_price_comp_t *iptr = &ptr->comp_[aidx[i]];
@@ -292,9 +303,10 @@ static inline void upd_aggregate( pc_price_t *ptr, uint64_t slot )
 
   // bound weights at 1/sqrt(Nquotes) and redeistribute the remaining weight
   // among the remaining quoters proportional to their weights
-  pd_t wmax[1], rnumer[1], rdenom[1], half[1], cumwgt[1];
+  pd_t wmax[1], rnumer[1], rdenom[1];
   pd_set( rnumer, one );
   pd_new( rdenom, 0, 0 );
+  // wmax = 1 / sqrt( numa )
   pd_new( wmax, numa, 0 );
   pd_sqrt( wmax, wmax, qs->fact_ );
   pd_div( wmax, one, wmax );
@@ -313,38 +325,58 @@ static inline void upd_aggregate( pc_price_t *ptr, uint64_t slot )
   if ( rdenom->v_ ) {
     pd_div( rnumer, rnumer, rdenom );
   }
-  pd_new( cumwgt, 0, 0 );
-  pd_new( half, 5, -1 );
-  for( uint32_t i=0;i != numa; ++i ) {
-    wptr = &qs->weight_[i];
-    if ( aidx[i] == 0 ) {
+  for ( uint32_t i = 0; i != numa; ++i ) {
+    wptr = &qs->weight_[ i ];
+    if ( aidx[ i ] == 0 ) {
       pd_mul( wptr, wptr, rnumer );
     }
-    pd_mul( weight, wptr, half );
-    pd_add( &qs->cumwgt_[i], cumwgt, weight, qs->fact_ );
-    pd_add( cumwgt, cumwgt, wptr, qs->fact_ );
   }
+
+  const pd_t half = { .e_ = -1, .v_ = 5 };
 
   // compute aggregate price as weighted median
   pd_t iprice[1], lprice[1], uprice[1], q3price[1], q1price[1], ptile[1];
   pd_new( ptile, 5, -1 );
-  wgt_ptile( iprice, qs->iprice_, ptile, qs );
+  wgt_ptile( iprice, qs->iprice_, qs->weight_, numa, ptile, qs );
   pd_adjust( iprice, ptr->expo_, qs->fact_ );
   ptr->agg_.price_  = iprice->v_;
 
   // compute diff in weighted median between upper and lower price bounds
-  wgt_ptile( uprice, qs->uprice_, ptile, qs );
-  wgt_ptile( lprice, qs->lprice_, ptile, qs );
+  pd_t prices[ PC_COMP_SIZE ];
+  pd_t weights[ PC_COMP_SIZE ];
+  // sort upper prices and weights
+  for ( uint32_t i = 0; i < numa; ++i ) {
+    uint32_t j = i;
+    for ( ; j > 0 && pd_lt( &qs->uprice_[ i ], &prices[ j - 1 ], qs->fact_ ); --j ) {
+      prices[ j ] = prices[ j - 1 ];
+      weights[ j ] = weights[ j - 1 ];
+    }
+    prices[ j ] = qs->uprice_[ i ];
+    weights[ j ] = qs->weight_[ i ];
+  }
+  wgt_ptile( uprice, prices, weights, numa, ptile, qs );
+  // sort lower prices and weights
+  for ( uint32_t i = 0; i < numa; ++i ) {
+    uint32_t j = i;
+    for ( ; j > 0 && pd_lt( &qs->lprice_[ i ], &prices[ j - 1 ], qs->fact_ ); --j ) {
+      prices[ j ] = prices[ j - 1 ];
+      weights[ j ] = weights[ j - 1 ];
+    }
+    prices[ j ] = qs->lprice_[ i ];
+    weights[ j ] = qs->weight_[ i ];
+  }
+  wgt_ptile( lprice, prices, weights, numa, ptile, qs );
+
   pd_sub( uprice, uprice, lprice, qs->fact_ );
-  pd_mul( uprice, uprice, half );
+  pd_mul( uprice, uprice, &half );
 
   // compute weighted iqr of prices
   pd_new( ptile, 75, -2 );
-  wgt_ptile( q3price, qs->iprice_, ptile, qs );
+  wgt_ptile( q3price, qs->iprice_, qs->weight_, numa, ptile, qs );
   pd_new( ptile, 25, -2 );
-  wgt_ptile( q1price, qs->iprice_, ptile, qs );
+  wgt_ptile( q1price, qs->iprice_, qs->weight_, numa, ptile, qs );
   pd_sub( q3price, q3price, q1price, qs->fact_ );
-  pd_mul( q3price, q3price, half );
+  pd_mul( q3price, q3price, &half );
 
   // take confidence interval as larger
   pd_t *cptr = pd_gt( uprice, q3price, qs->fact_ ) ? uprice : q3price;
