@@ -80,7 +80,7 @@ int main( int argc,char** argv )
   px->agg_.pub_slot_ = slot;
   px->num_  = 0;
   upd_aggregate( px, slot+1 );
-  pc_qset_t *qs = qset_new( px->expo_ );
+  pc_qset_t *qs = nullptr;
 
   // skip first line
   csv_parser cp( mf.data(), mf.size( ));
@@ -96,6 +96,10 @@ int main( int argc,char** argv )
     px->expo_ = expo;
     px->agg_.price_ = price;
     px->agg_.conf_  = conf;
+    if ( ! qs ) {
+      px->expo_ = expo;
+      qs = qset_new( px->expo_ );
+    }
     upd_twap( px, nslots, qs );
     std::cout << price << ','
               << conf << ','
