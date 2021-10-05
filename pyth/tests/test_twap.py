@@ -12,7 +12,7 @@ def _get_test_class():
 
   test_folder = os.path.join(_this_dir, 'twap')
 
-  class TestQset(object):
+  class TestTwap(object):
 
     def run_test(self, test_id):
       test_file = os.path.join(test_folder, '%s.csv' % (test_id,))
@@ -32,9 +32,9 @@ def _get_test_class():
         self.run_test(test_id)
         return test_func
 
-    setattr(TestQset, 'test_%s' % (test_id,), get_test_func(test_id))
+    setattr(TestTwap, 'test_%s' % (test_id,), get_test_func(test_id))
 
-  return TestQset
+  return TestTwap
 
 
-TestQset = _get_test_class()
+TestTwap = _get_test_class()
