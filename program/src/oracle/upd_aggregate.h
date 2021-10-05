@@ -130,8 +130,11 @@ static void upd_ema(
   // adjust and store results
   pd_adjust( val, qs->expo_, qs->fact_ );
   ptr->val_   = val->v_;
-  pd_store( &ptr->numer_, numer );
-  pd_store( &ptr->denom_, denom );
+  int64_t numer1, denom1;
+  if ( pd_store( &numer1, numer ) && pd_store( &denom1, denom ) ) {
+    ptr->numer_ = numer1;
+    ptr->denom_ = denom1;
+  }
   prc_ptr->drv1_ = 1;
 }
 
