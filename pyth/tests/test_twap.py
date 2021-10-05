@@ -30,7 +30,7 @@ def _get_test_class():
     def get_test_func(test_id):
       def test_func(self):
         self.run_test(test_id)
-        return test_func
+      return test_func
 
     setattr(TestTwap, 'test_%s' % (test_id,), get_test_func(test_id))
 
