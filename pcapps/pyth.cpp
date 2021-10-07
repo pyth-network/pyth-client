@@ -19,7 +19,6 @@ int usage()
   cerr << "  init_key         [options]" << endl;
   cerr << "  upd_price        <price_key> [options]" << endl;
   cerr << "  upd_price_val    <price_key> <value> <confidence> <status> [options]" << endl;
-  cerr << "  get_block        <slot_number> [options]" << endl;
   cerr << "  get_product      <product_key> [options]" << endl;
   cerr << "  get_product_list [options]" << endl;
   cerr << "  get_all_products [options]" << endl;
@@ -506,158 +505,6 @@ int on_get_all_products( int argc, char **argv )
   return 0;
 }
 
-class get_block_print : public get_block
-{
-public:
-  get_block_print( manager *mgr ) : mgr_( mgr ) {
-  }
-  void on_upd_price( rpc::get_block *res ) {
-    std::string kstr;
-    std::cout << "upd_price:" << std::endl;
-    print_val( "publisher", 2 );
-    res->get_key( 0 )->enc_base58( kstr );
-    std::cout << kstr << std::endl;
-    print_val( "price_account", 2 );
-    res->get_key( 1 )->enc_base58( kstr );
-    std::cout << kstr << std::endl;
-    price *px = mgr_->get_price( *res->get_key(1) );
-    if ( px ) {
-      print_val( "symbol", 2 );
-      std::cout << px->get_symbol().as_string() << std::endl;
-    }
-    cmd_upd_price *cmd = (cmd_upd_price*)res->get_cmd();
-    print_val( "status", 2 );
-    std::cout << symbol_status_to_str(
-        (symbol_status)cmd->status_ ).as_string() << std::endl;
-    print_val( "price", 2 );
-    std::cout << cmd->price_ << std::endl;
-    print_val( "conf_interval", 2 );
-    std::cout << cmd->conf_ << std::endl;
-    print_val( "pub_slot", 2 );
-    std::cout << cmd->pub_slot_ << std::endl;
-    print_val( "tx_fee", 2 );
-    std::cout << res->get_tx_fee() << std::endl;
-    if ( res->get_is_tx_err() ) {
-      print_val( "tx_error", 2 );
-      std::cout << res->get_tx_err().as_string() << std::endl;
-    }
-    std::cout << std::endl;
-  }
-  void on_response( rpc::get_block *res ) override {
-    if ( res->get_is_err() ) {
-      on_error_sub( res->get_err_msg(), this );
-      st_ = e_error;
-      return;
-    }
-    if ( res->get_is_end() ) {
-      st_ = e_done;
-      return;
-    }
-    char *cbuf = res->get_cmd();
-    cmd_hdr *hdr = (cmd_hdr*)cbuf;
-    switch( hdr->cmd_ ) {
-      case e_cmd_upd_price: on_upd_price( res ); break;
-    }
-  }
-  manager *mgr_;
-};
-
-class get_block_json : public get_block
-{
-public:
-  get_block_json( manager *mgr, json_wtr& wtr ) : mgr_( mgr ), wtr_( wtr ) {
-  }
-  void on_upd_price( rpc::get_block *res ) {
-    wtr_.add_val( json_wtr::e_obj );
-    wtr_.add_key( "event", "upd_price" );
-    wtr_.add_key( "publisher", *res->get_key( 0 ) );
-    wtr_.add_key( "price_account", *res->get_key( 1 ) );
-    wtr_.add_key( "param_account", *res->get_key( 2 ) );
-    price *px = mgr_->get_price( *res->get_key(1) );
-    if ( px ) {
-      wtr_.add_key( "symbol", px->get_symbol() );
-    }
-    cmd_upd_price *cmd = (cmd_upd_price*)res->get_cmd();
-    wtr_.add_key( "status", symbol_status_to_str(
-        (symbol_status)cmd->status_ ).as_string() );
-    wtr_.add_key( "price", cmd->price_ );
-    wtr_.add_key( "conf", cmd->conf_ );
-    wtr_.add_key( "pub_slot", cmd->pub_slot_ );
-    wtr_.add_key( "tx_fee", res->get_tx_fee() );
-    if ( res->get_is_tx_err() ) {
-      wtr_.add_key( "tx_error", res->get_tx_err() );
-    }
-    wtr_.pop();
-  }
-  void on_response( rpc::get_block *res ) override {
-    if ( res->get_is_err() ) {
-      on_error_sub( res->get_err_msg(), this );
-      st_ = e_error;
-      return;
-    }
-    if ( res->get_is_end() ) {
-      st_ = e_done;
-      return;
-    }
-    char *cbuf = res->get_cmd();
-    cmd_hdr *hdr = (cmd_hdr*)cbuf;
-    switch( hdr->cmd_ ) {
-      case e_cmd_upd_price: on_upd_price( res ); break;
-    }
-  }
-  manager  *mgr_;
-  json_wtr& wtr_;
-};
-
-
-int on_get_block( int argc, char **argv )
-{
-  if ( argc < 2 ) {
-    return usage();
-  }
-  uint64_t slot = ::atol( argv[1] );
-  if ( slot == 0 ) {
-    std::cerr << "pyth: invalid slot=" << argv[1] << std::endl;
-    return 1;
-  }
-  argc -= 1;
-  argv += 1;
-
-  pyth_arguments args( argc, argv );
-  if ( args.invalid_ )
-    return 1;
-
-  // initialize connection to block-chain
-  manager mgr;
-  mgr.set_rpc_host( args.rpc_host_ );
-  mgr.set_dir( args.key_dir_ );
-  mgr.set_do_tx( false );
-  mgr.set_commitment( args.cmt_ );
-  if ( !mgr.init() || !mgr.bootstrap() ) {
-    std::cerr << "pyth: " << mgr.get_err_msg() << std::endl;
-    return 1;
-  }
-
-  // get transaction
-  int ret = 0;
-  if ( args.do_json_ ) {
-    json_wtr wtr;
-    wtr.add_val( json_wtr::e_arr );
-    get_block_json req( &mgr, wtr );
-    req.set_slot( slot );
-    req.set_commitment( args.cmt_ );
-    ret = !mgr.submit_poll( &req );
-    wtr.pop();
-    print_json( wtr );
-  } else {
-    get_block_print req( &mgr );
-    req.set_slot( slot );
-    req.set_commitment( args.cmt_ );
-    ret = !mgr.submit_poll( &req );
-  }
-  return ret;
-}
-
 int main(int argc, char **argv)
 {
   if ( argc < 2 ) {
@@ -685,8 +532,6 @@ int main(int argc, char **argv)
     rc = on_get_product_list( argc, argv );
   } else if ( cmd == "get_all_products" ) {
     rc = on_get_all_products( argc, argv );
-  } else if ( cmd == "get_block" ) {
-    rc = on_get_block( argc, argv );
   } else if ( cmd == "version" ) {
     std::cout << "version: " << PC_VERSION << std::endl;
   } else {

@@ -391,38 +391,6 @@ namespace pc
       uint32_t    acct_type_;
     };
 
-    // get all (pyth) transactions in a slot
-    class get_block : public rpc_request
-    {
-    public:
-      void set_slot( uint64_t slot );
-      void set_commitment( commitment );
-      void set_program( pub_key * );
-      void request( json_wtr& ) override;
-      void response( const jtree& ) override;
-      uint64_t get_fee() const;
-      bool     get_is_tx_err() const;
-      str      get_tx_err() const;
-      uint64_t get_tx_fee() const;
-      unsigned get_num_key() const;
-      pub_key *get_key( unsigned i );
-      char    *get_cmd();
-      bool     get_is_end() const;
-
-    private:
-      typedef std::vector<pub_key> key_vec_t;
-      typedef std::vector<char>    ins_vec_t;
-      uint64_t bslot_;
-      commitment cmt_;
-      pub_key   *gkey_;
-      key_vec_t  kvec_;
-      ins_vec_t  ibuf_;
-      uint64_t   fee_;
-      str        tx_err_;
-      bool       is_end_;
-      bool       is_tx_err_;
-    };
-
     // set new component price
     class upd_price : public tx_request, public rpc_request
     {
