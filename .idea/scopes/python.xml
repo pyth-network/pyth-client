@@ -1,0 +1,3 @@
+<component name="DependencyValidationManager">
+  <scope name="python" pattern="file[pyth-client]:**/*.py" />
+</component>

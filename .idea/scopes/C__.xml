@@ -1,0 +1,3 @@
+<component name="DependencyValidationManager">
+  <scope name="C++" pattern="file[pyth-client]:**/*.cpp||file[pyth-client]:**/*.hpp||file[pyth-client]:**/*.c||file[pyth-client]:**/*.h" />
+</component>
