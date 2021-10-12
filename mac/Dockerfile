@@ -13,11 +13,7 @@ WORKDIR /home/pyth
 
 COPY --chown=pyth:pyth . pyth-client/
 
-RUN rm -rf pyth-client/build
-RUN cd pyth-client && mkdir build && cd build && cmake .. && make && ctest
+RUN cd pyth-client && mkdir build && cd build && cmake .. && make
 
 RUN echo "\nexport PATH=\$PATH:\$HOME/pyth-client/build" >> .profile
-
 RUN echo "\nexport PYTHONPATH=\${PYTHONPATH:+\${PYTHONPATH}:}\$HOME/pyth-client" >> .profile
-
-RUN /bin/bash -l -c "pytest-3 --pyargs pyth"
