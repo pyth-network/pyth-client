@@ -76,7 +76,6 @@ void request_sub_set::teardown()
 request::request()
 : svr_( nullptr ),
   clnt_( nullptr ),
-  cb_( nullptr ),
   is_submit_( false ),
   is_recv_( false )
 {

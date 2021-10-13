@@ -112,7 +112,6 @@ namespace pc
 
     manager    *svr_;
     rpc_client *clnt_;
-    rpc_sub    *cb_;
     prev_next_t nd_[1];
     node_list_t slist_;
     bool        is_submit_;

@@ -55,7 +55,7 @@ namespace pc
   public:
 
     manager();
-    virtual ~manager();
+    ~manager() override;
 
     // solana rpc http connection
     void set_rpc_host( const std::string& );
@@ -151,7 +151,7 @@ namespace pc
     void poll( bool do_wait = true);
 
     // accept new pyth client apps
-    void accept( int fd );
+    void accept( int fd ) override;
 
     // shut-down server
     void teardown();
