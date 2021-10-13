@@ -1,6 +1,8 @@
 # pyth-client
 client API for on-chain pyth programs
 
+### Build Instructions
+
 ```
 # depends on openssl
 apt install libssl-dev
@@ -54,7 +56,7 @@ and a corresponding set of test cases in the subdirectory with the same name as 
 You can run these tests using a command like:
 
 ```
-docker run -t --platform linux/amd64 -v "$(pwd)"/fuzz/add/findings:/home/pyth/pyth-client/fuzz/add/findings pyth-fuzz sh -c "./afl/afl-fuzz -i ./pyth-client/fuzz/add/testcases -o ./pyth-client/fuzz/add/findings ./pyth-client/build/add"
+docker run -t --platform linux/amd64 -v "$(pwd)"/fuzz/add/findings:/home/pyth/pyth-client/fuzz/add/findings pyth-fuzz sh -c "./afl/afl-fuzz -i ./pyth-client/fuzz/add/testcases -o ./pyth-client/fuzz/add/findings ./pyth-client/build/add add"
 ```
 
 This command will run the `add` program on the tests cases in `fuzz/add/testcases`, saving any outputs to `fuzz/add/findings`.
@@ -64,7 +66,7 @@ by looking in that subdirectory on the host.
 If you find an error case that you want to investigate further, you can run the program on the failing input using something like:
 
 ```
-docker run -t --platform linux/amd64 -v "$(pwd)"/fuzz/add/findings:/home/pyth/pyth-client/fuzz/add/findings pyth-fuzz sh -c "./pyth-client/build/add < ./pyth-client/fuzz/add/findings/crashes/id\:000000\,sig\:06\,src\:000000\,op\:flip1\,pos\:0"
+docker run -t --platform linux/amd64 -v "$(pwd)"/fuzz/add/findings:/home/pyth/pyth-client/fuzz/add/findings pyth-fuzz sh -c "./pyth-client/build/add add < ./pyth-client/fuzz/add/findings/crashes/id\:000000\,sig\:06\,src\:000000\,op\:flip1\,pos\:0"
 ```
 
 in this example, `id\:000000\,sig\:06\,src\:000000\,op\:flip1\,pos\:0` is the file containing the failing input.

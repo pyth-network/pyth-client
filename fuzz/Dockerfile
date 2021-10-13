@@ -20,10 +20,3 @@ ENV CXX=/home/pyth/afl/afl-g++
 
 COPY --chown=pyth:pyth . pyth-client/
 RUN cd pyth-client && mkdir build && cd build && cmake .. && make
-
-# RUN ctest
-
-# RUN echo "\nexport PATH=\$PATH:\$HOME/pyth-client/build" >> .profile
-# RUN echo "\nexport PYTHONPATH=\${PYTHONPATH:+\${PYTHONPATH}:}\$HOME/pyth-client" >> .profile
-# RUN /bin/bash -l -c "pytest-3 --pyargs pyth"
-
