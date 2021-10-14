@@ -33,7 +33,7 @@ We have a dockerfile that allows you to build the on-chain program on an M1 Mac.
 You can build the docker image using the following command:
 
 ```
-docker build . --platform linux/amd64 -f mac/Dockerfile -t pyth-client
+docker build . --platform linux/amd64 -f docker/mac/Dockerfile -t pyth-client
 ```
 
 You can then open a shell in the image by running:
@@ -56,17 +56,17 @@ and a corresponding set of test cases in the subdirectory with the same name as 
 You can run these tests using a command like:
 
 ```
-docker run -t --platform linux/amd64 -v "$(pwd)"/fuzz/add/findings:/home/pyth/pyth-client/fuzz/add/findings pyth-fuzz sh -c "./afl/afl-fuzz -i ./pyth-client/fuzz/add/testcases -o ./pyth-client/fuzz/add/findings ./pyth-client/build/add add"
+docker run -t --platform linux/amd64 -v "$(pwd)"/findings:/home/pyth/pyth-client/findings pyth-fuzz sh -c "./afl/afl-fuzz -i ./pyth-client/pyth/tests/fuzz/add/testcases -o ./pyth-client/findings ./pyth-client/build/fuzz add"
 ```
 
-This command will run the `add` program on the tests cases in `fuzz/add/testcases`, saving any outputs to `fuzz/add/findings`.
-Note that `fuzz/add/findings` is shared between the host machine and the docker container, so you can inspect any error cases
+This command will run the `add` program on the tests cases in `pyth/tests/fuzz/add/testcases`, saving any outputs to `findings/`.
+Note that `findings/` is shared between the host machine and the docker container, so you can inspect any error cases
 by looking in that subdirectory on the host.
 
 If you find an error case that you want to investigate further, you can run the program on the failing input using something like:
 
 ```
-docker run -t --platform linux/amd64 -v "$(pwd)"/fuzz/add/findings:/home/pyth/pyth-client/fuzz/add/findings pyth-fuzz sh -c "./pyth-client/build/add add < ./pyth-client/fuzz/add/findings/crashes/id\:000000\,sig\:06\,src\:000000\,op\:flip1\,pos\:0"
+docker run -t --platform linux/amd64 -v "$(pwd)"/findings:/home/pyth/pyth-client/findings pyth-fuzz sh -c "./pyth-client/build/fuzz add < ./pyth-client/findings/crashes/id\:000000\,sig\:06\,src\:000000\,op\:flip1\,pos\:0"
 ```
 
 in this example, `id\:000000\,sig\:06\,src\:000000\,op\:flip1\,pos\:0` is the file containing the failing input.
