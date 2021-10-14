@@ -1,3 +1,3 @@
-def test_deploy(solana_program_deploy):
+def test_setup(pyth_add_product):
 
     assert(True)

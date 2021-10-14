@@ -157,7 +157,9 @@ def solana_airdrop(solana_test_validator, solana_keygen):
 
 
 @pytest.fixture(scope='session')
-def solana_program_deploy(solana_test_validator, solana_keygen, solana_airdrop):
+def solana_program_deploy(
+    solana_test_validator, solana_keygen, solana_airdrop
+):
 
     cmd = [
         'solana', 'program', 'deploy',
@@ -174,3 +176,55 @@ def solana_program_deploy(solana_test_validator, solana_keygen, solana_airdrop):
     output = [line for line in output if 'Program Id' in line][0]
     output = output.split('Program Id: ')[1]
     return output
+
+
+@pytest.fixture(scope='session')
+def pyth_dir():
+
+    path = mkdtemp(prefix='pythd_')
+    yield path
+    rmtree(path)
+
+
+@pytest.fixture(scope='session')
+def pyth_publish_key(solana_keygen, pyth_dir):
+
+    path = os.path.join(pyth_dir, 'publish_key_pair.json')
+    os.symlink(solana_keygen[1], path)
+
+
+@pytest.fixture(scope='session')
+def pyth_program_key(solana_program_deploy, pyth_dir):
+
+    pyth_path = os.path.join(pyth_dir, 'program_key.json')
+    with open(pyth_path, 'w') as f:
+        f.write(solana_program_deploy)
+
+
+@pytest.fixture(scope='session')
+def pyth_init_mapping(
+    solana_test_validator, pyth_dir, pyth_publish_key, pyth_program_key
+):
+
+    cmd = [
+        'pyth_admin', 'init_mapping',
+        '-r', 'localhost',
+        '-k', pyth_dir,
+        '-c', 'finalized',
+    ]
+    check_call(cmd)
+
+
+@pytest.fixture(scope='session')
+def pyth_add_product(solana_test_validator, pyth_dir, pyth_init_mapping):
+
+    cmd = [
+        'pyth_admin', 'add_product',
+        '-r', 'localhost',
+        '-k', pyth_dir,
+        '-c', 'finalized',
+    ]
+    output = check_output(cmd)
+    output = output.decode('ascii')
+    output = output.splitlines()
+    return output[0]
