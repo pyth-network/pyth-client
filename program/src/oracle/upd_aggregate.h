@@ -108,23 +108,33 @@ static void upd_ema(
       pd_load( denom, ptr->denom_ );
     }
     else {
-      /* temporary upgrade code */
+      // temporary upgrade code
       pd_new_scale( numer, ptr->numer_, PD_EMA_EXPO );
       pd_new_scale( denom, ptr->denom_, PD_EMA_EXPO );
     }
-    pd_mul( numer, numer, decay );
-    pd_mul( wval, val, cwgt );
-    pd_add( numer, numer, wval, qs->fact_ );
-    pd_mul( denom, denom, decay );
-    pd_add( denom, denom, cwgt, qs->fact_ );
-    pd_div( val, numer, denom );
+    if ( numer->v_ < 0 || denom->v_ < 0 ) {
+      // temporary reset twap on negative value
+      pd_set( numer, val );
+      pd_set( denom, one );
+    }
+    else {
+      pd_mul( numer, numer, decay );
+      pd_mul( wval, val, cwgt );
+      pd_add( numer, numer, wval, qs->fact_ );
+      pd_mul( denom, denom, decay );
+      pd_add( denom, denom, cwgt, qs->fact_ );
+      pd_div( val, numer, denom );
+    }
   }
 
   // adjust and store results
   pd_adjust( val, qs->expo_, qs->fact_ );
   ptr->val_   = val->v_;
-  pd_store( &ptr->numer_, numer );
-  pd_store( &ptr->denom_, denom );
+  int64_t numer1, denom1;
+  if ( pd_store( &numer1, numer ) && pd_store( &denom1, denom ) ) {
+    ptr->numer_ = numer1;
+    ptr->denom_ = denom1;
+  }
   prc_ptr->drv1_ = 1;
 }
 

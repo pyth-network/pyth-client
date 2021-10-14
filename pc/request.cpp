@@ -76,7 +76,6 @@ void request_sub_set::teardown()
 request::request()
 : svr_( nullptr ),
   clnt_( nullptr ),
-  cb_( nullptr ),
   is_submit_( false ),
   is_recv_( false )
 {
@@ -256,47 +255,6 @@ void get_mapping::update( T *res )
 
   // capture mapping attributes to disk
   cptr->write( (pc_pub_key_t*)mkey_.data(), (pc_acc_t*)tab );
-}
-
-///////////////////////////////////////////////////////////////////////////
-// get_block
-
-get_block::get_block()
-: st_( e_sent )
-{
-}
-
-void get_block::set_slot( uint64_t slot )
-{
-  req_->set_slot( slot );
-}
-
-void get_block::set_commitment( commitment cmt )
-{
-  req_->set_commitment( cmt );
-}
-
-void get_block::on_response( rpc::get_block *res )
-{
-  if ( res->get_is_err() ) {
-    on_error_sub( res->get_err_msg(), this );
-    st_ = e_error;
-  } else if ( st_ == e_sent && res->get_is_end() ) {
-    st_ = e_done;
-  }
-}
-
-bool get_block::get_is_done() const
-{
-  return st_ == e_done;
-}
-
-void get_block::submit()
-{
-  st_ = e_sent;
-  req_->set_sub( this );
-  req_->set_program( get_manager()->get_program_pub_key() );
-  get_rpc_client()->send( req_ );
 }
 
 ///////////////////////////////////////////////////////////////////////////

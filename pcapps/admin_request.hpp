@@ -25,6 +25,8 @@ namespace pc
     void on_response( rpc::signature_subscribe * ) override;
 
   private:
+    using request::on_response;
+
     typedef enum {
       e_create_sent, e_create_sig,
       e_init_sent, e_init_sig, e_done, e_error
@@ -57,6 +59,8 @@ namespace pc
     void on_response( rpc::signature_subscribe * ) override;
 
   private:
+    using request::on_response;
+
     typedef enum {
       e_create_sent, e_create_sig,
       e_init_sent, e_init_sig, e_done, e_error
@@ -92,6 +96,8 @@ namespace pc
     void submit() override;
 
   private:
+    using request::on_response;
+
     typedef enum {
       e_create_sent, e_create_sig,
       e_add_sent, e_add_sig, e_done, e_error
@@ -100,7 +106,6 @@ namespace pc
     state_t                  st_;
     commitment               cmt_;
     key_pair                 akey_;
-    key_pair                 skey_;
     key_pair                 mkey_;
     rpc::create_account      areq_[1];
     rpc::add_product         sreq_[1];
@@ -127,6 +132,8 @@ namespace pc
     void reset();
 
   private:
+    using request::on_response;
+
     typedef enum {
       e_sent, e_sig, e_done, e_error
     } state_t;
@@ -163,6 +170,8 @@ namespace pc
     void submit() override;
 
   private:
+    using request::on_response;
+
     typedef enum {
       e_create_sent, e_create_sig,
       e_add_sent, e_add_sig, e_done, e_error
@@ -172,7 +181,6 @@ namespace pc
     commitment               cmt_;
     product                 *prod_;
     key_pair                 akey_;
-    key_pair                 skey_;
     key_pair                 mkey_;
     rpc::create_account      areq_[1];
     rpc::add_price           sreq_[1];
@@ -198,6 +206,8 @@ namespace pc
     void submit() override;
 
   private:
+    using request::on_response;
+
     typedef enum {
       e_init_sent, e_init_sig, e_done, e_error
     } state_t;
@@ -229,6 +239,8 @@ namespace pc
     void submit() override;
 
   private:
+    using request::on_response;
+
     typedef enum {
       e_add_sent, e_add_sig, e_done, e_error
     } state_t;
@@ -237,7 +249,6 @@ namespace pc
     commitment               cmt_;
     price                   *px_;
     key_pair                 akey_;
-    key_pair                 mkey_;
     rpc::add_publisher       req_[1];
     rpc::signature_subscribe sig_[1];
   };
@@ -261,6 +272,8 @@ namespace pc
     void submit() override;
 
   private:
+    using request::on_response;
+
     typedef enum {
       e_add_sent, e_add_sig, e_done, e_error
     } state_t;
@@ -292,6 +305,8 @@ namespace pc
     void on_response( rpc::signature_subscribe * ) override;
 
   private:
+    using request::on_response;
+
     typedef enum {
       e_create_sent, e_create_sig,
       e_init_sent, e_init_sig, e_done, e_error
@@ -321,6 +336,8 @@ namespace pc
     void on_response( rpc::account_subscribe * ) override;
 
   private:
+    using request::on_response;
+
     typedef enum {
       e_upd_sent, e_upd_sig, e_get_sent, e_done, e_error
     } state_t;
@@ -348,6 +365,7 @@ namespace pc
     bool get_is_done() const override;
 
   private:
+    using request::on_response;
     typedef enum { e_sent, e_done, e_error } state_t;
     state_t  st_;
     rpc::get_minimum_balance_rent_exemption req_[1];

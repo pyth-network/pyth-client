@@ -112,7 +112,6 @@ namespace pc
 
     manager    *svr_;
     rpc_client *clnt_;
-    rpc_sub    *cb_;
     prev_next_t nd_[1];
     node_list_t slist_;
     bool        is_submit_;
@@ -144,24 +143,6 @@ namespace pc
     pub_key  mkey_;
     uint32_t num_sym_;
     rpc::get_account_info areq_[1];
-  };
-
-  // get transactions in single block
-  class get_block : public request,
-                    public rpc_sub_i<rpc::get_block>
-  {
-  public:
-    get_block();
-    void set_slot( uint64_t slot );
-    void set_commitment( commitment cmt );
-  public:
-    void submit() override;
-    void on_response( rpc::get_block * ) override;
-    bool get_is_done() const override;
-  protected:
-    typedef enum { e_sent, e_done, e_error } state_t;
-    state_t st_;
-    rpc::get_block req_[1];
   };
 
   // product symbol and other reference-data attributes
