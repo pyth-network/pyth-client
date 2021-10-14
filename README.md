@@ -48,7 +48,7 @@ docker run -it --platform linux/amd64 pyth-client
 Build a docker image for running fuzz tests:
 
 ```
-docker build . --platform linux/amd64 -f fuzz/Dockerfile -t pyth-fuzz
+docker build . --platform linux/amd64 -f docker/fuzz/Dockerfile -t pyth-fuzz
 ```
 
 Each fuzz test has a command-line program in the `fuzz/` directory,

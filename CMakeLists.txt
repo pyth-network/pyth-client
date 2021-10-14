@@ -15,8 +15,7 @@ set( CMAKE_INCLUDE_CURRENT_DIR ON )
 include_directories( program/src/ )
 
 # gcc compiler/linker flags
-# FIXME: add -Werror back
-add_compile_options( -ggdb -Wall -Wextra -m64 )
+add_compile_options( -ggdb -Wall -Wextra -Werror -m64 )
 set( CMAKE_CXX_FLAGS -std=c++11 )
 set( CMAKE_C_FLAGS -std=c99 )
 set( CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread")
@@ -68,13 +67,6 @@ add_library( pc STATIC ${PC_SRC} )
 set( PC_DEP pc ssl crypto z zstd )
 
 #
-# fuzzing applications
-#
-
-add_executable( add fuzz/add.cpp )
-target_link_libraries( add ${PC_DEP} )
-
-#
 # applications
 #
 
@@ -118,3 +110,11 @@ target_link_libraries( leader_stats ${PC_DEP} )
 
 add_test( test_unit test_unit )
 add_test( test_net test_net )
+
+
+#
+# fuzz testing application
+#
+
+add_executable( fuzz pctest/fuzz/fuzz.cpp )
+target_link_libraries( fuzz ${PC_DEP} )
