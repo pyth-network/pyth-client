@@ -45,15 +45,9 @@ void test_pd_add(pd_t* num1, pd_t* num2) {
   assert(!(num1->v_ < 0 && num2->v_ < 0) || result.v_ <= 0, "sum of two negative numbers was not negative");
 }
 
-// Adds two decimal numbers and asserts that the result has the correct sign.
-// Usage: ./add
-// then input four numbers on stdin:
-// 1 <- value of the first number
-// 2 <- exponent of the first number
-// 3 <- value of the second number
-// 4 <- exponent of the second number.
-//
-// see the files in add/testcases for example inputs
+// Runs a fuzz test.
+// Usage: ./fuzz <test name>
+// then provide test input on stdin.
 int main(int argc, char **argv)
 {
   if (argc < 2) {
