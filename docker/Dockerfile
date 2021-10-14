@@ -20,8 +20,6 @@ RUN echo "\nexport PATH=\$PATH:\$HOME/pyth-client/build" >> .profile
 
 RUN echo "\nexport PYTHONPATH=\${PYTHONPATH:+\${PYTHONPATH}:}\$HOME/pyth-client" >> .profile
 
-RUN /bin/bash -l -c "pytest-3 --pyargs pyth"
-
 # Install Rust
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain none
 
@@ -33,6 +31,8 @@ RUN PATH=$PATH:$HOME/.cargo/bin && cd pyth-client/program && make V=1
 
 # Print hash of the program
 RUN sha256sum -b pyth-client/target/oracle.so
+
+RUN /bin/bash -l -c "pytest-3 --pyargs pyth"
 
 ENTRYPOINT []
 CMD []

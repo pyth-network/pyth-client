@@ -3,11 +3,20 @@ import glob
 import inspect
 import os
 import subprocess
+import time
+from shutil import rmtree
+from subprocess import DEVNULL, Popen, check_call, check_output
+from tempfile import mkdtemp
+
+import pytest
 
 
 __all__ = [
     'BaseTest',
 ]
+
+__this_file = os.path.abspath(__file__)
+__this_dir = os.path.dirname(__this_file)
 
 
 class BaseTest:
@@ -97,3 +106,66 @@ class BaseTest:
                     f.write(actual)
         else:
             assert actual == expected
+
+
+@pytest.fixture
+def solana_test_validator():
+
+    ledger_dir = mkdtemp(prefix='stv_')
+    cmd = [
+        'solana-test-validator',
+        '--rpc-port', '8899',
+        '--ledger', ledger_dir,
+    ]
+    kwargs = {
+        'stdin': DEVNULL,
+        'stdout': DEVNULL,
+        'stderr': DEVNULL,
+    }
+    with Popen(cmd, **kwargs) as p:
+        time.sleep(3)
+        yield
+        p.terminate()
+    rmtree(ledger_dir)
+
+
+@pytest.fixture
+def solana_keygen():
+
+    cmd = ['solana-keygen', 'new', '--no-passphrase']
+    output = check_output(cmd)
+    output = output.decode('ascii')
+    output = output.splitlines()
+    output = [line for line in output if 'pubkey' in line][0]
+    output = output.split('pubkey: ')[1]
+    return output
+
+
+@pytest.fixture
+def solana_airdrop(solana_test_validator, solana_keygen):
+
+    cmd = [
+        'solana', 'airdrop', '100', solana_keygen,
+        '--commitment', 'finalized',
+        '--url', 'localhost',
+    ]
+    check_call(cmd)
+
+
+@pytest.fixture
+def solana_program_deploy(solana_test_validator, solana_airdrop):
+
+    cmd = [
+        'solana', 'program', 'deploy',
+        os.path.abspath(
+            os.path.join(__this_dir, '..', '..', 'target', 'oracle.so')
+        ),
+        '--commitment', 'finalized',
+        '--url', 'localhost',
+    ]
+    output = check_output(cmd)
+    output = output.decode('ascii')
+    output = output.splitlines()
+    output = [line for line in output if 'Program Id' in line][0]
+    output = output.split('Program Id: ')[1]
+    return output
