@@ -39,6 +39,7 @@ set( PC_SRC
   pc/request.cpp;
   pc/rpc_client.cpp;
   pc/user.cpp;
+  program/src/oracle/pd.c;
   program/src/oracle/sort.c
   )
 
