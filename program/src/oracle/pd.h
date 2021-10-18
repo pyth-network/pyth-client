@@ -6,7 +6,7 @@ extern "C" {
 
 #define PD_SCALE9     (1000000000L)
 #define PD_EMA_MAX_DIFF 4145     // maximum slots before reset
-#define PD_EMA_EXPO     -9       // exponent of temporary storage
+#define PD_EMA_EXPO     (-9)     // exponent of temporary storage
 #define PD_EMA_DECAY   (-117065) // 1e9*-log(2)/5921
 #define PC_FACTOR_SIZE       18
 
@@ -24,7 +24,7 @@ typedef struct pd
   int64_t  v_;
 } pd_t;
 
-static void pd_scale( pd_t *n )
+static inline void pd_scale( pd_t *n )
 {
   int const neg = n->v_ < 0L;
   int64_t v = neg ? -n->v_ : n->v_; // make v positive for loop condition
@@ -32,7 +32,7 @@ static void pd_scale( pd_t *n )
   n->v_ = neg ? -v : v;
 }
 
-static bool pd_store( int64_t *r, pd_t const *n )
+static inline bool pd_store( int64_t *r, pd_t const *n )
 {
   int64_t v = n->v_;
   int32_t e = n->e_;
@@ -65,7 +65,7 @@ void pd_load( pd_t *r, int64_t const n )
   pd_scale( r );
 }
 
-static void pd_adjust( pd_t *n, int e, const int64_t *p )
+static inline void pd_adjust( pd_t *n, int e, const int64_t *p )
 {
   int64_t v = n->v_;
   int d = n->e_ - e;
@@ -78,14 +78,14 @@ static void pd_adjust( pd_t *n, int e, const int64_t *p )
   pd_new( n, v, e );
 }
 
-static void pd_mul( pd_t *r, const pd_t *n1, const pd_t *n2 )
+static inline void pd_mul( pd_t *r, const pd_t *n1, const pd_t *n2 )
 {
   r->v_ = n1->v_ * n2->v_;
   r->e_ = n1->e_ + n2->e_;
   pd_scale( r );
 }
 
-static void pd_div( pd_t *r, pd_t *n1, pd_t *n2 )
+static inline void pd_div( pd_t *r, pd_t *n1, pd_t *n2 )
 {
   if ( n1->v_ == 0 ) { pd_set( r, n1 ); return; }
   int64_t v1 = n1->v_, v2 = n2->v_;
@@ -100,7 +100,7 @@ static void pd_div( pd_t *r, pd_t *n1, pd_t *n2 )
   pd_scale( r );
 }
 
-static void pd_add( pd_t *r, const pd_t *n1, const pd_t *n2, const int64_t *p )
+static inline void pd_add( pd_t *r, const pd_t *n1, const pd_t *n2, const int64_t *p )
 {
   int d = n1->e_ - n2->e_;
   if ( d==0 ) {
@@ -126,7 +126,7 @@ static void pd_add( pd_t *r, const pd_t *n1, const pd_t *n2, const int64_t *p )
   pd_scale( r );
 }
 
-static void pd_sub( pd_t *r, const pd_t *n1, const pd_t *n2, const int64_t *p )
+static inline void pd_sub( pd_t *r, const pd_t *n1, const pd_t *n2, const int64_t *p )
 {
   int d = n1->e_ - n2->e_;
   if ( d==0 ) {
@@ -152,21 +152,21 @@ static void pd_sub( pd_t *r, const pd_t *n1, const pd_t *n2, const int64_t *p )
   pd_scale( r );
 }
 
-static int pd_lt( const pd_t *n1, const pd_t *n2, const int64_t *p )
+static inline int pd_lt( const pd_t *n1, const pd_t *n2, const int64_t *p )
 {
   pd_t r[1];
   pd_sub( r, n1, n2, p );
   return r->v_ < 0L;
 }
 
-static int pd_gt( const pd_t *n1, const pd_t *n2, const int64_t *p )
+static inline int pd_gt( const pd_t *n1, const pd_t *n2, const int64_t *p )
 {
   pd_t r[1];
   pd_sub( r, n1, n2, p );
   return r->v_ > 0L;
 }
 
-static void pd_sqrt( pd_t *r, pd_t *val, const int64_t *f )
+static inline void pd_sqrt( pd_t *r, pd_t *val, const int64_t *f )
 {
   pd_t t[1], x[1], hlf[1];
   pd_set( t, val );
