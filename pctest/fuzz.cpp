@@ -6,12 +6,18 @@
 #include <unistd.h>
 #include <signal.h>
 #include <iostream>
+#include <math.h>
 
 using namespace pc;
 
 void read_pd_t(pd_t* num) {
-  std::cin >> num->v_;
-  std::cin >> num->e_;
+  int32_t e;
+  int64_t v;
+
+  std::cin >> v;
+  std::cin >> e;
+
+  pd_new_scale(num, v, e);
 }
 
 void assert(bool condition, std::string msg) {
@@ -38,12 +44,69 @@ void test_pd_add(pd_t* num1, pd_t* num2) {
 
   std::cerr << "result: " << result.v_ << " * 10^" << result.e_ << std::endl;
 
+  int exponent_delta = num1->e_ - num2->e_;
+  // max range of double is 2^1024, which is roughly 10^300
+  if (fabs(exponent_delta) > 300) {
+    // the sum of these numbers is not representable in double-precision floating point
+
+    pd_t* max_num;
+    if (num1->e_ > num2->e_) {
+      max_num = num1;
+    } else {
+      max_num = num2;
+    }
+
+    std::cerr << "expected: " << max_num->v_ << " * 10^" << max_num->e_ << std::endl;
+    assert(result.v_ == max_num->v_ && result.e_ == max_num->e_, "Result was not equal to the larger of the two numbers");
+  } else {
+    int min_e, max_e;
+    if (num1->e_ > num2->e_) {
+      min_e = num2->e_;
+      max_e = num1->e_;
+    } else {
+      min_e = num1->e_;
+      max_e = num2->e_;
+    }
+
+    double num1_f = num1->v_ * pow(10, num1->e_ - min_e);
+    double num2_f = num2->v_ * pow(10, num2->e_ - min_e);
+
+    double expected = num1_f + num2_f;
+    double actual = result.v_ * pow(10, result.e_ - min_e);
+
+    double diff = fabs(expected - actual);
+    // maximum permissible error is the precision of the number with the larger exponent.
+    double max_diff = pow(10, max_e - min_e);
+
+    std::cerr << "expected: " << expected << " actual: " << actual << std::endl;
+    std::cerr << "diff: " << diff << " max diff: " << max_diff << std::endl;
+
+    assert(diff <= max_diff, "difference between fixed point and floating point was too large");
+  }
+
   // The sum of two positive numbers should be positive, and the
   // sum of two negative numbers should be negative.
   // TODO: test more interesting properties.
-  assert(!(num1->v_ > 0 && num2->v_ > 0) || result.v_ >= 0, "sum of two positive numbers was not positive");
-  assert(!(num1->v_ < 0 && num2->v_ < 0) || result.v_ <= 0, "sum of two negative numbers was not negative");
+  // assert(!(num1->v_ > 0 && num2->v_ > 0) || result.v_ >= 0, "sum of two positive numbers was not positive");
+  // assert(!(num1->v_ < 0 && num2->v_ < 0) || result.v_ <= 0, "sum of two negative numbers was not negative");
 }
+
+/*
+void test_upd_aggregate(pc_price_t* ptr, uint64_t slot) {
+  upd_aggregate(ptr, slot)
+
+  if (slot <= ptr->) {
+  }
+
+  // price / conf / status / slot per publisher
+
+  // require that aggregate price is
+  // if 1 publisher, aggregate price = publisher price.
+  // > smallest publisher price and < largest publisher price (overflow check). requires > 1 publisher.
+  //
+
+}
+*/
 
 // Runs a fuzz test.
 // Usage: ./fuzz <test name>
