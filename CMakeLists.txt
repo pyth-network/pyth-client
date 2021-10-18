@@ -62,6 +62,8 @@ set( PC_HDR
   pc/user.hpp )
 
 add_library( pc STATIC ${PC_SRC} )
+target_include_directories(pc PUBLIC ${PROJECT_SOURCE_DIR})
+target_include_directories(pc PUBLIC ${PROJECT_SOURCE_DIR}/program/src)
 
 # dependencies
 set( PC_DEP pc ssl crypto z zstd )
