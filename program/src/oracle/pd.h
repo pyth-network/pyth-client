@@ -102,6 +102,7 @@ void pd_load( pd_t *r, int64_t const n )
 
 [[maybe_unused]] static void pd_add( pd_t *r, const pd_t *n1, const pd_t *n2, const int64_t *p )
 {
+  // FIXME: this line can overflow if the exponent for n1 is max int and n2->e_ is negative.
   int d = n1->e_ - n2->e_;
   if ( d==0 ) {
     pd_new( r, n1->v_ + n2->v_, n1->e_ );
@@ -128,6 +129,7 @@ void pd_load( pd_t *r, int64_t const n )
 
 [[maybe_unused]] static void pd_sub( pd_t *r, const pd_t *n1, const pd_t *n2, const int64_t *p )
 {
+  // FIXME: this line can overflow if the exponent for n1 is max int and n2->e_ is negative.
   int d = n1->e_ - n2->e_;
   if ( d==0 ) {
     pd_new( r, n1->v_ - n2->v_, n1->e_ );
