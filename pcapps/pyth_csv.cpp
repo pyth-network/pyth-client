@@ -132,11 +132,11 @@ void csv_print::parse_price( replay& rep )
   if ( i ) std::cout << smap_.obj(i);
   std::cout << ',';
   str pstr = price_type_to_str( (price_type)ptr->ptype_ );
-  std::cout.write( pstr.str_, pstr.len_ );
+  std::cout.write( pstr.str_, static_cast< std::streamsize>( pstr.len_ ) );
   std::cout << ',' << ptr->expo_;
   std::cout << ',';
   str sstr = symbol_status_to_str( (symbol_status)ptr->agg_.status_ );
-  std::cout.write( sstr.str_, sstr.len_ );
+  std::cout.write( sstr.str_, static_cast< std::streamsize>( sstr.len_ ) );
   std::cout << ',' << ptr->agg_.price_
             << ',' << ptr->agg_.conf_
             << ',' << ptr->twap_.val_
@@ -151,7 +151,7 @@ void csv_print::parse_price( replay& rep )
     pc_price_comp_t *cptr = &ptr->comp_[i];
     std::cout << ',';
     str sstr = symbol_status_to_str( (symbol_status)cptr->agg_.status_ );
-    std::cout.write( sstr.str_, sstr.len_ );
+    std::cout.write( sstr.str_, static_cast< std::streamsize>( sstr.len_ ) );
     std::cout << ',' << cptr->agg_.price_
               << ',' << cptr->agg_.conf_
               << ',' << cptr->agg_.pub_slot_;

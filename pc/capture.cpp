@@ -155,7 +155,7 @@ void capture::run()
           int num = ::gzwrite( zfd_, buf, sz );
           if ( num > 0 ) {
             buf += num;
-            sz  -= num;
+            sz  -= static_cast< unsigned >( num );
           } else {
             break;
           }

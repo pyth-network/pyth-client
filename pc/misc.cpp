@@ -1,4 +1,6 @@
 #include "misc.hpp"
+
+#include <assert.h>
 #include <ctype.h>
 #include <time.h>
 
@@ -29,18 +31,24 @@ const char ALPHABET_MAP[256] = {
 const double iFactor = 1.36565823730976103695740418120764243208481439700722980119458355862779176747360903943915516885072037696111192757109;
 
 // reslen is the allocated length for result, feel free to overallocate
-int enc_base58(const uint8_t *source, int len, uint8_t result[], int reslen) {
+int enc_base58(const uint8_t *source, int len, char result[], int reslen)
+{
+  assert( source );
+  assert( len >= 0 );
+  assert( reslen >= 0 );
+
   int zeros = 0, length = 0, pbegin = 0, pend;
   if (!(pend = len)) return 0;
   while (pbegin != pend && !source[pbegin]) pbegin = ++zeros;
   int size = 1 + iFactor * (double)(pend - pbegin);
-  uint8_t b58[size];
+  assert( size > 0 );
+  uint8_t b58[ static_cast< unsigned >( size ) ];
   for (int i = 0; i < size; i++) b58[i] = 0;
   while (pbegin != pend) {
     uint32_t carry = source[pbegin];
     int i = 0;
     for (int it1 = size - 1; (carry || i < length) && (it1 != -1); it1--,i++) {
-      carry += 256 * b58[it1];
+      carry += 256U * b58[it1];
       b58[it1] = carry % 58;
       carry /= 58;
     }
@@ -61,6 +69,10 @@ int enc_base58(const uint8_t *source, int len, uint8_t result[], int reslen) {
 // result must be declared (for the worst case): char result[len * 2];
 int dec_base58( const uint8_t *str, int len, uint8_t *result)
 {
+  assert( str );
+  assert( len >= 0 );
+  assert( result );
+
   result[0] = 0;
   int resultlen = 1;
   for (int i = 0; i < len; i++) {
@@ -105,7 +117,7 @@ char *uint_to_str( uint64_t val, char *cptr )
   return cptr;
 }
 
-uint64_t str_to_uint( const char *val, int len )
+uint64_t str_to_uint( const char *val, const unsigned len )
 {
   uint64_t res = 0L;
   if ( len ) {
@@ -113,7 +125,7 @@ uint64_t str_to_uint( const char *val, int len )
     const char *end = &val[len];
     for(; cptr != end; ++cptr ) {
       if ( isdigit( *cptr ) ) {
-        res = res*10UL + (*cptr-'0');
+        res = res*10UL + static_cast< unsigned >(*cptr-'0');
       } else {
         res = 0L;
         break;
@@ -143,7 +155,7 @@ char *int_to_str( int64_t val, char *cptr )
   return cptr;
 }
 
-int64_t str_to_int( const char *val, int len )
+int64_t str_to_int( const char *val, const unsigned len )
 {
   bool is_neg = false;
   int64_t res = 0L;
@@ -152,7 +164,7 @@ int64_t str_to_int( const char *val, int len )
     const char *end = &val[len];
     for(; cptr != end; ++cptr ) {
       if ( isdigit( *cptr ) ) {
-        res = res*10UL + (*cptr-'0');
+        res = res*10L + (*cptr-'0');
       } else if ( *cptr == '-' ) {
         is_neg = true;
       } else {
@@ -181,14 +193,14 @@ inline void a3_to_a4(uint8_t* a4, uint8_t* a3)
   a4[3] = (a3[2] & 0x3f);
 }
 
-inline void a4_to_a3( uint8_t* a3, uint8_t* a4)
+inline void a4_to_a3( uint8_t* a3, const uint8_t* a4)
 {
   a3[0] = (a4[0] << 2) + ((a4[1] & 0x30) >> 4);
   a3[1] = ((a4[1] & 0xf) << 4) + ((a4[2] & 0x3c) >> 2);
   a3[2] = ((a4[2] & 0x3) << 6) + a4[3];
 }
 
-inline uint8_t b64_lookup(char c)
+inline char b64_lookup(char c)
 {
   if(c >='A' && c <='Z') return c - 'A';
   if(c >='a' && c <='z') return c - 71;
@@ -198,14 +210,15 @@ inline uint8_t b64_lookup(char c)
   return -1;
 }
 
-int enc_base64_len( int n )
+size_t enc_base64_len( const size_t n )
 {
   return (n + 2 - ((n + 2) % 3)) / 3 * 4;
 }
 
-int enc_base64( const uint8_t *inp, int len, uint8_t *out )
+size_t enc_base64( const uint8_t *inp, int len, char *out )
 {
-  int i = 0, j = 0, encLen = 0;
+  int i = 0, j = 0;
+  size_t encLen = 0;
   uint8_t a3[3];
   uint8_t a4[4];
 
@@ -236,11 +249,12 @@ int enc_base64( const uint8_t *inp, int len, uint8_t *out )
   return encLen;
 }
 
-int dec_base64( const uint8_t *inp, int len, uint8_t *out )
+size_t dec_base64( const char *inp, int len, uint8_t *out )
 {
-  int i = 0, j = 0, decLen = 0;
+  int i = 0, j = 0;
+  size_t decLen = 0;
   uint8_t a3[3] = { 0,0,0 };
-  uint8_t a4[4];
+  char a4[4];
 
   while ( len-- ) {
     if(*inp == '=') {
@@ -248,10 +262,10 @@ int dec_base64( const uint8_t *inp, int len, uint8_t *out )
     }
     a4[i++] = *(inp++);
     if (i == 4) {
-      for (i = 0; i <4; i++) {
+      for (i = 0; i < 4; i++) {
         a4[i] = b64_lookup(a4[i]);
       }
-      a4_to_a3(a3,a4);
+      a4_to_a3( a3, reinterpret_cast< uint8_t* >( a4 ) );
       for (i = 0; i < 3; i++) {
         out[decLen++] = a3[i];
       }
@@ -266,7 +280,7 @@ int dec_base64( const uint8_t *inp, int len, uint8_t *out )
     for (j = 0; j <4; j++) {
       a4[j] = b64_lookup(a4[j]);
     }
-    a4_to_a3(a3,a4);
+    a4_to_a3( a3, reinterpret_cast< uint8_t* >( a4 ) );
     for (j = 0; j < i - 1; j++) {
       out[decLen++] = a3[j];
     }
@@ -279,7 +293,7 @@ int64_t get_now()
   struct timespec ts[1];
   clock_gettime( CLOCK_REALTIME, ts );
   int64_t res = ts->tv_sec;
-  res *= 1000000000UL;
+  res *= 1000000000L;
   res += ts->tv_nsec;
   return res;
 }

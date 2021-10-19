@@ -4,6 +4,8 @@
 #include "misc.hpp"
 #include <openssl/evp.h>
 
+#include <assert.h>
+
 #define PC_SYMBOL_SPACES 0x2020202020202020
 
 using namespace pc;
@@ -75,7 +77,7 @@ void hash::init_from_buf( const uint8_t *pk )
   __builtin_memcpy( pk_, pk, len );
 }
 
-int hash::enc_base58( uint8_t *buf, uint32_t buflen ) const
+int hash::enc_base58( char *buf, int buflen ) const
 {
   return pc::enc_base58( pk_, len, buf, buflen );
 }
@@ -83,12 +85,13 @@ int hash::enc_base58( uint8_t *buf, uint32_t buflen ) const
 int hash::enc_base58( std::string& res ) const
 {
   char buf[64];
-  int n = enc_base58( (uint8_t*)buf, 64 );
-  res.assign( buf, n );
+  int n = enc_base58( buf, 64 );
+  assert( n >= 0 );
+  res.assign( buf, static_cast< unsigned >( n ) );
   return n;
 }
 
-int hash::dec_base58( const uint8_t *buf, uint32_t buflen )
+int hash::dec_base58( const uint8_t *buf, int buflen )
 {
   return pc::dec_base58( buf, buflen, pk_ );
 }
@@ -197,7 +200,7 @@ bool signature::init_from_text( const std::string& buf )
   return true;
 }
 
-int signature::enc_base58( uint8_t *buf, uint32_t buflen )
+int signature::enc_base58( char *buf, int buflen )
 {
   return pc::enc_base58( sig_, len, buf, buflen );
 }
@@ -205,8 +208,9 @@ int signature::enc_base58( uint8_t *buf, uint32_t buflen )
 int signature::enc_base58( std::string& res )
 {
   char buf[256];
-  int n = enc_base58( (uint8_t*)buf, 256 );
-  res.assign( buf, n );
+  int n = enc_base58( buf, 256 );
+  assert( n >= 0 );
+  res.assign( buf, static_cast< unsigned >( n ) );
   return n;
 }
 

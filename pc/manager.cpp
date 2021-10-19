@@ -498,8 +498,10 @@ void manager::poll_schedule()
 {
   while ( is_pub_ && kidx_ < kvec_.size() ) {
     price_sched *kptr = kvec_[kidx_];
-    int64_t pub_ts = pub_ts_ + ( pub_int_ * kptr->get_hash() ) /
-      price_sched::fraction;
+    int64_t pub_ts = pub_ts_ + static_cast< int64_t >(
+      ( static_cast< uint64_t >( pub_int_ ) * kptr->get_hash() )
+        / price_sched::fraction
+    );
     if ( curr_ts_ > pub_ts ) {
       kptr->schedule();
       if ( ++kidx_ >= kvec_.size() ) {

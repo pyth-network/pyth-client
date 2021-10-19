@@ -25,9 +25,9 @@ namespace pc
     void init_from_buf( const uint8_t * );
 
     // encode to text buffer
-    int enc_base58( uint8_t *buf, uint32_t buflen ) const;
+    int enc_base58( char *buf, int buflen ) const;
     int enc_base58( std::string& ) const;
-    int dec_base58( const uint8_t *buf, uint32_t buflen );
+    int dec_base58( const uint8_t *buf, int buflen );
 
     // get underlying bytes
     const uint8_t *data() const;
@@ -96,7 +96,7 @@ namespace pc
     bool init_from_text( const std::string& buf );
 
     // encode to text buffer
-    int enc_base58( uint8_t *buf, uint32_t buflen );
+    int enc_base58( char *buf, int buflen );
     int enc_base58( std::string& );
 
     // sign message given key_pair

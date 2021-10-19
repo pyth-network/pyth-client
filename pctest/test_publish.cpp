@@ -289,7 +289,7 @@ void test_publish::on_response( pc::price_sched *ptr, uint64_t sub_id )
       .add( "sub_id", sub_id )
       .end();
     // increase price
-    px_ += sprd_;
+    px_ += static_cast< int64_t >( sprd_ );
   } else if ( !sym->has_publisher() ) {
     PC_LOG_WRN( "missing publish permission" )
       .add( "symbol", sym->get_symbol() )

@@ -27,7 +27,7 @@ static bool write_key_file(
       hd->dealloc();
       return false;
     }
-    len -= num;
+    len -= static_cast< unsigned >( num );
     buf += num;
   } while( len );
   fchmod( fd, 0400 );
