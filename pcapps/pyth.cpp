@@ -1,5 +1,7 @@
 #include <pc/manager.hpp>
 #include <pc/log.hpp>
+
+#include <assert.h>
 #include <unistd.h>
 #include <signal.h>
 #include <iostream>
@@ -95,10 +97,10 @@ void print_val( str val, size_t sp=0 )
   "..........................................................................";
 
   size_t num = 20 - sp;
-  std::cout.write( spaces, sp );
-  std::cout.write( val.str_, val.len_ );
+  std::cout.write( spaces, static_cast< std::streamsize >( sp ) );
+  std::cout.write( val.str_, static_cast< std::streamsize >( val.len_ ) );
   if ( num > val.len_ ) {
-    std::cout.write( dots, num - val.len_ );
+    std::cout.write( dots, static_cast< std::streamsize >( num - val.len_ ) );
   }
   std::cout << ' ';
 }
@@ -208,10 +210,11 @@ int on_upd_price_val( int argc, char **argv )
   pub.init_from_text( pkey );
 
   // Price Value
-  uint64_t price_value = atoll( argv[2] );
+  int64_t price_value = atoll( argv[2] );
 
   // Confidence
-  uint64_t confidence = atoll( argv[3] );
+  int64_t confidence = atoll( argv[3] );
+  assert( confidence >= 0 );
 
   // Status
   symbol_status price_status = str_to_symbol_status( argv[4] );
@@ -250,7 +253,7 @@ int on_upd_price_val( int argc, char **argv )
     std::cerr << "pyth: missing publisher permission" << std::endl;
     return 1;
   }
-  ptr->update(price_value, confidence, price_status);
+  ptr->update(price_value, static_cast< uint64_t >( confidence ), price_status);
   if ( args.do_tx_ ) {
     while( mgr.get_is_tx_send() && !mgr.get_is_err() )
       mgr.poll();

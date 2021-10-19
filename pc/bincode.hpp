@@ -100,7 +100,7 @@ namespace pc
 
   inline void bincode::add( uint8_t val )
   {
-    buf_[idx_++] = val;
+    add_val_T( val );
   }
 
   template<class T>

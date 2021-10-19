@@ -1086,7 +1086,7 @@ bool upd_test::init_from_file( const std::string& file )
   unsigned i=0, qt =pt.find_val( 1, "quotes" );
   for( uint32_t it = pt.get_first( qt ); it; it = pt.get_next( it ) ) {
     int64_t px = pt.get_int( pt.find_val( it,  "price"  ) );
-    int64_t conf = pt.get_uint( pt.find_val( it, "conf" ) );
+    uint64_t conf = pt.get_uint( pt.find_val( it, "conf" ) );
     int64_t sdiff = pt.get_int( pt.find_val( it, "slot_diff" ) );
     ureq_->set_price( i++, px, conf, sdiff );
   }

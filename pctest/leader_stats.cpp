@@ -135,7 +135,7 @@ bool slot_replay::get_next()
     if ( ptr == end_ ) return false;
     if ( *ptr == '\n' ) break;
   }
-  ldr_.len_ = ptr - ldr_.str_;
+  ldr_.len_ = static_cast< size_t >( ptr - ldr_.str_ );
   ptr_ = ++ptr;
 
   // update stats

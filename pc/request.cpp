@@ -1,6 +1,8 @@
 #include "request.hpp"
 #include "manager.hpp"
 #include "log.hpp"
+
+#include <assert.h>
 #include <zstd.h>
 #include <algorithm>
 
@@ -526,7 +528,8 @@ int64_t price::get_twap() const
 
 uint64_t price::get_twac() const
 {
-  return pptr_->twac_.val_;
+  assert( pptr_->twac_.val_ >= 0 );
+  return static_cast< uint64_t >( pptr_->twac_.val_ );
 }
 
 uint64_t price::get_prev_slot() const

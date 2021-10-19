@@ -3,7 +3,9 @@
 #include <pc/log.hpp>
 #include <pc/request.hpp>
 #include "test_error.hpp"
+
 #include <math.h>
+#include <climits>
 #include <iostream>
 #include <vector>
 #include <sstream>
@@ -73,7 +75,7 @@ void test_key()
         (uint8_t*)clock_var.str_, clock_var.len_, ckey ) );
   uint64_t clock[] = { 0xc974c71817d5a706UL, 0xb65e1d6998635628UL,
     0x5c6d4b9ba3b85e8bUL, 0x215b5573UL };
-  uint8_t buf[128];
+  char buf[128];
   PC_TEST_CHECK( (int)clock_var.len_ ==
       enc_base58( (uint8_t*)clock, 32, buf, 128 ) );
   str cres( buf, clock_var.len_ );
@@ -112,7 +114,7 @@ class test_sub : public request_sub,
                  public request_sub_i<test_request>
 {
 public:
-  test_sub() : id_(-1) {}
+  test_sub() : id_(ULONG_MAX) {}
   void on_response( test_request *rptr, uint64_t val ) {
     val_ = rptr->val_;
     id_  = val;
