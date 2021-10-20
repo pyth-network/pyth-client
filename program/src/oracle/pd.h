@@ -1,5 +1,7 @@
 #pragma once
 
+#include <iostream>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -69,10 +71,13 @@ void pd_load( pd_t *r, int64_t const n )
 {
   int64_t v = n->v_;
   int d = n->e_ - e;
+  std::cerr << "d: " << d << std::endl;
   if ( d > 0 ) {
+    std::cerr << " * p[d]: " << p[d] << std::endl;
     v *= p[ d ];
   }
   else if ( d < 0 ) {
+    std::cerr << " / p[-d]: " << p[-d] << std::endl;
     v /= p[ -d ];
   }
   pd_new( n, v, e );

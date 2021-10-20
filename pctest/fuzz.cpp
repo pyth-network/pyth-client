@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <oracle/oracle.h>
 #include <oracle/pd.h>
+#include <oracle/upd_aggregate.h>
 #include <pc/manager.hpp>
 #include <pc/log.hpp>
 #include <unistd.h>
@@ -19,8 +20,8 @@ const int64_t dec_fact[] = {
 };
 
 void read_pd_t(pd_t* num) {
-  int32_t e;
-  int64_t v;
+  int32_t e = 0;
+  int64_t v = 0;
 
   std::cin >> v;
   std::cin >> e;
@@ -37,6 +38,14 @@ void assert(bool condition, std::string msg) {
 
 void log_pd_t(std::string prefix, pd_t* num) {
   std::cerr << prefix << num->v_ << " * 10^" << num->e_ << std::endl;
+}
+
+bool exponent_in_double_range(int e) {
+  return -300 < e && e < 300;
+}
+
+double pd_to_double(pd_t* num, int offset) {
+  return num->v_ * pow(10, num->e_ - offset);
 }
 
 void test_pd_add(pd_t* num1, pd_t* num2) {
@@ -104,7 +113,7 @@ void test_pd_sub(pd_t* num1, pd_t* num2) {
 
   int exponent_delta = num1->e_ - num2->e_;
   // max range of double is 2^1024, which is roughly 10^300
-  if (fabs(exponent_delta) > 300) {
+  if (!exponent_in_double_range(exponent_delta)) {
     // the difference between these numbers is not representable in double-precision floating point
     pd_t expected;
     if (num1->e_ > num2->e_) {
@@ -201,14 +210,14 @@ void test_pd_div(pd_t* num1, pd_t* num2) {
     return;
   }
 
-  pd_t result;
-  pd_div(&result, num1, num2);
+  pd_t result[1];
+  pd_div(result, num1, num2);
 
-  std::cerr << "result: " << result.v_ << " * 10^" << result.e_ << std::endl;
+  std::cerr << "result: " << result->v_ << " * 10^" << result->e_ << std::endl;
 
   int exponent_delta = num1->e_ - num2->e_;
   // max range of double is 2^1024, which is roughly 10^300
-  if (fabs(exponent_delta) > 300) {
+  if (!exponent_in_double_range(exponent_delta)) {
     std::cerr << "range too large, skipping test" << std::endl;
   } else {
     int min_e, max_e;
@@ -224,11 +233,11 @@ void test_pd_div(pd_t* num1, pd_t* num2) {
     double num2_f = num2->v_ * pow(10, num2->e_ - min_e);
 
     double expected = num1_f / num2_f;
-    double actual = result.v_ * pow(10, result.e_);
+    double actual = result->v_ * pow(10, result->e_);
 
     double diff = fabs(expected - actual);
     // maximum permissible error is the precision of the number with the larger exponent + carry.
-    double max_diff = pow(10, result.e_);
+    double max_diff = pow(10, result->e_);
 
     // note that this assertion validates the computation of max_diff above.
     // int carry = result.e_ - min_e;
@@ -239,63 +248,96 @@ void test_pd_div(pd_t* num1, pd_t* num2) {
 
     // zero can be stored with multiple exponents, and the exponent may be larger than the range representable by double
     // because it doesn't get normalized.
-    assert((num1->v == 0 && result->v == 0) || diff <= max_diff, "difference between fixed point and floating point was too large");
+    assert((num1->v_ == 0 && result->v_ == 0) || diff <= max_diff, "difference between fixed point and floating point was too large");
   }
 }
 
 void test_upd_ema(int64_t n, int64_t d, pd_t* val) {
-  pd_t numer, denom;
-  pd_load(&numer, n);
-  pd_load(&denom, d);
+  pd_t numer[1], denom[1];
+  pd_load(numer, n);
+  pd_load(denom, d);
 
   log_pd_t("numer: ", numer);
   log_pd_t("denom: ", denom);
+  log_pd_t("val: ", val);
 
   if (numer->v_ < 0 || denom->v_ <= 0) {
     std::cerr << "Skipping test: numerator must be >= 0 and denominator must be > 0." << std::endl;
     return;
   }
 
-  pc_ema_t ema;
-  ema.numer_ = n;
-  ema.denom_ = d;
-
-  // TODO:
-  pd_t conf;
-  conf.v_ = 1;
-  conf.e_ = 1;
-
-  pc_qset_t qs;
-  qs.fact_ = dec_fact;
-  qs.expo_ = -9;
-
-  pc_price_t prc;
-  prc.drv1_ = 1;
-
-  upd_ema(&ema, val, conf, 1, &qs, &prc);
-
-  pd_t result[1];
-  result->v_ = ema.val_;
-  result->e_ = qs.expo_;
-
-  log_pd_t("result: ", result);
 
   // there are only 5 bits of exponent in the int64_t representation, so it definitely fits in a double.
-  if (val->e < 300 && val-> > -300) {
-    double numer_f = numer->v_ * pow(10, numer->e_);
-    double denom_f = denom->v_ * pow(10, denom->e_);
-    double val_f = val->v_ * pow(10, val->e_);
+  if (exponent_in_double_range(val->e_)) {
+    double numer_f = pd_to_double(numer, 0);
+    double denom_f = pd_to_double(denom, 0);
+    double val_f = pd_to_double(val, 0);
+    pd_t decay[1];
+    pd_new(decay, PD_EMA_DECAY, PD_EMA_EXPO);
+    double decay_f = pd_to_double(decay, 0);
 
-    double expected = (numer_f / denom_f) * decay + val_f;
-    double actual = result.v_ * pow(10, result.e_);
+    std::cerr << "numer_f: " << numer_f << std::endl;
+    std::cerr << "denom_f: " << denom_f << std::endl;
+    std::cerr << "val_f: " << val_f << std::endl;
+    std::cerr << "decay_f: " << decay_f << std::endl;
 
+    double expected = (numer_f * (1 + decay_f) + val_f) / (denom_f * (1 + decay_f) + 1);
+
+    // Build inputs to EMA and run it.
+    pc_ema_t ema[1];
+    ema->numer_ = n;
+    ema->denom_ = d;
+
+    // TODO: make this configurable
+    pd_t conf[1];
+    conf->v_ = 1;
+    conf->e_ = 0;
+
+    pc_qset_t qs[1];
+    for (int i = 0; i < 18; i++) {
+      qs->fact_[i] = dec_fact[i];
+    }
+    qs->expo_ = -9;
+
+    pc_price_t prc[1];
+    prc->drv1_ = 1;
+    upd_ema(ema, val, conf, 1, qs, prc);
+
+    pd_t result[1];
+    result->v_ = ema->val_;
+    result->e_ = qs->expo_;
+
+    log_pd_t("result: ", result);
+    double actual = result->v_ * pow(10, result->e_);
+
+    // Check the diff two ways. If the diff is small, then the truncation at the exponent result->e_ will be
+    // the more significant factor. If the diff is large, then check that it's close in relative terms.
     double diff = fabs(expected - actual);
-    // maximum permissible error is the precision of the number with the larger exponent + carry.
-    double max_diff = pow(10, result.e_);
+    double max_diff = pow(10, result->e_);
+
+    double rel_diff = diff / expected;
+    double max_rel_diff = pow(10, -7);
 
     std::cerr << "expected: " << expected << " actual: " << actual << std::endl;
     std::cerr << "diff: " << diff << " max diff: " << max_diff << std::endl;
+    std::cerr << "relative diff: " << rel_diff << " max relative diff: " << max_rel_diff << std::endl;
+    assert((expected == 0 && actual == 0) || diff <= max_diff || rel_diff <= max_rel_diff, "difference between fixed point and floating point was too large");
+  }
+}
 
+void test_pd_adjust(pd_t* val, int e) {
+  if (exponent_in_double_range(val->e_) && exponent_in_double_range(e)) {
+    log_pd_t("initial: ", val);
+    double initial_value = pd_to_double(val, 0);
+    pd_adjust(val, e, dec_fact);
+    log_pd_t("result: ", val);
+
+    double final_value = pd_to_double(val, 0);
+    double diff = fabs(final_value - initial_value);
+    double max_diff = pow(10, val->e_);
+
+    std::cerr << "initial: " << initial_value << " final: " << final_value << std::endl;
+    std::cerr << "diff: " << diff << " max diff: " << max_diff << std::endl;
     assert(diff <= max_diff, "difference between fixed point and floating point was too large");
   }
 }
@@ -309,6 +351,8 @@ int main(int argc, char **argv)
     std::cerr << "Expected one argument (the function name to test)";
     return 1;
   }
+
+  std::cerr.precision(12);
 
   if (strcmp(argv[1], "add") == 0) {
     pd_t num1, num2;
@@ -331,12 +375,18 @@ int main(int argc, char **argv)
     read_pd_t(&num2);
     test_pd_div(&num1, &num2);
   } else if (strcmp(argv[1], "ema") == 0) {
-    int64_t, numer, denom;
+    int64_t numer, denom;
     pd_t val;
     std::cin >> numer;
     std::cin >> denom;
     read_pd_t(&val);
     test_upd_ema(numer, denom, &val);
+  } else if (strcmp(argv[1], "adjust") == 0) {
+    int e;
+    pd_t val;
+    read_pd_t(&val);
+    std::cin >> e;
+    test_pd_adjust(&val, e);
   } else {
     std::cerr << "Unknown test case: " << argv[1] << std::endl;
     return 1;
