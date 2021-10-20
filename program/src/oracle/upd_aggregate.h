@@ -5,7 +5,6 @@
 #include "sort.h"
 
 #include <limits.h>
-#include <iostream>
 
 #ifdef __cplusplus
 extern "C" {
@@ -92,7 +91,6 @@ static void upd_ema(
   } else {
     pd_set( cwgt, one );
   }
-  std::cerr << "here 1" << std::endl;
   if ( nslot > PD_EMA_MAX_DIFF ) {
     // initial condition
     pd_mul( numer, val, cwgt );
@@ -104,8 +102,6 @@ static void upd_ema(
     pd_mul( decay, decay, diff );
     pd_add( decay, decay, one, qs->fact_ );
 
-    std::cerr << "here 2" << std::endl;
-
     // compute numer/denom and new value from decay factor
     if ( prc_ptr->drv1_ ) {
       pd_load( numer, ptr->numer_ );
@@ -116,48 +112,30 @@ static void upd_ema(
       pd_new_scale( numer, ptr->numer_, PD_EMA_EXPO );
       pd_new_scale( denom, ptr->denom_, PD_EMA_EXPO );
     }
-
-    std::cerr << "here 3" << std::endl;
     if ( numer->v_ < 0 || denom->v_ < 0 ) {
       // temporary reset twap on negative value
       pd_set( numer, val );
       pd_set( denom, one );
     }
     else {
-      std::cerr << "numer: " << numer->v_ << " * 10^" << numer->e_ << std::endl;
-      std::cerr << "denom: " << denom->v_ << " * 10^" << denom->e_ << std::endl;
-      std::cerr << "val: " << val->v_ << " * 10^" << val->e_ << std::endl;
-      std::cerr << "cwgt: " << cwgt->v_ << " * 10^" << cwgt->e_ << std::endl;
       pd_mul( numer, numer, decay );
       pd_mul( wval, val, cwgt );
-      std::cerr << "numer: " << numer->v_ << " * 10^" << numer->e_ << std::endl;
-      std::cerr << "wval: " << wval->v_ << " * 10^" << wval->e_ << std::endl;
       pd_add( numer, numer, wval, qs->fact_ );
       pd_mul( denom, denom, decay );
       pd_add( denom, denom, cwgt, qs->fact_ );
-      std::cerr << "numer: " << numer->v_ << " * 10^" << numer->e_ << std::endl;
-      std::cerr << "denom: " << denom->v_ << " * 10^" << denom->e_ << std::endl;
       pd_div( val, numer, denom );
-      std::cerr << "val: " << val->v_ << " * 10^" << val->e_ << std::endl;
     }
   }
 
-  std::cerr << "qs->expo_ " << qs->expo_ << std::endl;
-
   // adjust and store results
-  // FIXME: this segfaults if val->e_ - qs->expo_ > 18
-  // FIXME: this can overflow if val->e + (order of magnitude of val->v) - qs->expo > 18
   pd_adjust( val, qs->expo_, qs->fact_ );
   ptr->val_   = val->v_;
   int64_t numer1, denom1;
-  std::cerr << "here 5" << std::endl;
   if ( pd_store( &numer1, numer ) && pd_store( &denom1, denom ) ) {
     ptr->numer_ = numer1;
     ptr->denom_ = denom1;
   }
-  std::cerr << "here 6" << std::endl;
   prc_ptr->drv1_ = 1;
-  std::cerr << "here 7" << std::endl;
 }
 
 static inline void upd_twap(

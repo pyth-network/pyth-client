@@ -1,7 +1,5 @@
 #pragma once
 
-#include <iostream>
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -26,7 +24,7 @@ typedef struct pd
   int64_t  v_;
 } pd_t;
 
-[[maybe_unused]] static void pd_scale( pd_t *n )
+static void pd_scale( pd_t *n )
 {
   int const neg = n->v_ < 0L;
   int64_t v = neg ? -n->v_ : n->v_; // make v positive for loop condition
@@ -34,7 +32,7 @@ typedef struct pd
   n->v_ = neg ? -v : v;
 }
 
-[[maybe_unused]] static bool pd_store( int64_t *r, pd_t const *n )
+static bool pd_store( int64_t *r, pd_t const *n )
 {
   int64_t v = n->v_;
   int32_t e = n->e_;
@@ -67,30 +65,27 @@ void pd_load( pd_t *r, int64_t const n )
   pd_scale( r );
 }
 
-[[maybe_unused]] static void pd_adjust( pd_t *n, int e, const int64_t *p )
+static void pd_adjust( pd_t *n, int e, const int64_t *p )
 {
   int64_t v = n->v_;
   int d = n->e_ - e;
-  std::cerr << "d: " << d << std::endl;
   if ( d > 0 ) {
-    std::cerr << " * p[d]: " << p[d] << std::endl;
     v *= p[ d ];
   }
   else if ( d < 0 ) {
-    std::cerr << " / p[-d]: " << p[-d] << std::endl;
     v /= p[ -d ];
   }
   pd_new( n, v, e );
 }
 
-[[maybe_unused]] static void pd_mul( pd_t *r, const pd_t *n1, const pd_t *n2 )
+static void pd_mul( pd_t *r, const pd_t *n1, const pd_t *n2 )
 {
   r->v_ = n1->v_ * n2->v_;
   r->e_ = n1->e_ + n2->e_;
   pd_scale( r );
 }
 
-[[maybe_unused]] static void pd_div( pd_t *r, pd_t *n1, pd_t *n2 )
+static void pd_div( pd_t *r, pd_t *n1, pd_t *n2 )
 {
   if ( n1->v_ == 0 ) { pd_set( r, n1 ); return; }
   int64_t v1 = n1->v_, v2 = n2->v_;
@@ -105,9 +100,8 @@ void pd_load( pd_t *r, int64_t const n )
   pd_scale( r );
 }
 
-[[maybe_unused]] static void pd_add( pd_t *r, const pd_t *n1, const pd_t *n2, const int64_t *p )
+static void pd_add( pd_t *r, const pd_t *n1, const pd_t *n2, const int64_t *p )
 {
-  // FIXME: this line can overflow if the exponent for n1 is max int and n2->e_ is negative.
   int d = n1->e_ - n2->e_;
   if ( d==0 ) {
     pd_new( r, n1->v_ + n2->v_, n1->e_ );
@@ -132,9 +126,8 @@ void pd_load( pd_t *r, int64_t const n )
   pd_scale( r );
 }
 
-[[maybe_unused]] static void pd_sub( pd_t *r, const pd_t *n1, const pd_t *n2, const int64_t *p )
+static void pd_sub( pd_t *r, const pd_t *n1, const pd_t *n2, const int64_t *p )
 {
-  // FIXME: this line can overflow if the exponent for n1 is max int and n2->e_ is negative.
   int d = n1->e_ - n2->e_;
   if ( d==0 ) {
     pd_new( r, n1->v_ - n2->v_, n1->e_ );
@@ -159,21 +152,21 @@ void pd_load( pd_t *r, int64_t const n )
   pd_scale( r );
 }
 
-[[maybe_unused]] static int pd_lt( const pd_t *n1, const pd_t *n2, const int64_t *p )
+static int pd_lt( const pd_t *n1, const pd_t *n2, const int64_t *p )
 {
   pd_t r[1];
   pd_sub( r, n1, n2, p );
   return r->v_ < 0L;
 }
 
-[[maybe_unused]] static int pd_gt( const pd_t *n1, const pd_t *n2, const int64_t *p )
+static int pd_gt( const pd_t *n1, const pd_t *n2, const int64_t *p )
 {
   pd_t r[1];
   pd_sub( r, n1, n2, p );
   return r->v_ > 0L;
 }
 
-[[maybe_unused]] static void pd_sqrt( pd_t *r, pd_t *val, const int64_t *f )
+static void pd_sqrt( pd_t *r, pd_t *val, const int64_t *f )
 {
   pd_t t[1], x[1], hlf[1];
   pd_set( t, val );
