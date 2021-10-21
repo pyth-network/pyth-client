@@ -3,6 +3,7 @@ char heap_start[8192];
 
 #include <iostream>
 
+#include <assert.h>
 #include <ctype.h>
 #include <math.h>
 #include <stdint.h>
@@ -95,7 +96,8 @@ int main( int argc,char** argv )
     cp.fetch( nslots );
     px->expo_ = expo;
     px->agg_.price_ = price;
-    px->agg_.conf_  = conf;
+    assert( conf >= 0 );
+    px->agg_.conf_ = static_cast< uint64_t >( conf );
     if ( ! qs ) {
       px->expo_ = expo;
       qs = qset_new( px->expo_ );

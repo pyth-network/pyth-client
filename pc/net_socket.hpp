@@ -68,7 +68,7 @@ namespace pc
     bool init();
 
     // add/delete sockets to epoll loop
-    void add( net_socket *, int events );
+    void add( net_socket *, uint32_t events );
     void del( net_socket * );
 
     // poll all connected sockets

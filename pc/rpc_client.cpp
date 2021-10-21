@@ -245,7 +245,7 @@ size_t rpc_client::get_data_ref(
   abuf_.resize( dlen );
   zbuf_.resize( tlen );
   ZSTD_DCtx *cxt = (ZSTD_DCtx*)cxt_;
-  dlen = dec_base64( (const uint8_t*)dptr, dlen, (uint8_t*)&abuf_[0] );
+  dlen = dec_base64( dptr, dlen, (uint8_t*)&abuf_[0] );
   tlen = ZSTD_decompressDCtx( cxt, &zbuf_[0], tlen, &abuf_[0], dlen );
   ptr = &zbuf_[0];
   return tlen;
@@ -256,7 +256,7 @@ size_t rpc_client::get_data_val(
 {
   abuf_.resize( dlen );
   ZSTD_DCtx *cxt = (ZSTD_DCtx*)cxt_;
-  dlen = dec_base64( (const uint8_t*)dptr, dlen, (uint8_t*)&abuf_[0] );
+  dlen = dec_base64( dptr, dlen, (uint8_t*)&abuf_[0] );
   tlen = ZSTD_decompressDCtx( cxt, tgt, tlen, &abuf_[0], dlen );
   return tlen;
 }

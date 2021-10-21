@@ -76,7 +76,7 @@ bool replay::get_next()
       len_ = left;
       int numread = ::gzread( zfd_, &buf_[len_], buf_sz - len_ );
       if ( numread > 0 ) {
-        len_ += numread;
+        len_ += static_cast< size_t >( numread );
       } else {
         return false;
       }

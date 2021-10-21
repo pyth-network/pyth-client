@@ -95,10 +95,10 @@ void print_val( str val, size_t sp=0 )
   "..........................................................................";
 
   size_t num = 20 - sp;
-  std::cout.write( spaces, sp );
-  std::cout.write( val.str_, val.len_ );
+  std::cout.write( spaces, static_cast< std::streamsize>( sp ) );
+  std::cout.write( val.str_, static_cast< std::streamsize>( val.len_ ) );
   if ( num > val.len_ ) {
-    std::cout.write( dots, num - val.len_ );
+    std::cout.write( dots, static_cast< std::streamsize>( num - val.len_ ) );
   }
   std::cout << ' ';
 }

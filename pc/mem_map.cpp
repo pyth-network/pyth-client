@@ -1,4 +1,6 @@
 #include "mem_map.hpp"
+
+#include <assert.h>
 #include <sys/types.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -47,7 +49,8 @@ bool mem_map::remap()
   if ( 0 != fstat( fd_, fst ) || fst->st_size == 0 ) {
     return false;
   }
-  size_t nlen = fst->st_size;
+  assert( fst->st_size >= 0 );
+  size_t nlen = static_cast< size_t >( fst->st_size );
   if ( nlen == len_ ) {
     return false;
   }
@@ -72,7 +75,8 @@ bool mem_map::init()
     ::close( fd );
     return false;
   }
-  len_ = fst->st_size;
+  assert( fst->st_size >= 0 );
+  len_ = static_cast< size_t >( fst->st_size );
   void *buf = mmap( NULL, len_, PROT_READ, MAP_SHARED, fd, 0 );
   if ( buf == MAP_FAILED ) {
     return false;

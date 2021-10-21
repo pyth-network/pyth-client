@@ -1,4 +1,6 @@
 #include "net_socket.hpp"
+
+#include <assert.h>
 #include <openssl/sha.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -173,7 +175,7 @@ void net_wtr::add_alloc( str str )
     if ( tl_->size_ == net_buf::len ) {
       alloc();
     }
-    size_t left = net_buf::len - tl_->size_;
+    size_t left = static_cast< size_t >( net_buf::len - tl_->size_ );
     size_t mlen = std::min( left, str.len_ );
     __builtin_memcpy( &tl_->buf_[tl_->size_], str.str_, mlen );
     tl_->size_ += mlen;
@@ -236,9 +238,9 @@ bool net_loop::init()
   return true;
 }
 
-void net_loop::add( net_socket *eptr, int events )
+void net_loop::add( net_socket *eptr, uint32_t events )
 {
-  ev_->events   = events;
+  ev_->events = events;
   ev_->data.ptr = eptr;
   int evop = EPOLL_CTL_ADD;
   if ( eptr->get_in_loop() ) {
@@ -468,7 +470,7 @@ void net_connect::poll_recv()
     // read up to buf_len at a time
     ssize_t rc = ::recv( get_fd(), &rdr_[rsz_], buf_len, MSG_NOSIGNAL );
     if ( rc > 0 ) {
-      rsz_ += rc;
+      rsz_ += static_cast< size_t >( rc );
     } else {
       if ( rc == 0 || errno != EAGAIN ) {
         poll_error( true );
@@ -834,7 +836,8 @@ void http_request::add_hdr( const char *hdr, uint64_t ival )
   add( ' ' );
   char *buf = reserve( 32 ), *end = &buf[31];
   char *val = uint_to_str( ival, end );
-  size_t val_len = end - val;
+  assert( end >= val );
+  size_t val_len = static_cast< size_t >( end - val );
   __builtin_memmove( buf, val, val_len );
   advance( val_len );
   add( '\r' );
@@ -887,7 +890,8 @@ bool http_client::parse( const char *ptr, size_t len, size_t& res )
   int status = strtol( stp, eptr, 10 );
   stp = ++ptr;
   if ( !find( CR, ptr, end ) )  return false;
-  parse_status( status, stp, ptr - stp );
+  assert( ptr >= stp );
+  parse_status( status, stp, static_cast< size_t >( ptr - stp ) );
   if ( !next( LF, ++ptr, end ) )  return false;
 
   // parse other header lines
@@ -903,13 +907,17 @@ bool http_client::parse( const char *ptr, size_t len, size_t& res )
     for( ++ptr; ptr != end && isspace(*ptr); ++ptr );
     const char *val = ptr;
     if ( !find( CR, ptr, end ) )  return false;
+    assert( hdr_end >= hdr );
+    const size_t hdr_len = static_cast< size_t >( hdr_end - hdr );
+    assert( ptr >= val );
+    const size_t val_len = static_cast< size_t >( ptr - val );
     if ( has_len || (
-          0 != __builtin_strncmp( "Content-Length", hdr, hdr_end-hdr ) &&
-          0 != __builtin_strncmp( "content-length", hdr, hdr_end-hdr ) ) ) {
-      parse_header( hdr, hdr_end-hdr, val, ptr-val );
+          0 != __builtin_strncmp( "Content-Length", hdr, hdr_len ) &&
+          0 != __builtin_strncmp( "content-length", hdr, hdr_len ) ) ) {
+      parse_header( hdr, hdr_len, val, val_len );
     } else {
       has_len = true;
-      clen = str_to_uint( val, ptr - val );
+      clen = str_to_uint( val, val_len );
     }
     if ( !next( LF, ++ptr, end ) )  return false;
   }
@@ -920,7 +928,8 @@ bool http_client::parse( const char *ptr, size_t len, size_t& res )
 
   parse_content( ptr, clen );
   // assign total message size
-  res = cnt - beg;
+  assert( cnt >= beg );
+  res = static_cast< size_t >( cnt - beg );
   return true;
 }
 
@@ -998,7 +1007,8 @@ bool http_server::parse( const char *ptr, size_t len, size_t& res )
   if ( !find( ' ', ptr, end ) ) return false;
   const char *path = ++ptr;
   if ( !find( ' ', ptr, end ) ) return false;
-  size_t path_len = ptr - path;
+  assert( ptr >= path );
+  size_t path_len = static_cast< size_t >( ptr - path );
   if ( !find( CR, ptr, end ) )  return false;
   path_.str_ = path;
   path_.len_ = path_len;
@@ -1017,20 +1027,23 @@ bool http_server::parse( const char *ptr, size_t len, size_t& res )
     for( ++ptr; ptr != end && isspace(*ptr); ++ptr );
     const char *val = ptr;
     if ( !find( CR, ptr, end ) )  return false;
-    size_t hlen = hdr_end-hdr;
+    assert( hdr_end >= hdr );
+    const size_t hlen = static_cast< size_t >( hdr_end - hdr );
+    assert( ptr >= val );
+    const size_t vlen = static_cast< size_t >( ptr - val );
     if ( has_len || (
         0 != __builtin_strncmp( "Content-Length", hdr, hlen ) &&
         0 != __builtin_strncmp( "content-length", hdr, hlen ) ) ) {
       hnms_.push_back( str( hdr, hlen ) );
-      hval_.push_back( str( val, ptr-val ) );
+      hval_.push_back( str( val, vlen ) );
       if ( wp_ && !has_upgrade ) {
         has_upgrade =
           0 == __builtin_strncmp( "Upgrade", hdr, hlen ) &&
-          0 == __builtin_strncmp( "websocket", val, ptr-val );
+          0 == __builtin_strncmp( "websocket", val, vlen );
       }
     } else {
       has_len = true;
-      clen = str_to_uint( val, ptr - val );
+      clen = str_to_uint( val, vlen );
     }
     if ( !next( LF, ++ptr, end ) )  return false;
   }
@@ -1040,7 +1053,8 @@ bool http_server::parse( const char *ptr, size_t len, size_t& res )
   if ( cnt > end ) return false;
 
   // assign total message size
-  res = cnt - beg;
+  assert( cnt >= beg );
+  res = static_cast< size_t >( cnt - beg );
 
   // upgrade or parse request
   if ( !has_upgrade ) {
@@ -1068,15 +1082,17 @@ void http_server::upgrade_ws()
   SHA1_Update( cx, magic_id, __builtin_strlen( magic_id ) );
   SHA1_Final( (uint8_t*)skey, cx );
   char bkey[SHA_DIGEST_LENGTH+SHA_DIGEST_LENGTH];
-  size_t blen = enc_base64(
-      (const uint8_t*)skey, SHA_DIGEST_LENGTH, (uint8_t*)bkey );
+  const int blen = enc_base64(
+      (const uint8_t*)skey, SHA_DIGEST_LENGTH, bkey );
+  assert( blen >= 0 );
 
   // submit switch protocols message
   http_response msg;
   msg.init( "101", "Switching Protocols" );
   msg.add_hdr( "Connection", "Upgrade" );
   msg.add_hdr( "Upgrade", "websocket" );
-  msg.add_hdr( "Sec-WebSocket-Accept", str( bkey, blen ) );
+  msg.add_hdr( "Sec-WebSocket-Accept"
+    , str( bkey, static_cast< size_t >( blen ) ) );
   msg.commit();
   np_->add_send( msg );
 
@@ -1330,7 +1346,8 @@ bool ws_parser::parse( const char *ptr, size_t len, size_t& res )
       payload[i] = payload[i] ^ mask[i%4];
     }
   }
-  res = pay_len + ( payload - ptr );
+  assert( payload >= ptr );
+  res = pay_len + static_cast< size_t >( payload - ptr );
   switch( hptr1->op_code_ ) {
     case ws_wtr::text_id:
     case ws_wtr::binary_id:{
@@ -1556,7 +1573,8 @@ void json_wtr::add_uint( uint64_t ival )
 {
   char *buf = reserve( 32 ), *end = &buf[31];
   char *val = uint_to_str( ival, end );
-  size_t val_len = end - val;
+  assert( end >= val );
+  size_t val_len = static_cast< size_t >( end - val );
   __builtin_memmove( buf, val, val_len );
   advance( val_len );
 }
@@ -1565,7 +1583,8 @@ void json_wtr::add_int( int64_t ival )
 {
   char *buf = reserve( 32 ), *end = &buf[31];
   char *val = int_to_str( ival, end );
-  size_t val_len = end - val;
+  assert( end >= val );
+  size_t val_len = static_cast< size_t >( end - val );
   __builtin_memmove( buf, val, val_len );
   advance( val_len );
 }
@@ -1575,8 +1594,10 @@ void json_wtr::add_enc_base58( str val )
   add( '"' );
   size_t rsv_len = val.len_ + val.len_;
   char *tgt = reserve( rsv_len );
-  advance( enc_base58( (const uint8_t*)val.str_,
-        val.len_, (uint8_t*)tgt, rsv_len ) );
+  const int elen =
+    enc_base58( (const uint8_t*)val.str_, val.len_, tgt, rsv_len );
+  assert( elen >= 0 );
+  advance( static_cast< size_t >( elen ) );
   add( '"' );
 }
 
@@ -1585,8 +1606,9 @@ void json_wtr::add_enc_base64( str val )
   add( '"' );
   size_t rsv_len = enc_base64_len( val.len_ );
   char *tgt = reserve( rsv_len );
-  advance( enc_base64( (const uint8_t*)val.str_,
-        val.len_, (uint8_t*)tgt ) );
+  const int elen = enc_base64( (const uint8_t*)val.str_, val.len_, tgt );
+  assert( elen >= 0 );
+  advance( static_cast< size_t >( elen ) );
   add( '"' );
 }
 

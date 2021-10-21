@@ -1,6 +1,7 @@
 char heap_start[8192];
 #define PC_HEAP_START (heap_start)
 
+#include <assert.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -140,9 +141,13 @@ int main( int argc,char** argv )
   for( uint32_t it = pt.get_first( qt ); it; it = pt.get_next( it ) ) {
     pc_price_comp_t *ptr = &px->comp_[px->num_++];
     ptr->latest_.status_ = PC_STATUS_TRADING;
-    ptr->latest_.price_ = pt.get_int( pt.find_val( it,  "price"  ) );
-    ptr->latest_.conf_  = pt.get_int( pt.find_val( it,  "conf"  ) );
-    ptr->latest_.pub_slot_ = slot + pt.get_int( pt.find_val( it,  "slot_diff"  ) );
+    ptr->latest_.price_ = pt.get_int( pt.find_val( it, "price" ) );
+    int64_t conf = pt.get_int( pt.find_val( it,  "conf" ) );
+    assert( conf >= 0 );
+    ptr->latest_.conf_  = static_cast< uint64_t >( conf );
+    int64_t pub_slot = pt.get_int( pt.find_val( it,  "slot_diff" ) );
+    ptr->latest_.pub_slot_ =
+      static_cast< uint64_t >( static_cast< int64_t >( slot ) + pub_slot );
   }
   upd_aggregate( px, slot+1 );
 

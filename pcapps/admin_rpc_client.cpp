@@ -1226,7 +1226,7 @@ void rpc::upd_test::request( json_wtr& msg )
   msg.add_key( "params", json_wtr::e_arr );
   char buf[4096];
   size_t buf_len = enc_base64( (const uint8_t*)tx.get_buf(),
-      tx.size(), (uint8_t*)buf );
+    tx.size(), buf );
   msg.add_val( str( buf, buf_len ) );
   msg.add_val( json_wtr::e_obj );
   msg.add_key( "encoding", "base64" );
