@@ -176,7 +176,7 @@ void test_pd_mul(pd_t* num1, pd_t* num2) {
     double max_diff = pow(10, result->e_ - (2 * min_e));
     std::cout << "expected: " << expected << " actual: " << actual << std::endl;
     std::cout << "diff: " << diff << " max diff: " << max_diff << std::endl;
-    assert(max_e + min_e - 10 <= result->e_ && result->e_ <= max_e + min_e + 1, "Result exponent is not in expected range");
+    assert(max_e + min_e - 1 <= result->e_ && result->e_ <= max_e + min_e + 10, "Result exponent is not in expected range");
     assert(diff <= max_diff, "difference between fixed point and floating point was too large");
   }
 }

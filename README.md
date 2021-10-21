@@ -51,8 +51,8 @@ Build a docker image for running fuzz tests:
 docker build . --platform linux/amd64 -f docker/fuzz/Dockerfile -t pyth-fuzz
 ```
 
-Each fuzz test has a command-line program in the `fuzz/` directory,
-and a corresponding set of test cases in the subdirectory with the same name as the program.
+Each fuzz test is invoked via an argument to the `fuzz` command-line program,
+and has a corresponding set of test cases in the subdirectory with the same name as the test.
 You can run these tests using a command like:
 
 ```
@@ -63,7 +63,7 @@ docker run -t \
   sh -c "./afl/afl-fuzz -i ./pyth-client/pyth/tests/fuzz/add/testcases -o ./pyth-client/findings ./pyth-client/build/fuzz add"
 ```
 
-This command will run the `add` program on the tests cases in `pyth/tests/fuzz/add/testcases`, saving any outputs to `findings/`.
+This command will run the `add` fuzz test on the tests cases in `pyth/tests/fuzz/add/testcases`, saving any outputs to `findings/`.
 Note that `findings/` is shared between the host machine and the docker container, so you can inspect any error cases
 by looking in that subdirectory on the host.
 
