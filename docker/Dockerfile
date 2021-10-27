@@ -14,7 +14,7 @@ WORKDIR /home/pyth
 
 COPY --chown=pyth:pyth ${GITHUB_WORKSPACE} pyth-client/
 
-RUN cd pyth-client && mkdir build && cd build && cmake .. && make && ctest
+RUN cd pyth-client && ./scripts/build.sh
 
 RUN echo "\nexport PATH=\$PATH:\$HOME/pyth-client/build" >> .profile
 
