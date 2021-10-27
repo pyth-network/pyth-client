@@ -59,6 +59,8 @@ typedef union pc_pub_key
   uint64_t k8_[PC_PUBKEY_SIZE_64];
 } pc_pub_key_t;
 
+static_assert( sizeof( pc_pub_key_t ) == 32, "" );
+
 // account header information
 typedef struct pc_acc
 {
@@ -67,6 +69,8 @@ typedef struct pc_acc
   uint32_t        type_;             // account type
   uint32_t        size_;             // size of populated region of account
 } pc_acc_t;
+
+static_assert( sizeof( pc_acc_t ) == 16, "" );
 
 // hash table of symbol to price account mappings
 typedef struct pc_map_table
@@ -81,12 +85,16 @@ typedef struct pc_map_table
   pc_pub_key_t    prod_[PC_MAP_TABLE_SIZE]; // product accounts
 } pc_map_table_t;
 
+static_assert( sizeof( pc_map_table_t ) == 20536, "" );
+
 // variable length string
 typedef struct pc_str
 {
   uint8_t         len_;
   char            data_[];
 } pc_str_t;
+
+static_assert( sizeof( pc_str_t ) == 1, "" );
 
 // product reference data
 typedef struct pc_prod
@@ -100,6 +108,8 @@ typedef struct pc_prod
   // stored as strings (pc_str_t)
 } pc_prod_t;
 
+static_assert( sizeof( pc_prod_t ) == 48, "" );
+
 // price et al. for some component or aggregate
 typedef struct pc_price_info
 {
@@ -110,6 +120,8 @@ typedef struct pc_price_info
   uint64_t        pub_slot_;         // publish slot of price
 } pc_price_info_t;
 
+static_assert( sizeof( pc_price_info_t ) == 32, "" );
+
 // published component price for contributing provider
 typedef struct pc_price_comp
 {
@@ -118,6 +130,8 @@ typedef struct pc_price_comp
   pc_price_info_t latest_;           // latest contributed prices
 } pc_price_comp_t;
 
+static_assert( sizeof( pc_price_comp_t ) == 96, "" );
+
 // time-weighted exponential moving average
 typedef struct pc_ema
 {
@@ -125,6 +139,8 @@ typedef struct pc_ema
   int64_t numer_;                     // numerator at full precision
   int64_t denom_;                     // denominator at full precision
 } pc_ema_t;
+
+static_assert( sizeof( pc_ema_t ) == 24, "" );
 
 // price account containing aggregate and all component prices
 typedef struct pc_price
@@ -152,6 +168,8 @@ typedef struct pc_price
   pc_price_info_t agg_;               // aggregate price information
   pc_price_comp_t comp_[PC_COMP_SIZE];// component prices
 } pc_price_t;
+
+static_assert( sizeof( pc_price_t ) == 3312, "" );
 
 // command enumeration
 typedef enum {
@@ -229,11 +247,15 @@ typedef struct cmd_hdr
   int32_t      cmd_;
 } cmd_hdr_t;
 
+static_assert( sizeof( cmd_hdr_t ) == 8, "" );
+
 typedef struct cmd_add_product
 {
   uint32_t     ver_;
   int32_t      cmd_;
 } cmd_add_product_t;
+
+static_assert( sizeof( cmd_add_product_t ) == 8, "" );
 
 typedef struct cmd_upd_product
 {
@@ -241,6 +263,8 @@ typedef struct cmd_upd_product
   int32_t      cmd_;
   // set of key-value pairs
 } cmd_upd_product_t;
+
+static_assert( sizeof( cmd_upd_product_t ) == 8, "" );
 
 typedef struct cmd_add_price
 {
@@ -250,6 +274,8 @@ typedef struct cmd_add_price
   uint32_t     ptype_;
 } cmd_add_price_t;
 
+static_assert( sizeof( cmd_add_price_t ) == 16, "" );
+
 typedef struct cmd_init_price
 {
   uint32_t     ver_;
@@ -258,6 +284,8 @@ typedef struct cmd_init_price
   uint32_t     ptype_;
 } cmd_init_price_t;
 
+static_assert( sizeof( cmd_init_price_t ) == 16, "" );
+
 typedef struct cmd_add_publisher
 {
   uint32_t     ver_;
@@ -265,12 +293,16 @@ typedef struct cmd_add_publisher
   pc_pub_key_t pub_;
 } cmd_add_publisher_t;
 
+static_assert( sizeof( cmd_add_publisher_t ) == 40, "" );
+
 typedef struct cmd_del_publisher
 {
   uint32_t     ver_;
   int32_t      cmd_;
   pc_pub_key_t pub_;
 } cmd_del_publisher_t;
+
+static_assert( sizeof( cmd_del_publisher_t ) == 40, "" );
 
 typedef struct cmd_upd_price
 {
@@ -283,6 +315,8 @@ typedef struct cmd_upd_price
   uint64_t     pub_slot_;
 } cmd_upd_price_t;
 
+static_assert( sizeof( cmd_upd_price_t ) == 40, "" );
+
 typedef struct cmd_upd_test
 {
   uint32_t     ver_;
@@ -294,6 +328,8 @@ typedef struct cmd_upd_test
   uint64_t     conf_[PC_COMP_SIZE];
 } cmd_upd_test_t;
 
+static_assert( sizeof( cmd_upd_test_t ) == 560, "" );
+
 // structure of clock sysvar account
 typedef struct sysvar_clock
 {
@@ -303,6 +339,8 @@ typedef struct sysvar_clock
   uint64_t    leader_schedule_epoch_;
   int64_t     unix_timestamp_;
 } sysvar_clock_t;
+
+static_assert( sizeof( sysvar_clock_t ) == 40, "" );
 
 // compare if two pub_keys (accounts) are the same
 inline bool pc_pub_key_equal( pc_pub_key_t *p1, pc_pub_key_t *p2 )
