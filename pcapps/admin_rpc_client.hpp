@@ -235,6 +235,32 @@ namespace pc {
       signature  sig_;
     };
 
+    // set min publishers on price account
+    class set_min_pub_rpc : public rpc_request
+    {
+    public:
+      void set_min_pub( uint8_t );
+      void set_program( pub_key * );
+      void set_block_hash( hash * );
+      void set_publish( key_pair * );
+      void set_account( key_pair * );
+
+      // results
+      signature *get_signature();
+
+      set_min_pub_rpc();
+      void request( json_wtr& ) override;
+      void response( const jtree& ) override;
+
+    private:
+      uint8_t    min_pub_;
+      hash      *bhash_;
+      key_pair  *pkey_;
+      pub_key   *gkey_;
+      key_pair  *akey_;
+      signature  sig_;
+    };
+
     // add new price publisher to symbol account
     class add_publisher : public rpc_request
     {

@@ -23,6 +23,8 @@ int usage()
   cerr << "  init_price       <price_key> "
        << "[-e <price_exponent (default " << DEFAULT_EXPONENT
        << ")>] [options]" << endl;
+  cerr << "  set_min_pub      <price_key> "
+       << "[-m <min_pub>]" << endl;
   cerr << "  init_test        [options]" << endl;
   cerr << "  add_product      [options]" << endl;
   cerr << "  add_price        <product_key> <price_type> "
@@ -60,19 +62,38 @@ struct pyth_arguments
   std::string  key_dir_    = DEFAULT_KEY_STORE;
   commitment   cmt_        = commitment::e_confirmed;
   int          exponent_   = DEFAULT_EXPONENT;
+  uint8_t      min_pub_    = 0;
   bool         do_prompt_  = true;
 };
 
 pyth_arguments::pyth_arguments( int argc, char **argv )
 {
   int opt = 0;
-  while ( (opt = ::getopt( argc, argv, "r:k:c:de:nh" )) != -1 ) {
+  while ( (opt = ::getopt( argc, argv, "r:k:c:de:m:nh" )) != -1 ) {
     switch (opt) {
       case 'r': rpc_host_ = optarg; break;
       case 'k': key_dir_ = optarg; break;
       case 'c': cmt_ = str_to_commitment( optarg ); break;
       case 'd': log::set_level( PC_LOG_DBG_LVL ); break;
       case 'e': exponent_ = ::atoi( optarg ); break;
+      case 'm': {
+        const int min_pub = ::atoi( optarg );
+        if ( min_pub < 0 ) {
+          std::cerr << "pyth_admin: min pub must be positive" << std::endl;
+          invalid_ = true;
+        }
+        else if ( min_pub > std::numeric_limits< uint8_t >::max() ) {
+          std::cerr << "pyth_admin: min pub must be less than "
+            << (
+              static_cast< unsigned >( std::numeric_limits< uint8_t >::max() )
+              + 1
+            )
+            << std::endl;
+          invalid_ = true;
+        }
+        min_pub_ = static_cast< uint8_t >( min_pub );
+        break;
+      }
       case 'n': do_prompt_ = false; break;
       default:
         usage();
@@ -452,6 +473,71 @@ int on_init_price( int argc, char **argv )
   return 0;
 }
 
+int on_set_min_pub( int argc, char **argv )
+{
+  // get input parameters
+  if ( argc < 2 ) {
+    return usage();
+  }
+  std::string pkey( argv[1] );
+  pub_key pub;
+  pub.init_from_text( pkey );
+  argc -= 1;
+  argv += 1;
+  pyth_arguments args( argc, argv );
+  if ( args.invalid_ )
+    return 1;
+
+  // initialize connection to block-chain
+  manager mgr;
+  mgr.set_rpc_host( args.rpc_host_ );
+  mgr.set_dir( args.key_dir_ );
+  mgr.set_do_tx( false );
+  mgr.set_commitment( args.cmt_ );
+  if ( !mgr.init() || !mgr.bootstrap() ) {
+    std::cerr << "pyth_admin: " << mgr.get_err_msg() << std::endl;
+    return 1;
+  }
+
+  // get price
+  price *px = mgr.get_price( pub );
+  if ( !px ) {
+    std::cerr << "pyth_admin: failed to find price=" << pkey << std::endl;
+    return 1;
+  }
+
+  // are you sure prompt
+  if ( args.do_prompt_ ) {
+    std::cout << "set min publishers:" << std::endl;
+    print_val( "price account", 2 );
+    pub_key pacc( *px->get_account() );
+    pacc.enc_base58( pkey );
+    std::cout << pkey << std::endl;
+    print_val( "symbol", 2 );
+    std::cout << px->get_symbol().as_string() << std::endl;
+    print_val( "version", 2 );
+    std::cout << PC_VERSION << std::endl;
+    print_val( "min pub", 2 );
+    std::cout << static_cast< unsigned >( args.min_pub_ ) << std::endl;
+    std::cout << "are you sure? [y/n] ";
+    char ch;
+    std::cin >> ch;
+    if ( ch != 'y' && ch != 'Y' ) {
+      return 1;
+    }
+  }
+
+  set_min_pub_req req_i[1];
+  req_i->set_min_pub( args.min_pub_ );
+  req_i->set_commitment( args.cmt_ );
+  req_i->set_price( px );
+  if( !mgr.submit_poll( req_i ) ) {
+    return 1;
+  }
+
+  return 0;
+}
+
 int on_init_test( int argc, char **argv )
 {
   pyth_arguments args( argc, argv );
@@ -621,6 +707,8 @@ int main(int argc, char **argv)
     rc = on_init_mapping( argc, argv );
   } else if ( cmd == "init_price" ) {
     rc = on_init_price( argc, argv );
+  } else if ( cmd == "set_min_pub" ) {
+    rc = on_set_min_pub( argc, argv );
   } else if ( cmd == "init_test" ) {
     rc = on_init_test( argc, argv );
   } else if ( cmd == "add_product" ) {

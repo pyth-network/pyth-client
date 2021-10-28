@@ -275,6 +275,7 @@ namespace pc
     const pub_key *get_account() const;
     price_type     get_price_type() const;
     int64_t        get_price_exponent() const;
+    uint8_t        get_min_pub() const;
     uint32_t       get_version() const;
     int64_t        get_price() const;
     uint64_t       get_conf() const;

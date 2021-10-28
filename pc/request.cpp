@@ -552,6 +552,11 @@ int64_t price::get_price_exponent() const
   return pptr_->expo_;
 }
 
+uint8_t price::get_min_pub() const
+{
+  return pptr_->min_pub_;
+}
+
 price_type price::get_price_type() const
 {
   return(price_type) pptr_->ptype_;

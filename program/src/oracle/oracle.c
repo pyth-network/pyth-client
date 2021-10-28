@@ -285,6 +285,36 @@ static uint64_t init_price( SolParameters *prm, SolAccountInfo *ka )
   return SUCCESS;
 }
 
+static uint64_t set_min_pub( SolParameters *prm, SolAccountInfo *ka )
+{
+  // Validate command parameters
+  cmd_set_min_pub_t *cptr = ( cmd_set_min_pub_t* )prm->data;
+  if ( prm->data_len != sizeof( cmd_set_min_pub_t ) ) {
+    return ERROR_INVALID_ARGUMENT;
+  }
+
+  // Account (1) is the price account to set min pub
+  // Verify that these are signed, writable accounts with correct ownership
+  // and size
+  if ( prm->ka_num != 2 ||
+       ! valid_funding_account( &ka[ 0 ] ) ||
+       ! valid_signable_account( prm, &ka[ 1 ], sizeof( pc_price_t ) ) ) {
+    return ERROR_INVALID_ARGUMENT;
+  }
+
+  // Verify that the price account is initialized
+  pc_price_t *sptr = ( pc_price_t* )ka[ 1 ].data;
+  if ( sptr->magic_ != PC_MAGIC ||
+       sptr->ver_ != cptr->ver_ ||
+       sptr->type_ != PC_ACCTYPE_PRICE ) {
+    return ERROR_INVALID_ARGUMENT;
+  }
+
+  sptr->min_pub_ = cptr->min_pub_;
+
+  return SUCCESS;
+}
+
 static uint64_t add_publisher( SolParameters *prm, SolAccountInfo *ka )
 {
   // Validate command parameters
@@ -532,6 +562,7 @@ static uint64_t dispatch( SolParameters *prm, SolAccountInfo *ka )
     case e_cmd_init_price:    return init_price( prm, ka );
     case e_cmd_init_test:     return init_test( prm, ka );
     case e_cmd_upd_test:      return upd_test( prm, ka );
+    case e_cmd_set_min_pub:   return set_min_pub( prm, ka );
     default:                  return ERROR_INVALID_ARGUMENT;
   }
 }

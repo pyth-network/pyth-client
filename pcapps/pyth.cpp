@@ -371,6 +371,8 @@ static void print_product( product *prod )
               << std::endl;
     print_val( "price_exponent", 4 );
     std::cout << ptr->get_price_exponent() << std::endl;
+    print_val( "min_pub", 4 );
+    std::cout << static_cast< unsigned >( ptr->get_min_pub() ) << std::endl;
     print_val( "status", 4 );
     std::cout << symbol_status_to_str( ptr->get_status() ).as_string()
               << std::endl;
