@@ -745,6 +745,105 @@ bool init_price::get_is_done() const
 }
 
 ///////////////////////////////////////////////////////////////////////////
+// set_min_pub_req
+
+set_min_pub_req::set_min_pub_req()
+: st_( e_init_sent ),
+  cmt_( commitment::e_confirmed )
+{
+}
+
+void set_min_pub_req::set_min_pub( uint8_t min_pub )
+{
+  req_->set_min_pub( min_pub );
+}
+
+void set_min_pub_req::set_price( price *px )
+{
+  price_ = px;
+}
+
+void set_min_pub_req::set_commitment( commitment cmt )
+{
+  cmt_ = cmt;
+}
+
+bool set_min_pub_req::get_is_ready()
+{
+  manager *cptr = get_manager();
+  if ( !cptr->get_mapping_pub_key() ) {
+    return set_err_msg( "missing mapping key pairfile ["
+        + cptr->get_mapping_key_pair_file() + "]" );
+  }
+  return cptr->has_status( PC_PYTH_RPC_CONNECTED |
+                           PC_PYTH_HAS_BLOCK_HASH |
+                           PC_PYTH_HAS_MAPPING );
+}
+
+void set_min_pub_req::submit()
+{
+  manager *cptr = get_manager();
+  key_pair *pkey = cptr->get_publish_key_pair();
+  if ( !pkey ) {
+    on_error_sub( "missing or invalid publish key [" +
+        cptr->get_publish_key_pair_file() + "]", this );
+    return;
+  }
+  pub_key *gpub = cptr->get_program_pub_key();
+  if ( !gpub ) {
+    on_error_sub( "missing or invalid program public key [" +
+        cptr->get_program_pub_key_file() + "]", this );
+    return;
+  }
+  pub_key *pub = price_->get_account();
+  if ( !cptr->get_account_key_pair( *pub, key_ ) ) {
+    std::string knm;
+    pub->enc_base58( knm );
+    on_error_sub( "missing key pair for price acct [" + knm + "]", this);
+    return;
+  }
+  req_->set_program( gpub );
+  req_->set_publish( pkey );
+  req_->set_account( &key_ );
+  req_->set_sub( this );
+  sig_->set_sub( this );
+
+  // get recent block hash and submit request
+  st_ = e_init_sent;
+  req_->set_block_hash( get_manager()->get_recent_block_hash() );
+  get_rpc_client()->send( req_ );
+}
+
+void set_min_pub_req::on_response( rpc::signature_subscribe *res )
+{
+  if ( res->get_is_err() ) {
+    on_error_sub( res->get_err_msg(), this );
+    st_ = e_error;
+  } else if ( st_ == e_init_sig ) {
+    st_ = e_done;
+    on_response_sub( this );
+  }
+}
+
+void set_min_pub_req::on_response( rpc::set_min_pub_rpc *res )
+{
+  if ( res->get_is_err() ) {
+    on_error_sub( res->get_err_msg(), this );
+    st_ = e_error;
+  } else if ( st_ == e_init_sent ) {
+    st_ = e_init_sig;
+    sig_->set_commitment( cmt_ );
+    sig_->set_signature( res->get_signature() );
+    get_rpc_client()->send( sig_ );
+  }
+}
+
+bool set_min_pub_req::get_is_done() const
+{
+  return st_ == e_done;
+}
+
+///////////////////////////////////////////////////////////////////////////
 // add_publisher
 
 add_publisher::add_publisher()

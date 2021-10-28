@@ -158,13 +158,16 @@ typedef struct pc_price
   pc_ema_t        twap_;              // time-weighted average price
   pc_ema_t        twac_;              // time-weighted average conf interval
   int64_t         drv1_;              // space for future derived values
-  int64_t         drv2_;              // space for future derived values
+  uint8_t         min_pub_;           // min publishers for valid price
+  int8_t          drv2_;              // space for future derived values
+  int16_t         drv3_;              // space for future derived values
+  int32_t         drv4_;              // space for future derived values
   pc_pub_key_t    prod_;              // product id/ref-account
   pc_pub_key_t    next_;              // next price account in list
   uint64_t        prev_slot_;         // valid slot of previous update
   int64_t         prev_price_;        // aggregate price of previous update
   uint64_t        prev_conf_;         // confidence interval of previous update
-  uint64_t        drv3_;              // space for future derived values
+  uint64_t        drv5_;              // space for future derived values
   pc_price_info_t agg_;               // aggregate price information
   pc_price_comp_t comp_[PC_COMP_SIZE];// component prices
 } pc_price_t;
@@ -237,7 +240,12 @@ typedef enum {
   // run aggregate price test
   // key[0] funding account       [signer writable]
   // key[1] test account          [signer writable]
-  e_cmd_upd_test
+  e_cmd_upd_test,
+
+  // set min publishers
+  // key[0] funding account       [signer writable]
+  // key[1] price account         [signer writable]
+  e_cmd_set_min_pub
 
 } command_t;
 
@@ -285,6 +293,15 @@ typedef struct cmd_init_price
 } cmd_init_price_t;
 
 static_assert( sizeof( cmd_init_price_t ) == 16, "" );
+
+typedef struct cmd_set_min_pub
+{
+  uint32_t     ver_;
+  int32_t      cmd_;
+  uint8_t      min_pub_;
+} cmd_set_min_pub_t;
+
+static_assert( sizeof( cmd_set_min_pub_t ) == 12, "" );
 
 typedef struct cmd_add_publisher
 {

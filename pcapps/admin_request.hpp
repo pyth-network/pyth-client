@@ -220,6 +220,39 @@ namespace pc
     rpc::signature_subscribe sig_[1];
   };
 
+  // (re)initialize price account to reflect exponent change
+  class set_min_pub_req : public request,
+                          public rpc_sub_i<rpc::signature_subscribe>,
+                          public rpc_sub_i<rpc::set_min_pub_rpc>
+  {
+  public:
+    set_min_pub_req();
+    void set_min_pub( uint8_t );
+    void set_price( price * );
+    void set_commitment( commitment );
+    bool get_is_done() const override;
+
+  public:
+    void on_response( rpc::signature_subscribe * ) override;
+    void on_response( rpc::set_min_pub_rpc * ) override;
+    bool get_is_ready() override;
+    void submit() override;
+
+  private:
+    using request::on_response;
+
+    typedef enum {
+      e_init_sent, e_init_sig, e_done, e_error
+    } state_t;
+
+    state_t                  st_;
+    commitment               cmt_;
+    price                   *price_;
+    key_pair                 key_;
+    rpc::set_min_pub_rpc     req_[1];
+    rpc::signature_subscribe sig_[1];
+  };
+
   // add new price publisher to symbol account
   class add_publisher : public request,
                         public rpc_sub_i<rpc::signature_subscribe>,

@@ -857,6 +857,105 @@ void rpc::init_price::response( const jtree& jt )
 }
 
 ///////////////////////////////////////////////////////////////////////////
+// set_min_pub_rpc
+
+void rpc::set_min_pub_rpc::set_min_pub( uint8_t min_pub )
+{
+  min_pub_ = min_pub;
+}
+
+void rpc::set_min_pub_rpc::set_program( pub_key *gkey )
+{
+  gkey_ = gkey;
+}
+
+void rpc::set_min_pub_rpc::set_block_hash( hash *bhash )
+{
+  bhash_ = bhash;
+}
+
+void rpc::set_min_pub_rpc::set_publish( key_pair *pkey )
+{
+  pkey_ = pkey;
+}
+
+void rpc::set_min_pub_rpc::set_account( key_pair *akey )
+{
+  akey_ = akey;
+}
+
+signature *rpc::set_min_pub_rpc::get_signature()
+{
+  return &sig_;
+}
+
+rpc::set_min_pub_rpc::set_min_pub_rpc()
+: min_pub_( 0 ),
+  bhash_( nullptr ),
+  pkey_( nullptr ),
+  gkey_( nullptr ),
+  akey_( nullptr )
+{
+}
+
+void rpc::set_min_pub_rpc::request( json_wtr& msg )
+{
+  // construct binary transaction
+  net_buf *bptr = net_buf::alloc();
+  bincode tx( bptr->buf_ );
+
+  // signatures section
+  tx.add_len<2>();      // three signatures (publish, price)
+  size_t pub_idx = tx.reserve_sign();
+  size_t prc_idx = tx.reserve_sign();
+
+  // message header
+  size_t tx_idx = tx.get_pos();
+  tx.add( (uint8_t)2 ); // pub and price signing accounts
+  tx.add( (uint8_t)0 ); // read-only signed accounts
+  tx.add( (uint8_t)1 ); // program-id are read-only unsigned accounts
+
+  // accounts
+  tx.add_len<3>();      // 3 accounts: publish, price, params, program
+  tx.add( *pkey_ );     // publish account
+  tx.add( *akey_ );     // price account
+  tx.add( *gkey_ );     // programid
+
+  // recent block hash
+  tx.add( *bhash_ );    // recent block hash
+
+  // instructions section
+  tx.add_len<1>();      // one instruction
+  tx.add( (uint8_t)2);  // program_id index
+  tx.add_len<2>();      // 2 accounts: publish, price
+  tx.add( (uint8_t)0 ); // index of publish account
+  tx.add( (uint8_t)1 ); // index of price account
+
+  // instruction parameter section
+  tx.add_len<sizeof(cmd_set_min_pub)>();
+  tx.add( (uint32_t)PC_VERSION );
+  tx.add( (int32_t)e_cmd_set_min_pub );
+  tx.add( min_pub_ );
+  tx.add( (uint8_t)0 );
+  tx.add( (uint16_t)0 );
+
+  // all accounts need to sign transaction
+  tx.sign( pub_idx, tx_idx, *pkey_ );
+  sig_.init_from_buf( (const uint8_t*)(tx.get_buf() + pub_idx) );
+  tx.sign( prc_idx, tx_idx, *akey_ );
+
+  // encode transaction and add to json params
+  send_transaction( msg, tx );
+  bptr->dealloc();
+}
+
+void rpc::set_min_pub_rpc::response( const jtree& jt )
+{
+  if ( on_error( jt, this ) ) return;
+  on_response( this );
+}
+
+///////////////////////////////////////////////////////////////////////////
 // add_publisher
 
 void rpc::add_publisher::set_program( pub_key *gkey )

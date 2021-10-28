@@ -257,7 +257,7 @@ static inline void upd_aggregate( pc_price_t *ptr, uint64_t slot )
 
   // zero quoters
   ptr->num_qt_ = numa;
-  if ( numa == 0 || numa * 2 <= numv ) {
+  if ( numa == 0 || numa < ptr->min_pub_ || numa * 2 <= numv ) {
     ptr->agg_.status_ = PC_STATUS_UNKNOWN;
     upd_twap( ptr, agg_diff, qs );
     return;
