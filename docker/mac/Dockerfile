@@ -15,7 +15,7 @@ COPY --chown=pyth:pyth . pyth-client/
 
 ENV CC=clang
 ENV CXX=clang++
-RUN cd pyth-client && mkdir build && cd build && cmake .. && make
+RUN cd pyth-client && ./scripts/build.sh
 
 RUN echo "\nexport PATH=\$PATH:\$HOME/pyth-client/build" >> .profile
 RUN echo "\nexport PYTHONPATH=\${PYTHONPATH:+\${PYTHONPATH}:}\$HOME/pyth-client" >> .profile
