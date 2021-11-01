@@ -26,23 +26,6 @@ make
 ctest
 ```
 
-
-### M1 Mac Build Instructions
-
-We have a dockerfile that allows you to build the on-chain program on an M1 Mac. 
-You can build the docker image using the following command:
-
-```
-docker build . --platform linux/amd64 -f docker/mac/Dockerfile -t pyth-client
-```
-
-You can then open a shell in the image by running:
-
-```
-docker run -it --platform linux/amd64 pyth-client
-```
-
-
 ### Fuzzing
 
 Build a docker image for running fuzz tests:
