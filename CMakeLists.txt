@@ -110,3 +110,11 @@ target_link_libraries( leader_stats ${PC_DEP} )
 
 add_test( test_unit test_unit )
 add_test( test_net test_net )
+
+
+#
+# fuzz testing application
+#
+
+add_executable( fuzz pctest/fuzz.cpp )
+target_link_libraries( fuzz ${PC_DEP} )
