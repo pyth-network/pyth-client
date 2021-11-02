@@ -108,7 +108,7 @@ class BaseTest:
             assert actual == expected
 
 
-@pytest.fixture
+@pytest.fixture(scope='session')
 def solana_test_validator():
 
     ledger_dir = mkdtemp(prefix='stv_')
@@ -129,31 +129,35 @@ def solana_test_validator():
     rmtree(ledger_dir)
 
 
-@pytest.fixture
+@pytest.fixture(scope='session')
 def solana_keygen():
 
-    cmd = ['solana-keygen', 'new', '--no-passphrase']
+    cfg_dir = mkdtemp(prefix='cfg_')
+    path = os.path.join(cfg_dir, 'id.json')
+    cmd = ['solana-keygen', 'new', '--no-passphrase', '--outfile', path]
     output = check_output(cmd)
     output = output.decode('ascii')
     output = output.splitlines()
     output = [line for line in output if 'pubkey' in line][0]
     output = output.split('pubkey: ')[1]
-    return output
+    yield (output, path)
+    rmtree(cfg_dir)
 
 
-@pytest.fixture
+@pytest.fixture(scope='session')
 def solana_airdrop(solana_test_validator, solana_keygen):
 
     cmd = [
-        'solana', 'airdrop', '100', solana_keygen,
+        'solana', 'airdrop', '100', solana_keygen[0],
         '--commitment', 'finalized',
         '--url', 'localhost',
+        '--keypair', solana_keygen[1],
     ]
     check_call(cmd)
 
 
-@pytest.fixture
-def solana_program_deploy(solana_test_validator, solana_airdrop):
+@pytest.fixture(scope='session')
+def solana_program_deploy(solana_test_validator, solana_keygen, solana_airdrop):
 
     cmd = [
         'solana', 'program', 'deploy',
@@ -162,6 +166,7 @@ def solana_program_deploy(solana_test_validator, solana_airdrop):
         ),
         '--commitment', 'finalized',
         '--url', 'localhost',
+        '--keypair', solana_keygen[1],
     ]
     output = check_output(cmd)
     output = output.decode('ascii')
