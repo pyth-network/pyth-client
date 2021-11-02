@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.9] - 2021-11-02
+- [pyth] add minimum number of publishers for price to be valid (not unknown)
+- [pyth] various minor code cleanup
+- [pyth] testing improvements
+
+## [2.8.1] - 2021-10-05
+- [pyth] temporary code to reset twap calc on negative values
+
 ## [2.8] - 2021-10-05
 - [pyth] use some bits for storing exponent to avoid overflow (twap)
 
