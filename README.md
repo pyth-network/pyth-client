@@ -17,14 +17,30 @@ apt install libzstd-dev
 apt install cmake
 
 # default is release build
-mkdir build
-cd build
-cmake ..
-make
-
-# run unit tests
-ctest
+./scripts/build.sh
 ```
+
+If you are using an M1 mac, you will need to build this repository inside a linux docker container, as the build depends on
+some linux-specific libraries. You can run the following command to open a shell in a linux docker container with the current
+directory mounted:
+
+```
+export PYTH_REPO=`pwd`
+export IMAGE="docker.io/pythfoundation/pyth-client:devnet-v2.8.1"
+
+docker run -it \
+  --volume "${HOME}:/home/pyth/home" \
+  --volume "${HOME}/.config:/home/pyth/.config" \
+  --mount "type=bind,src=${PYTH_REPO},target=/home/pyth/pyth-client" \
+  --userns=host \
+  --user="$( id -ur ):$( id -gr )" \
+  --platform linux/amd64 \
+  $IMAGE \
+  /bin/bash -l
+```
+
+This command runs a recent pyth-client docker image that already has the necessary dependencies installed.
+Therefore, once the container is running, all you have to do is run `cd pyth-client && ./scripts/build.sh`.
 
 ### Fuzzing
 
