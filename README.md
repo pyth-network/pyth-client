@@ -20,12 +20,11 @@ apt install cmake
 ./scripts/build.sh
 ```
 
-If you are using an M1 mac, you will need to build this repository inside a linux docker container, as the build depends on
-some linux-specific libraries. You can run the following command to open a shell in a linux docker container with the current
-directory mounted:
+You may want to build this repository inside a linux docker container for various reasons, e.g., if building on an M1 mac, or to run BPF binaries.
+You can run the following command to open a shell in a linux docker container with the pyth-client directory mounted:
 
 ```
-export PYTH_REPO=`pwd`
+export PYTH_REPO=/path/to/host/pyth-client
 export IMAGE="docker.io/pythfoundation/pyth-client:devnet-v2.8.1"
 
 docker run -it \
@@ -41,6 +40,7 @@ docker run -it \
 
 This command runs a recent pyth-client docker image that already has the necessary dependencies installed.
 Therefore, once the container is running, all you have to do is run `cd pyth-client && ./scripts/build.sh`.
+Note that updates to the `pyth-client` directory made inside the docker container will be persisted to the host filesystem (which is probably desirable).
 
 ### Fuzzing
 
