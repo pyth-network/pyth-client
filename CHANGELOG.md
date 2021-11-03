@@ -5,6 +5,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.9.1] - TBD
+- [pyth] do not update twap with last price if price unknown
+
 ## [2.9] - 2021-11-02
 - [pyth] add minimum number of publishers for price to be valid (not unknown)
 - [pyth] various minor code cleanup
