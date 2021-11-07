@@ -322,19 +322,17 @@ namespace pc
 
     // access to http request components
     unsigned get_num_header() const;
-    void get_header_key( unsigned i, str& ) const;
-    void get_header_val( unsigned i, str&) const;
-    bool get_header_val( const str&key, str&) const;
     void get_path( str& ) const;
 
   private:
+    bool get_header_val( const std::string& key, str& ) const;
 
     typedef std::vector<str> str_vec_t;
 
     void upgrade_ws();
 
     str          path_;
-    str_vec_t    hnms_;
+    std::vector< std::string > hnms_;
     str_vec_t    hval_;
     ws_parser   *wp_;
     net_connect *np_;
@@ -495,19 +493,8 @@ namespace pc
     return hnms_.size();
   }
 
-  inline void http_server::get_header_key( unsigned i, str& val ) const
-  {
-    val = hnms_[i];
-  }
-
-  inline void http_server::get_header_val( unsigned i, str& val ) const
-  {
-    val = hval_[i];
-  }
-
   inline void http_server::get_path( str& val ) const
   {
     val = path_;
   }
-
 }

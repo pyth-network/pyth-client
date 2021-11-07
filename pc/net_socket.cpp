@@ -9,6 +9,8 @@
 #include <fcntl.h>
 #include <netdb.h>
 #include <poll.h>
+
+#include <cctype>
 #include <iostream>
 
 #define PC_EPOLL_FLAGS (EPOLLIN|EPOLLET|EPOLLRDHUP|EPOLLHUP|EPOLLERR)
@@ -985,7 +987,7 @@ ws_parser *http_server::get_ws_parser() const
   return wp_;
 }
 
-bool http_server::get_header_val( const str& key, str& val) const
+bool http_server::get_header_val( const std::string& key, str& val ) const
 {
   for(unsigned i=0; i != hnms_.size(); ++i ) {
     if ( key == hnms_[i] ) {
@@ -1015,7 +1017,7 @@ bool http_server::parse( const char *ptr, size_t len, size_t& res )
   if ( !next( LF, ++ptr, end ) )  return false;
 
   // parse other header lines
-  bool has_len = false, has_upgrade = false;;
+  bool has_len = false, has_upgrade = false;
   size_t clen = 0;
   for(++ptr;;++ptr) {
     if ( ptr <= &end[-2] && ptr[0] == CR && ptr[1] == LF ) {
@@ -1029,16 +1031,19 @@ bool http_server::parse( const char *ptr, size_t len, size_t& res )
     if ( !find( CR, ptr, end ) )  return false;
     assert( hdr_end >= hdr );
     const size_t hlen = static_cast< size_t >( hdr_end - hdr );
+    std::string hdr_str{ hdr, hlen };
+    for ( char& c : hdr_str ) {
+      c = std::toupper( static_cast< unsigned char >( c ) );
+    }
     assert( ptr >= val );
     const size_t vlen = static_cast< size_t >( ptr - val );
-    if ( has_len || (
-        0 != __builtin_strncmp( "Content-Length", hdr, hlen ) &&
-        0 != __builtin_strncmp( "content-length", hdr, hlen ) ) ) {
-      hnms_.push_back( str( hdr, hlen ) );
+
+    if ( has_len || hdr_str != "CONTENT-LENGTH" ) {
+      hnms_.push_back( hdr_str );
       hval_.push_back( str( val, vlen ) );
       if ( wp_ && !has_upgrade ) {
         has_upgrade =
-          0 == __builtin_strncmp( "Upgrade", hdr, hlen ) &&
+          hdr_str == "UPGRADE" &&
           0 == __builtin_strncmp( "websocket", val, vlen );
       }
     } else {
@@ -1070,7 +1075,7 @@ bool http_server::parse( const char *ptr, size_t len, size_t& res )
 void http_server::upgrade_ws()
 {
   str key;
-  if ( !get_header_val( "Sec-WebSocket-Key", key ) ) {
+  if ( ! get_header_val( "SEC-WEBSOCKET-KEY", key ) ) {
     return;
   }
   const char *magic_id = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
