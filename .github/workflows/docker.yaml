@@ -17,7 +17,8 @@ jobs:
       - run: echo "BRANCH=$( echo ${GITHUB_REF##*/} )" >> $GITHUB_ENV
       - run: echo "DOCKER_TAG=${BRANCH}" >> $GITHUB_ENV
       - run: echo "DOCKER_IMAGE=$( echo ${GITHUB_REPOSITORY}:${DOCKER_TAG} )" >> $GITHUB_ENV
-      - run: docker build -f docker/Dockerfile --build-arg SOLANA_VERSION=${{ env.SOLANA_VERSION }} --tag ${{ env.DOCKER_IMAGE }} .
+      - run: echo "WORKSPACE=$( realpath --relative-to=$( pwd ) /${GITHUB_WORKSPACE} )" >> $GITHUB_ENV
+      - run: docker build -f docker/Dockerfile --build-arg SOLANA_VERSION=${{ env.SOLANA_VERSION }} --build-arg WORKSPACE=${{ env.WORKSPACE }} --tag ${{ env.DOCKER_IMAGE }} .
       # publish to docker.io
       - run: echo "${{ secrets.DOCKER_IO_PASS }}" | docker login docker.io -u ${{ secrets.DOCKER_IO_USER }} --password-stdin
         if: startsWith( github.ref, 'refs/tags/' )

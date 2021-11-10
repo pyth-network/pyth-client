@@ -2,6 +2,8 @@ ARG SOLANA_VERSION
 
 FROM solanalabs/solana:v${SOLANA_VERSION}
 
+ARG WORKSPACE
+
 RUN apt-get update
 RUN apt-get install -qq cmake curl g++ gcc-multilib git libzstd1 libzstd-dev python3-pytest sudo zlib1g zlib1g-dev
 
@@ -12,7 +14,7 @@ RUN useradd -m pyth
 USER pyth
 WORKDIR /home/pyth
 
-COPY --chown=pyth:pyth ${GITHUB_WORKSPACE} pyth-client/
+COPY --chown=pyth:pyth ${WORKSPACE} pyth-client/
 
 RUN cd pyth-client && ./scripts/build.sh
 
