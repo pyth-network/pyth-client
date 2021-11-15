@@ -4,6 +4,7 @@
     <configurations>
       <configuration PROFILE_NAME="Debug" ENABLED="true" CONFIG_NAME="Debug" />
       <configuration PROFILE_NAME="Release" ENABLED="true" CONFIG_NAME="Release" />
+      <configuration PROFILE_NAME="BPF" ENABLED="true" CONFIG_NAME="Release" TOOLCHAIN_NAME="BPF" GENERATION_OPTIONS="-DSOLANA=$CMakeProjectParentDir$/solana" />
     </configurations>
   </component>
 </project>
