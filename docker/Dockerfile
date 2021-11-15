@@ -40,24 +40,10 @@ RUN cd pyth-client && ./scripts/build.sh
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
   | sh -s -- -y --default-toolchain none
 
-# Copy solana sdk to modify makefile and header.
+# Copy solana sdk and apply patch.
 RUN mkdir solana
 RUN cp -a /usr/bin/sdk solana
-
-# Enable all clang warnings.
-RUN sed -i \
-  's/-Werror/-Wall -Wextra -Wconversion -Werror/g' \
-  solana/sdk/bpf/c/bpf.mk
-
-# Disallow missing symbols in ld.
-RUN sed -i \
-  's/-z notext/-z notext -z defs/g' \
-  solana/sdk/bpf/c/bpf.mk
-
-# https://github.com/solana-labs/solana/issues/21198
-RUN sed -i \
-  's/\(^uint64_t sol_invoke_signed_c(\)/__attribute__(( weak )) \1/g' \
-  solana/sdk/bpf/c/inc/solana_sdk.h
+RUN ./pyth-client/scripts/patch-solana.sh
 
 # Build and test the oracle program.
 RUN cd pyth-client && ./scripts/build-bpf.sh program
