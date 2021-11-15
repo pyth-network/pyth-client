@@ -8,12 +8,17 @@
 
 set -eu
 
-BUILD_DIR="$( cd "${1:-program}" && pwd )"
+BUILD_DIR="$( cd "${1:-.}" && pwd )"
 
 if [[ ! -f "${BUILD_DIR}/makefile" ]]
 then
-  >&2 echo "Not a makefile dir: ${BUILD_DIR}"
-  exit 1
+  if [[ -f "${BUILD_DIR}/program/makefile" ]]
+  then
+    BUILD_DIR="${BUILD_DIR}/program"
+  else
+    >&2 echo "Not a makefile dir: ${BUILD_DIR}"
+    exit 1
+  fi
 fi
 
 if ! which cargo 2> /dev/null
@@ -25,6 +30,7 @@ fi
 set -x
 
 cd "${BUILD_DIR}"
-make V=1 clean
-make V=1 "${@:2}"
+export V="${V:-1}"
+make clean
+make "${@:2}"
 sha256sum ../target/*.so
