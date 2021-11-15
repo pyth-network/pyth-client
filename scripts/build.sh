@@ -22,7 +22,8 @@ else
 fi
 
 ROOT_DIR="$( mkdir -p "${BUILD_DIR}" && cd "${BUILD_DIR}/.." && pwd )"
-BUILD_DIR="$( realpath --relative-to="${ROOT_DIR}" "${BUILD_DIR}" )"
+BUILD_DIR="$( cd "${BUILD_DIR}" && pwd )"
+BUILD_DIR="$( basename "${BUILD_DIR}" )"
 
 if [[ ! -v CMAKE_ARGS && $BUILD_DIR == *debug* ]]
 then
