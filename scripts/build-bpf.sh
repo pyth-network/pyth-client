@@ -34,3 +34,4 @@ export V="${V:-1}"
 make clean
 make "${@:2}"
 sha256sum ../target/*.so
+rm ../target/*-keypair.json
