@@ -1,12 +1,14 @@
 import argparse
 import glob
 import inspect
+import json
 import os
 import subprocess
 import time
+from os import fdopen
 from shutil import rmtree
 from subprocess import DEVNULL, Popen, check_call, check_output
-from tempfile import mkdtemp
+from tempfile import mkdtemp, mkstemp
 
 import pytest
 
@@ -228,3 +230,63 @@ def pyth_add_product(solana_test_validator, pyth_dir, pyth_init_mapping):
     output = output.decode('ascii')
     output = output.splitlines()
     return output[0]
+
+
+@pytest.fixture(scope='session')
+def pyth_init_product(solana_test_validator, pyth_dir, pyth_add_product):
+
+    ltc = {
+        'account': pyth_add_product,
+        'attr_dict': {
+            'symbol': 'LTC/USD',
+            'asset_type': 'Crypto',
+            'country': 'US',
+            'quote_currency': 'USD',
+            'tenor': 'Spot',
+            'jlqd_symbol': 'LTCUSD',
+        },
+    }
+    fd, path = mkstemp(suffix='.json', prefix='ltc_')
+    with fdopen(fd, 'w') as f:
+        json.dump([ltc], f)
+    cmd = [
+        'pyth_admin', 'upd_product', path,
+        '-r', 'localhost',
+        '-k', pyth_dir,
+        '-c', 'finalized',
+    ]
+    check_call(cmd)
+    os.remove(path)
+    return pyth_add_product
+
+
+@pytest.fixture(scope='session')
+def pyth_add_price(solana_test_validator, pyth_dir, pyth_init_product):
+
+    cmd = [
+        'pyth_admin', 'add_price',
+        pyth_init_product, 'price', '-e', '-5',
+        '-r', 'localhost',
+        '-k', pyth_dir,
+        '-c', 'finalized',
+        '-n',
+    ]
+    output = check_output(cmd)
+    output = output.decode('ascii')
+    output = output.splitlines()
+    return output[0]
+
+
+@pytest.fixture(scope='session')
+def pyth_init_price(solana_test_validator, pyth_dir, pyth_add_price):
+
+    cmd = [
+        'pyth_admin', 'init_price',
+        pyth_add_price, '-e', '-5',
+        '-r', 'localhost',
+        '-k', pyth_dir,
+        '-c', 'finalized',
+        '-n',
+    ]
+    check_call(cmd)
+    return pyth_add_price
