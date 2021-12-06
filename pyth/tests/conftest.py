@@ -290,3 +290,25 @@ def pyth_init_price(solana_test_validator, pyth_dir, pyth_add_price):
     ]
     check_call(cmd)
     return pyth_add_price
+
+
+@pytest.fixture(scope='session')
+def pythd(solana_test_validator, pyth_dir):
+
+    cmd = [
+        'pythd',
+        '-r', 'localhost',
+        '-k', pyth_dir,
+        '-x',
+        '-m', 'finalized',
+        '-d',
+    ]
+    kwargs = {
+        'stdin': DEVNULL,
+        'stdout': DEVNULL,
+        'stderr': DEVNULL,
+    }
+    with Popen(cmd, **kwargs) as p:
+        time.sleep(3)
+        yield
+        p.terminate()
