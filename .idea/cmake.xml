@@ -2,9 +2,13 @@
 <project version="4">
   <component name="CMakeSharedSettings">
     <configurations>
-      <configuration PROFILE_NAME="Debug" ENABLED="true" CONFIG_NAME="Debug" />
-      <configuration PROFILE_NAME="Release" ENABLED="true" CONFIG_NAME="Release" />
-      <configuration PROFILE_NAME="BPF" ENABLED="true" CONFIG_NAME="Release" TOOLCHAIN_NAME="BPF" GENERATION_OPTIONS="-DSOLANA=$CMakeProjectParentDir$/solana" />
+      <configuration PROFILE_NAME="Release" ENABLED="true" CONFIG_NAME="Release" GENERATION_OPTIONS="-DSOLANA=$CMakeProjectParentDir$/solana" GENERATION_PASS_SYSTEM_ENVIRONMENT="false">
+        <ADDITIONAL_GENERATION_ENVIRONMENT>
+          <envs>
+            <env name="VERBOSE" value="1" />
+          </envs>
+        </ADDITIONAL_GENERATION_ENVIRONMENT>
+      </configuration>
     </configurations>
   </component>
 </project>

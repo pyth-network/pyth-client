@@ -124,27 +124,6 @@ target_link_libraries( fuzz ${PC_DEP} )
 # bpf static analysis (CLion)
 #
 
-function( add_bpf_lib targ )
-  if( SOLANA AND NOT BPF )
-    set( BPF ${SOLANA}/sdk/bpf )
-  endif()
-  if( BPF )
-    add_library( ${targ} STATIC ${ARGN} )
-    if( ${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.21" )
-      # bpf.mk uses --std=c17
-      set_property( TARGET ${targ} PROPERTY C_STANDARD 17 )
-    else()
-      set_property( TARGET ${targ} PROPERTY C_STANDARD 11 )
-    endif()
-    set_property( TARGET ${targ} PROPERTY C_STANDARD_REQUIRED ON )
-    set_property( TARGET ${targ} PROPERTY C_EXTENSIONS OFF )
-    target_compile_definitions( ${targ} PRIVATE __bpf__=1 )
-    target_include_directories( ${targ} SYSTEM PRIVATE
-      ${BPF}/c/inc
-      ${BPF}/dependencies/criterion/include
-    )
-  endif()
-endfunction()
-
-# test_oracle.c includes oracle.c
-add_bpf_lib( test-oracle-bpf program/src/oracle/test_oracle.c )
+include( scripts/bpf.cmake )
+add_bpf_lib( oracle program/src/oracle/oracle.c )
+add_bpf_test( test_oracle program/src/oracle/test_oracle.c )
