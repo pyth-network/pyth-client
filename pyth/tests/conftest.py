@@ -110,6 +110,31 @@ class BaseTest:
             assert actual == expected
 
 
+PRODUCTS = {
+    'BTC': {
+        'symbol': 'BTC/USD',
+        'asset_type': 'Crypto',
+        'country': 'US',
+        'quote_currency': 'USD',
+        'tenor': 'Spot',
+    },
+    'ETH': {
+        'symbol': 'ETH/USD',
+        'asset_type': 'Crypto',
+        'country': 'US',
+        'quote_currency': 'USD',
+        'tenor': 'Spot',
+    },
+    'LTC': {
+        'symbol': 'LTC/USD',
+        'asset_type': 'Crypto',
+        'country': 'US',
+        'quote_currency': 'USD',
+        'tenor': 'Spot',
+    },
+}
+
+
 @pytest.fixture(scope='session')
 def solana_test_validator():
 
@@ -220,35 +245,33 @@ def pyth_init_mapping(
 @pytest.fixture(scope='session')
 def pyth_add_product(solana_test_validator, pyth_dir, pyth_init_mapping):
 
-    cmd = [
-        'pyth_admin', 'add_product',
-        '-r', 'localhost',
-        '-k', pyth_dir,
-        '-c', 'finalized',
-    ]
-    output = check_output(cmd)
-    output = output.decode('ascii')
-    output = output.splitlines()
-    return output[0]
+    result = {}
+    for product in PRODUCTS.keys():
+        cmd = [
+            'pyth_admin', 'add_product',
+            '-r', 'localhost',
+            '-k', pyth_dir,
+            '-c', 'finalized',
+        ]
+        output = check_output(cmd)
+        output = output.decode('ascii')
+        output = output.splitlines()
+        result[product] = output[0]
+    return result
 
 
 @pytest.fixture(scope='session')
 def pyth_init_product(solana_test_validator, pyth_dir, pyth_add_product):
 
-    ltc = {
-        'account': pyth_add_product,
-        'attr_dict': {
-            'symbol': 'LTC/USD',
-            'asset_type': 'Crypto',
-            'country': 'US',
-            'quote_currency': 'USD',
-            'tenor': 'Spot',
-            'jlqd_symbol': 'LTCUSD',
-        },
-    }
-    fd, path = mkstemp(suffix='.json', prefix='ltc_')
+    products = []
+    for product in pyth_add_product.keys():
+        products.append({
+            'account': pyth_add_product[product],
+            'attr_dict': PRODUCTS[product],
+        })
+    fd, path = mkstemp(suffix='.json', prefix='products_')
     with fdopen(fd, 'w') as f:
-        json.dump([ltc], f)
+        json.dump(products, f)
     cmd = [
         'pyth_admin', 'upd_product', path,
         '-r', 'localhost',
@@ -263,32 +286,36 @@ def pyth_init_product(solana_test_validator, pyth_dir, pyth_add_product):
 @pytest.fixture(scope='session')
 def pyth_add_price(solana_test_validator, pyth_dir, pyth_init_product):
 
-    cmd = [
-        'pyth_admin', 'add_price',
-        pyth_init_product, 'price', '-e', '-5',
-        '-r', 'localhost',
-        '-k', pyth_dir,
-        '-c', 'finalized',
-        '-n',
-    ]
-    output = check_output(cmd)
-    output = output.decode('ascii')
-    output = output.splitlines()
-    return output[0]
+    result = {}
+    for product, key in pyth_init_product.items():
+        cmd = [
+            'pyth_admin', 'add_price',
+            key, 'price', '-e', '-5',
+            '-r', 'localhost',
+            '-k', pyth_dir,
+            '-c', 'finalized',
+            '-n',
+        ]
+        output = check_output(cmd)
+        output = output.decode('ascii')
+        output = output.splitlines()
+        result[product] = output[0]
+    return result
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope='function')
 def pyth_init_price(solana_test_validator, pyth_dir, pyth_add_price):
 
-    cmd = [
-        'pyth_admin', 'init_price',
-        pyth_add_price, '-e', '-5',
-        '-r', 'localhost',
-        '-k', pyth_dir,
-        '-c', 'finalized',
-        '-n',
-    ]
-    check_call(cmd)
+    for product, key in pyth_add_price.items():
+        cmd = [
+            'pyth_admin', 'init_price',
+            key, '-e', '-5',
+            '-r', 'localhost',
+            '-k', pyth_dir,
+            '-c', 'finalized',
+            '-n',
+        ]
+        check_call(cmd)
     return pyth_add_price
 
 
