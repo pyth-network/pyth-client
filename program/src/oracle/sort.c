@@ -1,7 +1,9 @@
 #include "sort.h"
 
 #ifndef __bpf__
+#ifndef NDEBUG
 #include <assert.h>
+#endif
 #endif
 
 static inline void swap_int64( int64_t *a, int64_t *b )

@@ -505,7 +505,7 @@ static uint64_t upd_price( SolParameters *prm, SolAccountInfo *ka )
   }
 
   // verify that publisher is valid
-  uint32_t i = 0;
+  uint32_t i;
   pc_pub_key_t *kptr = (pc_pub_key_t*)ka[0].key;
   for( i=0; i != pptr->num_; ++i ) {
     pc_price_comp_t *iptr = &pptr->comp_[i];
@@ -567,6 +567,7 @@ static uint64_t dispatch( SolParameters *prm, SolAccountInfo *ka )
   }
 }
 
+PC_UNUSED
 extern uint64_t entrypoint(const uint8_t *input)
 {
   SolAccountInfo ka[4];

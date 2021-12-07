@@ -1,9 +1,9 @@
 #pragma once
 
-#ifdef __bpf__
+#if defined( __bpf__ ) || defined( SOL_TEST )
 #include <solana_sdk.h>
 #else
-#include <stdint.h>
+#include <stdint.h> // NOLINT(modernize-deprecated-headers)
 #endif
 
 #ifdef __cplusplus

@@ -1,9 +1,9 @@
 #pragma once
 
-#include <stdbool.h>
-
 #ifdef __cplusplus
 extern "C" {
+#else
+#include <stdbool.h>
 #endif
 
 // magic number at head of account
@@ -22,7 +22,7 @@ extern "C" {
 #define PC_COMP_SIZE         32
 #define PC_MAX_NUM_DECIMALS  16
 #define PC_PROD_ACC_SIZE    512
-#define PC_EXP_DECAY         -9
+#define PC_EXP_DECAY       (-9)
 
 #ifndef PC_HEAP_START
 #define PC_HEAP_START (0x300000000)
@@ -44,6 +44,8 @@ extern "C" {
 #define PC_ACCTYPE_PRICE      3
 #define PC_ACCTYPE_TEST       4
 
+#define PC_UNUSED __attribute__(( __unused__ ))
+
 // binary version of sysvar_clock account id
 const uint64_t sysvar_clock[] = {
   0xc974c71817d5a706UL,
@@ -55,6 +57,7 @@ const uint64_t sysvar_clock[] = {
 // public key of symbol or publisher account
 typedef union pc_pub_key
 {
+  PC_UNUSED
   uint8_t  k1_[PC_PUBKEY_SIZE];
   uint64_t k8_[PC_PUBKEY_SIZE_64];
 } pc_pub_key_t;
@@ -64,7 +67,9 @@ static_assert( sizeof( pc_pub_key_t ) == 32, "" );
 // account header information
 typedef struct pc_acc
 {
+  PC_UNUSED
   uint32_t        magic_;            // pyth magic number
+  PC_UNUSED
   uint32_t        ver_;              // program/account version
   uint32_t        type_;             // account type
   uint32_t        size_;             // size of populated region of account
@@ -80,6 +85,7 @@ typedef struct pc_map_table
   uint32_t        type_;             // account type
   uint32_t        size_;             // size of populated region of account
   uint32_t        num_;              // number of symbols
+  PC_UNUSED
   uint32_t        unused_;           // 64bit padding
   pc_pub_key_t    next_;             // next mapping account in chain
   pc_pub_key_t    prod_[PC_MAP_TABLE_SIZE]; // product accounts
@@ -91,6 +97,7 @@ static_assert( sizeof( pc_map_table_t ) == 20536, "" );
 typedef struct pc_str
 {
   uint8_t         len_;
+  PC_UNUSED
   char            data_[];
 } pc_str_t;
 
@@ -116,6 +123,7 @@ typedef struct pc_price_info
   int64_t         price_;            // price per ptype_
   uint64_t        conf_;             // price confidence interval
   uint32_t        status_;           // symbol status as of last update
+  PC_UNUSED
   uint32_t        corp_act_status_;  // corp action status as of last update
   uint64_t        pub_slot_;         // publish slot of price
 } pc_price_info_t;
@@ -159,14 +167,18 @@ typedef struct pc_price
   pc_ema_t        twac_;              // time-weighted average conf interval
   int64_t         drv1_;              // space for future derived values
   uint8_t         min_pub_;           // min publishers for valid price
+  PC_UNUSED
   int8_t          drv2_;              // space for future derived values
+  PC_UNUSED
   int16_t         drv3_;              // space for future derived values
+  PC_UNUSED
   int32_t         drv4_;              // space for future derived values
   pc_pub_key_t    prod_;              // product id/ref-account
   pc_pub_key_t    next_;              // next price account in list
   uint64_t        prev_slot_;         // valid slot of previous update
   int64_t         prev_price_;        // aggregate price of previous update
   uint64_t        prev_conf_;         // confidence interval of previous update
+  PC_UNUSED
   uint64_t        drv5_;              // space for future derived values
   pc_price_info_t agg_;               // aggregate price information
   pc_price_comp_t comp_[PC_COMP_SIZE];// component prices
@@ -259,7 +271,9 @@ static_assert( sizeof( cmd_hdr_t ) == 8, "" );
 
 typedef struct cmd_add_product
 {
+  PC_UNUSED
   uint32_t     ver_;
+  PC_UNUSED
   int32_t      cmd_;
 } cmd_add_product_t;
 
@@ -267,7 +281,9 @@ static_assert( sizeof( cmd_add_product_t ) == 8, "" );
 
 typedef struct cmd_upd_product
 {
+  PC_UNUSED
   uint32_t     ver_;
+  PC_UNUSED
   int32_t      cmd_;
   // set of key-value pairs
 } cmd_upd_product_t;
@@ -277,6 +293,7 @@ static_assert( sizeof( cmd_upd_product_t ) == 8, "" );
 typedef struct cmd_add_price
 {
   uint32_t     ver_;
+  PC_UNUSED
   int32_t      cmd_;
   int32_t      expo_;
   uint32_t     ptype_;
@@ -287,6 +304,7 @@ static_assert( sizeof( cmd_add_price_t ) == 16, "" );
 typedef struct cmd_init_price
 {
   uint32_t     ver_;
+  PC_UNUSED
   int32_t      cmd_;
   int32_t      expo_;
   uint32_t     ptype_;
@@ -297,6 +315,7 @@ static_assert( sizeof( cmd_init_price_t ) == 16, "" );
 typedef struct cmd_set_min_pub
 {
   uint32_t     ver_;
+  PC_UNUSED
   int32_t      cmd_;
   uint8_t      min_pub_;
 } cmd_set_min_pub_t;
@@ -306,6 +325,7 @@ static_assert( sizeof( cmd_set_min_pub_t ) == 12, "" );
 typedef struct cmd_add_publisher
 {
   uint32_t     ver_;
+  PC_UNUSED
   int32_t      cmd_;
   pc_pub_key_t pub_;
 } cmd_add_publisher_t;
@@ -315,6 +335,7 @@ static_assert( sizeof( cmd_add_publisher_t ) == 40, "" );
 typedef struct cmd_del_publisher
 {
   uint32_t     ver_;
+  PC_UNUSED
   int32_t      cmd_;
   pc_pub_key_t pub_;
 } cmd_del_publisher_t;
@@ -326,6 +347,7 @@ typedef struct cmd_upd_price
   uint32_t     ver_;
   int32_t      cmd_;
   uint32_t     status_;
+  PC_UNUSED
   uint32_t     unused_;
   int64_t      price_;
   uint64_t     conf_;
@@ -337,6 +359,7 @@ static_assert( sizeof( cmd_upd_price_t ) == 40, "" );
 typedef struct cmd_upd_test
 {
   uint32_t     ver_;
+  PC_UNUSED
   int32_t      cmd_;
   uint32_t     num_;
   int32_t      expo_;
@@ -351,9 +374,13 @@ static_assert( sizeof( cmd_upd_test_t ) == 560, "" );
 typedef struct sysvar_clock
 {
   uint64_t    slot_;
+  PC_UNUSED
   int64_t     epoch_start_timestamp_;
+  PC_UNUSED
   uint64_t    epoch_;
+  PC_UNUSED
   uint64_t    leader_schedule_epoch_;
+  PC_UNUSED
   int64_t     unix_timestamp_;
 } sysvar_clock_t;
 

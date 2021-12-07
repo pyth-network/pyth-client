@@ -4,7 +4,7 @@
 #include "pd.h"
 #include "sort.h"
 
-#include <limits.h>
+#include <limits.h> // NOLINT(modernize-deprecated-headers)
 
 #ifdef __cplusplus
 extern "C" {
@@ -276,7 +276,7 @@ static inline void upd_aggregate( pc_price_t *ptr, uint64_t slot )
   }
 
   // assign quotes and compute weights
-  pc_price_comp_t *pptr = 0;
+  pc_price_comp_t *pptr;
   pd_t price[1], conf[1], weight[1], one[1], wsum[1];
   pd_new( one, 100000000L, -8 );
   pd_new( wsum, 0, 0 );
