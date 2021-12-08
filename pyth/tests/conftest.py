@@ -303,10 +303,28 @@ def pyth_add_price(solana_test_validator, pyth_dir, pyth_init_product):
     return result
 
 
-@pytest.fixture(scope='function')
-def pyth_init_price(solana_test_validator, pyth_dir, pyth_add_price):
+@pytest.fixture(scope='session')
+def pyth_add_publisher(
+    solana_test_validator, solana_keygen, pyth_dir, pyth_add_price
+):
 
     for product, key in pyth_add_price.items():
+        cmd = [
+            'pyth_admin', 'add_publisher',
+            solana_keygen[0], key,
+            '-r', 'localhost',
+            '-k', pyth_dir,
+            '-c', 'finalized',
+            '-n',
+        ]
+        check_call(cmd)
+    return pyth_add_price
+
+
+@pytest.fixture(scope='function')
+def pyth_init_price(solana_test_validator, pyth_dir, pyth_add_publisher):
+
+    for product, key in pyth_add_publisher.items():
         cmd = [
             'pyth_admin', 'init_price',
             key, '-e', '-5',
@@ -316,7 +334,7 @@ def pyth_init_price(solana_test_validator, pyth_dir, pyth_add_price):
             '-n',
         ]
         check_call(cmd)
-    return pyth_add_price
+    return pyth_add_publisher
 
 
 @pytest.fixture(scope='session')
