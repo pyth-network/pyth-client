@@ -1,0 +1,8 @@
+[package]
+name = "pyth-bindgen"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+pyth-util = { path = "../util" }
+bindgen = "0.59.2"
