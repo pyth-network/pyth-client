@@ -567,7 +567,6 @@ static uint64_t dispatch( SolParameters *prm, SolAccountInfo *ka )
   }
 }
 
-PC_UNUSED
 extern uint64_t entrypoint(const uint8_t *input)
 {
   SolAccountInfo ka[4];
