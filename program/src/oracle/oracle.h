@@ -1,9 +1,17 @@
 #pragma once
 
+#if defined( __bpf__ ) || defined( SOL_TEST )
+#include <solana_sdk.h>
+#elif defined( __cplusplus )
+#include <cstdint>
+#else
+#include <assert.h>
+#include <stdbool.h>
+#include <stdint.h>
+#endif
+
 #ifdef __cplusplus
 extern "C" {
-#else
-#include <stdbool.h>
 #endif
 
 // magic number at head of account
