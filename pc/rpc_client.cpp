@@ -879,20 +879,104 @@ void rpc::upd_price::build_tx( bincode& tx )
   sig_.init_from_buf( (const uint8_t*)(tx.get_buf() + pub_idx) );
 }
 
-void rpc::upd_price::build( net_wtr& wtr )
+bool rpc::upd_price::build_tx(
+  bincode& tx, upd_price* upds[], const unsigned n
+)
 {
-  bincode tx;
-  ((tx_wtr&)wtr).init( tx );
-  build_tx( tx );
-  ((tx_wtr&)wtr).commit( tx );
+  if ( ! n ) {
+    return false;
+  }
+
+  // signatures section
+  tx.add_len< 1 >(); // one signature (publish)
+  size_t pub_idx = tx.reserve_sign();
+
+  // message header
+  size_t tx_idx = tx.get_pos();
+  tx.add( (uint8_t)1 ); // pub is only signing account
+  tx.add( (uint8_t)0 ); // read-only signed accounts
+  tx.add( (uint8_t)2 ); // sysvar and program-id are read-only
+                        // unsigned accounts
+
+  auto& first = *upds[ 0 ];
+
+  // accounts
+  tx.add_len( n + 3 ); // n + 3 accounts: publish, symbol{n}, sysvar, program
+  tx.add( *first.pkey_ ); // publish account
+  for ( unsigned i = 0; i < n; ++i ) {
+    tx.add( *upds[ i ]->akey_ ); // symbol account
+  }
+  tx.add( *(pub_key*)sysvar_clock ); // sysvar account
+  tx.add( *first.gkey_ ); // programid
+
+  // recent block hash
+  tx.add( *first.bhash_ ); // recent block hash
+
+  // instructions section
+  tx.add_len( n ); // n instruction(s)
+  for ( unsigned i = 0; i < n; ++i ) {
+    tx.add( (uint8_t)( n + 2 ) ); // program_id index
+    tx.add_len< 3 >(); // 3 accounts: publish, symbol, sysvar
+    tx.add( (uint8_t)0 ); // index of publish account
+    tx.add( (uint8_t)( i + 1 ) ); // index of symbol account
+    tx.add( (uint8_t)( n + 1 ) ); // index of sysvar account
+
+    auto const& upd = *upds[ i ];
+
+    // instruction parameter section
+    tx.add_len<sizeof(cmd_upd_price)>();
+    tx.add( (uint32_t)PC_VERSION );
+    tx.add( (int32_t)( upd.cmd_ ) );
+    tx.add( (int32_t)( upd.st_ ) );
+    tx.add( (int32_t)0 );
+    tx.add( upd.price_ );
+    tx.add( upd.conf_ );
+    tx.add( upd.pub_slot_ );
+  }
+
+  // all accounts need to sign transaction
+  tx.sign( pub_idx, tx_idx, *first.ckey_ );
+  first.sig_.init_from_buf( (const uint8_t*)(tx.get_buf() + pub_idx) );
+
+  return true;
 }
 
+void rpc::upd_price::build( net_wtr& wtr )
+{
+  upd_price* upds[] = { this };
+  build( wtr, upds, 1 );
+}
+
+
 void rpc::upd_price::request( json_wtr& msg )
+{
+  upd_price* upds[] = { this };
+  request( msg, upds, 1 );
+}
+
+bool rpc::upd_price::build(
+  net_wtr& wtr, upd_price* upds[], const unsigned n
+)
+{
+  bincode tx;
+  static_cast< tx_wtr& >( wtr ).init( tx );
+  if ( ! build_tx( tx, upds, n ) ) {
+    return false;
+  }
+  static_cast< tx_wtr& >( wtr ).commit( tx );
+  return true;
+}
+
+bool rpc::upd_price::request(
+  json_wtr& msg, upd_price* upds[], const unsigned n
+)
 {
   // construct binary transaction
   net_buf *bptr = net_buf::alloc();
   bincode tx( bptr->buf_ );
-  build_tx( tx );
+  if ( !  build_tx( tx, upds, n ) ) {
+    return false;
+  }
 
   // encode transaction and add to json params
   msg.add_key( "method", "sendTransaction" );
@@ -904,6 +988,8 @@ void rpc::upd_price::request( json_wtr& msg )
   msg.pop();
   msg.pop();
   bptr->dealloc();
+
+  return true;
 }
 
 void rpc::upd_price::response( const jtree& jt )
