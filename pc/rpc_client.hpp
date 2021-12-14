@@ -414,8 +414,12 @@ namespace pc
       void request( json_wtr& ) override;
       void response( const jtree& ) override;
 
+      static bool build( net_wtr&, upd_price*[], unsigned n );
+      static bool request( json_wtr&, upd_price*[], const unsigned n );
+
     private:
       void build_tx( bincode& );
+      static bool build_tx( bincode&, upd_price*[], unsigned n );
 
       hash         *bhash_;
       key_pair     *pkey_;
