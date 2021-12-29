@@ -41,6 +41,9 @@ namespace pc
 
     // on addition of new symbols
     virtual void on_add_symbol( manager *, price * );
+
+    // on new slot for publish
+    virtual void on_slot_publish( manager * );
   };
 
   // pyth-client connection management and event loop
@@ -130,6 +133,7 @@ namespace pc
 
     // submit pyth client api request
     void submit( request * );
+    void submit( net_wtr& );
     void submit( tx_request * );
 
     // submit pyth client api request and poll until finished
