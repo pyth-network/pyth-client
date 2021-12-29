@@ -745,8 +745,6 @@ void manager::on_response( rpc::get_slot *res )
 
   if (
     has_status( PC_PYTH_RPC_CONNECTED )
-    //&& ! hconn_.get_is_err()
-    //&& ( ! wconn_ || ! wconn_->get_is_err() )
   ) {
     if ( sub_ ) {
       sub_->on_slot_publish( this );
