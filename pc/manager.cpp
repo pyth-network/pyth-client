@@ -41,6 +41,10 @@ void manager_sub::on_add_symbol( manager *, price * )
 {
 }
 
+void manager_sub::on_slot_publish( manager * )
+{
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // manager
 
@@ -738,6 +742,16 @@ void manager::on_response( rpc::get_slot *res )
   if ( do_cap_ ) {
     cap_.flush();
   }
+
+  if (
+    has_status( PC_PYTH_RPC_CONNECTED )
+    //&& ! hconn_.get_is_err()
+    //&& ( ! wconn_ || ! wconn_->get_is_err() )
+  ) {
+    if ( sub_ ) {
+      sub_->on_slot_publish( this );
+    }
+  }
 }
 
 void manager::on_response( rpc::get_recent_block_hash *m )
@@ -802,11 +816,16 @@ void manager::submit( request *req )
   plist_.add( req );
 }
 
+void manager::submit( net_wtr& msg )
+{
+  tconn_.add_send( msg );
+}
+
 void manager::submit( tx_request *req )
 {
   net_wtr msg;
   req->build( msg );
-  tconn_.add_send( msg );
+  submit( msg );
 }
 
 bool manager::submit_poll( request *req )
