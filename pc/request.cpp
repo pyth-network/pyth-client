@@ -655,9 +655,10 @@ bool price::update(
   if ( PC_UNLIKELY( !get_is_ready_publish() ) ) {
     return false;
   }
+  preq_->set_price( price, conf, st, is_agg );
   manager *mgr = get_manager();
   const uint64_t slot = mgr->get_slot();
-  preq_->set_price( price, conf, st, slot, is_agg );
+  preq_->set_slot( slot );
   preq_->set_block_hash( mgr->get_recent_block_hash() );
   if ( mgr->get_do_tx() )
     mgr->submit( preq_ );
@@ -685,6 +686,101 @@ bool price::update(
     }
   }
   inc_sent();
+  return true;
+}
+
+void price::update_no_send(
+  const int64_t price, const uint64_t conf
+  , const symbol_status st, const bool is_agg
+)
+{
+  preq_->set_price( price, conf, st, is_agg );
+}
+
+bool price::send( price *prices[], const unsigned n )
+{
+  static std::vector< rpc::upd_price * > upds_;
+
+  upds_.clear();
+
+  manager *mgr1 = nullptr;
+
+  for ( unsigned i = 0, j = 0; i < n; ++i ) {
+    price *const p = prices[ i ];
+    if ( PC_UNLIKELY( ! p->init_ && ! p->init_publish() ) ) {
+      continue;
+    }
+    if ( PC_UNLIKELY( ! p->has_publisher() ) ) {
+      continue;
+    }
+    if ( PC_UNLIKELY( ! p->get_is_ready_publish() ) ) {
+      continue;
+    }
+    manager *const mgr = p->get_manager();
+    if ( ! mgr1 ) {
+      mgr1 = mgr;
+    }
+    else if ( mgr != mgr1 ) {
+      PC_LOG_ERR( "unexpected manager" ).end();
+      continue;
+    }
+    const uint64_t slot = mgr->get_slot();
+    p->preq_->set_slot( slot );
+    p->preq_->set_block_hash( mgr->get_recent_block_hash() );
+    upds_.emplace_back( p->preq_ );
+
+    if (
+      upds_.size() >= rpc::upd_price::MAX_UPDATES
+      || ( upds_.size() && ( i + 1 ) == n )
+    ) {
+      if ( mgr->get_do_tx() ) {
+        net_wtr msg;
+        if ( rpc::upd_price::build( msg, &upds_[ 0 ], upds_.size() ) ) {
+          mgr->submit( msg );
+        }
+        else {
+          PC_LOG_ERR( "failed to build msg" );
+        }
+      }
+      else {
+        p->get_rpc_client()->send( &upds_[ 0 ], upds_.size() );
+        for ( unsigned k = j; k <= i; ++k ) {
+          price *const p1 = prices[ k ];
+          p1->tvec_.emplace_back(
+            std::string( 100, '\0' ), p1->preq_->get_sent_time()
+          );
+          p1->preq_->get_signature()->enc_base58( p1->tvec_.back().first );
+          PC_LOG_DBG( "sent price update transaction" )
+            .add( "price_account", *p1->get_account() )
+            .add( "product_account", *p1->prod_->get_account() )
+            .add( "symbol", p1->get_symbol() )
+            .add( "price_type", price_type_to_str( p1->get_price_type() ) )
+            .add( "sig", p1->tvec_.back().first )
+            .add( "pub_slot", slot )
+            .end();
+          if ( PC_UNLIKELY( p1->tvec_.size() >= 100 ) ) {
+            PC_LOG_WRN( "too many unacked price update transactions" )
+              .add( "price_account", *p1->get_account() )
+              .add( "product_account", *p1->prod_->get_account() )
+              .add( "symbol", p1->get_symbol() )
+              .add( "price_type", price_type_to_str( p1->get_price_type() ) )
+              .add( "num_txid", p1->tvec_.size() )
+              .end();
+            p1->tvec_.erase( p1->tvec_.begin(), p1->tvec_.begin() + 50 );
+          }
+        }
+      }
+
+      for ( unsigned k = j; k <= i; ++k ) {
+        price *const p1 = prices[ k ];
+        p1->inc_sent();
+      }
+
+      j = i;
+      upds_.clear();
+    }
+  }
+
   return true;
 }
 
