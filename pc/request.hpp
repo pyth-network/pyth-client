@@ -261,6 +261,11 @@ namespace pc
     // or because publisher does not have permission (has_publisher())
     bool update( int64_t price, uint64_t conf, symbol_status );
 
+    void update_no_send(
+      int64_t price, uint64_t conf, symbol_status, bool aggr
+    );
+    static bool send( price * [], unsigned );
+
     // update aggregate price only
     bool update();
 
@@ -307,14 +312,6 @@ namespace pc
     void dump_json( json_wtr& wtr ) const;
 
   public:
-
-    void set_price_type( price_type );
-    void set_version( uint32_t );
-    void set_price( int64_t );
-    void set_conf( int64_t );
-    void set_symbol_status( symbol_status );
-    void set_product( product * );
-
     void reset();
     void unsubscribe();
     void submit() override;

@@ -151,12 +151,11 @@ void rpc_client::send( rpc_request *rptr )
     reuse_.pop_back();
   } else {
     id = ++id_;
-    rv_.resize( 1 + id, nullptr );
   }
   rptr->set_id( id );
   rptr->set_rpc_client( this );
   rptr->set_sent_time( get_now() );
-  rv_[id] = rptr;
+  rv_.emplace( id, rptr );
 
   // construct json message
   json_wtr jw;
@@ -167,6 +166,56 @@ void rpc_client::send( rpc_request *rptr )
   jw.pop();
 //  jw.print();
   if ( rptr->get_is_http() ) {
+    // submit http POST request
+    http_request msg;
+    msg.init( "POST", "/" );
+    msg.add_hdr( "Host", hptr_->get_host() );
+    msg.add_hdr( "Content-Type", "application/json" );
+    msg.commit( jw );
+    hptr_->add_send( msg );
+  } else if ( wptr_ ) {
+    // submit websocket message
+    ws_wtr msg;
+    msg.commit( ws_wtr::text_id, jw, true );
+    wptr_->add_send( msg );
+  }
+  else {
+    PC_LOG_WRN( "no ws connection to send msg" ).end();
+  }
+}
+
+void rpc_client::send( rpc::upd_price *upds[], const unsigned n )
+{
+  if ( ! n ) {
+    return;
+  }
+
+  // get request id
+  uint64_t id;
+  if ( !reuse_.empty() ) {
+    id = reuse_.back();
+    reuse_.pop_back();
+  } else {
+    id = ++id_;
+  }
+  const auto now = get_now();
+  for ( unsigned i = 0; i < n; ++i ) {
+    rpc_request *const rptr = upds[ i ];
+    rptr->set_id( id );
+    rptr->set_rpc_client( this );
+    rptr->set_sent_time( now );
+    rv_.emplace( id, rptr );
+  }
+
+  // construct json message
+  json_wtr jw;
+  jw.add_val( json_wtr::e_obj );
+  jw.add_key( "jsonrpc", "2.0" );
+  jw.add_key( "id", id );
+  rpc::upd_price::request( jw, upds, n );
+  jw.pop();
+//  jw.print();
+  if ( upds[ 0 ]->get_is_http() ) {
     // submit http POST request
     http_request msg;
     msg.init( "POST", "/" );
@@ -202,15 +251,14 @@ void rpc_client::parse_response( const char *txt, size_t len )
   uint32_t idtok = jp_.find_val( 1, "id" );
   if ( idtok ) {
     // response to http request
-    uint64_t id = jp_.get_uint( idtok );
-    if ( id < rv_.size() ) {
-      rpc_request *rptr = rv_[id];
-      if ( rptr ) {
-        rv_[id] = nullptr;
-        reuse_.push_back( id );
-        rptr->response( jp_ );
-      }
+    const uint64_t id = jp_.get_uint( idtok );
+    const auto range = rv_.equal_range( id );
+    for ( auto it = range.first; it != range.second; ++it ) {
+      rpc_request *const rptr = it->second;
+      rptr->response( jp_ );
     }
+    reuse_.push_back( id );
+    rv_.erase( range.first, range.second );
   } else {
     // websocket notification
     uint32_t ptok = jp_.find_val( 1, "params" );
@@ -798,14 +846,17 @@ void rpc::upd_price::set_block_hash( hash *bhash )
 void rpc::upd_price::set_price( int64_t px,
                                 uint64_t conf,
                                 symbol_status st,
-                                uint64_t pub_slot,
                                 bool is_agg )
 {
   price_ = px;
   conf_  = conf;
   st_    = st;
-  pub_slot_ = pub_slot;
   cmd_   = is_agg?e_cmd_agg_price:e_cmd_upd_price;
+}
+
+void rpc::upd_price::set_slot( const uint64_t pub_slot )
+{
+  pub_slot_ = pub_slot;
 }
 
 signature *rpc::upd_price::get_signature()
@@ -974,7 +1025,7 @@ bool rpc::upd_price::request(
   // construct binary transaction
   net_buf *bptr = net_buf::alloc();
   bincode tx( bptr->buf_ );
-  if ( !  build_tx( tx, upds, n ) ) {
+  if ( ! build_tx( tx, upds, n ) ) {
     return false;
   }
 

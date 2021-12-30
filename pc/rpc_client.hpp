@@ -7,6 +7,8 @@
 #include <oracle/oracle.h>
 #include <pc/hash_map.hpp>
 
+#include <unordered_map>
+
 #define PC_RPC_ERROR_BLOCK_CLEANED_UP          -32001
 #define PC_RPC_ERROR_SEND_TX_PREFLIGHT_FAIL    -32002
 #define PC_RPC_ERROR_TX_SIG_VERIFY_FAILURE     -32003
@@ -62,6 +64,11 @@ namespace pc
   str commitment_to_str( commitment );
   commitment str_to_commitment( str );
 
+  namespace rpc
+  {
+    class upd_price;
+  }
+
   // solana rpc REST API client
   class rpc_client : public error
   {
@@ -80,6 +87,7 @@ namespace pc
 
     // submit rpc request (and bundled callback)
     void send( rpc_request * );
+    void send( rpc::upd_price *[], unsigned n );
 
   public:
 
@@ -123,7 +131,7 @@ namespace pc
       };
     };
 
-    typedef std::vector<rpc_request*> request_t;
+    typedef std::unordered_multimap< uint64_t, rpc_request* > request_t;
     typedef std::vector<uint64_t>     id_vec_t;
     typedef std::vector<char>         acc_buf_t;
     typedef hash_map<trait>           sub_map_t;
@@ -395,6 +403,8 @@ namespace pc
     class upd_price : public tx_request, public rpc_request
     {
     public:
+      static constexpr unsigned MAX_UPDATES = 10;
+
       // parameters
       void set_symbol_status( symbol_status );
       void set_publish( key_pair * );
@@ -403,7 +413,8 @@ namespace pc
       void set_program( pub_key * );
       void set_block_hash( hash * );
       void set_price( int64_t px, uint64_t conf, symbol_status,
-                      uint64_t pub_slot, bool is_aggregate );
+                      bool is_aggregate );
+      void set_slot( uint64_t );
 
       // results
       signature *get_signature();
