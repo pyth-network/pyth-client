@@ -403,7 +403,7 @@ namespace pc
     class upd_price : public tx_request, public rpc_request
     {
     public:
-      static constexpr unsigned MAX_UPDATES = 10;
+      static constexpr unsigned MAX_UPDATES = 8;
 
       // parameters
       void set_symbol_status( symbol_status );
