@@ -188,6 +188,9 @@ void net_wtr::add_alloc( str str )
 
 char *net_wtr::reserve( size_t len )
 {
+  if ( len > net_buf::len ) {
+    return nullptr;
+  }
   size_t nlen = tl_->size_ + len;
   if ( nlen > net_buf::len ) {
     alloc();
