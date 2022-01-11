@@ -202,10 +202,10 @@ SORT_IMPL(stable_node)( SORT_KEY_T * x,
   }
 # endif
 
-  /* Append any stragglers (exactly one of these loops will execute) */
+  /* Append any stragglers */
 
-  while( j<nl ) x[i++] = yl[j++];
-  while( k<nr ) x[i++] = yr[k++];
+  if( j<nl ) do x[i++] = yl[j++]; while( j<nl );
+  else       do x[i++] = yr[k++]; while( k<nr );
 
   return x;
 }
