@@ -3,7 +3,7 @@
 
 /* Portable arithmetic shift right. */
 
-#include <stdint.h>
+#include "compat_stdint.h"
 
 /* Define PYTH_ORACLE_UTIL_SAR_USE_PLATFORM to non-zero if the platform
    does arithmetic right shift signed integer and zero if the platform

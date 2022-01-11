@@ -1,7 +1,7 @@
 #ifndef _pyth_oracle_model_model_h_
 #define _pyth_oracle_model_model_h_
 
-#include <stdint.h>
+#include "../util/compat_stdint.h"
 #include <stdalign.h>
 
 #ifdef __cplusplus

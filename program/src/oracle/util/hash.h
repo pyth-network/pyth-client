@@ -3,7 +3,7 @@
 
 /* Useful hashing utilities */
 
-#include <stdint.h>
+#include "compat_stdint.h"
 
 #ifdef __cplusplus
 extern "C" {

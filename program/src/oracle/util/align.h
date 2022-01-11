@@ -1,8 +1,8 @@
 #ifndef _pyth_oracle_util_align_h_
 #define _pyth_oracle_util_align_h_
 
-#include <stdint.h>   /* For uintptr_t */
-#include <stdalign.h> /* For alignof */
+#include "compat_stdint.h" /* For uintptr_t */
+#include <stdalign.h>      /* For alignof */
 
 #ifdef __cplusplus
 extern "C" {
