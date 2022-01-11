@@ -39,7 +39,7 @@ set( PC_SRC
   pc/request.cpp;
   pc/rpc_client.cpp;
   pc/user.cpp;
-  program/src/model/price_model.c
+  program/src/oracle/model/price_model.c
   )
 
 set( PC_HDR
