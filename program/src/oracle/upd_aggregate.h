@@ -1,8 +1,8 @@
 #pragma once
 
 #include "oracle.h"
+#include "model/model.h"
 #include "pd.h"
-#include "sort.h"
 
 #include <limits.h>
 
@@ -201,39 +201,76 @@ static inline void upd_aggregate( pc_price_t *ptr, uint64_t slot, int64_t timest
   ptr->agg_.pub_slot_ = slot;            // publish slot-time of agg. price
   ptr->timestamp_ = timestamp;
 
+  // identify valid quotes
+  // compute the aggregate prices and ranges
   uint32_t numv = 0;
   uint32_t vidx[ PC_COMP_SIZE ];
-  // identify valid quotes and order them by price
-  for ( uint32_t i = 0; i != ptr->num_; ++i ) {
-    pc_price_comp_t *iptr = &ptr->comp_[i];
-    // copy contributing price to aggregate snapshot
-    iptr->agg_ = iptr->latest_;
-    // add quote to sorted permutation array if it is valid
-    int64_t slot_diff = ( int64_t )slot - ( int64_t )( iptr->agg_.pub_slot_ );
-    if ( iptr->agg_.status_ == PC_STATUS_TRADING &&
-         iptr->agg_.conf_ != 0UL &&
-         iptr->agg_.price_ > 0L &&
-         slot_diff >= 0 && slot_diff <= PC_MAX_SEND_LATENCY ) {
-      vidx[numv++] = i;
+  int64_t  agg_price;
+  int64_t  agg_conf;
+  {
+    uint32_t nprcs = (uint32_t)0;
+    int64_t  prcs[ PC_COMP_SIZE * 3 ]; // ~0.75KiB for current PC_COMP_SIZE (FIXME: DOUBLE CHECK THIS FITS INTO STACK FRAME LIMIT)
+    for ( uint32_t i = 0; i != ptr->num_; ++i ) {
+      pc_price_comp_t *iptr = &ptr->comp_[i];
+      // copy contributing price to aggregate snapshot
+      iptr->agg_ = iptr->latest_;
+      // add quote to sorted permutation array if it is valid
+      int64_t slot_diff = ( int64_t )slot - ( int64_t )( iptr->agg_.pub_slot_ );
+      int64_t price     = iptr->agg_.price_;
+      int64_t conf      = ( int64_t )( iptr->agg_.conf_ );
+      if ( iptr->agg_.status_ == PC_STATUS_TRADING &&
+           (int64_t)0 < conf && conf < price && conf <= (INT64_MAX-price) && // No overflow for INT64_MAX-price as price>0
+           slot_diff >= 0 && slot_diff <= PC_MAX_SEND_LATENCY ) {
+        vidx[numv++] = i; // FIXME: GRAFT FOR OLD PRICE MODEL
+        prcs[ nprcs++ ] = price - conf; // No overflow as 0 < conf < price
+        prcs[ nprcs++ ] = price;
+        prcs[ nprcs++ ] = price + conf; // No overflow as 0 < conf <= INT64_MAX-price
+      }
+    }
+
+    // too few valid quotes
+    ptr->num_qt_ = numv; // FIXME: TEMPORARY GRAFT (ALL RETURN PATHS SET NUM_QT TO SOMETHING SENSIBLE)
+    if ( numv == 0 || numv < ptr->min_pub_ ) {
+      ptr->agg_.status_ = PC_STATUS_UNKNOWN;
+      return;
+    }
+
+    // evaluate the model to get the p25/p50/p75 prices
+    // note: numv>0 and nprcs = 3*numv at this point
+    int64_t agg_p25;
+    int64_t agg_p75;
+    int64_t scratch[ PC_COMP_SIZE * 3 ]; // ~0.75KiB for current PC_COMP_SIZE (FIXME: DOUBLE CHECK THIS FITS INTO STACK FRAME LIMIT)
+    price_model_core( (uint64_t)nprcs, prcs, &agg_p25, &agg_price, &agg_p75, scratch );
+
+    // get the left and right confidences
+    // note that as valid quotes have positive prices currently and
+    // agg_p25, agg_price, agg_p75 are ordered, this calculation can't
+    // overflow / underflow
+    int64_t agg_conf_left  = agg_price - agg_p25;
+    int64_t agg_conf_right = agg_p75 - agg_price;
+
+    // use the larger of the left and right confidences
+    agg_conf = agg_conf_right > agg_conf_left ? agg_conf_right : agg_conf_left;
+
+    // if the confidences end up at zero, we abort
+    // this is paranoia as it is currently not possible when nprcs>2 and
+    // positive confidences given the current pricing model
+    if( agg_conf <= (int64_t)0 ) {
+      ptr->agg_.status_ = PC_STATUS_UNKNOWN;
+      return;
     }
   }
 
-  uint32_t nprcs = 0;
-  int64_t prcs[ PC_COMP_SIZE * 2 ];
-  for ( uint32_t i = 0; i < numv; ++i ) {
-    pc_price_comp_t const *iptr = &ptr->comp_[ vidx[ i ] ];
-    int64_t const price = iptr->agg_.price_;
-    int64_t const conf = ( int64_t )( iptr->agg_.conf_ );
-    prcs[ nprcs++ ] = price - conf;
-    prcs[ nprcs++ ] = price + conf;
-  }
-  qsort_int64( prcs, nprcs );
+  // FIXME: MOST OF THE REST OF THE CODE HERE CAN PROBABLY BE REMOVED /
+  // CONDENSED AND/OR MADE MORE EFFICIENT.  AND IT PROBABLY WILL
+  // REPLACED SOON BY THE VWAP MODEL UNDER DEVELOPMENT.  IT IS KEPT HERE
+  // TO KEEP THE CURRENT VWAP CALCULATION AS CLOSE AS POSSIBLE TO WHAT
+  // HOW IT CURRENTLY WORKS.
 
   uint32_t numa = 0;
   uint32_t aidx[PC_COMP_SIZE];
-
-  if ( nprcs ) {
-    int64_t const mprc = ( prcs[ numv - 1 ] + prcs[ numv ] ) / 2;
+  {
+    int64_t const mprc = agg_price; // FIXME: GRAFT TO NEW CALC TO OLD CALC
     int64_t const lb = mprc / 5;
     int64_t const ub = ( mprc > LONG_MAX / 5 ) ? LONG_MAX : mprc * 5;
 
@@ -243,7 +280,7 @@ static inline void upd_aggregate( pc_price_t *ptr, uint64_t slot, int64_t timest
       int64_t const prc = iptr->agg_.price_;
       if ( prc >= lb && prc <= ub ) {
         uint32_t j = numa++;
-        for( ; j > 0 && ptr->comp_[ aidx[ j - 1 ] ].agg_.price_ > prc; --j ) {
+        for( ; j > 0 && ptr->comp_[ aidx[ j - 1 ] ].agg_.price_ > prc; --j ) { // FIXME: O(N^2)
           aidx[ j ] = aidx[ j - 1 ];
         }
         aidx[ j ] = idx;
@@ -268,6 +305,8 @@ static inline void upd_aggregate( pc_price_t *ptr, uint64_t slot, int64_t timest
     ptr->agg_.price_ = iptr->agg_.price_;
     ptr->agg_.conf_  = iptr->agg_.conf_;
     upd_twap( ptr, agg_diff, qs );
+    ptr->agg_.price_ = agg_price;           // FIXME: OVERRIDE OLD PRICE MODEL
+    ptr->agg_.conf_  = (uint64_t)agg_conf;  // FIXME: OVERRIDE OLD PRICE MODEL
     return;
   }
 
@@ -358,7 +397,7 @@ static inline void upd_aggregate( pc_price_t *ptr, uint64_t slot, int64_t timest
   // sort upper prices and weights
   for ( uint32_t i = 0; i < numa; ++i ) {
     uint32_t j = i;
-    for ( ; j > 0 && pd_lt( &qs->uprice_[ i ], &prices[ j - 1 ], qs->fact_ ); --j ) {
+    for ( ; j > 0 && pd_lt( &qs->uprice_[ i ], &prices[ j - 1 ], qs->fact_ ); --j ) { // FIXME: O(N^2)
       prices[ j ] = prices[ j - 1 ];
       weights[ j ] = weights[ j - 1 ];
     }
@@ -369,7 +408,7 @@ static inline void upd_aggregate( pc_price_t *ptr, uint64_t slot, int64_t timest
   // sort lower prices and weights
   for ( uint32_t i = 0; i < numa; ++i ) {
     uint32_t j = i;
-    for ( ; j > 0 && pd_lt( &qs->lprice_[ i ], &prices[ j - 1 ], qs->fact_ ); --j ) {
+    for ( ; j > 0 && pd_lt( &qs->lprice_[ i ], &prices[ j - 1 ], qs->fact_ ); --j ) { // FIXME: O(N^2)
       prices[ j ] = prices[ j - 1 ];
       weights[ j ] = weights[ j - 1 ];
     }
@@ -394,6 +433,8 @@ static inline void upd_aggregate( pc_price_t *ptr, uint64_t slot, int64_t timest
   pd_adjust( cptr, ptr->expo_, qs->fact_ );
   ptr->agg_.conf_ = ( uint64_t )( cptr->v_ );
   upd_twap( ptr, agg_diff, qs );
+  ptr->agg_.price_ = agg_price;          // FIXME: OVERRIDE OLD PRICE MODEL
+  ptr->agg_.conf_  = (uint64_t)agg_conf; // FIXME: OVERRIDE OLD PRICE MODEL
 }
 
 #ifdef __cplusplus
