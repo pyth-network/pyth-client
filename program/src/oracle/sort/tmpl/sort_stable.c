@@ -57,8 +57,8 @@
    Other defines exist to change the sort criteria / direction, linkage
    and so forth.  See below for details. */
 
-#include <stdint.h>           /* For uint64_t */
-#include "../../util/align.h" /* For ALIGN_UP */
+#include "../../util/compat_stdint.h" /* For uint64_t */
+#include "../../util/align.h"         /* For ALIGN_UP */
 
 #ifndef SORT_NAME
 #error "Define SORT_NAME"
