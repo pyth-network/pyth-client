@@ -6,12 +6,12 @@
 #include "../sort/tmpl/sort_stable.c"
 
 int64_t *
-price_model_core( uint64_t           cnt,
-                  int64_t * restrict quote,
-                  int64_t * restrict _p25,
-                  int64_t * restrict _p50,
-                  int64_t * restrict _p75,
-                  void    *          scratch ) {
+price_model_core( uint64_t  cnt,
+                  int64_t * quote,
+                  int64_t * _p25,
+                  int64_t * _p50,
+                  int64_t * _p75,
+                  void    * scratch ) {
 
   /* Sort the quotes.  The sorting implementation used here is a highly
      optimized mergesort (merge with an unrolled insertion sorting
