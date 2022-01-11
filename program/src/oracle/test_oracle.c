@@ -1,7 +1,6 @@
 char heap_start[8192];
 #define PC_HEAP_START (heap_start)
 #include "oracle.c"
-#include "sort.c"
 #include <criterion/criterion.h>
 
 Test(oracle, init_mapping) {
