@@ -163,13 +163,23 @@ SORT_IMPL(stable_node)( SORT_KEY_T * x,
   /* Note that nl and nr are both at least one at this point so at least
      one interation of the loop body is necessary. */
 
-  do {
+  for(;;) { /* Minimal C language operations */
+    if( SORT_BEFORE( yr[k], yl[j] ) ) {
+      x[i++] = yr[k++];
+      if( k>=nr ) { /* append left  stragglers (at least one) */ do x[i++] = yl[j++]; while( j<nl ); break; }
+    } else {
+      x[i++] = yl[j++];
+      if( j>=nl ) { /* append right stragglers (at least one) */ do x[i++] = yr[k++]; while( k<nr ); break; }
+    }
+  }
+
+# if 0 /* These variants of the above don't seem to produce much better code */
+  do { /* Single loop exit */
     if( SORT_BEFORE( yr[k], yl[j] ) ) x[i++] = yr[k++];
     else                              x[i++] = yl[j++];
   } while( (j<nl) && (k<nr) );
 
-# if 0 /* These variants of the above don't seem to produce much better code */
-  do { /* Minimal mem ops and branching */
+  do { /* Single loop exit, minimal mem ops and branching */
     SORT_KEY_T yj = yl[j];
     SORT_KEY_T yk = yr[k];
     int c = SORT_BEFORE( yk, yj );
@@ -178,34 +188,22 @@ SORT_IMPL(stable_node)( SORT_KEY_T * x,
     k += (SORT_IDX_T) c;
   } while( (j<nl) & (k<nr) );
 
-  do { /* Minimal mem ops */
+  do { /* Single loop exit, Minimal mem ops */
     SORT_KEY_T yj = yl[j];
     SORT_KEY_T yk = yr[k];
     if( SORT_BEFORE( yk, yj ) ) x[i++] = yk, k++;
     else                        x[i++] = yj, j++;
   } while( (j<nl) && (k<nr) );
 
-  do { /* Trinary variant of above */
+  do { /* Single loop exit, trinary variant of above */
     x[i++] = SORT_BEFORE( yr[k], yl[j] ) ? yr[k++] : yl[j++];
   } while( (j<nl) && (k<nr) );
-
-  for(;;) { /* Minimal mem ops and exit condition tests */
-    SORT_KEY_T yj = yl[j];
-    SORT_KEY_T yk = yr[k];
-    if( SORT_BEFORE( yk, yj ) ) { x[i++] = yk; k++; if( k>=nr ) break; }
-    else                        { x[i++] = yj; j++; if( j>=nl ) break; }
-  }
-
-  for(;;) { /* Minimal exit condition tests */
-    if( SORT_BEFORE( yr[k], yl[j] ) ) { x[i++] = yr[k]; k++; if( k>=nr ) break; }
-    else                              { x[i++] = yl[j]; j++; if( j>=nl ) break; }
-  }
-# endif
 
   /* Append any stragglers */
 
   if( j<nl ) do x[i++] = yl[j++]; while( j<nl );
   else       do x[i++] = yr[k++]; while( k<nr );
+# endif
 
   return x;
 }
