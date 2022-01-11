@@ -6,6 +6,7 @@
 
 #ifdef __bpf__
 #include <solana_sdk.h>
+typedef uint64_t uintptr_t;
 #else
 #include <stdint.h>
 #endif
