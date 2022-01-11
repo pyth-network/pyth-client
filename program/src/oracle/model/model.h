@@ -71,25 +71,25 @@ price_model_scratch_footprint( uint64_t cnt ) { /* Assumes price_model_cnt_valid
    could reducd to O(1) by using a non-recursive sort/select
    implementation under the hood if desired). */
 
-int64_t *                                       /* Returns pointer to sorted quotes (either quote or ALIGN_UP(scratch,int64_t)) */
-price_model_core( uint64_t           cnt,       /* Assumes price_model_cnt_valid( cnt ) is true */
-                  int64_t * restrict quote,     /* Assumes quote[i] for i in [0,cnt) is the i-th quote on input */
-                  int64_t * restrict _p25,      /* Assumes *_p25 is safe to write to the p25 model output */
-                  int64_t * restrict _p50,      /* Assumes *_p50 " */
-                  int64_t * restrict _p75,      /* Assumes *_p75 " */
-                  void    *          scratch ); /* Assumes a suitable scratch region */
+int64_t *                              /* Returns pointer to sorted quotes (either quote or ALIGN_UP(scratch,int64_t)) */
+price_model_core( uint64_t  cnt,       /* Assumes price_model_cnt_valid( cnt ) is true */
+                  int64_t * quote,     /* Assumes quote[i] for i in [0,cnt) is the i-th quote on input */
+                  int64_t * _p25,      /* Assumes *_p25 is safe to write to the p25 model output */
+                  int64_t * _p50,      /* Assumes *_p50 " */
+                  int64_t * _p75,      /* Assumes *_p75 " */
+                  void    * scratch ); /* Assumes a suitable scratch region */
 
 /* Same as the above but always returns quote and quote always holds the
    sorted quotes on return. */
 
 static inline int64_t *
-price_model( uint64_t           cnt,
-             int64_t * restrict quote,
-             int64_t * restrict _p25,
-             int64_t * restrict _p50,
-             int64_t * restrict _p75,
-             void    *          scratch ) {
-  int64_t * restrict tmp = price_model_core( cnt, quote, _p25, _p50, _p75, scratch );
+price_model( uint64_t  cnt,
+             int64_t * quote,
+             int64_t * _p25,
+             int64_t * _p50,
+             int64_t * _p75,
+             void    * scratch ) {
+  int64_t * tmp = price_model_core( cnt, quote, _p25, _p50, _p75, scratch );
   if( tmp!=quote ) for( uint64_t idx=(uint64_t)0; idx<cnt; idx++ ) quote[ idx ] = tmp[ idx ];
   return quote;
 }
