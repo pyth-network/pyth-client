@@ -4,6 +4,8 @@
 #include "align.h"  /* includes stdint.h */
 //#include "sar.h"  /* includes stdint.h */
 //#include "hash.h" /* includes stdint.h */
+#include "log2.h"   /* includes stdint.h */
+#include "smag.h"   /* includes stdint.h */
 #include "avg.h"    /* includes sar.h */
 #include "prng.h"   /* includes stdalign.h and hash.h */
 
