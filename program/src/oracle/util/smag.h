@@ -31,6 +31,18 @@ static inline int16_t smag_pack_int16( int s, uint16_t m ) { return (int16_t)( s
 static inline int32_t smag_pack_int32( int s, uint32_t m ) { return (int32_t)( s ? -m : m ); }
 static inline int64_t smag_pack_int64( int s, uint64_t m ) { return (int64_t)( s ? -m : m ); }
 
+/* FIXME: CONSIDER MOVING SIGNBIT AND ABS TO THEIR OWN HEADERS */
+
+static inline int signbit_int8 ( int8_t  x ) { return x<INT8_C( 0); }
+static inline int signbit_int16( int16_t x ) { return x<INT16_C(0); }
+static inline int signbit_int32( int32_t x ) { return x<INT32_C(0); }
+static inline int signbit_int64( int64_t x ) { return x<INT64_C(0); }
+
+static inline uint8_t  abs_int8 ( int8_t  x ) { return (uint8_t )( x<INT8_C( 0) ? -x : x ); }
+static inline uint16_t abs_int16( int16_t x ) { return (uint16_t)( x<INT16_C(0) ? -x : x ); }
+static inline uint32_t abs_int32( int32_t x ) { return (uint32_t)( x<INT32_C(0) ? -x : x ); }
+static inline uint64_t abs_int64( int64_t x ) { return (uint64_t)( x<INT64_C(0) ? -x : x ); }
+
 /* FIXME: CONSIDER FOR API COMPLETENESS/CONSISTENCY UINT VARIANTS (THEY
    ARE NOPS) */
 

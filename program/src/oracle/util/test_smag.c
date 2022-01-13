@@ -28,6 +28,16 @@ main( int     argc,
                 i, s, (long unsigned)m, (long unsigned)y );                  \
         return 1;                                                            \
       }                                                                      \
+      if( s!=signbit_int##w(x) ) {                                           \
+        printf( "FAIL (iter %i op signbit_int" #w " x %lx s %i\n",           \
+                i, (long unsigned)x, s );                                    \
+        return 1;                                                            \
+      }                                                                      \
+      if( m!=abs_int##w(x) ) {                                               \
+        printf( "FAIL (iter %i op abs_int" #w " x %lx m %lx\n",              \
+                i, (long unsigned)x, (long unsigned)m );                     \
+        return 1;                                                            \
+      }                                                                      \
     } while(0)
     TEST(8);
     TEST(16);
