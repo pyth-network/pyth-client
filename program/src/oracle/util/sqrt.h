@@ -15,18 +15,19 @@ extern "C" {
      y' = (y + x/y) / 2
 
    In continuum math, this converges quadratically to sqrt(x).  This is
-   a useful starting point for a method because we have relatively low
+   a useful starting point for a method because we have a relatively low
    cost unsigned integer division in the machine model and the
    operations and intermediates in this calculation all have magnitudes
    smaller than x (so limited concern about overflow issues).
 
    We don't do this iteration in integer arithmetic directly because the
-   interation has two roundoff errors while the actual result only has
-   one (the floor of the continuum value) such that, even if it did it
-   probably would not converge exactly.
+   iteration has two roundoff errors while the actual result only has
+   one (the floor of the continuum value).  As such, even if it did
+   converge in integer arithmetic, probably would not always converge
+   exactly.
 
-   So we instead combine the two divisions into one, yielding single
-   round off error iteration:
+   We instead combine the two divisions into one, yielding single round
+   off error iteration:
 
      y' = floor( (y^2 + x) / (2 y) )
 
@@ -46,12 +47,12 @@ extern "C" {
      -> y^2 <= x < y^2 + 2 y + 1
      -> y^2  = x - r'
 
-   for some r' in [0,2 y].  r' == r with the element 2 y added.  And it
+   for some r' in [0,2 y].  r' is r with the element 2 y added.  And it
    is possible to have y^2 = x - 2 y.  Namely if x+1 = z^2 for integer
    z, this becomes y^2 + 2 y + 1 = z^2 -> y = z-1.  That is, when
-   x = z^2 - 1 for integral z, the relationship can never converge.  We
-   need instead of have a denominator in the iteration of 2y+1 if we
-   want the r to have the necessary range:
+   x = z^2 - 1 for integral z, the relationship can never converge.  If
+   we instead used a denominator of 2y+1 in the iteration, r would have
+   the necessary range:
 
      y' = floor( (y^2 + x) / (2 y + 1) )
 
@@ -61,23 +62,23 @@ extern "C" {
      -> 2 y^2 + y = (y^2 + x - r)
      -> y^2 = x-y-r
 
-   for some r in [0,2 y].  This isn't quite right but we note that if change
-   the recurrence numerator:
+   for some r in [0,2 y].  This isn't quite right but we change the
+   recurrence numerator to compensate:
 
      y' = floor( (y^2 + y + x) / (2 y + 1) )
   
-   at convergence we have:
+   At convergence we now have:
 
      y^2 = x-r
 
-   for some r in [0,2 y].  That is at convergence y = floor( sqrt(x) )
+   for some r in [0,2 y].  That is, at convergence y = floor( sqrt(x) )
    exactly!  The addition of y to the numerator has not made
-   intermediate overflow much more diffcult to deal with either as
-   y <<< x for large x.  So to compute this without intermediate
-   overflow, we compute the terms individually and then combine the
-   reminders appropriately.  x/(2y+1) term is trivial.  For the
-   remainder, we note that, asymptotically, it is approximately y/2.
-   So, breaking it into its asymptotic and residual:
+   intermediate overflow much more diffcult to deal with either as y <<<
+   x for large x.  So to compute this without intermediate overflow, we
+   compute the terms individually and then combine the reminders
+   appropriately.  x/(2y+1) term is trivial.  The other term,
+   (y^2+y)/(2y+1) is asymptotically approximately y/2.  Breaking it into
+   its asymptotic and residual:
 
       (y^2 + y) / (2y+1) = y/2 + ( y^2 + y - (y/2)(2y+1) ) / (2y+1)
                          = y/2 + ( y^2 + y - y^2 - y/2   ) / (2y+1)
@@ -86,13 +87,14 @@ extern "C" {
    For even y, y/2 = y>>1 = yh and we have the partial quotient yh and
    remainder yh.  For odd y, we have:
 
-                        = yh + (1/2) + (yh+(1/2)) / (2y+1)
-                        = yh + ((1/2)(2y+1)+yh+(1/2)) / (2y+1)
-                        = yh + (y+yh+1) / (2y+1)
+                         = yh + (1/2) + (yh+(1/2)) / (2y+1)
+                         = yh + ((1/2)(2y+1)+yh+(1/2)) / (2y+1)
+                         = yh + (y+yh+1) / (2y+1)
 
-   This yields the below iteration.
+   with partial quotent yh and remainder y+yh+1.  This yields the
+   iteration:
 
-     y ~ sqrt(x) << INT_MAX for all x
+     y ~ sqrt(x)                               // <<< INT_MAX for all x
      for(;;) {
        d  = 2*y + 1;
        qx = x / d; rx = x - qx*d;              // Compute x  /(2y+1), rx in [0,2y]
@@ -109,15 +111,19 @@ extern "C" {
 
      y = sqrt(x) = sqrt( 2^n + d ) <~ 2^(n/2)
    
-   where n is the index of the MSB and d is n bits wide.
+   where n is the index of the MSB and d is in [0,2^n) (i.e. is n bits
+   wide).  Thus:
 
-   If n is even, we have y <~ 2^(n>>1)
-   If n is odd, we have y <~ 2^(n>>1) sqrt(2) */
+     y ~ 2^(n>>1) if n is even and 2^(n>>1) sqrt(2) if n is odd
 
-/* FIXME: THIS ONE IS PROBABLY A LOOKUP TABLE PRACTICALLY */
+   and we can do a simple fixed point calculation to compute this.
+
+   For small values of x, we encode a 20 entry 3-bit wide lookup table
+   in a 64-bit constant and just do a quick lookup. */
+
 static inline uint8_t
-sqrt_uint8( uint8_t x ) {
-  if( !x ) return UINT8_C(0);
+sqrt_uint8( uint8_t x ) { /* FIXME: CONSIDER 8-bit->4-bit LUT INSTEAD (128bytes)? */
+  if( x<UINT8_C(21) ) return (uint8_t)((UINT64_C(0x49246db6da492248) >> (3*(int)x)) & UINT64_C(7));
   int     n = log2_uint8( x );
   uint8_t y = (uint8_t)(((n & 1) ? UINT8_C(0xb) /* floor( 2^3 sqrt(2) ) */ : UINT8_C(0x8) /* 2^3 */) >> (3-(n>>1)));
   for(;;) {
@@ -134,7 +140,7 @@ sqrt_uint8( uint8_t x ) {
 
 static inline uint16_t
 sqrt_uint16( uint16_t x ) {
-  if( !x ) return UINT16_C(0);
+  if( x<UINT16_C(21) ) return (uint16_t)((UINT64_C(0x49246db6da492248) >> (3*(int)x)) & UINT64_C(7));
   int      n = log2_uint16( x );
   uint16_t y = (uint16_t)(((n & 1) ? UINT16_C(0xb5) /* floor( 2^7 sqrt(2) ) */ : UINT16_C(0x80) /* 2^7 */) >> (7-(n>>1)));
   for(;;) {
@@ -151,6 +157,7 @@ sqrt_uint16( uint16_t x ) {
 
 static inline uint32_t
 sqrt_uint32( uint32_t x ) {
+  if( x<UINT32_C(21) ) return (uint32_t)((UINT64_C(0x49246db6da492248) >> (3*(int)x)) & UINT64_C(7));
   if( !x ) return UINT32_C(0);
   int      n = log2_uint32( x ); /* In [0,63) */
   uint32_t y = ((n & 1) ? UINT32_C(0xb504) /* floor( 2^15 sqrt(2) ) */ : UINT32_C(0x8000) /* 2^15 */) >> (15-(n>>1));
@@ -168,7 +175,7 @@ sqrt_uint32( uint32_t x ) {
 
 static inline uint64_t
 sqrt_uint64( uint64_t x ) {
-  if( !x ) return UINT64_C(0);
+  if( x<UINT64_C(21) ) return (UINT64_C(0x49246db6da492248) >> (3*(int)x)) & UINT64_C(7);
   int      n = log2_uint64( x ); /* In [0,63) */
   uint64_t y = ((n & 1) ? UINT64_C(0xb504f333) /* floor( 2^31 sqrt(2) ) */ : UINT64_C(0x80000000) /* 2^31 */) >> (31-(n>>1));
   for(;;) {
