@@ -9,9 +9,7 @@ main( int     argc,
   prng_t _prng[1];
   prng_t * prng = prng_join( prng_new( _prng, (uint32_t)0, (uint64_t)0 ) );
 
-  int ctr;
-  
-  ctr = 0;                                                                                                                      
+  int ctr = 0;
   for( int i=0; i<100000000; i++ ) {
     if( !ctr ) { printf( "Completed %i iterations\n", i ); ctr = 10000000; }
     ctr--;
