@@ -46,8 +46,6 @@ main( int     argc,
 #   undef TEST
   }
 
-# undef N
-
   prng_delete( prng_leave( prng ) );
 
   printf( "pass\n" );
