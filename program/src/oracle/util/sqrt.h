@@ -159,7 +159,7 @@ static inline uint32_t
 sqrt_uint32( uint32_t x ) {
   if( x<UINT32_C(21) ) return (uint32_t)((UINT64_C(0x49246db6da492248) >> (3*(int)x)) & UINT64_C(7));
   if( !x ) return UINT32_C(0);
-  int      n = log2_uint32( x ); /* In [0,63) */
+  int      n = log2_uint32( x );
   uint32_t y = ((n & 1) ? UINT32_C(0xb504) /* floor( 2^15 sqrt(2) ) */ : UINT32_C(0x8000) /* 2^15 */) >> (15-(n>>1));
   for(;;) {
     uint32_t d = (y<<1); d++;
@@ -176,7 +176,7 @@ sqrt_uint32( uint32_t x ) {
 static inline uint64_t
 sqrt_uint64( uint64_t x ) {
   if( x<UINT64_C(21) ) return (UINT64_C(0x49246db6da492248) >> (3*(int)x)) & UINT64_C(7);
-  int      n = log2_uint64( x ); /* In [0,63) */
+  int      n = log2_uint64( x );
   uint64_t y = ((n & 1) ? UINT64_C(0xb504f333) /* floor( 2^31 sqrt(2) ) */ : UINT64_C(0x80000000) /* 2^31 */) >> (31-(n>>1));
   for(;;) {
     uint64_t d = (y<<1); d++;
@@ -192,21 +192,21 @@ sqrt_uint64( uint64_t x ) {
 
 /* These return floor( sqrt( x ) ), undefined behavior for negative x. */
 
-static inline int8_t  sqrt_int8 ( int8_t  x ) { return (int8_t )sqrt_uint8 ( (uint8_t) x ); }
+static inline int8_t  sqrt_int8 ( int8_t  x ) { return (int8_t )sqrt_uint8 ( (uint8_t )x ); }
 static inline int16_t sqrt_int16( int16_t x ) { return (int16_t)sqrt_uint16( (uint16_t)x ); }
 static inline int32_t sqrt_int32( int32_t x ) { return (int32_t)sqrt_uint32( (uint32_t)x ); }
 static inline int64_t sqrt_int64( int64_t x ) { return (int64_t)sqrt_uint64( (uint64_t)x ); }
 
 /* These return the floor( re sqrt(x) ) */
 
-static inline int8_t  sqrt_re_int8 ( int8_t  x ) { return x>INT8_C( 0) ? (int8_t )sqrt_uint8 ( (uint8_t) x ) : INT8_C( 0); }
+static inline int8_t  sqrt_re_int8 ( int8_t  x ) { return x>INT8_C( 0) ? (int8_t )sqrt_uint8 ( (uint8_t )x ) : INT8_C( 0); }
 static inline int16_t sqrt_re_int16( int16_t x ) { return x>INT16_C(0) ? (int16_t)sqrt_uint16( (uint16_t)x ) : INT16_C(0); }
 static inline int32_t sqrt_re_int32( int32_t x ) { return x>INT32_C(0) ? (int32_t)sqrt_uint32( (uint32_t)x ) : INT32_C(0); }
 static inline int64_t sqrt_re_int64( int64_t x ) { return x>INT64_C(0) ? (int64_t)sqrt_uint64( (uint64_t)x ) : INT64_C(0); }
 
 /* These return the floor( sqrt( |x| ) ) */
 
-static inline int8_t  sqrt_abs_int8 ( int8_t  x ) { return (int8_t )sqrt_uint8 ( (uint8_t) (x<INT8_C( 0) ? -x : x) ); }
+static inline int8_t  sqrt_abs_int8 ( int8_t  x ) { return (int8_t )sqrt_uint8 ( (uint8_t )(x<INT8_C( 0) ? -x : x) ); }
 static inline int16_t sqrt_abs_int16( int16_t x ) { return (int16_t)sqrt_uint16( (uint16_t)(x<INT16_C(0) ? -x : x) ); }
 static inline int32_t sqrt_abs_int32( int32_t x ) { return (int32_t)sqrt_uint32( (uint32_t)(x<INT32_C(0) ? -x : x) ); }
 static inline int64_t sqrt_abs_int64( int64_t x ) { return (int64_t)sqrt_uint64( (uint64_t)(x<INT64_C(0) ? -x : x) ); }
