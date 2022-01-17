@@ -48,7 +48,7 @@ main( int     argc,
 
     /* Add two random uint128_t x and y with a random 64-bit carry in c */
 
-    do { 
+    do {
       uint128_t z0 = (uint128_t)c + x; uint64_t w0 = (uint64_t)(z0<x); z0 += y; w0 += (uint64_t)(z0<y);
       uint64_t zh,zl, w = uwide_add( &zh,&zl, xh,xl, yh,yl, c );
       uint128_t z = join( zh,zl );
@@ -59,15 +59,42 @@ main( int     argc,
       }
     } while(0);
 
+    /* Subtract two random uint128_t x and y with a random 64-bit borrow c */
+
+    do {
+      uint64_t w0 = (uint64_t)(x<(uint128_t)c); uint128_t z0 = x - (uint128_t)c; w0 += (uint64_t)(z0<y); z0 -= y;
+      uint64_t zh,zl, w = uwide_sub( &zh,&zl, xh,xl, yh,yl, c );
+      uint128_t z = join( zh,zl );
+      if( z!=z0 || w!=w0 ) {
+        printf( "FAIL (iter %i op uwide_sub x %016lx %016lx y %016lx %016lx c %016lx z %016lx %016lx w %016lx z0 %016lx %016lx w0 %016lx)\n",
+                i, xh,xl, yh,yl, c, zh,zl,w, split_hi(z0),split_lo(z0),w0 );
+        return 1;
+      }
+    } while(0);
+
     /* Multiply two random uint128_t x and y */
 
-    do { 
+    do {
       uint128_t z0 = ((uint128_t)xl)*((uint128_t)yl);
       uint64_t zh,zl; uwide_mul( &zh,&zl, xl,yl );
       uint128_t z = join( zh,zl );
       if( z!=z0 ) {
         printf( "FAIL (iter %i op uwide_mul x %016lx y %016lx z %016lx %016lx z0 %016lx %016lx)\n",
                 i, xl, yl, zh,zl, split_hi(z0),split_lo(z0) );
+        return 1;
+      }
+    } while(0);
+
+    /* Divide a random uint128_t x by a random non-zero d */
+
+    do {
+      uint64_t  d = c | (UINT64_C(1) << (nc-1)); /* d is a random nc bit denom with leading 1 set */
+      uint128_t z0 = x / (uint128_t)d;
+      uint64_t zh,zl; uwide_div( &zh,&zl, xh,xl, d );
+      uint128_t z = join( zh,zl );
+      if( z!=z0 ) {
+        printf( "FAIL (iter %i op uwide_div x %016lx %016lx d %016lx z %016lx %016lx z0 %016lx %016lx)\n",
+                i, xh,xl, d, zh,zl, split_hi(z0),split_lo(z0) );
         return 1;
       }
     } while(0);
