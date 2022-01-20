@@ -1,9 +1,19 @@
 #ifndef _pyth_oracle_util_log2_h_
 #define _pyth_oracle_util_log2_h_
 
-/* Portable robust integer log base 2 (i.e. find most significant bit) */
+/* Portable robust integer log base 2 (i.e. find most significant bit).
+   Define PYTH_ORACLE_UTIL_LOG2_STYLE to indicate the implementation
+   style:
+     0 - portable
+     1 - based on gcc's compiler builtins assuming uint32_t/uint64_t is
+         an "unsigned int"/"unsigned long".
+   Default is 0. */
 
 #include "compat_stdint.h"
+
+#ifndef PYTH_ORACLE_UTIL_LOG2_STYLE
+#define PYTH_ORACLE_UTIL_LOG2_STYLE 0
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -11,20 +21,29 @@ extern "C" {
 
 /* Compute z = floor( log_2( x ) ) for positive x (i.e. return the
    index of the most significant bit set in x.  Exact.  Undefined
-   behavior for x==0 (the current implementation returns 0). */
+   behavior for x==0 (might depend on the implementation style).  Cost
+   depends on the style.  For the portable style, the cost is a O(log_2
+   N) fast integer ops where N is bit width of x. */
 
 static inline int          /* In [0,7] */
 log2_uint8( uint8_t _x ) { /* Positive */
+# if PYTH_ORACLE_UTIL_LOG2_STYLE==0
   uint32_t x = (uint32_t)_x;
   int z = 0;
   if( x >= (UINT32_C(1)<< 4) ) z +=  4, x >>=  4;
   if( x >= (UINT32_C(1)<< 2) ) z +=  2, x >>=  2;
   if( x >= (UINT32_C(1)<< 1) ) z +=  1;
   return z;
+# elif PYTH_ORACLE_UTIL_LOG2_STYLE==1
+  return 31-__builtin_clz( (unsigned int)_x );
+# else
+# error "Unsupported PYTH_ORACLE_UTIL_LOG2_STYLE"
+# endif
 }
 
 static inline int            /* In [0,15] */
 log2_uint16( uint16_t _x ) { /* Positive */
+# if PYTH_ORACLE_UTIL_LOG2_STYLE==0
   uint32_t x = (uint32_t)_x;
   int z = 0;
   if( x >= (UINT32_C(1)<< 8) ) z +=  8, x >>=  8;
@@ -32,10 +51,16 @@ log2_uint16( uint16_t _x ) { /* Positive */
   if( x >= (UINT32_C(1)<< 2) ) z +=  2, x >>=  2;
   if( x >= (UINT32_C(1)<< 1) ) z +=  1;
   return z;
+# elif PYTH_ORACLE_UTIL_LOG2_STYLE==1
+  return 31-__builtin_clz( (unsigned int)_x );
+# else
+# error "Unsupported PYTH_ORACLE_UTIL_LOG2_STYLE"
+# endif
 }
 
 static inline int           /* In [0,31] */
 log2_uint32( uint32_t x ) { /* Positive */
+# if PYTH_ORACLE_UTIL_LOG2_STYLE==0
   int z = 0;
   if( x >= (UINT32_C(1)<<16) ) z += 16, x >>= 16;
   if( x >= (UINT32_C(1)<< 8) ) z +=  8, x >>=  8;
@@ -43,10 +68,16 @@ log2_uint32( uint32_t x ) { /* Positive */
   if( x >= (UINT32_C(1)<< 2) ) z +=  2, x >>=  2;
   if( x >= (UINT32_C(1)<< 1) ) z +=  1;
   return z;
+# elif PYTH_ORACLE_UTIL_LOG2_STYLE==1
+  return 31-__builtin_clz( (unsigned int)x );
+# else
+# error "Unsupported PYTH_ORACLE_UTIL_LOG2_STYLE"
+# endif
 }
 
 static inline int           /* In [0,63] */
 log2_uint64( uint64_t x ) { /* Positive */
+# if PYTH_ORACLE_UTIL_LOG2_STYLE==0
   int z = 0;
   if( x >= (UINT64_C(1)<<32) ) z += 32, x >>= 32;
   if( x >= (UINT64_C(1)<<16) ) z += 16, x >>= 16;
@@ -55,6 +86,11 @@ log2_uint64( uint64_t x ) { /* Positive */
   if( x >= (UINT64_C(1)<< 2) ) z +=  2, x >>=  2;
   if( x >= (UINT64_C(1)<< 1) ) z +=  1;
   return z;
+# elif PYTH_ORACLE_UTIL_LOG2_STYLE==1
+  return 63-__builtin_clzl( (unsigned long)x );
+# else
+# error "Unsupported PYTH_ORACLE_UTIL_LOG2_STYLE"
+# endif
 }
 
 static inline int /* In [0, 6] */ log2_int8 ( int8_t  x /* positive */ ) { return log2_uint8 ( (uint8_t )x ); }
