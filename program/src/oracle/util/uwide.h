@@ -1,10 +1,10 @@
 #ifndef _pyth_oracle_util_uwide_h_
 #define _pyth_oracle_util_uwide_h_
 
-/* Useful operations for unsigned 128-bit integer operations
-   a 128-bit wide number is represented as a pair of two uint64_t.  In
-   the notation below <xh,xl> == xh 2^64 + xl where xh and xl are
-   uint64_t's. */
+/* Useful operations for unsigned 128-bit integer operations.  A 128-bit
+   wide number is represented as a pair of uint64_t.  In the notation
+   below <xh,xl> == xh 2^64 + xl where xh and xl are uint64_t's.  FIXME:
+   CONSIDER ADDING A STYLE BASED ON GCC'S __int128 EXTENSIONS? */
 
 #include "log2.h"
 
@@ -15,7 +15,10 @@ extern "C" {
 /* Compute co 2^128 + <zh,zl> = <xh,xl> + <yh,yl> + ci exactly.  Returns
    the carry out.  Note that the carry in / carry operations should be
    compile time optimized out if ci is 0 at compile time on input and/or
-   return value is not used. */
+   return value is not used.  Assumes _zh and _zl are valid (e.g.
+   non-NULL and non-overlapping).  Ignoring carry in/out related
+   operations costs 4 u64 adds, 1 u64 compare and 1 u64 conditional
+   increment. */
 
 static inline uint64_t
 uwide_add( uint64_t * _zh, uint64_t * _zl,
@@ -34,7 +37,10 @@ uwide_add( uint64_t * _zh, uint64_t * _zl,
 /* Compute <zh,zl> = bo 2^128 + <xh,xl> - <yh,yl> - bi exactly.  Returns
    the borrow out.  Note that the borrow in / borrow operations should
    be compile time optimized out if b is 0 at compile time on input
-   and/or return value is not used. */
+   and/or return value is not used.  Assumes _zh and _zl are valid (e.g.
+   non-NULL and non-overlapping).  Ignoring borrow in/out related
+   operations costs 4 u64 subs, 1 u64 compare and 1 u64 conditional
+   decrement. */
 
 static inline uint64_t
 uwide_sub( uint64_t * _zh, uint64_t * _zl,
@@ -50,7 +56,10 @@ uwide_sub( uint64_t * _zh, uint64_t * _zl,
   *_zh = zh; *_zl = zl; return bo;
 }
 
-/* Compute <zh,zl> = x*y exactly.  Return will be in [0,2^128-2^65+1] */
+/* Compute <zh,zl> = x*y exactly, will be in [0,2^128-2^65+1].  Assumes
+   _zh and _zl are valid (e.g. non-NULL and non-overlapping).  Cost is 4
+   u32*u32->u64 muls, 4 u64 adds, 2 u64 compares, 2 u64 conditional
+   increments, 8 u64 u32 word extractions. */
 
 static inline void
 uwide_mul( uint64_t * _zh, uint64_t * _zl,
@@ -65,15 +74,15 @@ uwide_mul( uint64_t * _zh, uint64_t * _zl,
   uint64_t w1h = w1>>32; uint64_t w1l = (uint64_t)(uint32_t)w1; /* w1h 2^32-2, w1l 1 @ worst case */
   uint64_t w2h = w2>>32; uint64_t w2l = (uint64_t)(uint32_t)w2; /* w2h 2^32-2, w2l 1 @ worst case */
 
-  uint64_t zh  = w1h + w2h + w3;                               /* 2^64-3                     @ worst case */
-  uint64_t t0  = w0 + (w1l<<32); zh += (uint64_t)(t0<w0);      /* t 2^64-2^32+1, zh 2^64 - 3 @ worst case */
-  uint64_t zl  = t0 + (w2l<<32); zh += (uint64_t)(zl<t0);      /* t 1,           zh 2^64 - 2 @ worst case */
+  uint64_t zh  = w1h + w2h + w3;                                /* 2^64-3                     @ worst case */
+  uint64_t t0  = w0 + (w1l<<32); zh += (uint64_t)(t0<w0);       /* t 2^64-2^32+1, zh 2^64 - 3 @ worst case */
+  uint64_t zl  = t0 + (w2l<<32); zh += (uint64_t)(zl<t0);       /* t 1,           zh 2^64 - 2 @ worst case */
   /* zh 2^64 + zl == 2^128-2^65+1 @ worst case */
 
   *_zh = zh; *_zl = zl;
 }
 
-/* Compute n = floor( log2 <xh,xl> ) exactly.  Assumes <xh,xl> is not 0. */
+/* Returns floor( log2 <xh,xl> ) exactly.  Assumes <xh,xl> is not 0. */
 
 static inline int
 uwide_log2( uint64_t xh,
@@ -83,16 +92,20 @@ uwide_log2( uint64_t xh,
   return off + log2_uint64( xl );
 }
 
-/* Same as the above but returns def is <xh,xl> is 0. */
+/* Same as the uwide_log2 but returns def is <xh,xl> is 0. */
 
 static inline int uwide_log2_def( uint64_t xh, uint64_t xl, int def ) { return (xh|xl) ? uwide_log2(xh,xl) : def; }
 
-/* Compute <zh,zl> = <xh,xl> << s.  Returns the overflow flag (will be 0
-   or 1) which indicates if any non-zero bits of <xh,xl> were lost in
-   the process.  Note that the overflow and various cases should be
+/* Compute <zh,zl> = <xh,xl> << s.  Assumes _zh and _zl are valid (e.g.
+   non-NULL and non-overlapping) and s is non-negative.  Large values of
+   s are fine (shifts to zero).  Returns the inexact flag (will be 0 or
+   1) which indicates if any non-zero bits of <xh,xl> were lost in the
+   process.  Note that inexact handling and various cases should be
    compile time optimized out if if s is known at compile time on input
-   and/or return value is not used.  Assumes s is non-negative (FIXME:
-   CONSIDER HAVING AN INVALID OP FLAG TOO?) . */
+   and/or return value is not used.  Ignoring inexact handling and
+   assuming compile time s, for the worst case s, cost is 3 u64 shifts
+   and 1 u64 bit or.  (FIXME: CONSIDER HAVING AN INVALID FLAG FOR
+   NEGATIVE S?) */
 
 static inline int
 uwide_sl( uint64_t * _zh, uint64_t * _zl,
@@ -105,18 +118,22 @@ uwide_sl( uint64_t * _zh, uint64_t * _zl,
   /*  s==  0 */                         *_zh =  xh;             *_zl = xl;          return 0;
 }
 
-/* Compute <zh,zl> = <xh,xl> >> s.  Returns the underflow flag (will be
-   0 or 1) which indicates if any non-zero bits of xh and xl were lost
-   in process.  Note that the underflow and various cases should be
+/* Compute <zh,zl> = <xh,xl> >> s.  Assumes _zh and _zl are valid (e.g.
+   non-NULL and non-overlapping) and s is non-negative.  Large values of
+   s are fine (shifts to zero).  Returns the inexact flag (will be 0 or
+   1) which indicates if any non-zero bits of <xh,xl> were lost in the
+   process.  Note that inexact handling and various cases should be
    compile time optimized out if if s is known at compile time on input
-   and/or return value is not used.  (FIXME: CONSIDER HAVING AN INVALID
-   OP FLAGS AND MORE DETAILED UNDERFLOW FLAG TO SIMPLIFY ROUNDING MODE
-   SUPPORT?) */
+   and/or return value is not used.  Ignoring inexact handling and
+   assuming compile time s, for the worst case s, cost is 3 u64 shifts
+   and 1 u64 bit or.  (FIXME: CONSIDER HAVING AN INVALID FLAG FOR
+   NEGATIVE S AND/OR MORE DETAILED INEXACT FLAGS TO SIMPLIFY
+   IMPLEMENTING FIXED AND FLOATING POINT ROUNDING MODES?) */
 
 static inline int
 uwide_sr( uint64_t * _zh, uint64_t * _zl,
           uint64_t    xh, uint64_t    xl,
-          int s ) { /* U.B. for negative s (currently treats negative s as 0, consider having invalid op flag?) */
+          int s ) {
   if( s>=128 ) {                        *_zh = UINT64_C(0); *_zl = UINT64_C(0);     return !!( xh    |xl); }
   if( s>  64 ) { s -= 64; int t = 64-s; *_zh = UINT64_C(0); *_zl =  xh>>s;          return !!((xh<<t)|xl); }
   if( s== 64 ) {                        *_zh = UINT64_C(0); *_zl =  xh;             return !!         xl;  }
@@ -124,11 +141,17 @@ uwide_sr( uint64_t * _zh, uint64_t * _zl,
   /*  s==  0 */                         *_zh = xh;          *_zl =  xl;             return 0;
 }
 
-/* Compute a ~32-bit accurate approximation of q = floor(n 2^64 / d)
-   where d is in [2^63,2^64).  Setup cost for the first n is
-   approximately a single 64/64->64 integer divide.  Cost per n
-   afterwards is approximately 2 32*32->64 multiplications.
-   Approximation will <=q.
+/* Compute a ~32-bit accurate approximation qa of q = floor(n 2^64 / d)
+   where d is in [2^63,2^64) cheaply.  Approximation will be at most q.
+
+   In the general case, qa is up to 65 bits wide (worst case is n=2^64-1
+   and d=2^63 such that q is 2^65-2 and qa is precise enough to need 65
+   bits too).  The implementation here assumes n is is less than d so
+   that q and qa are both known to fit within 64 bits.
+
+   Cost to setup for a given d is approximately a 1 u64 u32 extract, 1
+   u64 increment, 1 u64 neg, 1 u64/u64 div, 1 u64 add.  Cost per n/d
+   afterward is 2 u32*u32->u64 mul, 2 u64 add, 1 u64 u32 extract.
 
    Theory: Let q d + r = n 2^64 where q = floor( n 2^64 / d ).  Note r
    is in [0,d).  Break d into d = dh 2^32 + dl where dh and dl are
@@ -140,7 +163,7 @@ uwide_sr( uint64_t * _zh, uint64_t * _zl,
    Note that floor( 2^64/(dh+1) ) is in [2^32,2^33-4].  This suggests
    letting:
      2^32 + m = floor( 2^64/(dh+1) )
-   where m is in [0,2^32-4] (a uint32_t).  Then we have:
+   where m is in [0,2^32-4] (fits in a uint32_t).  Then we have:
      q+r/d > n (2^32 + m) / 2^32
            = n + n m / 2^32
    Similarly breaking n into n = nh 2^32 + nl:
@@ -161,12 +184,7 @@ uwide_sr( uint64_t * _zh, uint64_t * _zl,
         = floor( (2^64-(dh+1))/(dh+1) ) - (2^32-1)
    and in "C style" modulo 2^64 arithmetic, 2^64 - x = -x.  This yields:
      m  = (-(dh+1))/(dh+1) - (2^32-1)
-
-   In the general case, qa is up to 65 bits wide (worst case is n=2^64-1
-   and d=2^63 such that q is 2^65-2 and qa is precise enough in this
-   case as to need 65 bits too).  The implementation here assumes n is
-   is less than d here so that q and qa are both known to fit within 64
-   bits. */
+*/
 
 static inline uint64_t                    /* In [0,2^32) */
 uwide_div_approx_init( uint64_t d ) {     /* d in [2^63,2^64) */
@@ -174,16 +192,26 @@ uwide_div_approx_init( uint64_t d ) {     /* d in [2^63,2^64) */
   return ((-m)/m) - (uint64_t)UINT32_MAX; /* m = floor( 2^64/(dh+1) ) - 2^32 ... exact */
 }
 
-static inline uint64_t           /* In [n,2^64) */
+static inline uint64_t           /* In [n,2^64) and <= floor(n 2^64/d) */
 uwide_div_approx( uint64_t n,    /* In [0,d) */
-                  uint64_t m ) { /* Output of uwide_div_helper_init for the desired d in [2^63,2^64) */
+                  uint64_t m ) { /* Output of uwide_div_helper_init for the desired d */
   uint64_t nh = n>>32;
   uint64_t nl = (uint64_t)(uint32_t)n;
   return n + nh*m + ((nl*m)>>32);
 }
 
-/* Compute z = floor( (xh 2^64 + xl) / y ).  Requires y to be non-zero.
-   Returns divide by zero flag if y is 0 (<zh,zl>=0 in this case). */
+/* Compute z = floor( (xh 2^64 + xl) / y ).  Assumes _zh and _zl are
+   valid (e.g. non-NULL and non-overlapping).  Requires y to be
+   non-zero.  Returns the exception flag if y is 0 (<zh,zl>=0 in this
+   case).  This is not very cheap and cost is highly variable depending
+   on properties of both n and d.  Worst case is roughly ~3 u64/u64
+   divides, ~24 u64*u64->u64 muls plus other minor ops.
+
+   Breakdown in worst case 1 u64 log2, 2 u64/u64 div, 1 u64*u64->u64
+   mul, 1 u64 sub, 1 int sub, 1 u128 variable shift, 1 1 u64 variable
+   shift, 1 u64 div approx init, 4*(1 u64 div approx, 1 u64*u64->u128
+   mul, 1 u128 sub) plus various operations to faciliating shortcutting
+   (e.g. when xh is zero, cost is 1 u64/u64 div). */
 
 static inline int
 uwide_div( uint64_t * _zh, uint64_t * _zl,
@@ -210,7 +238,7 @@ uwide_div( uint64_t * _zh, uint64_t * _zl,
   uint64_t qh = xh / y;
   uint64_t rh = xh - qh*y;
 
-  /* Short cut the trivial zl case */
+  /* Simple zl shortcut */
 
   if( !rh ) { *_zh = qh; *_zl = xl / y; return 0; }
 
@@ -223,7 +251,7 @@ uwide_div( uint64_t * _zh, uint64_t * _zl,
        -> n   = q d + r where q = floor(n/d) and r in [0,d).
        -> n w = q d w + r w for some integer w>0
      That is, if we scale up both n and d by w, it doesn't affect q (it
-     just scales the remainder).  We use the scale factor of 2^s on
+     just scales the remainder).  We use a scale factor of 2^s on
      <rh,xl> and y such that y will have its most significant bit set.
      This will not cause <rh,xl> to overflow as rh is less than y at
      this point. */
@@ -245,9 +273,11 @@ uwide_div( uint64_t * _zh, uint64_t * _zl,
        (i.e. eh is non-zero).  If we increment ql by the correction
        floor(<eh,el>/d), we'd be at the solution but computing this is
        as hard as the original problem.  We do have the ability to
-       compute a ~32-bit accurate estimate ( <eh,0>/d ) very fast
-       though.  So we use that as our increment.  Practically, this loop
-       will require at most ~4 iterations. */
+       very quickly compute a ~32-bit accurate estimate dqest of
+       floor(<eh,0>/d) such that:
+         1 <= eh <= dqest <= floor(<eh,0>/d) <= floor(<eh,el)/d).
+       so we use that as our increment.  Practically, this loop will
+       require at most ~4 iterations. */
 
     ql += uwide_div_approx( eh, m );                 /* Guaranteed to make progress if eh > 0 */
     uwide_mul( &eh,&el, ql, d );                     /* <eh,el> = ql*d */
