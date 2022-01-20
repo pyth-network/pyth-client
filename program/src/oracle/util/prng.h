@@ -7,9 +7,9 @@
    extremely strict tests of randomness.
    
    Assumes hash.h provides a high quality 64<>64-bit integer hash
-   functions (i.e. full avalanche) with the property hash_uint64(0)==0
-   and hash_uint64(i) for i in [0,2^64) yields a permutation of [0,2^64)
-   and also a reasonable efficient inverse. */
+   functions (i.e. full avalanche) with the property hash_uint64(0)==0,
+   hash_uint64(i) for i in [0,2^64) yields a permutation of [0,2^64) and
+   also provides reasonably efficient inverse of this. */
 
 #include <stdalign.h>
 #include "hash.h" /* includes stdint.h */
