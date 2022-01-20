@@ -12,7 +12,7 @@
 #include "compat_stdint.h"
 
 #ifndef PYTH_ORACLE_UTIL_LOG2_STYLE
-#define PYTH_ORACLE_UTIL_LOG2_STYLE 1
+#define PYTH_ORACLE_UTIL_LOG2_STYLE 0
 #endif
 
 #ifdef __cplusplus
