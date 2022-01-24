@@ -2,6 +2,7 @@
 #include "manager.hpp"
 #include "log.hpp"
 #include "mem_map.hpp"
+#include <algorithm>
 
 #define PC_JSON_RPC_VER         "2.0"
 #define PC_JSON_PARSE_ERROR     -32700
@@ -207,7 +208,9 @@ void user::parse_upd_price( uint32_t tok, uint32_t itok )
 
     // Add the updated price to the pending updates
     sptr->update_no_send( price, conf, stype, false );
-    pending_vec_.emplace_back( sptr );
+    if( std::find(pending_vec_.begin(), pending_vec_.end(), sptr) == pending_vec_.end() ) {
+      pending_vec_.emplace_back( sptr );
+    }
 
     // Send the result back
     add_header();
