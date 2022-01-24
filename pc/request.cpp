@@ -708,12 +708,27 @@ bool price::send( price *prices[], const unsigned n )
   for ( unsigned i = 0, j = 0; i < n; ++i ) {
     price *const p = prices[ i ];
     if ( PC_UNLIKELY( ! p->init_ && ! p->init_publish() ) ) {
+      PC_LOG_ERR( "failed to initialize publisher" )
+        .add( "price_account", *p->get_account() )
+        .add( "product_account", *p->prod_->get_account() )
+        .add( "symbol", p->get_symbol() )
+        .add( "price_type", price_type_to_str( p->get_price_type() ) ).end();
       continue;
     }
     if ( PC_UNLIKELY( ! p->has_publisher() ) ) {
+      PC_LOG_ERR( "missing publish permission" )
+        .add( "price_account", *p->get_account() )
+        .add( "product_account", *p->prod_->get_account() )
+        .add( "symbol", p->get_symbol() )
+        .add( "price_type", price_type_to_str( p->get_price_type() ) ).end();
       continue;
     }
     if ( PC_UNLIKELY( ! p->get_is_ready_publish() ) ) {
+      PC_LOG_ERR( "not ready to publish - check rpc / pyth_tx connection" )
+        .add( "price_account", *p->get_account() )
+        .add( "product_account", *p->prod_->get_account() )
+        .add( "symbol", p->get_symbol() )
+        .add( "price_type", price_type_to_str( p->get_price_type() ) ).end();
       continue;
     }
     manager *const mgr = p->get_manager();
@@ -721,7 +736,11 @@ bool price::send( price *prices[], const unsigned n )
       mgr1 = mgr;
     }
     else if ( mgr != mgr1 ) {
-      PC_LOG_ERR( "unexpected manager" ).end();
+      PC_LOG_ERR( "unexpected manager" )
+        .add( "price_account", *p->get_account() )
+        .add( "product_account", *p->prod_->get_account() )
+        .add( "symbol", p->get_symbol() )
+        .add( "price_type", price_type_to_str( p->get_price_type() ) ).end();
       continue;
     }
     const uint64_t slot = mgr->get_slot();
@@ -739,7 +758,11 @@ bool price::send( price *prices[], const unsigned n )
           mgr->submit( msg );
         }
         else {
-          PC_LOG_ERR( "failed to build msg" );
+          PC_LOG_ERR( "failed to build msg" )
+            .add( "price_account", *p->get_account() )
+            .add( "product_account", *p->prod_->get_account() )
+            .add( "symbol", p->get_symbol() )
+            .add( "price_type", price_type_to_str( p->get_price_type() ) ).end();
         }
       }
       else {
