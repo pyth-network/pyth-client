@@ -11,6 +11,7 @@
 #define PC_JSON_UNKNOWN_SYMBOL  -32000
 #define PC_JSON_MISSING_PERMS   -32001
 #define PC_JSON_NOT_READY       -32002
+#define PC_BATCH_SEND_FAILED    -32010
 
 using namespace pc;
 
@@ -324,6 +325,19 @@ void user::parse_get_product( uint32_t tok, uint32_t itok )
   prod->dump_json( jw_ );
   jw_.pop();
   add_tail( itok );
+}
+
+void user::send_pending_upds()
+{
+  if ( pending_vec_.empty() ) {
+    return;
+  }
+
+  if ( !price::send( pending_vec_.data(), pending_vec_.size()) ) {
+    add_error( 0, PC_BATCH_SEND_FAILED, "batch send failed - please check the pyth logs" );
+  }
+
+  pending_vec_.clear();
 }
 
 void user::parse_get_all_products( uint32_t itok )

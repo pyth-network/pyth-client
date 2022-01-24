@@ -43,6 +43,9 @@ namespace pc
     // symbol price schedule callback
     void on_response( price_sched *, uint64_t ) override;
 
+    // send all pending updates
+    void send_pending_upds();
+
   private:
 
     // http-only request parsing
