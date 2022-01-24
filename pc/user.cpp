@@ -204,22 +204,15 @@ void user::parse_upd_price( uint32_t tok, uint32_t itok )
     if ( 0 == (ntok = jp_.find_val( ptok, "status" ) ) ) break;
     symbol_status stype = str_to_symbol_status( jp_.get_str( ntok ) );
 
-    // submit new price
-    if ( sptr->update( price, conf, stype ) ) {
-      // create result
-      add_header();
-      jw_.add_key( "result", 0UL );
-      add_tail( itok );
-    } else if ( !sptr->get_is_ready_publish() ) {
-      add_error( itok, PC_JSON_NOT_READY,
-          "not ready to publish - check rpc / pyth_tx connection" );
-    } else if ( !sptr->has_publisher() ) {
-      add_error( itok, PC_JSON_MISSING_PERMS, "missing publish permission" );
-    } else if ( sptr->get_is_err() ) {
-      add_error( itok, PC_JSON_INVALID_REQUEST, sptr->get_err_msg() );
-    } else {
-      add_error( itok, PC_JSON_INVALID_REQUEST, "unknown error" );
-    }
+    // Add the updated price to the pending updates
+    sptr->update_no_send( price, conf, stype, false );
+    pending_vec_.emplace_back( sptr );
+
+    // Send the result back
+    add_header();
+    jw_.add_key( "result", 0UL );
+    add_tail( itok );
+
     return;
   } while( 0 );
   add_invalid_params( itok );
