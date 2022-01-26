@@ -157,6 +157,10 @@ namespace pc
 
     // symbol from attr_dict
     str get_symbol();
+    // Get the base currency (from attr_dict)
+    str get_base_asset();
+    // Get the quote currency (from attr_dict)
+    str get_quote_currency();
 
     // iterate through associated price accounts (quotes) associated
     // with this product
@@ -242,6 +246,12 @@ namespace pc
 
     // convenience wrapper equiv to: get_product()->get_symbol()
     str get_symbol();
+
+    // Get the base asset for the product (from the list of product attributes).
+    str get_base_asset();
+
+    // Get the quote currency for the product (from the list of product attributes).
+    str get_quote_currency();
 
     // convenience wrapper equiv to: get_product()->get_sttr()
     bool get_attr( attr_id, str& ) const;

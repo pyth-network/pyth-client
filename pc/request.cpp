@@ -295,6 +295,20 @@ str product::get_symbol()
   return sym;
 }
 
+str product::get_base_asset()
+{
+  str base;
+  get_attr( attr_id( "base" ), base);
+  return base;
+}
+
+str product::get_quote_currency()
+{
+  str quote;
+  get_attr( attr_id( "quote_currency" ), quote);
+  return quote;
+}
+
 void product::reset()
 {
   reset_err();
@@ -489,6 +503,16 @@ product *price::get_product() const
 str price::get_symbol()
 {
   return prod_->get_symbol();
+}
+
+str price::get_base_asset()
+{
+  return prod_->get_base_asset();
+}
+
+str price::get_quote_currency()
+{
+  return prod_->get_quote_currency();
 }
 
 bool price::get_attr( attr_id aid, str& val ) const
