@@ -295,7 +295,7 @@ str product::get_symbol()
   return sym;
 }
 
-str product::get_base()
+str product::get_base_asset()
 {
   str base;
   get_attr( attr_id( "base" ), base);
@@ -505,9 +505,9 @@ str price::get_symbol()
   return prod_->get_symbol();
 }
 
-str price::get_base()
+str price::get_base_asset()
 {
-  return prod_->get_base();
+  return prod_->get_base_asset();
 }
 
 str price::get_quote_currency()

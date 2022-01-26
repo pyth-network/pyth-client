@@ -158,7 +158,7 @@ namespace pc
     // symbol from attr_dict
     str get_symbol();
     // Get the base currency (from attr_dict)
-    str get_base();
+    str get_base_asset();
     // Get the quote currency (from attr_dict)
     str get_quote_currency();
 
@@ -247,8 +247,8 @@ namespace pc
     // convenience wrapper equiv to: get_product()->get_symbol()
     str get_symbol();
 
-    // Get the base currency for the product (from the list of product attributes).
-    str get_base();
+    // Get the base asset for the product (from the list of product attributes).
+    str get_base_asset();
 
     // Get the quote currency for the product (from the list of product attributes).
     str get_quote_currency();
