@@ -295,6 +295,20 @@ str product::get_symbol()
   return sym;
 }
 
+str product::get_base()
+{
+  str base;
+  get_attr( attr_id( "base" ), base);
+  return base;
+}
+
+str product::get_quote()
+{
+  str quote;
+  get_attr( attr_id( "quote_currency" ), quote);
+  return quote;
+}
+
 void product::reset()
 {
   reset_err();

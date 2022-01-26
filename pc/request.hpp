@@ -243,6 +243,12 @@ namespace pc
     // convenience wrapper equiv to: get_product()->get_symbol()
     str get_symbol();
 
+    // Get the base currency for the product (from the list of product attributes).
+    str get_base();
+
+    // Get the quote currency for the product (from the list of product attributes).
+    str get_quote();
+
     // convenience wrapper equiv to: get_product()->get_sttr()
     bool get_attr( attr_id, str& ) const;
 
