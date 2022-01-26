@@ -505,6 +505,16 @@ str price::get_symbol()
   return prod_->get_symbol();
 }
 
+str price::get_base()
+{
+  return prod_->get_base();
+}
+
+str price::get_quote()
+{
+  return prod_->get_quote();
+}
+
 bool price::get_attr( attr_id aid, str& val ) const
 {
   return prod_->get_attr( aid, val );

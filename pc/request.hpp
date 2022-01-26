@@ -157,6 +157,10 @@ namespace pc
 
     // symbol from attr_dict
     str get_symbol();
+    // Get the base currency (from attr_dict)
+    str get_base();
+    // Get the quote currency (from attr_dict)
+    str get_quote();
 
     // iterate through associated price accounts (quotes) associated
     // with this product
