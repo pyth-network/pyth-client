@@ -302,7 +302,7 @@ str product::get_base()
   return base;
 }
 
-str product::get_quote()
+str product::get_quote_currency()
 {
   str quote;
   get_attr( attr_id( "quote_currency" ), quote);
@@ -510,9 +510,9 @@ str price::get_base()
   return prod_->get_base();
 }
 
-str price::get_quote()
+str price::get_quote_currency()
 {
-  return prod_->get_quote();
+  return prod_->get_quote_currency();
 }
 
 bool price::get_attr( attr_id aid, str& val ) const
