@@ -16,6 +16,7 @@ RUN apt-get install -qq \
   libzstd1 \
   libzstd-dev \
   python3-pytest \
+  python3-pytest-asyncio \
   python3-websockets \
   sudo \
   zlib1g \

@@ -773,7 +773,7 @@ bool price::send( price *prices[], const unsigned n )
             std::string( 100, '\0' ), p1->preq_->get_sent_time()
           );
           p1->preq_->get_signature()->enc_base58( p1->tvec_.back().first );
-          PC_LOG_DBG( "sent price update transaction" )
+          PC_LOG_DBG( "sent price update" )
             .add( "price_account", *p1->get_account() )
             .add( "product_account", *p1->prod_->get_account() )
             .add( "symbol", p1->get_symbol() )

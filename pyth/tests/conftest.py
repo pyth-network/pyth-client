@@ -347,12 +347,12 @@ def pythd(solana_test_validator, pyth_dir):
         '-x',
         '-m', 'finalized',
         '-d',
+        '-l', 'pyth_logs.txt',
     ]
     kwargs = {
         'stdin': DEVNULL,
-        'stdout': DEVNULL,
-        'stderr': DEVNULL,
     }
+        
     with Popen(cmd, **kwargs) as p:
         time.sleep(3)
         yield
