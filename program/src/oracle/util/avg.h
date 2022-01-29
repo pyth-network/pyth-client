@@ -8,6 +8,8 @@
 
 #include "sar.h"
 
+/* FIXME: ADD SUPPORT FOR 64_BIT ARRAY AVERAGES BASED ON UWIDE? */
+
 #ifdef __cplusplus
 extern "C" {
 #endif
