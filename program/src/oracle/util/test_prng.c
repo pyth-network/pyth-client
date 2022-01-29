@@ -150,14 +150,16 @@ main( int     argc,
   }
   if( domain!=((UINT64_C(1)<<32)-UINT64_C(1)) ) { printf( "FAIL (domain)\n" ); return 1; }
 
-  prng_delete( prng_leave( prng ) );
-
-# if 0
   long sum_pop  = 0L;
   long sum_pop2 = 0L;
   int  min_pop  = INT_MAX;
   int  max_pop  = INT_MIN;
+
+  int ctr = 0;
   for( long i=0; i<(1L<<32); i++ ) {
+    if( !ctr ) { printf( "Completed %li iterations\n", i ); ctr = 100000000; }
+    ctr--;
+
     uint64_t seq = prng_private_expand( (uint32_t)i );
     if( prng_private_contract( seq )!=(uint32_t)i ) { printf( "FAIL (contract)\n" ); return 1; }
     int pop  = __builtin_popcountl( seq );
@@ -168,10 +170,11 @@ main( int     argc,
   }
   double avg_pop = ((double)sum_pop ) / ((double)(1L<<32));
   double rms_pop = sqrt( (((double)sum_pop2) / ((double)(1L<<32))) - avg_pop*avg_pop );
-  printf( "expand popcount stats: %.3f +/- %.3f [%i,%i]\n", avg_pop, rms_pop, min_pop, max_pop );
-# endif
 
-  printf( "pass\n" );
+  prng_delete( prng_leave( prng ) );
+
+  printf( "pass (expand popcount stats: %.3f +/- %.3f [%i,%i])\n", avg_pop, rms_pop, min_pop, max_pop );
+
   return 0;
 }
 
