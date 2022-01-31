@@ -10,29 +10,31 @@ CC="gcc -g -Wall -Werror -Wextra -Wconversion -Wstrict-aliasing=2 -Wimplicit-fal
 
 set -x
 
-$CC test_align.c -o bin/test_align || exit 1
-$CC test_hash.c  -o bin/test_hash  || exit 1
-$CC test_prng.c  -o bin/test_prng  || exit 1
-$CC test_sar.c   -o bin/test_sar   || exit 1
-$CC test_round.c -o bin/test_round || exit 1
-$CC test_log2.c  -o bin/test_log2  || exit 1
-$CC test_smag.c  -o bin/test_smag  || exit 1
-$CC test_rexp2.c -o bin/test_rexp2 || exit 1
-$CC test_uwide.c -o bin/test_uwide || exit 1
-$CC test_sqrt.c  -o bin/test_sqrt  || exit 1
-$CC test_avg.c   -o bin/test_avg   || exit 1
+$CC test_align.c  -o bin/test_align  || exit 1
+$CC test_hash.c   -o bin/test_hash   || exit 1
+$CC test_prng.c   -o bin/test_prng   || exit 1
+$CC test_sar.c    -o bin/test_sar    || exit 1
+$CC test_round.c  -o bin/test_round  || exit 1
+$CC test_log2.c   -o bin/test_log2   || exit 1
+$CC test_smag.c   -o bin/test_smag   || exit 1
+$CC test_rexp2.c  -o bin/test_rexp2  || exit 1
+$CC test_exp2m1.c -o bin/test_exp2m1 || exit 1
+$CC test_uwide.c  -o bin/test_uwide  || exit 1
+$CC test_sqrt.c   -o bin/test_sqrt   || exit 1
+$CC test_avg.c    -o bin/test_avg    || exit 1
 
-bin/test_align || exit 1
-bin/test_hash  || exit 1
-bin/test_prng  || exit 1
-bin/test_sar   || exit 1
-bin/test_round || exit 1
-bin/test_log2  || exit 1
-bin/test_smag  || exit 1
-bin/test_rexp2 || exit 1
-bin/test_uwide || exit 1
-bin/test_sqrt  || exit 1
-bin/test_avg   || exit 1
+bin/test_align  || exit 1
+bin/test_hash   || exit 1
+bin/test_prng   || exit 1
+bin/test_sar    || exit 1
+bin/test_round  || exit 1
+bin/test_log2   || exit 1
+bin/test_smag   || exit 1
+bin/test_rexp2  || exit 1
+bin/test_exp2m1 || exit 1
+bin/test_uwide  || exit 1
+bin/test_sqrt   || exit 1
+bin/test_avg    || exit 1
 
 # PRNG batteries
 
