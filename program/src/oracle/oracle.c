@@ -515,6 +515,8 @@ static uint64_t upd_price( SolParameters *prm, SolAccountInfo *ka )
     return ERROR_INVALID_ARGUMENT;
   }
 
+  uint32_t comp_idx = find_comp_idx( publish_account, price_account );
+
   // Verify that symbol account is initialized and corresponds to the
   // same symbol in the instruction parameters
   pc_price_t *pptr = (pc_price_t*)price_account->data;
@@ -525,20 +527,19 @@ static uint64_t upd_price( SolParameters *prm, SolAccountInfo *ka )
   }
 
   // verify that publisher is valid
-  uint32_t comp_idx = find_comp_idx( publish_account, price_account );
   if ( comp_idx == pptr->num_ ) {
     return ERROR_INVALID_ARGUMENT;
   }
 
   // reject if this price corresponds to the same or earlier time
   pc_price_info_t *fptr = &pptr->comp_[comp_idx].latest_;
-  sysvar_clock_t *sptr = (sysvar_clock_t*)clock_account->data;
   if ( cptr->cmd_ == e_cmd_upd_price &&
        cptr->pub_slot_ <= fptr->pub_slot_ ) {
     return ERROR_INVALID_ARGUMENT;
   }
 
   // update aggregate price as necessary
+  sysvar_clock_t *sptr = (sysvar_clock_t*)clock_account->data;
   if ( sptr->slot_ > pptr->agg_.pub_slot_ ) {
     upd_aggregate( pptr, sptr->slot_ );
   }
