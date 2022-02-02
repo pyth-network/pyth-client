@@ -448,6 +448,127 @@ Test( oracle, upd_price ) {
   cr_assert( ERROR_INVALID_ARGUMENT == dispatch( &prm, acc ) );
 }
 
+Test( oracle, batch_upd_price ) {
+
+  // In this test we submit a batch update containing both a valid and invalid
+  // price update. The valid update should have affect, the invalid update
+  // should not, and the transaction should complete successfully.
+
+  // Set up the Solana accounts
+  SolPubkey p_id  = {.x = { 0xff, }};
+  SolPubkey pkey = {.x = { 1, }};
+  SolPubkey skey = {.x = { 3, }};
+  sysvar_clock_t cvar = {
+    .slot_ = 1
+  };
+  uint64_t pqty = 100, sqty = 200;
+
+  uint64_t num_price_accounts = 2;
+  pc_price_t sptr[num_price_accounts];
+  for ( uint64_t i = 0; i < num_price_accounts; i++) {
+    sol_memset( &sptr[i], 0, sizeof( pc_price_t ) );
+    sptr[i].magic_ = PC_MAGIC;
+    sptr[i].ver_   = PC_VERSION;
+    sptr[i].ptype_ = PC_PTYPE_PRICE;
+    sptr[i].type_  = PC_ACCTYPE_PRICE;
+    sptr[i].num_   = 1;
+    pc_pub_key_assign( &sptr[i].comp_[0].pub_, (pc_pub_key_t*)&pkey );
+  }
+
+  SolAccountInfo acc[] = {{
+      .key         = &pkey,
+      .lamports    = &pqty,
+      .data_len    = 0,
+      .data        = NULL,
+      .owner       = NULL,
+      .rent_epoch  = 0,
+      .is_signer   = true,
+      .is_writable = true,
+      .executable  = false
+  },{
+      .key         = &skey,
+      .lamports    = &sqty,
+      .data_len    = sizeof( pc_price_t ),
+      .data        = (uint8_t*)&sptr[0],
+      .owner       = &p_id,
+      .rent_epoch  = 0,
+      .is_signer   = false,
+      .is_writable = true,
+      .executable  = false
+  },{
+      .key         = &skey,
+      .lamports    = &sqty,
+      .data_len    = sizeof( pc_price_t ),
+      .data        = (uint8_t*)&sptr[1],
+      .owner       = &p_id,
+      .rent_epoch  = 0,
+      .is_signer   = false,
+      .is_writable = true,
+      .executable  = false
+  },{
+      .key         = (SolPubkey*)sysvar_clock,
+      .lamports    = &sqty,
+      .data_len    = sizeof( sysvar_clock_t ),
+      .data        = (uint8_t*)&cvar,
+      .owner       = &p_id,
+      .rent_epoch  = 0,
+      .is_signer   = false,
+      .is_writable = false,
+      .executable  = false
+  }};
+
+  // Create a request with two updates: one valid and one invalid
+  uint64_t data_len = sizeof(cmd_batch_upd_price_header_t) + (sizeof(cmd_upd_price_t) * num_price_accounts);
+  char input_data[data_len]; 
+  cmd_batch_upd_price_t *req = (cmd_batch_upd_price_t*)&input_data;
+  req->header_.ver_ = PC_VERSION;
+  req->header_.cmd_ = e_cmd_batch_upd_price;
+  req->header_.count_ = 2;
+
+  // The valid update
+  cmd_upd_price_t *upd = &req->upds_[0];
+  upd->ver_ = PC_VERSION;
+  upd->cmd_ = e_cmd_batch_upd_price;
+  upd->status_ = PC_STATUS_TRADING;
+  upd->price_ = 55L;
+  upd->conf_ = 9L;
+  upd->pub_slot_ = 1;
+
+  // The invalid update: incorrect program version
+  upd = &req->upds_[1];
+  upd->ver_ = 1;
+  upd->cmd_ = e_cmd_batch_upd_price;
+  upd->status_ = PC_STATUS_TRADING;
+  upd->price_ = 73L;
+  upd->conf_ = 8L;
+  upd->pub_slot_ = 1;
+
+  SolParameters prm = {
+    .ka         = acc,
+    .ka_num     = 4,
+    .data       = (const uint8_t*)req,
+    .data_len   = data_len,
+    .program_id = &p_id
+  };
+
+  // Dispatch the request and check that the transaction completed successfully
+  cr_assert( SUCCESS == dispatch( &prm, acc ) );
+
+  // Check that the first account got updated successfully
+  cr_assert( sptr[0].comp_[0].latest_.price_ == 55L );
+  cr_assert( sptr[0].comp_[0].latest_.conf_ == 9L );
+  cr_assert( sptr[0].comp_[0].latest_.pub_slot_ == 1 );
+  cr_assert( sptr[0].agg_.pub_slot_ == 1 );
+  cr_assert( sptr[0].valid_slot_ == 0 );
+
+  // Check that the second account didn't
+  cr_assert( sptr[1].comp_[0].latest_.price_ == 0L );
+  cr_assert( sptr[1].comp_[0].latest_.conf_ == 0L );
+  cr_assert( sptr[1].comp_[0].latest_.pub_slot_ == 0 );
+  cr_assert( sptr[1].agg_.pub_slot_ == 0 );
+  cr_assert( sptr[1].valid_slot_ == 0 );
+}
+
 Test( oracle, upd_aggregate ) {
   pc_price_t px[1];
   sol_memset( px, 0, sizeof( pc_price_t ) );

@@ -507,7 +507,7 @@ static bool is_valid_price_upd( cmd_upd_price_t *cptr, SolAccountInfo *price_acc
 
   // Reject if this price corresponds to the same or earlier time
   pc_price_info_t *fptr = &pptr->comp_[comp_idx].latest_;
-  if ( cptr->cmd_ == e_cmd_upd_price &&
+  if ( ( cptr->cmd_ == e_cmd_upd_price || cptr->cmd_ == e_cmd_batch_upd_price ) &&
        cptr->pub_slot_ <= fptr->pub_slot_ ) {
     return false;
   }
@@ -525,12 +525,70 @@ static void do_price_upd( cmd_upd_price_t *cptr, SolAccountInfo *clock_account, 
 
   // update component price if required
   pc_price_info_t *fptr = &pptr->comp_[comp_idx].latest_;
-  if ( cptr->cmd_ == e_cmd_upd_price ) {
+  if ( ( cptr->cmd_ == e_cmd_upd_price || cptr->cmd_ == e_cmd_batch_upd_price ) ) {
     fptr->price_    = cptr->price_;
     fptr->conf_     = cptr->conf_;
     fptr->status_   = cptr->status_;
     fptr->pub_slot_ = cptr->pub_slot_;
   }
+}
+
+static uint64_t batch_upd_price( SolParameters *prm, SolAccountInfo *ka ) {
+  // Check that header information has been provided
+  if ( prm->data_len < sizeof( cmd_batch_upd_price_header_t ) ) {
+    return ERROR_INVALID_ARGUMENT;
+  }
+  cmd_batch_upd_price_header_t *hptr = (cmd_batch_upd_price_header_t *)prm->data;
+
+  // Check that within the batch, the correct number of updates have been provided
+  if ( prm->data_len != ( sizeof( cmd_batch_upd_price_header_t ) + ( hptr->count_ * sizeof( cmd_upd_price_t ) ) ) ) {
+    return ERROR_INVALID_ARGUMENT;
+  }
+  cmd_batch_upd_price_t *cptr = (cmd_batch_upd_price_t *)prm->data;
+
+  // Check that the correct number of account keys have been provided.
+  // We expect the publisher account, the clock account and the price accounts to be present.
+  if ( prm->ka_num != ( 2 + hptr->count_ ) ) {
+    return ERROR_INVALID_ARGUMENT;
+  }
+  SolAccountInfo *publish_account = &ka[0];
+  SolAccountInfo *clock_account = &ka[hptr->count_ + 1];
+
+  // Check that the publish accounts and the clock accounts are valid
+  if ( !valid_funding_account( publish_account ) ||
+       !pc_pub_key_equal( (pc_pub_key_t*)clock_account->key, (pc_pub_key_t*)sysvar_clock ) ) {
+    return ERROR_INVALID_ARGUMENT;
+  }
+
+  // Loop over all the given updates.
+  bool any_succeeded = false;
+  for ( uint64_t i = 0; i < hptr->count_; i++ ) {
+
+    cmd_upd_price_t *uptr = &cptr->upds_[i];
+    SolAccountInfo *price_account = &ka[1 + i];
+
+    // Check that the price account is signed, writable with the correct ownership and is of the correct size
+    if ( !valid_writable_account( prm, price_account, sizeof( pc_price_t ) ) ) {
+      continue;
+    }
+
+    // Check that this price update is valid
+    uint32_t comp_idx = find_comp_idx( publish_account, price_account );
+    if ( !is_valid_price_upd( uptr, price_account, comp_idx ) ) {
+      continue;
+    }
+
+    do_price_upd( uptr, clock_account, price_account, comp_idx );
+
+    any_succeeded = true;
+  }
+
+  // Fail the transaction if no updates succeeded
+  if ( !any_succeeded && hptr->count_ > 0 ) {
+    return ERROR_INVALID_ARGUMENT;
+  }
+
+  return SUCCESS;
 }
 
 static uint64_t upd_price( SolParameters *prm, SolAccountInfo *ka )
@@ -581,25 +639,30 @@ static uint64_t dispatch( SolParameters *prm, SolAccountInfo *ka )
   }
   switch(hdr->cmd_) {
     case e_cmd_upd_price:
-    case e_cmd_agg_price:     return upd_price( prm, ka );
-    case e_cmd_init_mapping:  return init_mapping( prm, ka );
-    case e_cmd_add_mapping:   return add_mapping( prm, ka );
-    case e_cmd_add_product:   return add_product( prm, ka );
-    case e_cmd_upd_product:   return upd_product( prm, ka );
-    case e_cmd_add_price:     return add_price( prm, ka );
-    case e_cmd_add_publisher: return add_publisher( prm, ka );
-    case e_cmd_del_publisher: return del_publisher( prm, ka );
-    case e_cmd_init_price:    return init_price( prm, ka );
-    case e_cmd_init_test:     return init_test( prm, ka );
-    case e_cmd_upd_test:      return upd_test( prm, ka );
-    case e_cmd_set_min_pub:   return set_min_pub( prm, ka );
-    default:                  return ERROR_INVALID_ARGUMENT;
+    case e_cmd_agg_price:       return upd_price( prm, ka );
+    case e_cmd_batch_upd_price: return batch_upd_price( prm, ka );
+    case e_cmd_init_mapping:    return init_mapping( prm, ka );
+    case e_cmd_add_mapping:     return add_mapping( prm, ka );
+    case e_cmd_add_product:     return add_product( prm, ka );
+    case e_cmd_upd_product:     return upd_product( prm, ka );
+    case e_cmd_add_price:       return add_price( prm, ka );
+    case e_cmd_add_publisher:   return add_publisher( prm, ka );
+    case e_cmd_del_publisher:   return del_publisher( prm, ka );
+    case e_cmd_init_price:      return init_price( prm, ka );
+    case e_cmd_init_test:       return init_test( prm, ka );
+    case e_cmd_upd_test:        return upd_test( prm, ka );
+    case e_cmd_set_min_pub:     return set_min_pub( prm, ka );
+    default:                    return ERROR_INVALID_ARGUMENT;
   }
 }
 
 extern uint64_t entrypoint(const uint8_t *input)
 {
-  SolAccountInfo ka[4];
+  // Batch transactions contain a price account for each symbol,
+  // the publishing account and the sysvar_clock account.
+  int16_t num_accounts = MAX_BATCH_UPD_PRICE_COUNT + 2;
+  SolAccountInfo ka[num_accounts];
+
   SolParameters prm[1];
   prm->ka = ka;
   if (!sol_deserialize(input, prm, SOL_ARRAY_SIZE(ka))) {

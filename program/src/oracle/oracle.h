@@ -221,6 +221,12 @@ typedef enum {
   // key[2] sysvar_clock account  [readable]
   e_cmd_upd_price,
 
+  // publish a batch of component prices
+  // key[0]    funding account       [signer writable]
+  // key[1..n] price accounts        [writable]
+  // key[n]    sysvar_clock account  [readable]
+  e_cmd_batch_upd_price,
+
   // compute aggregate price
   // key[0] funding account       [signer writable]
   // key[1] price account         [writable]
@@ -333,6 +339,26 @@ typedef struct cmd_upd_price
 } cmd_upd_price_t;
 
 static_assert( sizeof( cmd_upd_price_t ) == 40, "" );
+
+// The maximum amount of price updates that pythd will send.
+// The limiting factor is the maximum size of a pythd JRPC request, 
+// so we may be able to increase this in the futute.
+#define MAX_BATCH_UPD_PRICE_COUNT 8
+
+typedef struct cmd_batch_upd_price_header
+{
+  uint32_t ver_;
+  int32_t cmd_;
+  uint64_t count_; 
+} cmd_batch_upd_price_header_t;
+
+static_assert( sizeof( cmd_batch_upd_price_header_t ) == 16, "" );
+
+typedef struct cmd_batch_upd_price
+{
+  cmd_batch_upd_price_header_t header_;
+  cmd_upd_price_t upds_[0];
+} cmd_batch_upd_price_t;
 
 typedef struct cmd_upd_test
 {
