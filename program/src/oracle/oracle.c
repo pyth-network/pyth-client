@@ -515,6 +515,24 @@ static bool is_valid_price_upd( cmd_upd_price_t *cptr, SolAccountInfo *price_acc
   return true;
 }
 
+static void do_price_upd( cmd_upd_price_t *cptr, SolAccountInfo *clock_account, SolAccountInfo *price_account, uint32_t comp_idx ) {
+  // update aggregate price as necessary
+  pc_price_t *pptr = (pc_price_t*)price_account->data;
+  sysvar_clock_t *sptr = (sysvar_clock_t*)clock_account->data;
+  if ( sptr->slot_ > pptr->agg_.pub_slot_ ) {
+    upd_aggregate( pptr, sptr->slot_ );
+  }
+
+  // update component price if required
+  pc_price_info_t *fptr = &pptr->comp_[comp_idx].latest_;
+  if ( cptr->cmd_ == e_cmd_upd_price ) {
+    fptr->price_    = cptr->price_;
+    fptr->conf_     = cptr->conf_;
+    fptr->status_   = cptr->status_;
+    fptr->pub_slot_ = cptr->pub_slot_;
+  }
+}
+
 static uint64_t upd_price( SolParameters *prm, SolAccountInfo *ka )
 {
   // Validate command parameters
@@ -547,19 +565,8 @@ static uint64_t upd_price( SolParameters *prm, SolAccountInfo *ka )
     return ERROR_INVALID_ARGUMENT;
   }
 
-  // update aggregate price as necessary
-  sysvar_clock_t *sptr = (sysvar_clock_t*)clock_account->data;
-  if ( sptr->slot_ > pptr->agg_.pub_slot_ ) {
-    upd_aggregate( pptr, sptr->slot_ );
-  }
-
-  // update component price if required
-  if ( cptr->cmd_ == e_cmd_upd_price ) {
-    fptr->price_    = cptr->price_;
-    fptr->conf_     = cptr->conf_;
-    fptr->status_   = cptr->status_;
-    fptr->pub_slot_ = cptr->pub_slot_;
-  }
+  // Update the price
+  do_price_upd( cptr, clock_account, price_account, comp_idx );
   return SUCCESS;
 }
 
