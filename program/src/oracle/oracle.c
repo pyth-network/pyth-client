@@ -489,6 +489,32 @@ static uint32_t find_comp_idx( SolAccountInfo *publish_account, SolAccountInfo *
   return i;
 }
 
+static bool is_valid_price_upd( cmd_upd_price_t *cptr, SolAccountInfo *price_account, uint32_t comp_idx )
+{
+  // Verify that symbol account is initialized and corresponds to the
+  // same symbol in the instruction parameters
+  pc_price_t *pptr = (pc_price_t*)price_account->data;
+  if ( pptr->magic_ != PC_MAGIC ||
+       pptr->ver_ != cptr->ver_ ||
+       pptr->type_ != PC_ACCTYPE_PRICE ) {
+    return false;
+  }
+
+  // Verify that the price component index is valid
+  if ( comp_idx >= pptr->num_ ) {
+    return false;
+  }
+
+  // Reject if this price corresponds to the same or earlier time
+  pc_price_info_t *fptr = &pptr->comp_[comp_idx].latest_;
+  if ( cptr->cmd_ == e_cmd_upd_price &&
+       cptr->pub_slot_ <= fptr->pub_slot_ ) {
+    return false;
+  }
+
+  return true;
+}
+
 static uint64_t upd_price( SolParameters *prm, SolAccountInfo *ka )
 {
   // Validate command parameters
@@ -515,26 +541,9 @@ static uint64_t upd_price( SolParameters *prm, SolAccountInfo *ka )
     return ERROR_INVALID_ARGUMENT;
   }
 
+  // Fail the transaction if the price update is invalid
   uint32_t comp_idx = find_comp_idx( publish_account, price_account );
-
-  // Verify that symbol account is initialized and corresponds to the
-  // same symbol in the instruction parameters
-  pc_price_t *pptr = (pc_price_t*)price_account->data;
-  if ( pptr->magic_ != PC_MAGIC ||
-       pptr->ver_ != cptr->ver_ ||
-       pptr->type_ != PC_ACCTYPE_PRICE ) {
-    return ERROR_INVALID_ARGUMENT;
-  }
-
-  // verify that publisher is valid
-  if ( comp_idx == pptr->num_ ) {
-    return ERROR_INVALID_ARGUMENT;
-  }
-
-  // reject if this price corresponds to the same or earlier time
-  pc_price_info_t *fptr = &pptr->comp_[comp_idx].latest_;
-  if ( cptr->cmd_ == e_cmd_upd_price &&
-       cptr->pub_slot_ <= fptr->pub_slot_ ) {
+  if ( !is_valid_price_upd( cptr, price_account, comp_idx ) ) {
     return ERROR_INVALID_ARGUMENT;
   }
 
