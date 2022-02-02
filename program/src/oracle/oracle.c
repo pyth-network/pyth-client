@@ -483,21 +483,27 @@ static uint64_t upd_price( SolParameters *prm, SolAccountInfo *ka )
     return ERROR_INVALID_ARGUMENT;
   }
 
-  // Account (1) is the price account
-  // Account (2) is the sysvar_clock account
-  // Verify that this is signed, writable with correct ownership and size
+  // Verify that the correct number of accounts have been passed
+  if ( (prm->ka_num != 3 && prm->ka_num != 4) ) {
+    return ERROR_INVALID_ARGUMENT;
+  }
+
+  SolAccountInfo *publish_account = &ka[0];
+  SolAccountInfo *price_account = &ka[1];
   uint32_t clock_idx = prm->ka_num == 3 ? 2 : 3;
-  if ( (prm->ka_num != 3 && prm->ka_num != 4) ||
-       !valid_funding_account( &ka[0] ) ||
-       !valid_writable_account( prm, &ka[1], sizeof( pc_price_t ) ) ||
-       !pc_pub_key_equal( (pc_pub_key_t*)ka[clock_idx].key,
+  SolAccountInfo *clock_account = &ka[clock_idx];
+
+  // Verify that this is signed, writable with correct ownership and size
+  if ( !valid_funding_account( publish_account ) ||
+       !valid_writable_account( prm, price_account, sizeof( pc_price_t ) ) ||
+       !pc_pub_key_equal( (pc_pub_key_t*)clock_account->key,
                           (pc_pub_key_t*)sysvar_clock ) ) {
     return ERROR_INVALID_ARGUMENT;
   }
 
   // Verify that symbol account is initialized and corresponds to the
   // same symbol in the instruction parameters
-  pc_price_t *pptr = (pc_price_t*)ka[1].data;
+  pc_price_t *pptr = (pc_price_t*)price_account->data;
   if ( pptr->magic_ != PC_MAGIC ||
        pptr->ver_ != cptr->ver_ ||
        pptr->type_ != PC_ACCTYPE_PRICE ) {
@@ -506,7 +512,7 @@ static uint64_t upd_price( SolParameters *prm, SolAccountInfo *ka )
 
   // verify that publisher is valid
   uint32_t i = 0;
-  pc_pub_key_t *kptr = (pc_pub_key_t*)ka[0].key;
+  pc_pub_key_t *kptr = (pc_pub_key_t*)publish_account->key;
   for( i=0; i != pptr->num_; ++i ) {
     pc_price_comp_t *iptr = &pptr->comp_[i];
     if ( pc_pub_key_equal( kptr, &iptr->pub_ ) ) {
@@ -519,7 +525,7 @@ static uint64_t upd_price( SolParameters *prm, SolAccountInfo *ka )
 
   // reject if this price corresponds to the same or earlier time
   pc_price_info_t *fptr = &pptr->comp_[i].latest_;
-  sysvar_clock_t *sptr = (sysvar_clock_t*)ka[clock_idx].data;
+  sysvar_clock_t *sptr = (sysvar_clock_t*)clock_account->data;
   if ( cptr->cmd_ == e_cmd_upd_price &&
        cptr->pub_slot_ <= fptr->pub_slot_ ) {
     return ERROR_INVALID_ARGUMENT;
