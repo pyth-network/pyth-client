@@ -475,6 +475,20 @@ static uint64_t upd_test( SolParameters *prm, SolAccountInfo *ka )
   return SUCCESS;
 }
 
+static uint32_t find_comp_idx( SolAccountInfo *publish_account, SolAccountInfo *price_account ) {
+  uint32_t i = 0;
+  pc_pub_key_t *kptr = (pc_pub_key_t*)publish_account->key;
+  pc_price_t *pptr = (pc_price_t*)price_account->data;
+  for( i=0; i != pptr->num_; ++i ) {
+    pc_price_comp_t *iptr = &pptr->comp_[i];
+    if ( pc_pub_key_equal( kptr, &iptr->pub_ ) ) {
+      break;
+    }
+  }
+
+  return i;
+}
+
 static uint64_t upd_price( SolParameters *prm, SolAccountInfo *ka )
 {
   // Validate command parameters
@@ -511,20 +525,13 @@ static uint64_t upd_price( SolParameters *prm, SolAccountInfo *ka )
   }
 
   // verify that publisher is valid
-  uint32_t i = 0;
-  pc_pub_key_t *kptr = (pc_pub_key_t*)publish_account->key;
-  for( i=0; i != pptr->num_; ++i ) {
-    pc_price_comp_t *iptr = &pptr->comp_[i];
-    if ( pc_pub_key_equal( kptr, &iptr->pub_ ) ) {
-      break;
-    }
-  }
-  if ( i == pptr->num_ ) {
+  uint32_t comp_idx = find_comp_idx( publish_account, price_account );
+  if ( comp_idx == pptr->num_ ) {
     return ERROR_INVALID_ARGUMENT;
   }
 
   // reject if this price corresponds to the same or earlier time
-  pc_price_info_t *fptr = &pptr->comp_[i].latest_;
+  pc_price_info_t *fptr = &pptr->comp_[comp_idx].latest_;
   sysvar_clock_t *sptr = (sysvar_clock_t*)clock_account->data;
   if ( cptr->cmd_ == e_cmd_upd_price &&
        cptr->pub_slot_ <= fptr->pub_slot_ ) {
