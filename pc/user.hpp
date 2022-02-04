@@ -43,6 +43,9 @@ namespace pc
     // symbol price schedule callback
     void on_response( price_sched *, uint64_t ) override;
 
+    // send all pending updates
+    void send_pending_upds();
+
   private:
 
     // http-only request parsing
@@ -57,6 +60,7 @@ namespace pc
     };
 
     typedef std::vector<deferred_sub> def_vec_t;
+    typedef std::vector<price*> pending_vec_t;
 
     void parse_request( uint32_t );
     void parse_get_product_list( uint32_t );
@@ -73,13 +77,14 @@ namespace pc
     void add_unknown_symbol( uint32_t id );
     void add_error( uint32_t id, int err, str );
 
-    rpc_client     *rptr_;    // rpc manager api
-    manager        *sptr_;    // manager collection
-    user_http       hsvr_;    // http parser
-    jtree           jp_;      // json parser
-    json_wtr        jw_;      // json writer
-    def_vec_t       dvec_;    // deferred subscriptions
-    request_sub_set psub_;    // price subscriptions
+    rpc_client     *rptr_;        // rpc manager api
+    manager        *sptr_;        // manager collection
+    user_http       hsvr_;        // http parser
+    jtree           jp_;          // json parser
+    json_wtr        jw_;          // json writer
+    def_vec_t       dvec_;        // deferred subscriptions
+    request_sub_set psub_;        // price subscriptions
+    pending_vec_t   pending_vec_; // prices with pending updates
   };
 
 }
