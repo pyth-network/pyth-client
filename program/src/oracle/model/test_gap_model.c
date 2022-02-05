@@ -5,7 +5,7 @@
 #define EXP2M1_FXP_ORDER 7 /* EXP2M1_FXP_ORDER 4 yields a better than IEEE single precision accurate approximation */
 #include "gap_model.h"
 
-uint64_t
+static uint64_t
 gap_model_ref( uint64_t gap ) {
   if( !gap ) return UINT64_C(0);
   double x = ((double)gap) / ((double)GAP_MODEL_LAMBDA);
