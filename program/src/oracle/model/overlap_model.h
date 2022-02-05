@@ -49,7 +49,6 @@
 #include "../util/uwide.h"
 #include "../util/sqrt.h"
 #include "../util/rexp2.h"
-#include "../util/log2.h"
 
 #ifdef __cplusplus
 extern "C" {
