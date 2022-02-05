@@ -23,9 +23,9 @@
    to a standard EMA when gap is always 1 but naturally generalizes to
    non-uniform sampling (e.g. chain congestion), large gaps (e.g.
    EOD-to-next-SOD) and initialization (gap->infinity).  For this model,
-   lambda is known at compile time (see GAP_LAMBA) and on return r will
-   be in [0,lambda 2^30].  Gap==0 should not be passed to this model but
-   for specificity, the model here returns 0 if it is.
+   lambda is known at compile time (see GAP_MODEL_LAMBA) and on return r
+   will be in [0,lambda 2^30].  Gap==0 should not be passed to this
+   model but for specificity, the model here returns 0 if it is.
 
    For robustness and accuracy of the finite precision computation,
    lambda should be in 1 << lambda << 294801.  The precision of the
