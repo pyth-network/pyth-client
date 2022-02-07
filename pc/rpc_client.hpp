@@ -429,7 +429,6 @@ namespace pc
       static bool request( json_wtr&, upd_price*[], const unsigned n );
 
     private:
-      void build_tx( bincode& );
       static bool build_tx( bincode&, upd_price*[], unsigned n );
 
       hash         *bhash_;
