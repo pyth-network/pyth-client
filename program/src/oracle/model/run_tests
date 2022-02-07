@@ -10,15 +10,17 @@ CC="gcc -g -Wall -Werror -Wextra -Wconversion -Wstrict-aliasing=2 -Wimplicit-fal
 
 set -x
 
-$CC test_price_model.c price_model.c -o bin/test_price_model   || exit 1
-$CC test_gap_model.c                 -o bin/test_gap_model     || exit 1
-$CC test_overlap_model.c             -o bin/test_overlap_model || exit 1
-$CC test_weight_model.c              -o bin/test_weight_model  || exit 1
+$CC test_price_model.c price_model.c -o bin/test_price_model      || exit 1
+$CC test_gap_model.c                 -o bin/test_gap_model        || exit 1
+$CC test_overlap_model.c             -o bin/test_overlap_model    || exit 1
+$CC test_weight_model.c              -o bin/test_weight_model     || exit 1
+$CC test_leaky_integrator.c          -o bin/test_leaky_integrator || exit 1
 
-bin/test_price_model   || exit 1
-bin/test_gap_model     || exit 1
-bin/test_overlap_model || exit 1
-bin/test_weight_model  || exit 1
+bin/test_price_model      || exit 1
+bin/test_gap_model        || exit 1
+bin/test_overlap_model    || exit 1
+bin/test_weight_model     || exit 1
+bin/test_leaky_integrator || exit 1
 
 echo all tests passed
 
