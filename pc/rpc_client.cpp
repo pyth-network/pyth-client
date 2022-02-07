@@ -809,7 +809,7 @@ rpc::upd_price::upd_price()
   ckey_( nullptr ),
   gkey_( nullptr ),
   akey_( nullptr ),
-  cmd_( e_cmd_upd_price )
+  cmd_( e_cmd_batch_upd_price )
 {
 }
 
@@ -851,7 +851,7 @@ void rpc::upd_price::set_price( int64_t px,
   price_ = px;
   conf_  = conf;
   st_    = st;
-  cmd_   = is_agg?e_cmd_agg_price:e_cmd_upd_price;
+  cmd_   = is_agg?e_cmd_agg_price:e_cmd_batch_upd_price;
 }
 
 void rpc::upd_price::set_slot( const uint64_t pub_slot )
@@ -918,18 +918,30 @@ bool rpc::upd_price::build_tx(
   tx.add( *first.bhash_ ); // recent block hash
 
   // instructions section
-  tx.add_len( n ); // n instruction(s)
+  tx.add_len( 1 );
+
+  // Create the cmd_batch_upd_price instruction
+  tx.add( (uint8_t)( n + 2 ) ); // program_id index
+
+  // All the accounts this instruction accesses
+  tx.add_len( 2 + n ); // number of accounts: publish; clock and the symbol accounts
+  tx.add( (uint8_t)0 ); // index of publish account
   for ( unsigned i = 0; i < n; ++i ) {
-    tx.add( (uint8_t)( n + 2 ) ); // program_id index
-    tx.add_len< 3 >(); // 3 accounts: publish, symbol, sysvar
-    tx.add( (uint8_t)0 ); // index of publish account
     tx.add( (uint8_t)( i + 1 ) ); // index of symbol account
-    tx.add( (uint8_t)( n + 1 ) ); // index of sysvar account
+  }
+  tx.add( (uint8_t)( n + 1 ) ); // index of sysvar account
 
+  // Instruction parameter section
+  tx.add_len( sizeof( cmd_batch_upd_price_header ) + ( n * sizeof( cmd_upd_price ) ) ); 
+
+  // Add the header
+  tx.add( (uint32_t)PC_VERSION );
+  tx.add( (int32_t)( e_cmd_batch_upd_price ) );
+  tx.add( (uint64_t)( n ) );
+
+  // Add each instruction
+  for ( unsigned i = 0; i < n; ++i ) {
     auto const& upd = *upds[ i ];
-
-    // instruction parameter section
-    tx.add_len<sizeof(cmd_upd_price)>();
     tx.add( (uint32_t)PC_VERSION );
     tx.add( (int32_t)( upd.cmd_ ) );
     tx.add( (int32_t)( upd.st_ ) );
