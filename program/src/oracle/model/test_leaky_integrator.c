@@ -9,6 +9,7 @@ leaky_integrator_ref( uint64_t * _zh, uint64_t *_zl,
                       uint64_t    yh, uint64_t   yl,
                       uint64_t   _w,
                       uint64_t   _x ) {
+  static long double const _2_30  = (long double)(UINT64_C(1)<<30);
   static long double const _2_64  = 18446744073709551616.L;
   static long double const _2_128 = 18446744073709551616.L*18446744073709551616.L;
   static long double const _2_n30 = 1.L/(long double)(UINT64_C(1)<<30);
@@ -20,7 +21,7 @@ leaky_integrator_ref( uint64_t * _zh, uint64_t *_zl,
 
   long double y = _2_64*((long double)yh) + ((long double)yl);
   long double w = (long double)_w;
-  long double x = (long double)_x;
+  long double x = _2_30*(long double)_x;
 
   long double z = roundl( (y*w)*_2_n30 + x );
 
