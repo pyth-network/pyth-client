@@ -9,7 +9,7 @@ import random
 from pyth.tests.conftest import PRODUCTS
 
 @pytest.mark.asyncio
-async def test_batch_update_price(solana_test_validator, pythd, pyth_dir, pyth_init_product, pyth_init_price):
+async def test_batch_update_price(solana_test_validator, solana_logs, pythd, pyth_dir, pyth_init_product, pyth_init_price):
 
     messageIds = itertools.count()
 
