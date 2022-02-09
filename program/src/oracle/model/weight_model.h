@@ -44,7 +44,7 @@ extern "C" {
 
 #ifdef WEIGHT_MODEL_NEED_REF
 
-static long double
+static inline long double
 weight_model_ref( long double ratio_gap,
                   long double ratio_overlap ) {
   long double r = ratio_gap*ratio_overlap;
