@@ -37,12 +37,16 @@
    different mechanisms for chain congestion) without needing to modify
    anything else.  We could even incorporate time invariant processes by
    tweaking the API here to take the block sequence numbers of the
-   samples in question. */
+   samples in question.
+
+   If GAP_MODEL_NEED_REF is defined, this will also declare a high
+   accuracy floating point reference implementation "gap_model_ref" to
+   aid in testing / tuning block chain suitable approximations. */
 
 #include "../util/exp2m1.h"
 
-#ifdef __cplusplus
-extern "C" {
+#ifdef GAP_MODEL_NEED_REF
+#include <math.h>
 #endif
 
 /* GAP_MODEL_LAMBDA should an integer in [1,294802)
@@ -50,6 +54,22 @@ extern "C" {
 
 #ifndef GAP_MODEL_LAMBDA
 #define GAP_MODEL_LAMBDA (3000)
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#ifdef GAP_MODEL_NEED_REF
+
+/* Returns ps/pd ~ 1/(exp(gap/GAP_MODEL_LAMBDA)-1) if gap is positive
+   and 0 otherwise */
+
+static inline long double
+gap_model_ref( long double gap ) {
+  return gap>0.L ? (1.L / expm1l( gap / ((long double)GAP_MODEL_LAMBDA) ) ) : 0.L;
+}
+
 #endif
 
 static inline uint64_t      /* In [0,2^30 GAP_MODEL_LAMBDA] */

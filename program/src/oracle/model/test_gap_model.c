@@ -2,16 +2,9 @@
 #include <math.h>
 #include "../util/prng.h"
 
+#define GAP_MODEL_NEED_REF
 #define EXP2M1_FXP_ORDER 7 /* EXP2M1_FXP_ORDER 4 yields a better than IEEE single precision accurate approximation */
 #include "gap_model.h"
-
-static uint64_t
-gap_model_ref( uint64_t gap ) {
-  if( !gap ) return UINT64_C(0);
-  double x = ((double)gap) / ((double)GAP_MODEL_LAMBDA);
-  double y = 1./expm1( x );
-  return (uint64_t)round( y*(double)(1<<30) );
-}
 
 static uint64_t const ulp_thresh[8] = {
   UINT64_C(0),
@@ -45,7 +38,7 @@ main( int     argc,
     }
 
     uint64_t y = gap_model( x );
-    uint64_t z = gap_model_ref( x );
+    uint64_t z = (uint64_t)roundl( gap_model_ref( x )*(long double)(1<<30) );
 
     if( !x ) {
       if( y!=z ) { printf( "FAIL (iter %i: special x %lu y %lu z %lu)\n", i, x, y, z ); return 1; }
