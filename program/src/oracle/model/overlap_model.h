@@ -44,20 +44,50 @@
    sigma_min/sigma_max<<1), the limitations of the fixed point
    representation limits accuracy at most ~3e-5.  The default
    REXP2_FXP_ORDER is accurate to better than IEEE single precision when
-   sigma_0 and sigma_1 have comparable magnitudes. */
+   sigma_0 and sigma_1 have comparable magnitudes.
+
+   If OVERLAP_MODEL_NEED_REF is defined, this will also declare a high
+   accuracy floating point reference implementation "overlap_model_ref"
+   to aid in testing / tuning block chain suitable approximations. */
 
 #include "../util/uwide.h"
 #include "../util/sqrt.h"
 #include "../util/rexp2.h"
 
-#ifdef __cplusplus
-extern "C" {
+#ifdef OVERLAP_MODEL_NEED_REF
+#include <math.h>
 #endif
 
 /* OVERLAP_MODEL_WEIGHT should be a uint64_t up to ~2^34 */
 
 #ifndef OVERLAP_MODEL_WEIGHT
 #define OVERLAP_MODEL_WEIGHT (UINT64_C(1)<<30)
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#ifdef OVERLAP_MODEL_NEED_REF
+
+/* Compute ps/pd ~ (OVERLAP_MODEL_WEIGHT/2^30)
+                   sqrt( 2 sigma_0 sigma_1 / (sigma_0^2 + sigma_1^2) )
+                   exp( -0.5 (mu_0-mu_1)^2 / (sigma_0^2 + sigma_1^2) )
+   If sigma_0 is not positive, it will be treated as zero.  Similarly
+   for sigma_1.  Assumes (sigma_0+sigma_1)^2 <= LDBL_MAX. */
+
+static inline long double
+overlap_model_ref( long double mu_0, long double sigma_0,
+                   long double mu_1, long double sigma_1 ) {
+  static long double const weight = ((long double)OVERLAP_MODEL_WEIGHT) / ((long double)(UINT64_C(1)<<30));
+  if( !(sigma_0>0.L) ) sigma_0 = 0.L;
+  if( !(sigma_1>0.L) ) sigma_1 = 0.L;
+  if( sigma_0==0.L && sigma_1==0.L ) return mu_0==mu_1 ? weight : 0.L;
+  long double kappa_sq = 1.L/(sigma_0*sigma_0 + sigma_1*sigma_1);
+  long double delta    = mu_0-mu_1;
+  return weight*(sqrtl( (2.L*kappa_sq)*(sigma_0*sigma_1) )*expl( -(0.5L*kappa_sq)*(delta*delta) ));
+}
+
 #endif
 
 static inline uint64_t                              /* In [0,OVERLAP_MODEL_WEIGHT] */

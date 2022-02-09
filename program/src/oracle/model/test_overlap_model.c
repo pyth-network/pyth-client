@@ -2,22 +2,9 @@
 #include <math.h>
 #include "../util/prng.h"
 
+#define OVERLAP_MODEL_NEED_REF
 #define REXP2_FXP_ORDER 7 /* REXP2_FXP_ORDER 5 yields a better than IEEE single precision accurate approximation */
 #include "overlap_model.h"
-
-static long double
-overlap_model_ref( uint64_t _mu_0, uint64_t _sigma_0,
-                   uint64_t _mu_1, uint64_t _sigma_1 ) {
-  /* Need long double because uint64_t not exactly representable in a
-     IEEE double */
-  static long double weight = ((long double)OVERLAP_MODEL_WEIGHT) / ((long double)(UINT64_C(1)<<30));
-  if( !_sigma_0 && !_sigma_1 ) return _mu_0==_mu_1 ? weight : 0.L; 
-  long double mu_0 = (long double)_mu_0; long double sigma_0 = (long double)_sigma_0;
-  long double mu_1 = (long double)_mu_1; long double sigma_1 = (long double)_sigma_1;
-  long double kappa_sq = 1.L/(sigma_0*sigma_0 + sigma_1*sigma_1);
-  long double delta    = mu_0-mu_1;
-  return weight*(sqrtl( (2.L*kappa_sq)*(sigma_0*sigma_1) )*expl( -(0.5L*kappa_sq)*(delta*delta) ));
-}
 
 static long double const ulp_fine[8] = {
          0.0L,
@@ -76,8 +63,9 @@ main( int     argc,
     uint64_t sigma_max = sigma_0<sigma_1 ? sigma_1 : sigma_0;
     int fine = (sigma_min >= (sigma_max>>1)); /* sigmas of the two are comparable */
 
-    long double y   =           (long double)overlap_model    ( mu_0,sigma_0, mu_1,sigma_1 );
-    long double z   = ((long double)(1<<30))*overlap_model_ref( mu_0,sigma_0, mu_1,sigma_1 );
+    long double y   = (long double)overlap_model( mu_0,sigma_0, mu_1,sigma_1 );
+    long double z   = ((long double)(1<<30))*overlap_model_ref( (long double)mu_0,(long double)sigma_0,
+                                                                (long double)mu_1,(long double)sigma_1 );
     long double ulp = fabsl( y - z );
     if( ulp>=(fine ? thresh_fine : thresh_coarse) ) {
       printf( "FAIL (iter %i: i(%lu,%lu) j(%lu,%lu) y %Lf z %Lf ulp %Lf)\n", iter, mu_0, sigma_0, mu_1, sigma_1, y, z, ulp );
