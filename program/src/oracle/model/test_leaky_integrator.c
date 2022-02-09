@@ -2,37 +2,8 @@
 #include <math.h>
 #include "../util/prng.h"
 
+#define LEAKY_INTEGRATOR_NEED_REF
 #include "leaky_integrator.h"
-
-static uint64_t
-leaky_integrator_ref( uint64_t * _zh, uint64_t *_zl,
-                      uint64_t    yh, uint64_t   yl,
-                      uint64_t   _w,
-                      uint64_t   _x ) {
-  static long double const _2_30  = (long double)(UINT64_C(1)<<30);
-  static long double const _2_64  = 18446744073709551616.L;
-  static long double const _2_128 = 18446744073709551616.L*18446744073709551616.L;
-  static long double const _2_n30 = 1.L/(long double)(UINT64_C(1)<<30);
-
-  /* Using long double because uint64_t not exactly representable in a
-     IEEE double.  Due to limited precision of the long doubles, it
-     turns out that this calculation is actually less accurate than the
-     actual fixed point implementation. */
-
-  long double y = _2_64*((long double)yh) + ((long double)yl);
-  long double w = (long double)_w;
-  long double x = _2_30*(long double)_x;
-
-  long double z = roundl( (y*w)*_2_n30 + x );
-
-  uint64_t co = (uint64_t)floorl( z*(1.L/_2_128) ); z -= ((long double)co)*_2_128;
-  uint64_t zh = (uint64_t)floorl( z*(1.L/_2_64)  ); z -= ((long double)zh)*_2_64;
-  uint64_t zl = (uint64_t)floorl( z );
-
-  *_zh = zh;
-  *_zl = zl;
-  return co;
-}
 
 int
 main( int     argc,
@@ -44,6 +15,8 @@ main( int     argc,
 
   long double max_rerr = 0.L;
 
+  static long double const _2_30  =     (long double)(UINT64_C(1)<<30);
+  static long double const _2_n30 = 1.L/(long double)(UINT64_C(1)<<30);
   static long double const _2_64  = 18446744073709551616.L;
   static long double const _2_128 = 18446744073709551616.L*18446744073709551616.L;
 
@@ -57,23 +30,24 @@ main( int     argc,
     uint64_t yh = prng_uint64( prng );
     uint64_t yl = prng_uint64( prng );
     uwide_sr( &yh,&yl, yh,yl, (int)(t & UINT32_C(127)) ); t >>= 7;
+    long double y = (_2_64*(long double)yh) + (long double)yl;
 
     uint64_t w = (uint64_t)(prng_uint32( prng ) >> (t & UINT32_C(31))); t >>= 5;
     if( w>(UINT64_C(1)<<30) ) w = (UINT64_C(1)<<30);
 
     uint64_t x = prng_uint64( prng ) >> (t & UINT32_C(63)); t >>= 6;
     
-    uint64_t zh,    zl;     uint64_t co     = leaky_integrator    ( &zh,&zl,         yh,yl, w, x );
-    uint64_t zh_ref,zl_ref; uint64_t co_ref = leaky_integrator_ref( &zh_ref,&zl_ref, yh,yl, w, x );
+    uint64_t zh,zl; uint64_t co = leaky_integrator( &zh,&zl, yh,yl, w, x );
+    long double z = ((long double)co)*_2_128 + ((long double)zh)*_2_64 + ((long double)zl);
 
-    long double z     = ((long double)co    )*_2_128 + ((long double)zh    )*_2_64 + ((long double)zl    );
-    long double z_ref = ((long double)co_ref)*_2_128 + ((long double)zh_ref)*_2_64 + ((long double)zl_ref);
+    long double z_ref = roundl( leaky_integrator_ref( y, ((long double)w)*_2_n30, _2_30*(long double)x ) );
 
-    long double rerr  = fabsl( z-z_ref ) / fmaxl( 1.L, z_ref );
+    long double aerr = fabsl( z-z_ref );
+    long double rerr = aerr / fmaxl( 1.L, z_ref );
 
-    if( rerr > 2.L ) {
-      printf( "FAIL (iter %i: y %lx %016lx w %lx x %lx z %lx %016lx %016lx ref %lx %016lx %016lx rerr %.1Le\n", iter,
-              yh,yl, w, x, co,zh,zl, co_ref,zh_ref,zl_ref, rerr );
+    if( rerr > 2.6e-14 ) {
+      printf( "FAIL (iter %i: y %Le w %lx x %lx z %Le z_ref %Le aerr %.1Le rerr %.1Le\n", iter,
+              y, w, x, z, z_ref, aerr, rerr );
       return 1;
     }
     max_rerr = fmaxl( rerr, max_rerr );

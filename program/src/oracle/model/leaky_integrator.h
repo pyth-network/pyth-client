@@ -12,12 +12,38 @@
    where co is the "carry out".  (Can be used to detect overflow and/or
    automatically rescale as necessary.)  Assumes w is in [0,2^30].
    Calculation is essentially full precision O(1) and more accurate than
-   a long double implementation for a wide range inputs. */
+   a long double implementation for a wide range inputs.
+
+   If LEAKY_INTEGRATOR_NEED_REF is defined, this will also declare a
+   high accuracy floating point reference implementation
+   "leaky_integrator_ref" to aid in testing / tuning block chain
+   suitable approximations.  (Note: In this case, the limitations of
+   IEEE long double floating point mean in this case leaky_integator_ref
+   is actually expected to be _less_ _precise_ than leaky_integrator
+   when the time scale * price scales involved require more than 64-bit
+   mantissas.) */
 
 #include "../util/uwide.h"
 
+#ifdef LEAKY_INTEGRATOR_NEED_REF
+#include <math.h>
+#endif
+
 #ifdef __cplusplus
 extern "C" {
+#endif
+
+#ifdef LEAKY_INTEGRATOR_NEED_REF
+
+/* Compute z ~ y w + x */
+
+static inline long double
+leaky_integrator_ref( long double y,
+                      long double w,
+                      long double x ) {
+  return fmal(y,w,x);
+}
+
 #endif
 
 static inline uint64_t
