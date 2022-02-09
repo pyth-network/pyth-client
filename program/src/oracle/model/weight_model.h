@@ -26,12 +26,31 @@
       ratio_gap    /2^30 ~ PROB(SIM)     / PROB(~SIM)
 
    This calcuation ~30-bits accurate (the result is +/-1 ulp of the
-   correctly rounded result). */
+   correctly rounded result).
+
+   If WEIGHT_MODEL_NEED_REF is defined, this will also declare a high
+   accuracy floating point reference implementation "weight_model_ref"
+   to aid in testing / tuning block chain suitable approximations. */
 
 #include "../util/uwide.h"
 
+#ifdef WEIGHT_MODEL_NEED_REF
+#include <math.h>
+#endif
+
 #ifdef __cplusplus
 extern "C" {
+#endif
+
+#ifdef WEIGHT_MODEL_NEED_REF
+
+static long double
+weight_model_ref( long double ratio_gap,
+                  long double ratio_overlap ) {
+  long double r = ratio_gap*ratio_overlap;
+  return r / (1.L + r);
+}
+
 #endif
 
 static inline uint64_t /* In [0,2^30] */
