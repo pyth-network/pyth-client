@@ -451,7 +451,7 @@ Test( oracle, upd_price ) {
 Test( oracle, batch_upd_price ) {
 
   // In this test we submit a batch update containing both a valid and invalid
-  // price update. The valid update should have affect, the invalid update
+  // price update. The valid update should have an affect; the invalid update
   // should not, and the transaction should complete successfully.
 
   // Set up the Solana accounts
