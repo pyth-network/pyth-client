@@ -475,6 +475,8 @@ static uint64_t upd_test( SolParameters *prm, SolAccountInfo *ka )
   return SUCCESS;
 }
 
+// Find the index of the component price associated with the publishers key.
+// Returns price_account->data if the publisher's key isn't found.
 static uint32_t find_comp_idx( SolAccountInfo *publish_account, SolAccountInfo *price_account ) {
   uint32_t i = 0;
   pc_pub_key_t *kptr = (pc_pub_key_t*)publish_account->key;
