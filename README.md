@@ -77,3 +77,31 @@ docker run -t \
 ```
 
 in this example, `id\:000000\,sig\:06\,src\:000000\,op\:flip1\,pos\:0` is the file containing the failing input.
+
+## Development Setup Using VS Code
+
+First create a docker container in daemon as your working container (`IMAGE` and `PYTH_REPO` same as above):
+
+```
+docker run --name pyth-dev -d \\
+  --volume "${HOME}:/home/pyth/home" \\
+  --volume "${HOME}/.config:/home/pyth/.config" \\
+  --volume "${HOME}/.ssh:/home/pyth/.ssh" \\ # Github access
+  --mount "type=bind,src=${PYTH_REPO},target=/home/pyth/pyth-client" \\
+  --platform linux/amd64 \\
+  $IMAGE \\
+  /bin/bash -c "while [ true ]; do sleep 1000; done"
+```
+
+Default user in the image is `pyth` which may not have access to your directories. Assign your user id and group id to it to enable access.
+```
+host@host$ id $USER # Shows user_id, group_id, and group names
+host@host$ docker exec -ti pyth-dev bash
+pyth@pyth-dev$ sudo su
+root@pyth-dev# groupadd -g 1004 1004
+root@pyth-dev# usermod -u 1002 -g 1004 -s /bin/bash pyth
+```
+
+Finally, in docker extension inside VS Code click right and choose "Attach VS Code". If you're using a remote host in VS Code make sure to let this connection be open.
+
+To get best experience from C++ IntelliSense, open entire `/home/pyth` in VS Code to include `solana` directory in home for lookup directories.
