@@ -221,6 +221,12 @@ typedef enum {
   // key[2] sysvar_clock account  [readable]
   e_cmd_upd_price,
 
+  // publish component price, never returning an error even if the update failed
+  // key[0] funding account       [signer writable]
+  // key[1] price account         [writable]
+  // key[2] sysvar_clock account  [readable]
+  e_cmd_upd_price_no_fail_on_error,
+
   // publish a batch of component prices
   // key[0]    funding account       [signer writable]
   // key[1]    sysvar_clock account  [readable]
