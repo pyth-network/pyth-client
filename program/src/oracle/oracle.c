@@ -554,7 +554,7 @@ static uint64_t batch_upd_price( SolParameters *prm, SolAccountInfo *ka ) {
     return ERROR_INVALID_ARGUMENT;
   }
   SolAccountInfo *publish_account = &ka[0];
-  SolAccountInfo *clock_account = &ka[hptr->count_ + 1];
+  SolAccountInfo *clock_account = &ka[1];
 
   // Check that the publish accounts and the clock accounts are valid
   if ( !valid_funding_account( publish_account ) ||
@@ -567,7 +567,7 @@ static uint64_t batch_upd_price( SolParameters *prm, SolAccountInfo *ka ) {
   for ( uint64_t i = 0; i < hptr->count_; i++ ) {
 
     cmd_upd_price_t *uptr = &cptr->upds_[i];
-    SolAccountInfo *price_account = &ka[1 + i];
+    SolAccountInfo *price_account = &ka[2 + i];
 
     // Check that the price account is signed, writable with the correct ownership and is of the correct size
     if ( !valid_writable_account( prm, price_account, sizeof( pc_price_t ) ) ) {

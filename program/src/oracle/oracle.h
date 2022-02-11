@@ -223,8 +223,9 @@ typedef enum {
 
   // publish a batch of component prices
   // key[0]    funding account       [signer writable]
-  // key[1..n] price accounts        [writable]
-  // key[n]    sysvar_clock account  [readable]
+  // key[1]    sysvar_clock account  [readable]
+  // key[2...n] price accounts       [writable]
+  
   e_cmd_batch_upd_price,
 
   // compute aggregate price
