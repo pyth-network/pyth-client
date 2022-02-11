@@ -448,6 +448,103 @@ Test( oracle, upd_price ) {
   cr_assert( ERROR_INVALID_ARGUMENT == dispatch( &prm, acc ) );
 }
 
+Test( oracle, upd_price_no_fail_on_error ) {
+  cmd_upd_price_t idata = {
+    .ver_    = PC_VERSION,
+    .cmd_    = e_cmd_upd_price_no_fail_on_error,
+    .status_ = PC_STATUS_TRADING,
+    .price_  = 42L,
+    .conf_   = 9L,
+    .pub_slot_ = 1
+  };
+  SolPubkey p_id  = {.x = { 0xff, }};
+  SolPubkey pkey = {.x = { 1, }};
+  SolPubkey skey = {.x = { 3, }};
+  sysvar_clock_t cvar = {
+    .slot_ = 1
+  };
+  uint64_t pqty = 100, sqty = 200;
+  pc_price_t sptr[1];
+  sol_memset( sptr, 0, sizeof( pc_price_t ) );
+  sptr->magic_ = PC_MAGIC;
+  sptr->ver_   = PC_VERSION;
+  sptr->ptype_ = PC_PTYPE_PRICE;
+  sptr->type_  = PC_ACCTYPE_PRICE;
+  sptr->num_   = 1;
+  
+  SolAccountInfo acc[] = {{
+      .key         = &pkey,
+      .lamports    = &pqty,
+      .data_len    = 0,
+      .data        = NULL,
+      .owner       = NULL,
+      .rent_epoch  = 0,
+      .is_signer   = true,
+      .is_writable = true,
+      .executable  = false
+  },{
+      .key         = &skey,
+      .lamports    = &sqty,
+      .data_len    = sizeof( pc_price_t ),
+      .data        = (uint8_t*)sptr,
+      .owner       = &p_id,
+      .rent_epoch  = 0,
+      .is_signer   = false,
+      .is_writable = true,
+      .executable  = false
+  },{
+      .key         = (SolPubkey*)sysvar_clock,
+      .lamports    = &sqty,
+      .data_len    = sizeof( sysvar_clock_t ),
+      .data        = (uint8_t*)&cvar,
+      .owner       = &p_id,
+      .rent_epoch  = 0,
+      .is_signer   = false,
+      .is_writable = false,
+      .executable  = false
+  }};
+  SolParameters prm = {
+    .ka         = acc,
+    .ka_num     = 3,
+    .data       = (const uint8_t*)&idata,
+    .data_len   = sizeof( idata ),
+    .program_id = &p_id
+  };
+
+  // We haven't permissioned the publish account for the price account
+  // yet, so any update should fail silently and have no effect. The
+  // transaction should "succeed".
+  cr_assert( SUCCESS == dispatch( &prm, acc ) );
+  cr_assert( sptr->comp_[0].latest_.price_ == 0L );
+  cr_assert( sptr->comp_[0].latest_.conf_ == 0L );
+  cr_assert( sptr->comp_[0].latest_.pub_slot_ == 0 );
+  cr_assert( sptr->agg_.pub_slot_ == 0 );
+  cr_assert( sptr->valid_slot_ == 0 );  
+
+  // Now permission the publish account for the price account.
+  pc_pub_key_assign( &sptr->comp_[0].pub_, (pc_pub_key_t*)&pkey );
+
+  // The update should now succeed, and have an effect.
+  cr_assert( SUCCESS == dispatch( &prm, acc ) );
+  cr_assert( sptr->comp_[0].latest_.price_ == 42L );
+  cr_assert( sptr->comp_[0].latest_.conf_ == 9L );
+  cr_assert( sptr->comp_[0].latest_.pub_slot_ == 1 );
+  cr_assert( sptr->agg_.pub_slot_ == 1 );
+  cr_assert( sptr->valid_slot_ == 0 );
+
+  // Invalid updates, such as publishing an update for the current slot, 
+  // should still fail silently and have no effect.
+  idata.price_ = 55L;
+  idata.conf_ = 22L;
+  idata.pub_slot_ = 1;
+  cr_assert( SUCCESS == dispatch( &prm, acc ) );
+  cr_assert( sptr->comp_[0].latest_.price_ == 42L );
+  cr_assert( sptr->comp_[0].latest_.conf_ == 9L );
+  cr_assert( sptr->comp_[0].latest_.pub_slot_ == 1 );
+  cr_assert( sptr->agg_.pub_slot_ == 1 );
+  cr_assert( sptr->valid_slot_ == 0 );
+}
+
 Test( oracle, upd_aggregate ) {
   pc_price_t px[1];
   sol_memset( px, 0, sizeof( pc_price_t ) );
