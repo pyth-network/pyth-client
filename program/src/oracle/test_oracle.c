@@ -450,9 +450,10 @@ Test( oracle, upd_price ) {
 
 Test( oracle, batch_upd_price ) {
 
-  // In this test we submit a batch update containing both a valid and invalid
-  // price update. The valid update should have an affect; the invalid update
-  // should not, and the transaction should complete successfully.
+  // In this test we submit a batch update containing two price updates for different
+  // price accounts. We will only permission the publisher account for the first price
+  // account, making the update to the second invalid. The valid update should have an 
+  // affect; the invalid update should not, and the transaction should complete successfully.
 
   // Set up the Solana accounts
   SolPubkey p_id  = {.x = { 0xff, }};
@@ -472,8 +473,10 @@ Test( oracle, batch_upd_price ) {
     sptr[i].ptype_ = PC_PTYPE_PRICE;
     sptr[i].type_  = PC_ACCTYPE_PRICE;
     sptr[i].num_   = 1;
-    pc_pub_key_assign( &sptr[i].comp_[0].pub_, (pc_pub_key_t*)&pkey );
   }
+
+  // Only permission the publisher account for the first price account.
+  pc_pub_key_assign( &sptr[0].comp_[0].pub_, (pc_pub_key_t*)&pkey );
 
   SolAccountInfo acc[] = {{
       .key         = &pkey,
@@ -484,6 +487,16 @@ Test( oracle, batch_upd_price ) {
       .rent_epoch  = 0,
       .is_signer   = true,
       .is_writable = true,
+      .executable  = false
+  },{
+      .key         = (SolPubkey*)sysvar_clock,
+      .lamports    = &sqty,
+      .data_len    = sizeof( sysvar_clock_t ),
+      .data        = (uint8_t*)&cvar,
+      .owner       = &p_id,
+      .rent_epoch  = 0,
+      .is_signer   = false,
+      .is_writable = false,
       .executable  = false
   },{
       .key         = &skey,
@@ -505,19 +518,10 @@ Test( oracle, batch_upd_price ) {
       .is_signer   = false,
       .is_writable = true,
       .executable  = false
-  },{
-      .key         = (SolPubkey*)sysvar_clock,
-      .lamports    = &sqty,
-      .data_len    = sizeof( sysvar_clock_t ),
-      .data        = (uint8_t*)&cvar,
-      .owner       = &p_id,
-      .rent_epoch  = 0,
-      .is_signer   = false,
-      .is_writable = false,
-      .executable  = false
   }};
 
-  // Create a request with two updates: one valid and one invalid
+  // Create a request with two updates: one valid and one invalid. The second update is invalid
+  // because the publisher key isn't permissioned for that price account.
   uint64_t data_len = sizeof(cmd_batch_upd_price_header_t) + (sizeof(cmd_upd_price_t) * num_price_accounts);
   char input_data[data_len]; 
   cmd_batch_upd_price_t *req = (cmd_batch_upd_price_t*)&input_data;
@@ -534,9 +538,9 @@ Test( oracle, batch_upd_price ) {
   upd->conf_ = 9L;
   upd->pub_slot_ = 1;
 
-  // The invalid update: incorrect program version
+  // The invalid update: not permissioned 
   upd = &req->upds_[1];
-  upd->ver_ = 1;
+  upd->ver_ = PC_VERSION;
   upd->cmd_ = e_cmd_batch_upd_price;
   upd->status_ = PC_STATUS_TRADING;
   upd->price_ = 73L;
