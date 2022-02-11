@@ -809,7 +809,7 @@ rpc::upd_price::upd_price()
   ckey_( nullptr ),
   gkey_( nullptr ),
   akey_( nullptr ),
-  cmd_( e_cmd_upd_price )
+  cmd_( e_cmd_upd_price_no_fail_on_error )
 {
 }
 
@@ -851,7 +851,7 @@ void rpc::upd_price::set_price( int64_t px,
   price_ = px;
   conf_  = conf;
   st_    = st;
-  cmd_   = is_agg?e_cmd_agg_price:e_cmd_upd_price;
+  cmd_   = is_agg?e_cmd_agg_price:e_cmd_upd_price_no_fail_on_error;
 }
 
 void rpc::upd_price::set_slot( const uint64_t pub_slot )
