@@ -1,232 +1,69 @@
-#pragma once
+#ifndef _pyth_oracle_upd_aggregrate_h_
+#define _pyth_oracle_upd_aggregrate_h_
+
+#include <limits.h> /* For INT64_MAX */
 
 #include "oracle.h"
 #include "model/price_model.h"
-#include "model/price_model.c" /* FIXME: HACK TO DEAL WITH DOCKER LINKAGE ISSUES */
-#include "pd.h"
+#include "model/twap_model.h"
 
-#include <limits.h>
+/* FIXME: TEMP HACK TO DEAL WITH LINKING */
+#include "model/price_model.c"
+#include "model/twap_model.c"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef struct pc_qset
-{
-  pd_t      iprice_[PC_COMP_SIZE];
-  pd_t      uprice_[PC_COMP_SIZE];
-  pd_t      lprice_[PC_COMP_SIZE];
-  pd_t      weight_[PC_COMP_SIZE];
-  int64_t   decay_[1+PC_MAX_SEND_LATENCY];
-  int64_t   fact_[PC_FACTOR_SIZE];
-  int32_t   expo_;
-} pc_qset_t;
-
-// initialize quote-set temporary data in heap area
-static pc_qset_t *qset_new( int expo )
-{
-  // allocate off heap
-  pc_qset_t *qs = (pc_qset_t*)PC_HEAP_START;
-
-  // sqrt of numbers 1 to 25 for decaying conf. interval based on slot delay
-  qs->decay_[0]  = 1000000000L;
-  qs->decay_[1]  = 1000000000L;
-  qs->decay_[2]  = 1414213562L;
-  qs->decay_[3]  = 1732050807L;
-  qs->decay_[4]  = 2000000000L;
-  qs->decay_[5]  = 2236067977L;
-  qs->decay_[6]  = 2449489742L;
-  qs->decay_[7]  = 2645751311L;
-  qs->decay_[8]  = 2828427124L;
-  qs->decay_[9]  = 3000000000L;
-  qs->decay_[10] = 3162277660L;
-  qs->decay_[11] = 3316624790L;
-  qs->decay_[12] = 3464101615L;
-  qs->decay_[13] = 3605551275L;
-  qs->decay_[14] = 3741657386L;
-  qs->decay_[15] = 3872983346L;
-  qs->decay_[16] = 4000000000L;
-  qs->decay_[17] = 4123105625L;
-  qs->decay_[18] = 4242640687L;
-  qs->decay_[19] = 4358898943L;
-  qs->decay_[20] = 4472135954L;
-  qs->decay_[21] = 4582575694L;
-  qs->decay_[22] = 4690415759L;
-  qs->decay_[23] = 4795831523L;
-  qs->decay_[24] = 4898979485L;
-  qs->decay_[25] = 5000000000L;
-
-  // powers of 10 for use in decimal arithmetic scaling
-  qs->fact_[0]   = 1L;
-  qs->fact_[1]   = 10L;
-  qs->fact_[2]   = 100L;
-  qs->fact_[3]   = 1000L;
-  qs->fact_[4]   = 10000L;
-  qs->fact_[5]   = 100000L;
-  qs->fact_[6]   = 1000000L;
-  qs->fact_[7]   = 10000000L;
-  qs->fact_[8]   = 100000000L;
-  qs->fact_[9]   = 1000000000L;
-  qs->fact_[10]  = 10000000000L;
-  qs->fact_[11]  = 100000000000L;
-  qs->fact_[12]  = 1000000000000L;
-  qs->fact_[13]  = 10000000000000L;
-  qs->fact_[14]  = 100000000000000L;
-  qs->fact_[15]  = 1000000000000000L;
-  qs->fact_[16]  = 10000000000000000L;
-  qs->fact_[17]  = 100000000000000000L;
-
-  qs->expo_ = expo;
-
-  return qs;
-}
-
-static void upd_ema(
-    pc_ema_t *ptr, pd_t *val, pd_t *conf, int64_t nslot, pc_qset_t *qs
-    , pc_price_t *prc_ptr)
-{
-  pd_t numer[1], denom[1], cwgt[1], wval[1], decay[1], diff[1], one[1];
-  pd_new( one, 100000000L, -8 );
-  if ( conf->v_ ) {
-    pd_div( cwgt, one, conf );
-  } else {
-    pd_set( cwgt, one );
-  }
-  if ( nslot > PD_EMA_MAX_DIFF ) {
-    // initial condition
-    pd_mul( numer, val, cwgt );
-    pd_set( denom, cwgt );
-  } else {
-    // compute decay factor
-    pd_new( diff, nslot, 0 );
-    pd_new( decay, PD_EMA_DECAY, PD_EMA_EXPO );
-    pd_mul( decay, decay, diff );
-    pd_add( decay, decay, one, qs->fact_ );
-
-    // compute numer/denom and new value from decay factor
-    if ( prc_ptr->drv1_ ) {
-      pd_load( numer, ptr->numer_ );
-      pd_load( denom, ptr->denom_ );
-    }
-    else {
-      // temporary upgrade code
-      pd_new_scale( numer, ptr->numer_, PD_EMA_EXPO );
-      pd_new_scale( denom, ptr->denom_, PD_EMA_EXPO );
-    }
-    if ( numer->v_ < 0 || denom->v_ < 0 ) {
-      // temporary reset twap on negative value
-      pd_set( numer, val );
-      pd_set( denom, one );
-    }
-    else {
-      pd_mul( numer, numer, decay );
-      pd_mul( wval, val, cwgt );
-      pd_add( numer, numer, wval, qs->fact_ );
-      pd_mul( denom, denom, decay );
-      pd_add( denom, denom, cwgt, qs->fact_ );
-      pd_div( val, numer, denom );
-    }
-  }
-
-  // adjust and store results
-  pd_adjust( val, qs->expo_, qs->fact_ );
-  ptr->val_   = val->v_;
-  int64_t numer1, denom1;
-  if ( pd_store( &numer1, numer ) && pd_store( &denom1, denom ) ) {
-    ptr->numer_ = numer1;
-    ptr->denom_ = denom1;
-  }
-  prc_ptr->drv1_ = 1;
-}
-
-static inline void upd_twap(
-    pc_price_t *ptr, int64_t nslots, pc_qset_t *qs )
-{
-  pd_t px[1], conf[1];
-  pd_new_scale( px, ptr->agg_.price_, ptr->expo_ );
-  pd_new_scale( conf, ( int64_t )( ptr->agg_.conf_ ), ptr->expo_ );
-  upd_ema( &ptr->twap_, px, conf, nslots, qs, ptr );
-  upd_ema( &ptr->twac_, conf, conf, nslots, qs, ptr );
-}
-
-// compute weighted percentile
-static void wgt_ptile(
-  pd_t * const res
-  , const pd_t * const prices, const pd_t * const weights, const uint32_t num
-  , const pd_t * const ptile, pc_qset_t *qs )
-{
-  pd_t cumwgt[ PC_COMP_SIZE ];
-
-  pd_t cumwgta[ 1 ], half[ 1 ];
-  pd_new( cumwgta, 0, 0 );
-  pd_new( half, 5, -1 );
-  for ( uint32_t i = 0; i < num; ++i ) {
-    const pd_t * const wptr = &weights[ i ];
-    pd_t weight[ 1 ];
-    pd_mul( weight, wptr, half );
-    pd_add( &cumwgt[ i ], cumwgta, weight, qs->fact_ );
-    pd_add( cumwgta, cumwgta, wptr, qs->fact_ );
-  }
-
-  uint32_t i = 0;
-  for( ; i != num && pd_lt( &cumwgt[i], ptile, qs->fact_ ); ++i );
-  if ( i == num ) {
-    pd_set( res, &prices[num-1] );
-  } else if ( i == 0 ) {
-    pd_set( res, &prices[0] );
-  } else {
-    pd_t t1[1], t2[1];
-    pd_sub( t1, &prices[i], &prices[i-1], qs->fact_ );
-    pd_sub( t2, ptile, &cumwgt[i-1], qs->fact_ );
-    pd_mul( t1, t1, t2 );
-    pd_sub( t2, &cumwgt[i], &cumwgt[i-1], qs->fact_ );
-    pd_div( t1, t1, t2 );
-    pd_add( res, &prices[i-1], t1, qs->fact_ );
-  }
-}
-
 // update aggregate price
-static inline void upd_aggregate( pc_price_t *ptr, uint64_t slot )
-{
-  // only re-compute aggregate in next slot
-  if ( slot <= ptr->agg_.pub_slot_ ) {
-    return;
-  }
-  pc_qset_t *qs = qset_new( ptr->expo_ );
 
-  // get number of slots from last published valid price
-  int64_t agg_diff = ( int64_t )slot - ( int64_t )( ptr->last_slot_ );
+static inline void
+upd_aggregate( pc_price_t *ptr,
+               uint64_t    now ) {
+
+  // only re-compute aggregate in newer slots
+  // this logic correctly handles sequence number wrapping
+
+  int64_t agg_diff = (int64_t)(now - ptr->last_slot_);
+  if( agg_diff<INT64_C(0) ) return;
 
   // copy previous price
+
   ptr->prev_slot_  = ptr->valid_slot_;
   ptr->prev_price_ = ptr->agg_.price_;
   ptr->prev_conf_  = ptr->agg_.conf_;
 
   // update aggregate details ready for next slot
-  ptr->valid_slot_ = ptr->agg_.pub_slot_;// valid slot-time of agg. price
-  ptr->agg_.pub_slot_ = slot;            // publish slot-time of agg. price
 
-  // identify valid quotes
-  // compute the aggregate prices and ranges
-  uint32_t numv = 0;
-  uint32_t vidx[ PC_COMP_SIZE ];
+  ptr->valid_slot_    = ptr->agg_.pub_slot_; // valid slot-time of agg. price
+  ptr->agg_.pub_slot_ = now;                 // publish slot-time of agg. price
+
+  // identify valid quotes (those that have a trading status, have a
+  // recent quote (i.e. from a block seq number
+  // [now-PC_MAX_SEND_LATENCY,now]) and do not have obviously bad values
+  // for price and conf for that quote (i.e. 0<conf<price and
+  // conf<=INT64_MAX-price) and if there are enough of them, apply the
+  // price aggegration model to these quotes
+
+  uint32_t numv = UINT32_C(0);
   int64_t  agg_price;
   int64_t  agg_conf;
   {
-    uint32_t nprcs = (uint32_t)0;
-    int64_t  prcs[ PC_COMP_SIZE * 3 ]; // ~0.75KiB for current PC_COMP_SIZE (FIXME: DOUBLE CHECK THIS FITS INTO STACK FRAME LIMIT)
-    for ( uint32_t i = 0; i != ptr->num_; ++i ) {
+    uint32_t  nprcs = UINT32_C(0);
+    int64_t * prcs  = (int64_t *)PC_HEAP_START; // Uses at most ~1.5KiB for current PC_COMP_SIZE in heap area (FIXME: USE MALLOC?)
+    for( uint32_t i=UINT32_C(0); i<ptr->num_; i++ ) {
       pc_price_comp_t *iptr = &ptr->comp_[i];
       // copy contributing price to aggregate snapshot
       iptr->agg_ = iptr->latest_;
-      // add quote to sorted permutation array if it is valid
-      int64_t slot_diff = ( int64_t )slot - ( int64_t )( iptr->agg_.pub_slot_ );
+      // add quote values to prcs if valid
+      int64_t slot_diff = (int64_t)(now - iptr->agg_.pub_slot_);
       int64_t price     = iptr->agg_.price_;
       int64_t conf      = ( int64_t )( iptr->agg_.conf_ );
-      if ( iptr->agg_.status_ == PC_STATUS_TRADING &&
-           (int64_t)0 < conf && conf < price && conf <= (INT64_MAX-price) && // No overflow for INT64_MAX-price as price>0
-           slot_diff >= 0 && slot_diff <= PC_MAX_SEND_LATENCY ) {
-        vidx[numv++] = i; // FIXME: GRAFT FOR OLD PRICE MODEL
+      if( iptr->agg_.status_ == PC_STATUS_TRADING &&
+          INT64_C(0)<=slot_diff && slot_diff<=PC_MAX_SEND_LATENCY &&
+          INT64_C(0)<conf && conf<price &&
+          conf <= (INT64_MAX-price) ) { // No overflow for INT64_MAX-price as price>0
+        numv++;
         prcs[ nprcs++ ] = price - conf; // No overflow as 0 < conf < price
         prcs[ nprcs++ ] = price;
         prcs[ nprcs++ ] = price + conf; // No overflow as 0 < conf <= INT64_MAX-price
@@ -234,18 +71,20 @@ static inline void upd_aggregate( pc_price_t *ptr, uint64_t slot )
     }
 
     // too few valid quotes
-    ptr->num_qt_ = numv; // FIXME: TEMPORARY GRAFT (ALL RETURN PATHS SET NUM_QT TO SOMETHING SENSIBLE)
-    if ( numv == 0 || numv < ptr->min_pub_ ) {
+    if( !numv || numv<ptr->min_pub_ ) {
+      // FIXME: SHOULD NUM_QT_ AND/OR LAST_SLOT_ BE UPDATED?  IN EARLIER
+      // CODE, NUM_QT_ WAS BUT LAST SLOT WASN'T IN CASES LIKE THIS.  IT
+      // SEEMS LIKE IT WAS WRONG TO UPDATE NUM_QT_ THOUGH AS IT SEEMS TO
+      // CORRESPOND THE POINT IN TIME SPECIFIED BY LAST_SLOT_.
       ptr->agg_.status_ = PC_STATUS_UNKNOWN;
       return;
     }
 
-    // evaluate the model to get the p25/p50/p75 prices
+    // evaluate price_model to get the p25/p50/p75 prices
     // note: numv>0 and nprcs = 3*numv at this point
     int64_t agg_p25;
     int64_t agg_p75;
-    int64_t scratch[ PC_COMP_SIZE * 3 ]; // ~0.75KiB for current PC_COMP_SIZE (FIXME: DOUBLE CHECK THIS FITS INTO STACK FRAME LIMIT)
-    price_model_core( (uint64_t)nprcs, prcs, &agg_p25, &agg_price, &agg_p75, scratch );
+    price_model_core( (uint64_t)nprcs, prcs, &agg_p25, &agg_price, &agg_p75, prcs+nprcs );
 
     // get the left and right confidences
     // note that as valid quotes have positive prices currently and
@@ -257,192 +96,57 @@ static inline void upd_aggregate( pc_price_t *ptr, uint64_t slot )
     // use the larger of the left and right confidences
     agg_conf = agg_conf_right > agg_conf_left ? agg_conf_right : agg_conf_left;
 
-    // if the confidences end up at zero, we abort
-    // this is paranoia as it is currently not possible when nprcs>2 and
-    // positive confidences given the current pricing model
-    if( agg_conf <= (int64_t)0 ) {
+    // if the aggregated values don't look sane, we abort
+    // this is paranoia given the current pricing model and
+    // above quoter sanity checks
+    if( !(INT64_C(0)<agg_conf && agg_conf<agg_price && agg_conf<=(INT64_MAX-agg_price)) ) {
+      // FIXME: SEE NOTE ABOVE ABOUT NUM_QT_ AND LAST_SLOT_
       ptr->agg_.status_ = PC_STATUS_UNKNOWN;
       return;
     }
   }
 
-  // FIXME: MOST OF THE REST OF THE CODE HERE CAN PROBABLY BE REMOVED /
-  // CONDENSED AND/OR MADE MORE EFFICIENT.  AND IT PROBABLY WILL
-  // REPLACED SOON BY THE VWAP MODEL UNDER DEVELOPMENT.  IT IS KEPT HERE
-  // TO KEEP THE CURRENT VWAP CALCULATION AS CLOSE AS POSSIBLE TO WHAT
-  // HOW IT CURRENTLY WORKS.
+  // we have an valid (now,agg_price,agg_conf) observation
+  // update the twap_model
 
-  uint32_t numa = 0;
-  uint32_t aidx[PC_COMP_SIZE];
-  {
-    int64_t const mprc = agg_price; // FIXME: GRAFT TO NEW CALC TO OLD CALC
-    int64_t const lb = mprc / 5;
-    int64_t const ub = ( mprc > LONG_MAX / 5 ) ? LONG_MAX : mprc * 5;
+  // FIXME: HIDEOUS TEMPORARY HACK TO PACK THE EXISTING PC_PRICE_T DATA
+  // LAYOUT INTO A TWAP_MODEL_T (PC_PRICE_T SHOULD JUST HAVE THIS AS A
+  // COMPONENT AND MAYBE ELIMINATE LAST_SLOT_ IN FAVOR OF TM->TS).
+  twap_model_t tm[1];
+  tm->valid   = ptr->drv2_;                   // FIXME: MAKE SURE DRV2_ IS INITIALIZED TO ZERO ON ACCOUNT CREATION
+  tm->ts      = ptr->last_slot_;
+  tm->twap    = (uint64_t)ptr->twap_.val_;
+  tm->twac    = (uint64_t)ptr->twac_.val_;
+  tm->twap_Nh = (uint64_t)ptr->twap_.numer_; tm->twap_Nl = (uint64_t)ptr->twap_.denom_; // FIXME: UGLY REINTERP
+  tm->twac_Nh = (uint64_t)ptr->twac_.numer_; tm->twac_Nl = (uint64_t)ptr->twac_.denom_; // FIXME: UGLY REINTERP
+  tm->D       = (uint64_t)ptr->drv1_;
 
-    for ( uint32_t i = 0; i < numv; ++i ) {
-      uint32_t const idx = vidx[ i ];
-      pc_price_comp_t const *iptr = &ptr->comp_[ idx ];
-      int64_t const prc = iptr->agg_.price_;
-      if ( prc >= lb && prc <= ub ) {
-        uint32_t j = numa++;
-        for( ; j > 0 && ptr->comp_[ aidx[ j - 1 ] ].agg_.price_ > prc; --j ) { // FIXME: O(N^2)
-          aidx[ j ] = aidx[ j - 1 ];
-        }
-        aidx[ j ] = idx;
-      }
-    }
-  }
+  twap_model_update( tm, now, (uint64_t)agg_price, (uint64_t)agg_conf );
 
-  // zero quoters
-  ptr->num_qt_ = numa;
-  if ( numa == 0 || numa < ptr->min_pub_ || numa * 2 <= numv ) {
+  // FIXME: HIDEOUS TEMPORARY HACK TO UNPACK.  SEE NOTE ABOVE.  IF
+  // ANYTHING EVEN WENT THE SLIGHTEST WEIRD, WE ABORT.
+  if( !(INT64_C(0)<tm->twac && tm->twac<tm->twap && tm->twac<=((uint64_t)INT64_MAX-tm->twap)) ) {
+    // FIXME: SEE NOTE ABOVE ABOUT NUM_QT_ AND LAST_SLOT_
     ptr->agg_.status_ = PC_STATUS_UNKNOWN;
     return;
   }
+  ptr->drv2_        = tm->valid;
+  ptr->twap_.val_   = (int64_t)tm->twap;
+  ptr->twac_.val_   = (int64_t)tm->twac;
+  ptr->twap_.numer_ = (int64_t)tm->twap_Nh; ptr->twap_.denom_ = (int64_t)tm->twap_Nl;
+  ptr->twac_.numer_ = (int64_t)tm->twac_Nh; ptr->twac_.denom_ = (int64_t)tm->twac_Nl;
+  ptr->drv1_        = (int64_t)tm->D;
 
-  // update status and publish slot of last trading status price
+  // all good
+  ptr->num_qt_      = numv;
+  ptr->last_slot_   = now;
+  ptr->agg_.price_  = agg_price;
+  ptr->agg_.conf_   = (uint64_t)agg_conf;
   ptr->agg_.status_ = PC_STATUS_TRADING;
-  ptr->last_slot_ = slot;
-
-  // single quoter
-  if ( numa == 1 ) {
-    pc_price_comp_t *iptr = &ptr->comp_[aidx[0]];
-    ptr->agg_.price_ = iptr->agg_.price_;
-    ptr->agg_.conf_  = iptr->agg_.conf_;
-    upd_twap( ptr, agg_diff, qs );
-    ptr->agg_.price_ = agg_price;           // FIXME: OVERRIDE OLD PRICE MODEL
-    ptr->agg_.conf_  = (uint64_t)agg_conf;  // FIXME: OVERRIDE OLD PRICE MODEL
-    return;
-  }
-
-  // assign quotes and compute weights
-  pc_price_comp_t *pptr = 0;
-  pd_t price[1], conf[1], weight[1], one[1], wsum[1];
-  pd_new( one, 100000000L, -8 );
-  pd_new( wsum, 0, 0 );
-  int64_t ldiff = INT64_MAX;
-  pd_t *wptr = qs->weight_;
-  for( uint32_t i=0;i != numa; ++i ) {
-    pc_price_comp_t *iptr = &ptr->comp_[aidx[i]];
-    // scale confidence interval by sqrt of slot age
-    int64_t slot_diff = ( int64_t )slot - ( int64_t )( iptr->agg_.pub_slot_ );
-    pd_t decay[1];
-    pd_new( decay, qs->decay_[slot_diff], PC_EXP_DECAY );
-    pd_new_scale( conf, ( int64_t )( iptr->agg_.conf_ ), ptr->expo_ );
-    pd_mul( conf, conf, decay );
-
-    // assign price and upper/lower bounds of price
-    pd_new_scale( price, iptr->agg_.price_, ptr->expo_ );
-    pd_set( &qs->iprice_[i], price );
-    pd_add( &qs->uprice_[i], price, conf, qs->fact_ );
-    pd_sub( &qs->lprice_[i], price, conf, qs->fact_ );
-
-    // compute weight (1/(conf+nearest_neighbor))
-    pd_set( &qs->weight_[i], conf );
-    if ( i ) {
-      int64_t idiff = iptr->agg_.price_ - pptr->agg_.price_;
-      pd_new_scale( weight, idiff < ldiff ? idiff : ldiff, ptr->expo_ );
-      pd_add( wptr, wptr, weight, qs->fact_ );
-      pd_div( wptr, one, wptr );
-      pd_add( wsum, wsum, wptr, qs->fact_ );
-      ldiff = idiff;
-      ++wptr;
-    }
-    pptr = iptr;
-  }
-  // compute weight for last quote
-  pd_new_scale( weight, ldiff, ptr->expo_ );
-  pd_add( wptr, wptr, weight, qs->fact_ );
-  pd_div( wptr, one, wptr );
-  pd_add( wsum, wsum, wptr, qs->fact_ );
-
-  // bound weights at 1/sqrt(Nquotes) and redeistribute the remaining weight
-  // among the remaining quoters proportional to their weights
-  pd_t wmax[1], rnumer[1], rdenom[1];
-  pd_set( rnumer, one );
-  pd_new( rdenom, 0, 0 );
-  // wmax = 1 / sqrt( numa )
-  pd_new( wmax, numa, 0 );
-  pd_sqrt( wmax, wmax, qs->fact_ );
-  pd_div( wmax, one, wmax );
-  for( uint32_t i=0;i != numa; ++i ) {
-    wptr = &qs->weight_[i];
-    pd_div( wptr, wptr, wsum );
-    if ( pd_gt( wptr, wmax, qs->fact_ ) ) {
-      pd_set( wptr, wmax );
-      pd_sub( rnumer, rnumer, wmax, qs->fact_ );
-      aidx[i] = 1;
-    } else {
-      pd_add( rdenom, rdenom, wptr, qs->fact_ );
-      aidx[i] = 0;
-    }
-  }
-  if ( rdenom->v_ ) {
-    pd_div( rnumer, rnumer, rdenom );
-  }
-  for ( uint32_t i = 0; i != numa; ++i ) {
-    wptr = &qs->weight_[ i ];
-    if ( aidx[ i ] == 0 ) {
-      pd_mul( wptr, wptr, rnumer );
-    }
-  }
-
-  const pd_t half = { .e_ = -1, .v_ = 5 };
-
-  // compute aggregate price as weighted median
-  pd_t iprice[1], lprice[1], uprice[1], q3price[1], q1price[1], ptile[1];
-  pd_new( ptile, 5, -1 );
-  wgt_ptile( iprice, qs->iprice_, qs->weight_, numa, ptile, qs );
-  pd_adjust( iprice, ptr->expo_, qs->fact_ );
-  ptr->agg_.price_  = iprice->v_;
-
-  // compute diff in weighted median between upper and lower price bounds
-  pd_t prices[ PC_COMP_SIZE ];
-  pd_t weights[ PC_COMP_SIZE ];
-  // sort upper prices and weights
-  for ( uint32_t i = 0; i < numa; ++i ) {
-    uint32_t j = i;
-    for ( ; j > 0 && pd_lt( &qs->uprice_[ i ], &prices[ j - 1 ], qs->fact_ ); --j ) { // FIXME: O(N^2)
-      prices[ j ] = prices[ j - 1 ];
-      weights[ j ] = weights[ j - 1 ];
-    }
-    prices[ j ] = qs->uprice_[ i ];
-    weights[ j ] = qs->weight_[ i ];
-  }
-  wgt_ptile( uprice, prices, weights, numa, ptile, qs );
-  // sort lower prices and weights
-  for ( uint32_t i = 0; i < numa; ++i ) {
-    uint32_t j = i;
-    for ( ; j > 0 && pd_lt( &qs->lprice_[ i ], &prices[ j - 1 ], qs->fact_ ); --j ) { // FIXME: O(N^2)
-      prices[ j ] = prices[ j - 1 ];
-      weights[ j ] = weights[ j - 1 ];
-    }
-    prices[ j ] = qs->lprice_[ i ];
-    weights[ j ] = qs->weight_[ i ];
-  }
-  wgt_ptile( lprice, prices, weights, numa, ptile, qs );
-
-  pd_sub( uprice, uprice, lprice, qs->fact_ );
-  pd_mul( uprice, uprice, &half );
-
-  // compute weighted iqr of prices
-  pd_new( ptile, 75, -2 );
-  wgt_ptile( q3price, qs->iprice_, qs->weight_, numa, ptile, qs );
-  pd_new( ptile, 25, -2 );
-  wgt_ptile( q1price, qs->iprice_, qs->weight_, numa, ptile, qs );
-  pd_sub( q3price, q3price, q1price, qs->fact_ );
-  pd_mul( q3price, q3price, &half );
-
-  // take confidence interval as larger
-  pd_t *cptr = pd_gt( uprice, q3price, qs->fact_ ) ? uprice : q3price;
-  pd_adjust( cptr, ptr->expo_, qs->fact_ );
-  ptr->agg_.conf_ = ( uint64_t )( cptr->v_ );
-  upd_twap( ptr, agg_diff, qs );
-  ptr->agg_.price_ = agg_price;          // FIXME: OVERRIDE OLD PRICE MODEL
-  ptr->agg_.conf_  = (uint64_t)agg_conf; // FIXME: OVERRIDE OLD PRICE MODEL
 }
 
 #ifdef __cplusplus
 }
 #endif
 
+#endif /* _pyth_oracle_upd_aggregrate_h_ */
