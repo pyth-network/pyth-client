@@ -1,7 +1,7 @@
 #pragma once
 
 #include "oracle.h"
-#include "model/model.h"
+#include "model/price_model.h"
 #include "model/price_model.c" /* FIXME: HACK TO DEAL WITH DOCKER LINKAGE ISSUES */
 #include "pd.h"
 

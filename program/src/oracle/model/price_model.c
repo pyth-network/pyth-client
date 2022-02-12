@@ -1,4 +1,4 @@
-#include "model.h"
+#include "price_model.h"
 #include "../util/avg.h" /* For avg_2_int64 */
 
 #define SORT_NAME  int64_sort_ascending
