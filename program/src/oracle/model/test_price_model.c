@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "../util/util.h"
-#include "model.h"
+#include "price_model.h"
 
 int
 qcmp( void const * _p,
