@@ -1,5 +1,5 @@
-#ifndef _pyth_oracle_model_model_h_
-#define _pyth_oracle_model_model_h_
+#ifndef _pyth_oracle_model_price_model_h_
+#define _pyth_oracle_model_price_model_h_
 
 #include "../util/compat_stdint.h"
 #include <stdalign.h>
@@ -98,4 +98,4 @@ price_model( uint64_t  cnt,
 }
 #endif
 
-#endif /* _pyth_oracle_model_model_h_ */
+#endif /* _pyth_oracle_model_price_model_h_ */
