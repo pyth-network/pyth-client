@@ -116,9 +116,8 @@ add_test( test_net test_net )
 # fuzz testing application
 #
 
-add_executable( fuzz pctest/fuzz.cpp )
-target_link_libraries( fuzz ${PC_DEP} )
-
+#add_executable( fuzz pctest/fuzz.cpp )
+#target_link_libraries( fuzz ${PC_DEP} )
 
 #
 # bpf static analysis (CLion)
