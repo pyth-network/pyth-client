@@ -321,6 +321,19 @@ def pyth_add_publisher(
     return pyth_add_price
 
 
+@pytest.fixture(scope='session')
+def solana_logs(solana_test_validator, solana_keygen):
+    with open("solana_logs.txt", 'w') as f:
+        cmd = [
+            'solana', 'logs',
+            '--url', 'localhost',
+            '--keypair', solana_keygen[1],
+        ]
+        p = subprocess.Popen(cmd, stdout=f)
+        yield
+        p.kill()
+
+
 @pytest.fixture(scope='function')
 def pyth_init_price(solana_test_validator, pyth_dir, pyth_add_publisher):
 

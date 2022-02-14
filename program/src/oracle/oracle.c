@@ -520,7 +520,7 @@ static uint64_t upd_price( SolParameters *prm, SolAccountInfo *ka )
   // reject if this price corresponds to the same or earlier time
   pc_price_info_t *fptr = &pptr->comp_[i].latest_;
   sysvar_clock_t *sptr = (sysvar_clock_t*)ka[clock_idx].data;
-  if ( cptr->cmd_ == e_cmd_upd_price &&
+  if ( ( cptr->cmd_ == e_cmd_upd_price || cptr->cmd_ == e_cmd_upd_price_no_fail_on_error ) &&
        cptr->pub_slot_ <= fptr->pub_slot_ ) {
     return ERROR_INVALID_ARGUMENT;
   }
@@ -531,12 +531,18 @@ static uint64_t upd_price( SolParameters *prm, SolAccountInfo *ka )
   }
 
   // update component price if required
-  if ( cptr->cmd_ == e_cmd_upd_price ) {
+  if ( cptr->cmd_ == e_cmd_upd_price || cptr->cmd_ == e_cmd_upd_price_no_fail_on_error ) {
     fptr->price_    = cptr->price_;
     fptr->conf_     = cptr->conf_;
     fptr->status_   = cptr->status_;
     fptr->pub_slot_ = cptr->pub_slot_;
   }
+  return SUCCESS;
+}
+
+static uint64_t upd_price_no_fail_on_error( SolParameters *prm, SolAccountInfo *ka )
+{
+  upd_price( prm, ka );
   return SUCCESS;
 }
 
@@ -551,19 +557,20 @@ static uint64_t dispatch( SolParameters *prm, SolAccountInfo *ka )
   }
   switch(hdr->cmd_) {
     case e_cmd_upd_price:
-    case e_cmd_agg_price:     return upd_price( prm, ka );
-    case e_cmd_init_mapping:  return init_mapping( prm, ka );
-    case e_cmd_add_mapping:   return add_mapping( prm, ka );
-    case e_cmd_add_product:   return add_product( prm, ka );
-    case e_cmd_upd_product:   return upd_product( prm, ka );
-    case e_cmd_add_price:     return add_price( prm, ka );
-    case e_cmd_add_publisher: return add_publisher( prm, ka );
-    case e_cmd_del_publisher: return del_publisher( prm, ka );
-    case e_cmd_init_price:    return init_price( prm, ka );
-    case e_cmd_init_test:     return init_test( prm, ka );
-    case e_cmd_upd_test:      return upd_test( prm, ka );
-    case e_cmd_set_min_pub:   return set_min_pub( prm, ka );
-    default:                  return ERROR_INVALID_ARGUMENT;
+    case e_cmd_agg_price:                  return upd_price( prm, ka );
+    case e_cmd_upd_price_no_fail_on_error: return upd_price_no_fail_on_error( prm, ka );
+    case e_cmd_init_mapping:               return init_mapping( prm, ka );
+    case e_cmd_add_mapping:                return add_mapping( prm, ka );
+    case e_cmd_add_product:                return add_product( prm, ka );
+    case e_cmd_upd_product:                return upd_product( prm, ka );
+    case e_cmd_add_price:                  return add_price( prm, ka );
+    case e_cmd_add_publisher:              return add_publisher( prm, ka );
+    case e_cmd_del_publisher:              return del_publisher( prm, ka );
+    case e_cmd_init_price:                 return init_price( prm, ka );
+    case e_cmd_init_test:                  return init_test( prm, ka );
+    case e_cmd_upd_test:                   return upd_test( prm, ka );
+    case e_cmd_set_min_pub:                return set_min_pub( prm, ka );
+    default:                               return ERROR_INVALID_ARGUMENT;
   }
 }
 

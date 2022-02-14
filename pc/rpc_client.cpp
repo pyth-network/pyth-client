@@ -809,7 +809,7 @@ rpc::upd_price::upd_price()
   ckey_( nullptr ),
   gkey_( nullptr ),
   akey_( nullptr ),
-  cmd_( e_cmd_upd_price )
+  cmd_( e_cmd_upd_price_no_fail_on_error )
 {
 }
 
@@ -851,7 +851,7 @@ void rpc::upd_price::set_price( int64_t px,
   price_ = px;
   conf_  = conf;
   st_    = st;
-  cmd_   = is_agg?e_cmd_agg_price:e_cmd_upd_price;
+  cmd_   = is_agg?e_cmd_agg_price:e_cmd_upd_price_no_fail_on_error;
 }
 
 void rpc::upd_price::set_slot( const uint64_t pub_slot )
@@ -883,52 +883,6 @@ public:
     hdr->size_ = tx.size();
   }
 };
-
-void rpc::upd_price::build_tx( bincode& tx )
-{
-  // signatures section
-  tx.add_len<1>();      // one signature (publish)
-  size_t pub_idx = tx.reserve_sign();
-
-  // message header
-  size_t tx_idx = tx.get_pos();
-  tx.add( (uint8_t)1 ); // pub is only signing account
-  tx.add( (uint8_t)0 ); // read-only signed accounts
-  tx.add( (uint8_t)2 ); // sysvar and program-id are read-only
-                        // unsigned accounts
-
-  // accounts
-  tx.add_len<4>();      // 4 accounts: publish, symbol, sysvar, program
-  tx.add( *pkey_ );     // publish account
-  tx.add( *akey_ );     // symbol account
-  tx.add( *(pub_key*)sysvar_clock ); // sysvar account
-  tx.add( *gkey_ );     // programid
-
-  // recent block hash
-  tx.add( *bhash_ );    // recent block hash
-
-  // instructions section
-  tx.add_len<1>();      // one instruction
-  tx.add( (uint8_t)3);  // program_id index
-  tx.add_len<3>();      // 3 accounts: publish, symbol, sysvar
-  tx.add( (uint8_t)0 ); // index of publish account
-  tx.add( (uint8_t)1 ); // index of symbol account
-  tx.add( (uint8_t)2 ); // index of sysvar account
-
-  // instruction parameter section
-  tx.add_len<sizeof(cmd_upd_price)>();
-  tx.add( (uint32_t)PC_VERSION );
-  tx.add( (int32_t)cmd_ );
-  tx.add( (int32_t)st_ );
-  tx.add( (int32_t)0 );
-  tx.add( price_ );
-  tx.add( conf_ );
-  tx.add( pub_slot_ );
-
-  // all accounts need to sign transaction
-  tx.sign( pub_idx, tx_idx, *ckey_ );
-  sig_.init_from_buf( (const uint8_t*)(tx.get_buf() + pub_idx) );
-}
 
 bool rpc::upd_price::build_tx(
   bincode& tx, upd_price* upds[], const unsigned n
