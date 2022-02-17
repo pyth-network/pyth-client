@@ -654,9 +654,9 @@ Test( oracle, upd_aggregate ) {
   px->comp_[px->num_++].latest_ = p2;
   px->comp_[px->num_++].latest_ = p1;
   upd_aggregate( px, 1001, 2 );
-  cr_assert( px->agg_.price_ == 147 );
-  cr_assert( px->agg_.conf_ == 48 );
-  cr_assert( px->twap_.val_ == 108 );
+  cr_assert( px->agg_.price_ == 145 );
+  cr_assert( px->agg_.conf_ == 55 );
+  cr_assert( px->twap_.val_ == 106 );
   cr_assert( px->twac_.val_ == 16 );
   cr_assert( px->num_qt_ == 2 );
   cr_assert( px->timestamp_ == 2 );
@@ -673,15 +673,15 @@ Test( oracle, upd_aggregate ) {
   px->comp_[px->num_++].latest_ = p1;
   px->comp_[px->num_++].latest_ = p3;
   upd_aggregate( px, 1001, 3 );
-  cr_assert( px->agg_.price_ == 191 );
-  cr_assert( px->agg_.conf_ == 74 );
-  cr_assert( px->twap_.val_ == 116 );
-  cr_assert( px->twac_.val_ == 22 );
+  cr_assert( px->agg_.price_ == 200 );
+  cr_assert( px->agg_.conf_ == 90 );
+  cr_assert( px->twap_.val_ == 114 );
+  cr_assert( px->twac_.val_ == 23 );
   cr_assert( px->num_qt_ == 3 );
   cr_assert( px->timestamp_ == 3 );
   cr_assert( px->prev_slot_ == 1000 );
-  cr_assert( px->prev_price_ == 147 );
-  cr_assert( px->prev_conf_ == 48 );
+  cr_assert( px->prev_price_ == 145 );
+  cr_assert( px->prev_conf_ == 55 );
   cr_assert( px->prev_timestamp_ == 2 );
 
   // four publishers
@@ -693,16 +693,16 @@ Test( oracle, upd_aggregate ) {
   px->comp_[px->num_++].latest_ = p4;
   px->comp_[px->num_++].latest_ = p2;
   upd_aggregate( px, 1001, 4 );
-  cr_assert( px->agg_.price_ == 235 );
-  cr_assert( px->agg_.conf_ == 99 );
-  cr_assert( px->twap_.val_ == 124 );
-  cr_assert( px->twac_.val_ == 27 );
+  cr_assert( px->agg_.price_ == 245 );
+  cr_assert( px->agg_.conf_ == 85 );
+  cr_assert( px->twap_.val_ == 125 );
+  cr_assert( px->twac_.val_ == 28 );
   cr_assert( px->last_slot_ == 1001 );
   cr_assert( px->num_qt_ == 4 );
   cr_assert( px->timestamp_ == 4 );
   cr_assert( px->prev_slot_ == 1000 );
-  cr_assert( px->prev_price_ == 191 );
-  cr_assert( px->prev_conf_ == 74 );
+  cr_assert( px->prev_price_ == 200 );
+  cr_assert( px->prev_conf_ == 90 );
   cr_assert( px->prev_timestamp_ == 3 );
 
   upd_aggregate( px, 1025, 5 );
@@ -711,8 +711,8 @@ Test( oracle, upd_aggregate ) {
   cr_assert( px->num_qt_ == 4 );
   cr_assert( px->timestamp_ == 5 );
   cr_assert( px->prev_slot_ == 1001 );
-  cr_assert( px->prev_price_ == 235 );
-  cr_assert( px->prev_conf_ == 99 );
+  cr_assert( px->prev_price_ == 245 );
+  cr_assert( px->prev_conf_ == 85 );
   cr_assert( px->prev_timestamp_ == 4 );
 
   // check what happens when nothing publishes for a while
