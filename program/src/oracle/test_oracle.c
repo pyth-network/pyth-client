@@ -575,8 +575,8 @@ Test( oracle, upd_aggregate ) {
   px->comp_[px->num_++].latest_ = p2;
   px->comp_[px->num_++].latest_ = p1;
   upd_aggregate( px, 1001 );
-  cr_assert( px->agg_.price_ == 147 );
-  cr_assert( px->agg_.conf_ == 48 );
+  cr_assert( px->agg_.price_ == 145 );
+  cr_assert( px->agg_.conf_ == 55 );
   cr_assert( px->twap_.val_ == 108 );
   cr_assert( px->twac_.val_ == 16 );
   cr_assert( px->num_qt_ == 2 );
@@ -589,8 +589,8 @@ Test( oracle, upd_aggregate ) {
   px->comp_[px->num_++].latest_ = p1;
   px->comp_[px->num_++].latest_ = p3;
   upd_aggregate( px, 1001 );
-  cr_assert( px->agg_.price_ == 191 );
-  cr_assert( px->agg_.conf_ == 74 );
+  cr_assert( px->agg_.price_ == 200 );
+  cr_assert( px->agg_.conf_ == 90 );
   cr_assert( px->twap_.val_ == 116 );
   cr_assert( px->twac_.val_ == 22 );
   cr_assert( px->num_qt_ == 3 );
@@ -604,8 +604,8 @@ Test( oracle, upd_aggregate ) {
   px->comp_[px->num_++].latest_ = p4;
   px->comp_[px->num_++].latest_ = p2;
   upd_aggregate( px, 1001 );
-  cr_assert( px->agg_.price_ == 235 );
-  cr_assert( px->agg_.conf_ == 99 );
+  cr_assert( px->agg_.price_ == 245 );
+  cr_assert( px->agg_.conf_ == 85 );
   cr_assert( px->twap_.val_ == 124 );
   cr_assert( px->twac_.val_ == 27 );
   cr_assert( px->last_slot_ == 1001 );
