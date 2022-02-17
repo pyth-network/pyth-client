@@ -34,6 +34,18 @@ uwide_add( uint64_t * _zh, uint64_t * _zl,
   *_zh = zh; *_zl = zl; return co;
 }
 
+/* Compute <zh,zl> = (<xh,xl> + y) mod 2^128 exactly (a common use of
+   the above) */
+
+static inline void
+uwide_inc( uint64_t * _zh, uint64_t * _zl,
+           uint64_t    xh, uint64_t    xl,
+           uint64_t     y ) {
+  uint64_t zl = xl + y;
+  uint64_t zh = xh + (zl<xl);
+  *_zh = zh; *_zl = zl;
+}
+
 /* Compute <zh,zl> = bo 2^128 + <xh,xl> - <yh,yl> - bi exactly.  Returns
    the borrow out.  Note that the borrow in / borrow operations should
    be compile time optimized out if b is 0 at compile time on input
@@ -54,6 +66,18 @@ uwide_sub( uint64_t * _zh, uint64_t * _zl,
   bo  = (uint64_t)(zh<bt); zh -= bt;
   bo += (uint64_t)(zh<yh); zh -= yh;
   *_zh = zh; *_zl = zl; return bo;
+}
+
+/* Compute <zh,zl> = (<xh,xl> - y) mod 2^128 exactly (a common use of
+   the above) */
+
+static inline void
+uwide_dec( uint64_t * _zh, uint64_t * _zl,
+           uint64_t    xh, uint64_t    xl,
+           uint64_t     y ) {
+  uint64_t zh = xh - (uint64_t)(y>xl);
+  uint64_t zl = xl - y;
+  *_zh = zh; *_zl = zl;
 }
 
 /* Compute <zh,zl> = x*y exactly, will be in [0,2^128-2^65+1].  Assumes
@@ -281,7 +305,7 @@ uwide_div( uint64_t * _zh, uint64_t * _zl,
 
     ql += uwide_div_approx( eh, m );                 /* Guaranteed to make progress if eh > 0 */
     uwide_mul( &eh,&el, ql, d );                     /* <eh,el> = ql*d */
-    uwide_sub( &eh,&el, nh,nl, eh,el, UINT64_C(0) ); /* <eh,el> = nh 2^64 - ql d */
+    uwide_sub( &eh,&el, nh,nl, eh,el, UINT64_C(0) ); /* <eh,el> = <nh,nl> - ql d */
   } while( eh );
 
   /* At this point, n - ql*d has an error less than 2^64 so we can
@@ -290,6 +314,46 @@ uwide_div( uint64_t * _zh, uint64_t * _zl,
   ql += el/d;
 
   *_zh = qh; *_zl = ql; return 0;
+}
+
+/* Same as the above but returns the value of the remainder too.
+   For non-zero y, remainder will be in [0,y).  If y==0, returns
+   <zh,zl>=0 with a remainder of UINT64_MAX (to signal error). */
+
+static inline uint64_t
+uwide_divrem( uint64_t * _zh, uint64_t * _zl,
+              uint64_t    xh, uint64_t    xl,
+              uint64_t    y ) {
+
+  if( !y ) { *_zh = UINT64_C(0); *_zl = UINT64_C(0); return UINT64_MAX; }
+  if( !xh ) { uint64_t ql = xl / y; uint64_t r = xl - ql*y; *_zh = UINT64_C(0); *_zl = ql; return r; }
+
+  int n = log2_uint64( y );
+  if( !(y & (y-UINT64_C(1))) ) { int s = 64-n; uwide_sr( _zh,_zl, xh,xl, n ); return n ? ((xl << s) >> s) : UINT64_C(0); }
+
+  uint64_t qh = xh / y;
+  uint64_t rh = xh - qh*y;
+
+  if( !rh ) { uint64_t ql = xl / y; uint64_t r = xl - ql*y; *_zh = qh; *_zl = ql; return r; }
+
+  int s = 63-n;
+  uint64_t nh, nl; uwide_sl( &nh,&nl, rh,xl, s );
+  uint64_t d = y << s;
+
+  uint64_t m  = uwide_div_approx_init( d );
+  uint64_t eh = nh; uint64_t el = nl;
+  uint64_t ql = UINT64_C(0);
+  do {
+    ql += uwide_div_approx( eh, m );
+    uwide_mul( &eh,&el, ql, d );
+    uwide_sub( &eh,&el, nh,nl, eh,el, UINT64_C(0) );
+  } while( eh );
+
+  uint64_t dq = el / d;
+  uint64_t r  = (el - dq*d) >> s;
+  ql += dq;
+
+  *_zh = qh; *_zl = ql; return r;
 }
 
 #ifdef __cplusplus
