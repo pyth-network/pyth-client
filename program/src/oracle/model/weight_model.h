@@ -100,7 +100,7 @@ weight_model( uint64_t ratio_gap,
 
   static uint64_t const thresh = (UINT64_C(1)<<63) - (UINT64_C(1)<<32);
 
-  uwide_add( &tmp_h,&tmp_l, num_h,num_l, UINT64_C(0),UINT64_C(0), UINT64_C(1)<<27 );
+  uwide_inc( &tmp_h,&tmp_l, num_h,num_l, UINT64_C(1)<<27 );
   uwide_sr ( &tmp_h,&tmp_l, tmp_h,tmp_l, 28 );
   if( tmp_h || tmp_l>=thresh ) return UINT64_C(1)<<30;
   uint64_t den = (UINT64_C(1)<<32) + tmp_l;
@@ -108,8 +108,8 @@ weight_model( uint64_t ratio_gap,
   /* Compute weight.  Note that at this point <num_h,num_l> < 2^91-2^60
      and den < 2^63 such that none of the below can overflow. */
 
-  uwide_sl ( &tmp_h,&tmp_l, num_h,num_l, 3 );
-  uwide_add( &tmp_h,&tmp_l, tmp_h,tmp_l, UINT64_C(0),UINT64_C(0), den );
+  uwide_sl ( &tmp_h,&tmp_l, num_h,num_l, 3      );
+  uwide_inc( &tmp_h,&tmp_l, tmp_h,tmp_l, den    );
   uwide_div( &tmp_h,&tmp_l, tmp_h,tmp_l, den<<1 );
   uint64_t weight = tmp_l; /* tmp_h==0 at this point */
 

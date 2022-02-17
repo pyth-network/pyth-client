@@ -122,9 +122,9 @@ overlap_model( uint64_t mu_0, uint64_t sigma_0,
        sigma_max < 2^63) or using a very expensive 128 bit / 128 bit
        divider for something that practically already is overkill. */
 
-  uwide_sl(  &tmp_h,&tmp_l, UINT64_C(0),sigma_min, 30 );
-  uwide_add( &tmp_h,&tmp_l, tmp_h,tmp_l, UINT64_C(0),UINT64_C(0), sigma_max>>1 );
-  uwide_div( &tmp_h,&tmp_l, tmp_h,tmp_l, sigma_max );
+  uwide_sl ( &tmp_h,&tmp_l, UINT64_C(0),sigma_min, 30 );
+  uwide_inc( &tmp_h,&tmp_l, tmp_h,tmp_l, sigma_max>>1 );
+  uwide_div( &tmp_h,&tmp_l, tmp_h,tmp_l, sigma_max    );
   uint64_t ratio_sigma = tmp_l; /* In [0,2^30], note that tmp_h==0 at this point */
 
   /* Rewriting the model in terms of ratio_sigma, we have:
@@ -186,12 +186,12 @@ overlap_model( uint64_t mu_0, uint64_t sigma_0,
   uint64_t mu_max = mu_c ? mu_1 : mu_0;
 
   uwide_mul( &tmp_h,&tmp_l, ((UINT64_C(0x266f98430)*kappa) + (UINT64_C(1)<<33)) >> 34, mu_max-mu_min );
-  uwide_add( &tmp_h,&tmp_l, tmp_h,tmp_l, UINT64_C(0),UINT64_C(0), sigma_max>>1 );
-  uwide_div( &tmp_h,&tmp_l, tmp_h,tmp_l, sigma_max );
+  uwide_inc( &tmp_h,&tmp_l, tmp_h,tmp_l, sigma_max>>1 );
+  uwide_div( &tmp_h,&tmp_l, tmp_h,tmp_l, sigma_max    );
   if( tmp_h || tmp_l>=UINT64_C(0x22b202b460f) ) return UINT64_C(0);
   uwide_mul( &tmp_h,&tmp_l, tmp_l, tmp_l );
-  uwide_add( &tmp_h,&tmp_l, tmp_h,tmp_l, UINT64_C(0),UINT64_C(0), UINT64_C(1)<<29 );
-  uwide_sr( &tmp_h,&tmp_l, tmp_h,tmp_l, 30 );
+  uwide_inc( &tmp_h,&tmp_l, tmp_h,tmp_l, UINT64_C(1)<<29 );
+  uwide_sr ( &tmp_h,&tmp_l, tmp_h,tmp_l, 30 );
   uint64_t omega = rexp2_fxp( tmp_l ); /* In [1,2^30] */
 
   /* Combine the above to get the result:
