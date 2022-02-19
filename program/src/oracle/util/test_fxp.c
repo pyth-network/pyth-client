@@ -1,6 +1,4 @@
 #include <stdio.h>
-#include <math.h>
-#include <fenv.h>
 #include "prng.h"
 
 #include "fxp.h"
@@ -181,10 +179,38 @@ fxp_div_rno_ref( uint64_t   x,
   return split_lo( z );
 }
 
-static inline uint64_t
-fxp_sqrt_rtz_ref( uint64_t x ) {
-  static long double const c = (long double)(UINT64_C(1)<<30);
-  return (uint64_t)floorl( sqrtl( c*(long double)x ) );
+static inline int
+test_fxp_sqrt_rtz( uint64_t x,
+                   uint64_t y ) {
+  if( !x ) return !!y;
+  if( !(((UINT64_C(1)<<15)<=y) && (y<=(UINT64_C(1)<<(32+15)))) ) return 1;
+  uint64_t xh,xl; uwide_sl ( &xh,&xl, UINT64_C(0),x, 30 );      /* 2^30 x */
+  uint64_t rh,rl; uwide_mul( &rh,&rl, y,y );                    /* y^2 */
+  uint64_t b = uwide_sub( &rh,&rl, xh,xl, rh,rl, UINT64_C(0) ); /* r = 2^30 x - y^2, in [0,2y] if rounded correctly */
+  return b || rh || rl>(y<<1);
+}
+
+static inline int
+test_fxp_sqrt_raz( uint64_t x,
+                   uint64_t y ) {
+  if( !x ) return !!y;
+  if( !(((UINT64_C(1)<<15)<=y) && (y<=(UINT64_C(1)<<(32+15)))) ) return 1;
+  uint64_t xh,xl; uwide_sl ( &xh,&xl, UINT64_C(0),x, 30 );      /* 2^30 x */
+  uint64_t rh,rl; uwide_mul( &rh,&rl, y,y );                    /* y^2 */
+  uint64_t b = uwide_sub( &rh,&rl, rh,rl, xh,xl, UINT64_C(0) ); /* y^2 - 2^30 x, in [0,2y-2] if rounded correctly */
+  return b || rh || rl>((y<<1)-UINT64_C(2));
+}
+
+static inline int
+test_fxp_sqrt_rnz( uint64_t x,
+                   uint64_t y ) {
+  if( !x ) return !!y;
+  if( !(((UINT64_C(1)<<15)<=y) && (y<=(UINT64_C(1)<<(32+15)))) ) return 1;
+  uint64_t xh,xl; uwide_sl ( &xh,&xl, UINT64_C(0),x, 30 );      /* 2^30 x */
+  uint64_t rh,rl; uwide_mul( &rh,&rl, y,y-UINT64_C(1) );        /* y^2 - y */
+  uwide_inc( &rh,&rl, rh,rl, UINT64_C(1) );                     /* y^2 - y + 1 */
+  uint64_t b = uwide_sub( &rh,&rl, xh,xl, rh,rl, UINT64_C(0) ); /* r = 2^30 x - (y^2 - y + 1), in [0,2y-1] if rounded correctly */
+  return b || rh || rl>=(y<<1);
 }
 
 int
@@ -194,8 +220,6 @@ main( int     argc,
 
   prng_t _prng[1];
   prng_t * prng = prng_join( prng_new( _prng, (uint32_t)0, (uint64_t)0 ) );
-
-  fesetround( FE_TOWARDZERO );
 
   int ctr = 0;
   for( int i=0; i<100000000; i++ ) {
@@ -264,17 +288,18 @@ main( int     argc,
 #   undef TEST
 #   define TEST(op)                       \
     do {                                  \
-      uint64_t z0 = fxp_##op##_ref ( x ); \
       uint64_t z1 = fxp_##op       ( x ); \
       uint64_t z2 = fxp_##op##_fast( x ); \
-      if( z0!=z1 || ((x<UINT64_C(0x400000000)) && (z0!=z2)) ) { \
-        printf( "%i: FAIL (fxp_" #op " x %016lx z0 %016lx z1 %016lx z2 %016lx\n", \
-                i, x, z0, z1, z2 );       \
+      if( test_fxp_##op( x, z1 ) || ((x<UINT64_C(0x400000000)) && (z1!=z2)) ) { \
+        printf( "%i: FAIL (fxp_" #op " x %016lx z1 %016lx z2 %016lx\n", \
+                i, x, z1, z2 );           \
         return 1;                         \
       }                                   \
     } while(0)
 
     TEST(sqrt_rtz);
+    TEST(sqrt_raz);
+    TEST(sqrt_rnz);
 
 #   undef TEST
   }

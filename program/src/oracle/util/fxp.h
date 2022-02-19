@@ -513,7 +513,7 @@ static inline uint64_t fxp_div_rnu_fast( uint64_t x, uint64_t y ) { return fxp_d
    Based on:
         z/2^30 ~ sqrt( x/2^30)
      -> z      ~ sqrt( 2^30 x )
-   With RTZ rounding: 
+   With RTZ rounding:
         z      = floor( sqrt( 2^30 x ) )
    Fastest style of rounding.  Rounding error in [0,1) ulp.
    (ulp==2^-30). */
@@ -540,15 +540,15 @@ fxp_sqrt_rtz( uint64_t x ) {
   uint64_t xh,xl; fxp_div_expand( &xh,&xl, x );
   for(;;) {
 
-    /* Iterate y' = floor( (y^2 + y + 2^30 x) / (2y+1) ).  This is the
+    /* Iterate y' = floor( (y(y+1) + 2^30 x) / (2y+1) ).  This is the
        same iteration as sqrt_uint{8,16,32,64} (which converges on the
-       floor( sqrt(x) ) but applied to the (wider than 64-bit) quantity
-       2^30 x and then starting from an expectionally good guess (such
+       floor(sqrt(x)) but applied to the (wider than 64b) quantity
+       2^30*x and then starting from an exceptionally good guess (such
        that ~2 iterations should be needed at most). */
 
     uint64_t yh,yl;
-    uwide_mul( &yh,&yl, y,y );
-    uwide_add( &yh,&yl, yh,yl, xh,xl, y );
+    uwide_mul( &yh,&yl, y,y+UINT64_C(1) );
+    uwide_add( &yh,&yl, yh,yl, xh,xl, UINT64_C(0) );
     uwide_div( &yh,&yl, yh,yl, (y<<1)+UINT64_C(1) );
     if( yl==y ) break;
     y = yl;
@@ -558,6 +558,187 @@ fxp_sqrt_rtz( uint64_t x ) {
 }
 
 static inline uint64_t fxp_sqrt_rtz_fast( uint64_t x ) { return sqrt_uint64( x<<30 ); }
+
+/* raz -> Round away zero
+   Fast variant assumes x<2^34
+   Based on:
+        z/2^30 ~ sqrt( x/2^30)
+     -> z      ~ sqrt( 2^30 x )
+   Let y by the RTZ rounded result:
+        y = floor( sqrt( 2^30 x ) )
+   and consider the residual:
+        r = 2^30 x - y^2
+   which, given the above, will be in [0,2y].  If r==0, the result
+   is exact and thus already correctly rounded.  Otherwise, we need
+   to round up.  We note that the residual of the RTZ iteration is
+   the same as this residual at convergence:
+        y = floor( (y^2 + y + 2^30 x) / (2y+1) )
+          = (y^2 + y + 2^30 x - r') / (2y+1)
+   where r' in [0,2y]:
+        2y^2 + y = y^2 + y + 2^30 x - r'
+        y^2 = 2^30 x - r'
+        r' = 2^30 x - y^2
+     -> r' = r
+   Thus we can use explicitly compute the remainder or use uwide_divrem
+   in the iteration itself to produce the needed residual.
+
+   Alternatively, the iteration
+        y = floor( (y^2 + y - 2 + 2^30 x) / (2y-1) )
+          = floor( (y(y+1) + (2^30 x-2)) / (2y-1) )
+   should converge on the RAZ rounded result as:
+        y = (y^2 + y - 2 + 2^30 x - r'') / (2y-1)
+   where r'' in [0,2y-2]
+        2y^2 - y = y^2 + y - 2 + 2^30 x - r''
+        y^2 - 2 y + 2 + r'' = 2^30 x
+   Thus at r'' = 0:
+        (y-1)^2 + 1 = 2^30 x
+     -> (y-1)^2 < 2^30 x
+   and at r'' = 2y-2
+        y^2 = 2^30 x
+   such that:
+        (y-1)^2 < 2^30 x <= y^2
+   which means y is the correctly rounded result.
+
+   Slightly more expensive than RTZ rounding.  Rounding error in (-1,0]
+   ulp.  (ulp==2^-30). */
+
+static inline uint64_t
+fxp_sqrt_raz( uint64_t x ) {
+  uint64_t xh, xl;
+
+  /* Same guess as rtz rounding */
+  int s = (63-log2_uint64( x )) >> 1;
+  if( s>15 ) s = 15;
+  xl = x << (s<<1);
+  uint64_t y = sqrt_uint64( xl ) << (15-s);
+  if( s==15 ) return y + (uint64_t)!!(xl-y*y); /* Explicitly compute residual to round when no iteration needed */
+
+  /* Use the modified iteration to converge on raz rounded result */
+  fxp_div_expand( &xh,&xl, x );
+  uwide_dec( &xh,&xl, xh, xl, UINT64_C(2) );
+  for(;;) {
+    uint64_t yh,yl;
+    uwide_mul( &yh,&yl, y, y+UINT64_C(1) );
+    uwide_add( &yh,&yl, yh,yl, xh,xl, UINT64_C(0) );
+    uwide_div( &yh,&yl, yh,yl, (y<<1)-UINT64_C(1) );
+    if( yl==y ) break;
+    y = yl;
+  }
+
+  return y;
+}
+
+static inline uint64_t
+fxp_sqrt_raz_fast( uint64_t x ) {
+  uint64_t xl = x<<30;
+  uint64_t y  = sqrt_uint64( xl );
+  uint64_t r  = xl - y*y;
+  return y + (uint64_t)!!r;
+}
+
+/* rnz/rna/rne/rno -> Round nearest with ties toward zero/away zero/toward even/toward odd
+   Fast variant assumes x<2^34
+   Based on:
+        z/2^30 ~ sqrt( x/2^30)
+     -> z      ~ sqrt( 2^30 x )
+   Assuming there are no ties, we want to integer z such that:
+        (z-1/2)^2 < 2^30 x < (z+1/2)^2
+        z^2 - z + 1/4 < 2^30 x < z^2 + z + 1/4
+   since z is integral, this is equivalent to finding a z such that:
+     -> z^2 - z + 1 <= 2^30 x < z^2 + z + 1
+     -> r = 2^30 x - (z^2 - z + 1) and is in [0,2z)
+   This suggests using the iteration:
+        z = floor( (z^2 + z - 1 + 2^30 x) / (2z) )
+          = floor( (z(z+1) + (2^30 x-1)) / (2z) )
+   which, at convergence, has:
+        2z^2 = z^2 + z - 1 + 2^30 x - r'
+   where r' is in [0,2z).  Solving for r', at convergence:
+        r' = 2^30 x - (z^2 - z + 1)
+        r' = r
+   Thus, this iteration converges to the correctly rounded z when there
+   are no ties.  But this also demonstrates that no ties are possible
+   when z is integral ... the above derivation hold when either endpoint
+   of the initial inequality is closed because the endpoint values are
+   fraction and cannot be exactly met for any integral z.  As such,
+   there are no ties and all round nearest styles can use the same
+   iteration for the sqrt function.
+
+   For computing a faster result for small x, let y by the RTZ rounded
+   result:
+        y = floor( sqrt( 2^30 x ) )
+   and consider the residual:
+        r'' = 2^30 x - y^2
+   which, given the above, will be in [0,2y].  If r''==0, the result is
+   exact and thus already correctly rounded.  Otherwise, let:
+        z = y when r''<=y and y+1 when when r''>y
+   Consider r''' from the above for this z.
+        r''' = 2^30 x - z^2
+             = 2^30 x - y^2 when r''<=y and 2^30 x - (y+1)^2 o.w.
+             = r''' when r''<=y and r'' - 2y - 1 o.w.
+     -> r''' in [0,y] when r''<=y and in [y+1,2y]-2y-1 o.w.
+     -> r''' in [0,y] when r''<=y and in [-y,-1]-2y-1 o.w.
+     -> r''' in [-y,y] and is negative when r''>y
+     -> r''' in [-z+1,z]
+   This implies that  we have for
+        2^30 x - (z^2-z+1) = r''' + z-1 is in [0,2z)
+   As such, z computed by this method is also correctly rounded.  Thus
+   we can use explicitly compute the remainder or use uwide_divrem in
+   the iteration itself to produce the needed residual.
+
+   Very slightly more expensive than RTZ rounding.  Rounding error in
+   (-1/2,1/2) ulp.  (ulp==2^-30). */
+
+static inline uint64_t
+fxp_sqrt_rnz( uint64_t x ) {
+  uint64_t xh, xl;
+
+  /* Same guess as rtz rounding */
+  int s = (63-log2_uint64( x )) >> 1;
+  if( s>15 ) s = 15;
+  xl = x << (s<<1);
+  uint64_t y = sqrt_uint64( xl ) << (15-s);
+  if( s==15 ) return y + (uint64_t)((xl-y*y)>y); /* Explicitly compute residual to round when no iteration needed */
+
+  /* Use the modified iteration to converge on rnz rounded result */
+  fxp_div_expand( &xh,&xl, x );                      /* 2^30 x */
+  uwide_dec( &xh,&xl, xh,xl, UINT64_C(1) );          /* 2^30 x - 1 */
+  for(;;) {
+    uint64_t yh,yl;
+    uwide_mul( &yh,&yl, y,y+UINT64_C(1) );           /* y^2 + y */
+    uwide_add( &yh,&yl, yh,yl, xh,xl, UINT64_C(0) ); /* y^2 + y - 1 + 2^30 x */
+    uwide_div( &yh,&yl, yh,yl, y<<1 );
+    if( yl==y ) break;
+    y = yl;
+  }
+
+  return y;
+}
+
+static inline uint64_t
+fxp_sqrt_rnz_fast( uint64_t x ) {
+  uint64_t xl = x<<30;
+  uint64_t y  = sqrt_uint64( xl );
+  uint64_t r  = xl - y*y;
+  return y + (uint64_t)(r>y);
+}
+
+static inline uint64_t fxp_sqrt_rna( uint64_t x ) { return fxp_sqrt_rnz( x ); }
+static inline uint64_t fxp_sqrt_rne( uint64_t x ) { return fxp_sqrt_rnz( x ); }
+static inline uint64_t fxp_sqrt_rno( uint64_t x ) { return fxp_sqrt_rnz( x ); }
+
+static inline uint64_t fxp_sqrt_rna_fast( uint64_t x ) { return fxp_sqrt_rnz_fast( x ); }
+static inline uint64_t fxp_sqrt_rne_fast( uint64_t x ) { return fxp_sqrt_rnz_fast( x ); }
+static inline uint64_t fxp_sqrt_rno_fast( uint64_t x ) { return fxp_sqrt_rnz_fast( x ); }
+
+static inline uint64_t fxp_sqrt_rdn( uint64_t x ) { return fxp_sqrt_rtz( x ); }
+static inline uint64_t fxp_sqrt_rup( uint64_t x ) { return fxp_sqrt_raz( x ); }
+static inline uint64_t fxp_sqrt_rnd( uint64_t x ) { return fxp_sqrt_rnz( x ); }
+static inline uint64_t fxp_sqrt_rnu( uint64_t x ) { return fxp_sqrt_rnz( x ); }
+
+static inline uint64_t fxp_sqrt_rdn_fast( uint64_t x ) { return fxp_sqrt_rtz_fast( x ); }
+static inline uint64_t fxp_sqrt_rup_fast( uint64_t x ) { return fxp_sqrt_raz_fast( x ); }
+static inline uint64_t fxp_sqrt_rnd_fast( uint64_t x ) { return fxp_sqrt_rnz_fast( x ); }
+static inline uint64_t fxp_sqrt_rnu_fast( uint64_t x ) { return fxp_sqrt_rnz_fast( x ); }
 
 #ifdef __cplusplus
 }
