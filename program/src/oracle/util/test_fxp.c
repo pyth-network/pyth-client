@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <math.h>
+#include <fenv.h>
 #include "prng.h"
 
 #include "fxp.h"
@@ -180,6 +181,12 @@ fxp_div_rno_ref( uint64_t   x,
   return split_lo( z );
 }
 
+static inline uint64_t
+fxp_sqrt_rtz_ref( uint64_t x ) {
+  static long double const c = (long double)(UINT64_C(1)<<30);
+  return (uint64_t)floorl( sqrtl( c*(long double)x ) );
+}
+
 int
 main( int     argc,
       char ** argv ) {
@@ -187,6 +194,8 @@ main( int     argc,
 
   prng_t _prng[1];
   prng_t * prng = prng_join( prng_new( _prng, (uint32_t)0, (uint64_t)0 ) );
+
+  fesetround( FE_TOWARDZERO );
 
   int ctr = 0;
   for( int i=0; i<100000000; i++ ) {
@@ -251,6 +260,21 @@ main( int     argc,
     TEST(div_rna);
     TEST(div_rne);
     TEST(div_rno);
+
+#   undef TEST
+#   define TEST(op)                       \
+    do {                                  \
+      uint64_t z0 = fxp_##op##_ref ( x ); \
+      uint64_t z1 = fxp_##op       ( x ); \
+      uint64_t z2 = fxp_##op##_fast( x ); \
+      if( z0!=z1 || ((x<UINT64_C(0x400000000)) && (z0!=z2)) ) { \
+        printf( "%i: FAIL (fxp_" #op " x %016lx z0 %016lx z1 %016lx z2 %016lx\n", \
+                i, x, z0, z1, z2 );       \
+        return 1;                         \
+      }                                   \
+    } while(0)
+
+    TEST(sqrt_rtz);
 
 #   undef TEST
   }

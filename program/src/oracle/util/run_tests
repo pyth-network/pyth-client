@@ -20,8 +20,8 @@ $CC test_smag.c   -o bin/test_smag   || exit 1
 $CC test_rexp2.c  -o bin/test_rexp2  || exit 1
 $CC test_exp2m1.c -o bin/test_exp2m1 || exit 1
 $CC test_uwide.c  -o bin/test_uwide  || exit 1
-$CC test_fxp.c    -o bin/test_fxp    || exit 1
 $CC test_sqrt.c   -o bin/test_sqrt   || exit 1
+$CC test_fxp.c    -o bin/test_fxp    || exit 1
 $CC test_avg.c    -o bin/test_avg    || exit 1
 
 bin/test_align  || exit 1
@@ -34,8 +34,8 @@ bin/test_smag   || exit 1
 bin/test_rexp2  || exit 1
 bin/test_exp2m1 || exit 1
 bin/test_uwide  || exit 1
-bin/test_fxp    || exit 1
 bin/test_sqrt   || exit 1
+bin/test_fxp    || exit 1
 bin/test_avg    || exit 1
 
 # PRNG batteries

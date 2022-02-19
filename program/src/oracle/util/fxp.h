@@ -9,6 +9,7 @@
    bits. */
 
 #include "uwide.h"
+#include "sqrt.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -500,6 +501,63 @@ static inline uint64_t fxp_div_rdn_fast( uint64_t x, uint64_t y ) { return fxp_d
 static inline uint64_t fxp_div_rup_fast( uint64_t x, uint64_t y ) { return fxp_div_raz_fast( x, y ); }
 static inline uint64_t fxp_div_rnd_fast( uint64_t x, uint64_t y ) { return fxp_div_rnz_fast( x, y ); }
 static inline uint64_t fxp_div_rnu_fast( uint64_t x, uint64_t y ) { return fxp_div_rna_fast( x, y ); }
+
+/* FIXED POINT SQRT ***************************************************/
+
+/* Compute:
+     z/2^30 ~ sqrt( x/2^30 )
+   under various rounding modes. */
+
+/* rtz -> Round toward zero (aka truncate rounding)
+   Fast variant assumes x<2^34
+   Based on:
+        z/2^30 ~ sqrt( x/2^30)
+     -> z      ~ sqrt( 2^30 x )
+   With RTZ rounding: 
+        z      = floor( sqrt( 2^30 x ) )
+   Fastest style of rounding.  Rounding error in [0,1) ulp.
+   (ulp==2^-30). */
+
+static inline uint64_t
+fxp_sqrt_rtz( uint64_t x ) {
+
+  /* Initial guess.  Want to compute
+       y = sqrt( x 2^30 )
+     but x 2^30 does not fit into 64-bits at this point.  So we instead
+     approximate:
+       y = sqrt( x 2^(2s) 2^(30-2s) )
+         = sqrt( x 2^(2s) ) 2^(15-s)
+         ~ floor( sqrt( x 2^(2s) ) ) 2^(15-s)
+     where s is the largest integer such that x 2^(2s) does not
+     overflow. */
+
+  int s = (63-log2_uint64( x )) >> 1;                /* lg x in [34,63], 63-lg x in [0,29], s in [0,14] when x>=2^34 */
+  if( s>15 ) s = 15;                                 /* s==15 when x<2^34 */
+  uint64_t y = sqrt_uint64( x << (s<<1) ) << (15-s); /* All shifts well defined */
+  if( s==15 ) return y;                              /* No iteration if x<2^34 */
+
+  /* Expand x to 2^30 x for the fixed point iteration */
+  uint64_t xh,xl; fxp_div_expand( &xh,&xl, x );
+  for(;;) {
+
+    /* Iterate y' = floor( (y^2 + y + 2^30 x) / (2y+1) ).  This is the
+       same iteration as sqrt_uint{8,16,32,64} (which converges on the
+       floor( sqrt(x) ) but applied to the (wider than 64-bit) quantity
+       2^30 x and then starting from an expectionally good guess (such
+       that ~2 iterations should be needed at most). */
+
+    uint64_t yh,yl;
+    uwide_mul( &yh,&yl, y,y );
+    uwide_add( &yh,&yl, yh,yl, xh,xl, y );
+    uwide_div( &yh,&yl, yh,yl, (y<<1)+UINT64_C(1) );
+    if( yl==y ) break;
+    y = yl;
+  }
+
+  return y;
+}
+
+static inline uint64_t fxp_sqrt_rtz_fast( uint64_t x ) { return sqrt_uint64( x<<30 ); }
 
 #ifdef __cplusplus
 }

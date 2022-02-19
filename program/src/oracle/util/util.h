@@ -9,8 +9,8 @@
 #include "rexp2.h"   /* includes stdint.h */
 #include "exp2m1.h"  /* includes stdint.h */
 //#include "uwide.h" /* includes log2.h */
-#include "fxp.h"     /* includes uwide.h */
-#include "sqrt.h"    /* includes log2.h */
+//#include "sqrt.h"  /* includes log2.h */
+#include "fxp.h"     /* includes uwide.h and sqrt.h */
 #include "avg.h"     /* includes sar.h */
 #include "prng.h"    /* includes stdalign.h and hash.h */
 
