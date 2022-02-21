@@ -8,6 +8,7 @@
    point representations that fit within 64b and have 30 fractional
    bits. */
 
+#include <limits.h> /* For INT_MIN */
 #include "uwide.h"
 #include "sqrt.h"
 
@@ -730,6 +731,12 @@ static inline uint64_t fxp_sqrt_rna_fast( uint64_t x ) { return fxp_sqrt_rnz_fas
 static inline uint64_t fxp_sqrt_rne_fast( uint64_t x ) { return fxp_sqrt_rnz_fast( x ); }
 static inline uint64_t fxp_sqrt_rno_fast( uint64_t x ) { return fxp_sqrt_rnz_fast( x ); }
 
+/* Other rouding modes:
+     rdn -> Round down                   / toward floor / toward -inf ... same as rtz for unsigned
+     rup -> Round up                     / toward ceil  / toward +inf ... same as raz for unsigned
+     rnd -> Round nearest with ties down / toward floor / toward -inf ... same as rnz for unsigned
+     rnu -> Round nearest with ties up   / toward ceil  / toward -inf ... same as rna for unsigned */
+
 static inline uint64_t fxp_sqrt_rdn( uint64_t x ) { return fxp_sqrt_rtz( x ); }
 static inline uint64_t fxp_sqrt_rup( uint64_t x ) { return fxp_sqrt_raz( x ); }
 static inline uint64_t fxp_sqrt_rnd( uint64_t x ) { return fxp_sqrt_rnz( x ); }
@@ -739,6 +746,121 @@ static inline uint64_t fxp_sqrt_rdn_fast( uint64_t x ) { return fxp_sqrt_rtz_fas
 static inline uint64_t fxp_sqrt_rup_fast( uint64_t x ) { return fxp_sqrt_raz_fast( x ); }
 static inline uint64_t fxp_sqrt_rnd_fast( uint64_t x ) { return fxp_sqrt_rnz_fast( x ); }
 static inline uint64_t fxp_sqrt_rnu_fast( uint64_t x ) { return fxp_sqrt_rnz_fast( x ); }
+
+/* FIXED POINT LOG2 ***************************************************/
+
+/* Compute:
+
+     e + f/2^30 ~ log2( x/2^30 )
+
+   If x is non-zero, e will be in [-30,33] and f will be in [0,2^30]
+
+   Note: This is not guaranteed to be exactly rounded and thus this
+   doesn't have variants for every rounding mode under the sun.  The
+   current implementation has <=2 ulp error with a round-nearest flavor
+   though.
+
+   Given the round-nearest flavor, it is possible to have a f/2^30=1
+   exactly (e.g. log2_approx( UINT64_MAX ) will have e=33 and f/2^30=1
+   such that e still is exactly determined by the index of x's most
+   significant bit but the fractional part is 1 after rounding up.
+
+   It is possible modify this while retaining a round-nearest flavor
+   such that e is strictly in [-30,34] and f/2^30 is strictly in [0,1)
+   (e will no longer strictly be determined the index of x's most
+   significant bit so technically this retains less info than the
+   above).
+
+   Likewise, it is possible to modify this to use a round-toward-zero
+   flavor such that e will be in [-30,33] and f/2^30 is in [0,1) always.
+   The resulting approximation accuracy would be slightly lower and
+   slightly biased.
+
+   If x is zero, the result is undefined mathematically (the limit
+   x->zero+ is -inf ... this implementation returns i=INT_MIN<<-30 and
+   f=0 for specificity. */
+
+static inline int                  /* e, in [-30,33] (==log2_uint64(x)-30 ... see note above) */
+fxp_log2_approx( uint64_t * _f,    /* f, in [0,2^30] (yes, closed ... see note above) */
+                 uint64_t    x ) {
+
+  /* Handle bad inputs */
+
+  if( !x ) { *_f = UINT64_C(0); return INT_MIN; }
+
+  /* Crack x into:
+
+       x = 2^i ( 1 + y/2^63 )
+
+     where y is in [0,2^63).  This can always be done _exactly_ for
+     non-zero x.  That is, i is the index of x's most significant
+     non-zero bit (in [0,63]) and y is trailing i bits shifted up to be
+     63b wide. */
+
+  int      i = log2_uint64( x );                  /* In [0,63] */
+  uint64_t y = (x << (63-i)) - (UINT64_C(1)<<63); /* In [0,2^63) */
+
+  /* Convert this to a fixed point approximation of x:
+
+       x ~ 2^i ( 1 + d/2^30 )
+
+     via:
+
+       d = floor( (y+2^32) / 2^33 )
+
+     This representation is still exact when i <= 30 and at most 1/2 ulp
+     error in d when i>30 (rna / round nearest with ties away from zero
+     rounding ... consider using ties toward even or truncate rounding
+     here as per note above).  Given the use of a round nearest style, d
+     is in [0,2^30] (closed at both ends). */
+
+  uint64_t d = (y + (UINT64_C(1)<<32)) >> 33;
+
+  /* Given this, we have:
+
+       e + f/2^30 = log2( x/2^30 )
+                  = log2( x ) - 30
+                  ~ log2( 2^i ( 1+ d/2^30 ) ) - 30
+                  = i-30 + log2( 1 + d/2^30 )
+
+     From this, we identify:
+
+       e      = i-30               (exact)
+       f/2^30 ~ log2( 1 + d/2^30 ) (approximate)
+
+     Thus, f of a 30b fixed point lg1p calculator with a 30b fixed point
+     input.  The below is automatically generated code for a fixed point
+     implementation of a minimax Pade(4,3) approximant to log2(1+x) over
+     the domain [0,1].  If exact math, the approximation has an accuracy
+     better than 1/2 ulp over the whole domain and is exact at the
+     endpoints.  As implemented the accuracy is O(1) ulp over the whole
+     domain (with round nearest flavored rounding) style), monotonic and
+     still exact at the endpoints. */
+
+  uint64_t f;
+  uint64_t g;
+
+  /* BEGIN AUTOGENERATED CODE */
+  /* bits 31.8 rms_aerr 1.9e-10 rms_rerr 1.3e-10 max_aerr 2.7e-10 max_rerr 2.7e-10 */
+
+  f = UINT64_C(0x0000000245c36b35);               /* scale 41 bout 34 bmul  - */
+  f = UINT64_C(0x000000029c5b8e15) + ((f*d)>>36); /* scale 35 bout 34 bmul 64 */
+  f = UINT64_C(0x0000000303d59639) + ((f*d)>>32); /* scale 33 bout 34 bmul 64 */
+  f = UINT64_C(0x00000001715475cc) + ((f*d)>>31); /* scale 32 bout 34 bmul 64 */
+  f =                                 (f*d);      /* scale 62 bout 64 bmul 64 */
+  /* f max 0xd1fb651800000000 */
+
+  g = UINT64_C(0x000000024357c946);               /* scale 37 bout 34 bmul  - */
+  g = UINT64_C(0x00000002a94e3723) + ((g*d)>>33); /* scale 34 bout 34 bmul 64 */
+  g = UINT64_C(0x000000018b7f484d) + ((g*d)>>32); /* scale 32 bout 34 bmul 64 */
+  g = UINT64_C(0x0000000100000000) + ((g*d)>>30); /* scale 32 bout 34 bmul 64 */
+  /* g max 0x0000000347ed945f */
+
+  f = (f + (g>>1)) / g; /* RNA style rounding */
+  /* END AUTOGENERATED CODE */
+
+  *_f = f; return i-30;
+}
 
 #ifdef __cplusplus
 }

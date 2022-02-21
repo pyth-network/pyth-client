@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <math.h>
 #include "prng.h"
 
 #include "fxp.h"
@@ -213,6 +214,16 @@ test_fxp_sqrt_rnz( uint64_t x,
   return b || rh || rl>=(y<<1);
 }
 
+static inline int
+fxp_log2_ref( uint64_t * _f,
+              uint64_t   x ) {
+  if( !x ) { *_f = UINT64_C(0); return INT_MIN; }
+  long double ef = log2l( (long double)x );
+  int e = log2_uint64( x );
+  *_f = (uint64_t)roundl( (ef - (long double)e)*(long double)(UINT64_C(1)<<30) );
+  return e-30;
+}
+
 int
 main( int     argc,
       char ** argv ) {
@@ -220,6 +231,8 @@ main( int     argc,
 
   prng_t _prng[1];
   prng_t * prng = prng_join( prng_new( _prng, (uint32_t)0, (uint64_t)0 ) );
+
+  uint64_t fxp_log2_approx_ulp = UINT64_C(0);
 
   int ctr = 0;
   for( int i=0; i<100000000; i++ ) {
@@ -302,11 +315,22 @@ main( int     argc,
     TEST(sqrt_rnz);
 
 #   undef TEST
+
+    do {
+      uint64_t f0; int e0 = fxp_log2_ref   ( &f0, x );
+      uint64_t f1; int e1 = fxp_log2_approx( &f1, x );
+      uint64_t ulp = f0>f1 ? f0-f1 : f1-f0;
+      if( ulp > fxp_log2_approx_ulp ) fxp_log2_approx_ulp = ulp;
+      if( e0!=e1 || ulp>UINT64_C(2) ) {
+        printf( "%i: FAIL (fxp_log2_approx x %016lx z0 %3i %016lx z1 %3i %016lx ulp %016lx\n", i, x, e0,f0, e1,f1, ulp );
+        return 1;
+      }
+    } while(0);
   }
 
   prng_delete( prng_leave( prng ) );
 
-  printf( "pass\n" );
+  printf( "pass (fxp_log2_approx_ulp %lu)\n", fxp_log2_approx_ulp );
 
   return 0;
 }
