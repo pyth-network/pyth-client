@@ -173,38 +173,6 @@ SORT_IMPL(stable_node)( SORT_KEY_T * x,
     }
   }
 
-# if 0 /* These variants of the above don't seem to produce much better code */
-  do { /* Single loop exit */
-    if( SORT_BEFORE( yr[k], yl[j] ) ) x[i++] = yr[k++];
-    else                              x[i++] = yl[j++];
-  } while( (j<nl) && (k<nr) );
-
-  do { /* Single loop exit, minimal mem ops and branching */
-    SORT_KEY_T yj = yl[j];
-    SORT_KEY_T yk = yr[k];
-    int c = SORT_BEFORE( yk, yj );
-    x[i++] = c ? yk : yj;
-    j += (SORT_IDX_T)!c;
-    k += (SORT_IDX_T) c;
-  } while( (j<nl) & (k<nr) );
-
-  do { /* Single loop exit, Minimal mem ops */
-    SORT_KEY_T yj = yl[j];
-    SORT_KEY_T yk = yr[k];
-    if( SORT_BEFORE( yk, yj ) ) x[i++] = yk, k++;
-    else                        x[i++] = yj, j++;
-  } while( (j<nl) && (k<nr) );
-
-  do { /* Single loop exit, trinary variant of above */
-    x[i++] = SORT_BEFORE( yr[k], yl[j] ) ? yr[k++] : yl[j++];
-  } while( (j<nl) && (k<nr) );
-
-  /* Append any stragglers */
-
-  if( j<nl ) do x[i++] = yl[j++]; while( j<nl );
-  else       do x[i++] = yr[k++]; while( k<nr );
-# endif
-
   return x;
 }
 
