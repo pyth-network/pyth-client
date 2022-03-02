@@ -224,6 +224,17 @@ fxp_log2_ref( uint64_t * _f,
   return e-30;
 }
 
+static inline uint64_t
+fxp_exp2_ref( uint64_t x ) {
+  if( x>=UINT64_C(0x880000000) ) return UINT64_MAX;
+  return (uint64_t)roundl( ((long double)(UINT64_C(1)<<30))*exp2l( ((long double)x)*(1.L/(long double)(UINT64_C(1)<<30)) ) );
+}
+
+static inline uint64_t
+fxp_rexp2_ref( uint64_t x ) {
+  return (uint64_t)roundl( ((long double)(UINT64_C(1)<<30))*exp2l( ((long double)x)*(-1.L/(long double)(UINT64_C(1)<<30)) ) );
+}
+
 int
 main( int     argc,
       char ** argv ) {
@@ -232,7 +243,9 @@ main( int     argc,
   prng_t _prng[1];
   prng_t * prng = prng_join( prng_new( _prng, (uint32_t)0, (uint64_t)0 ) );
 
-  uint64_t fxp_log2_approx_ulp = UINT64_C(0);
+  uint64_t fxp_log2_approx_ulp  = UINT64_C(0);
+  uint64_t fxp_exp2_approx_ulp  = UINT64_C(0);
+  uint64_t fxp_rexp2_approx_ulp = UINT64_C(0);
 
   int ctr = 0;
   for( int i=0; i<100000000; i++ ) {
@@ -326,11 +339,37 @@ main( int     argc,
         return 1;
       }
     } while(0);
+
+    do {
+      uint64_t z0  = fxp_exp2_ref   ( x );
+      uint64_t z1  = fxp_exp2_approx( x );
+      uint64_t ulp = z0>z1 ? z0-z1 : z1-z0;
+      uint64_t ix = x>>30; /* Larger x are only +/-1 ulp accurate in the first 30 bits */
+      if( UINT64_C(0)<ix && ix<UINT64_C(64) ) ulp >>= ix;
+      if( ulp > fxp_exp2_approx_ulp ) fxp_exp2_approx_ulp = ulp;
+      if( ulp>UINT64_C(1) ) {
+        printf( "%i: FAIL (fxp_exp2_approx x %016lx z0 %016lx z1 %016lx ulp %016lx\n", i, x, z0, z1, ulp );
+        return 1;
+      }
+    } while(0);
+
+    do {
+      uint64_t z0 = fxp_rexp2_ref   ( x );
+      uint64_t z1 = fxp_rexp2_approx( x );
+      uint64_t ulp = z0>z1 ? z0-z1 : z1-z0;
+      if( ulp > fxp_rexp2_approx_ulp ) fxp_rexp2_approx_ulp = ulp;
+      if( ulp>UINT64_C(1) ) {
+        printf( "%i: FAIL (fxp_rexp2_approx x %016lx z0 %016lx z1 %016lx ulp %016lx\n", i, x, z0, z1, ulp );
+        return 1;
+      }
+    } while(0);
+
   }
 
   prng_delete( prng_leave( prng ) );
 
-  printf( "pass (fxp_log2_approx_ulp %lu)\n", fxp_log2_approx_ulp );
+  printf( "pass (ulp fxp_log2_approx ~ %lu fxp_exp2_approx ~ %lu fxp_rexp2_approx ~ %lu)\n",
+          fxp_log2_approx_ulp, fxp_exp2_approx_ulp, fxp_rexp2_approx_ulp );
 
   return 0;
 }
