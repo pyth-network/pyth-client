@@ -13,7 +13,7 @@ extern "C" {
 #define PC_VERSION            2
 
 // max latency in slots between send and receive
-#define PC_MAX_SEND_LATENCY  25
+#define PC_MAX_SEND_LATENCY  75
 
 // various size constants
 #define PC_PUBKEY_SIZE       32
