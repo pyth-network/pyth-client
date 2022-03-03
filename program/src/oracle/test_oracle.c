@@ -577,7 +577,7 @@ Test( oracle, upd_aggregate ) {
   upd_aggregate( px, 1001 );
   cr_assert( px->agg_.price_ == 145 );
   cr_assert( px->agg_.conf_ == 55 );
-  cr_assert( px->twap_.val_ == 108 );
+  cr_assert( px->twap_.val_ == 106 );
   cr_assert( px->twac_.val_ == 16 );
   cr_assert( px->num_qt_ == 2 );
 
@@ -591,8 +591,8 @@ Test( oracle, upd_aggregate ) {
   upd_aggregate( px, 1001 );
   cr_assert( px->agg_.price_ == 200 );
   cr_assert( px->agg_.conf_ == 90 );
-  cr_assert( px->twap_.val_ == 116 );
-  cr_assert( px->twac_.val_ == 22 );
+  cr_assert( px->twap_.val_ == 114 );
+  cr_assert( px->twac_.val_ == 23 );
   cr_assert( px->num_qt_ == 3 );
 
   // four publishers
@@ -606,8 +606,8 @@ Test( oracle, upd_aggregate ) {
   upd_aggregate( px, 1001 );
   cr_assert( px->agg_.price_ == 245 );
   cr_assert( px->agg_.conf_ == 85 );
-  cr_assert( px->twap_.val_ == 124 );
-  cr_assert( px->twac_.val_ == 27 );
+  cr_assert( px->twap_.val_ == 125 );
+  cr_assert( px->twac_.val_ == 28 );
   cr_assert( px->last_slot_ == 1001 );
   cr_assert( px->num_qt_ == 4 );
 
