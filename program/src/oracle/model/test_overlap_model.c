@@ -3,30 +3,7 @@
 #include "../util/prng.h"
 
 #define OVERLAP_MODEL_NEED_REF
-#define REXP2_FXP_ORDER 7 /* REXP2_FXP_ORDER 5 yields a better than IEEE single precision accurate approximation */
 #include "overlap_model.h"
-
-static long double const ulp_fine[8] = {
-         0.0L,
-  46209190.1L, /* max_rerr 4.3e-02 */
-   2086863.4L, /* max_rerr 1.9e-03 */
-     91856.7L, /* max_rerr 8.6e-05 */
-      2999.3L, /* max_rerr 2.8e-06 */
-        83.2L, /* max_rerr 7.7e-08 */
-         4.3L, /* max_rerr 4.0e-09 */
-         3.6L  /* max_rerr 3.3e-09 */
-};
-
-static long double const ulp_coarse[8] = {
-         0.0L,
-  46209190.1L, /* max_rerr 4.3e-02 */
-   2086863.4L, /* max_rerr 1.9e-03 */
-     91856.7L, /* max_rerr 8.6e-05 */
-     32768.0L, /* max_rerr 3.1e-05 */
-     32768.0L, /* max_rerr 3.1e-05 */
-     32768.0L, /* max_rerr 3.1e-05 */
-     32768.0L  /* max_rerr 3.1e-05 */
-};
 
 int
 main( int     argc,
@@ -39,8 +16,8 @@ main( int     argc,
   long double max_ulp_fine   = 0.L;
   long double max_ulp_coarse = 0.L;
 
-  long double thresh_fine   = ulp_fine  [ REXP2_FXP_ORDER ];
-  long double thresh_coarse = ulp_coarse[ REXP2_FXP_ORDER ];
+  long double const thresh_fine   = 2.6L;    /* max_rerr 2.4e-09 */
+  long double const thresh_coarse = 32768.L; /* max_rerr 3.1e-05 */
 
   int ctr = 0;
   for( int iter=0; iter<100000000; iter++ ) {
@@ -78,8 +55,8 @@ main( int     argc,
   prng_delete( prng_leave( prng ) );
 
   printf( "pass (fine: max_rerr %.1Le max ulp %.1Lf, coarse: max_rerr %.1Le max ulp %.1Lf)\n",
-          max_ulp_fine   / ((long double)OVERLAP_MODEL_WEIGHT), max_ulp_fine,
-          max_ulp_coarse / ((long double)OVERLAP_MODEL_WEIGHT), max_ulp_coarse );
+          max_ulp_fine   / ((long double)(UINT64_C(1)<<30)), max_ulp_fine,
+          max_ulp_coarse / ((long double)(UINT64_C(1)<<30)), max_ulp_coarse );
 
   return 0;
 }
