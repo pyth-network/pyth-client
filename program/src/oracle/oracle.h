@@ -221,12 +221,6 @@ typedef enum {
   // key[2] sysvar_clock account  [readable]
   e_cmd_upd_price,
 
-  // publish component price, never returning an error even if the update failed
-  // key[0] funding account       [signer writable]
-  // key[1] price account         [writable]
-  // key[2] sysvar_clock account  [readable]
-  e_cmd_upd_price_no_fail_on_error,
-
   // compute aggregate price
   // key[0] funding account       [signer writable]
   // key[1] price account         [writable]
@@ -251,8 +245,13 @@ typedef enum {
   // set min publishers
   // key[0] funding account       [signer writable]
   // key[1] price account         [signer writable]
-  e_cmd_set_min_pub
+  e_cmd_set_min_pub,
 
+  // publish component price, never returning an error even if the update failed
+  // key[0] funding account       [signer writable]
+  // key[1] price account         [writable]
+  // key[2] sysvar_clock account  [readable]
+  e_cmd_upd_price_no_fail_on_error,
 } command_t;
 
 typedef struct cmd_hdr
