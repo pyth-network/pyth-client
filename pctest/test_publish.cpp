@@ -59,6 +59,12 @@ public:
   // callback for re-initialization of price account (with diff. exponent)
   void on_response( pc::price_init *, uint64_t ) override;
 
+  // user-facing method to update the price this publisher will send
+  void update_price( int64_t px_, uint64_t sprd_ );
+
+  // the pyth price publisher for this symbol
+  pc::price *sym_;
+
 private:
   void unsubscribe();
 
@@ -72,7 +78,8 @@ private:
 };
 
 test_publish::test_publish( pc::price *sym, int64_t px, uint64_t sprd )
-: sub_( this ),
+: sym_( sym ),
+  sub_( this ),
   px_( px ),
   sprd_( sprd ),
   rcnt_( 0UL )
@@ -262,6 +269,11 @@ void test_publish::on_response( pc::price_init *ptr, uint64_t )
     .add( "symbol", sym->get_symbol() )
     .add( "exponent", sym->get_price_exponent() )
     .end();
+}
+
+// Updates the price value stored locally, without sending the update.
+void test_publish::update_price( int64_t px_, uint64_t sprd_ ) {
+  sym_->update_no_send( px_, sprd_, pc::symbol_status::e_trading, false );
 }
 
 std::string get_rpc_host()
