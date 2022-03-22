@@ -44,8 +44,7 @@ private:
 class test_publish : public pc::request_sub,
                      public pc::request_sub_i<pc::product>,
                      public pc::request_sub_i<pc::price>,
-                     public pc::request_sub_i<pc::price_init>,
-                     public pc::request_sub_i<pc::price_sched>
+                     public pc::request_sub_i<pc::price_init>
 {
 public:
   test_publish( pc::price *sym, int64_t px, uint64_t sprd );
@@ -56,9 +55,6 @@ public:
 
   // callback for on-chain aggregate price update
   void on_response( pc::price*, uint64_t ) override;
-
-  // callback for when to submit new price on-chain
-  void on_response( pc::price_sched *, uint64_t ) override;
 
   // callback for re-initialization of price account (with diff. exponent)
   void on_response( pc::price_init *, uint64_t ) override;
@@ -71,8 +67,7 @@ private:
   uint64_t            sprd_;  // confidence interval or bid-ask spread
   double              expo_;  // price exponent
   uint64_t            sid1_;  // subscription id for prices
-  uint64_t            sid2_;  // subscription id for scheduling
-  uint64_t            sid3_;  // subscription id for scheduling
+  uint64_t            sid2_;  // subscription id for products
   uint64_t            rcnt_;  // price receive count
 };
 
@@ -85,11 +80,8 @@ test_publish::test_publish( pc::price *sym, int64_t px, uint64_t sprd )
   // add subscriptions for price updates from block chain
   sid1_ = sub_.add( sym );
 
-  // add subscription for price scheduling
-  sid2_ = sub_.add( sym->get_sched() );
-
   // add subscription for product updates
-  sid3_ = sub_.add( sym->get_product() );
+  sid2_ = sub_.add( sym->get_product() );
 
   // get price exponent for this symbol
   int64_t expo = sym->get_price_exponent();
@@ -179,7 +171,6 @@ void test_publish::unsubscribe()
 {
   // unsubscribe to callbacks
   sub_.del( sid1_ ); // unsubscribe price updates
-  sub_.del( sid2_ ); // unsubscribe price schedule updates
 }
 
 void test_publish::on_response( pc::product *prod, uint64_t )
@@ -261,56 +252,6 @@ void test_publish::on_response( pc::price *sym, uint64_t )
         .add( "slot_p75", slot_quartiles[2] )
         .add( "slot_p99", slot_quartiles[3] )
         .end();
-  }
-}
-
-void test_publish::on_response( pc::price_sched *ptr, uint64_t sub_id )
-{
-  // check if currently in error
-  pc::price *sym = ptr->get_price();
-  if ( sym->get_is_err() ) {
-    PC_LOG_ERR( "aggregate price in error" )
-      .add( "err", sym->get_err_msg() )
-      .end();
-    unsubscribe();
-    return;
-  }
-
-  // submit next price to block chain for this symbol
-  if ( sym->update( px_, sprd_, pc::symbol_status::e_trading ) ) {
-    double price  = expo_ * (double)px_;
-    double spread = expo_ * (double)sprd_;
-    PC_LOG_INF( "submit price to block-chain" )
-      .add( "symbol", sym->get_symbol() )
-      .add( "price_type", pc::price_type_to_str( sym->get_price_type() ) )
-      .add( "price", price )
-      .add( "spread", spread )
-      .add( "slot", sym->get_manager()->get_slot() )
-      .add( "sub_id", sub_id )
-      .end();
-    // increase price
-    px_ += static_cast< int64_t >( sprd_ );
-  } else if ( !sym->has_publisher() ) {
-    PC_LOG_WRN( "missing publish permission" )
-      .add( "symbol", sym->get_symbol() )
-      .add( "price_type", pc::price_type_to_str( sym->get_price_type() ) )
-      .end();
-    // should work once publisher has been permissioned
-  } else if ( !sym->get_is_ready_publish() ) {
-    PC_LOG_WRN( "not ready to publish next price - check rpc / pyth_tx connection")
-      .add( "symbol", sym->get_symbol() )
-      .add( "price_type", pc::price_type_to_str( sym->get_price_type() ) )
-      .end();
-    // likely that pyth_tx not yet connected
-  } else if ( sym->get_is_err() ) {
-    PC_LOG_WRN( "block-chain error" )
-      .add( "symbol", sym->get_symbol() )
-      .add( "price_type", pc::price_type_to_str( sym->get_price_type() ) )
-      .add( "err_msg", sym->get_err_msg() )
-      .end();
-    unsubscribe();
-    // either bad config or on-chain program problem - cant continue as is
-    // could try calling reset_err() and continue once error is resolved
   }
 }
 
