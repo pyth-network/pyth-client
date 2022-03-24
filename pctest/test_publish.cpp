@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <iostream>
+#include <stdlib.h>
 
 class test_publish;
 
@@ -38,7 +39,6 @@ public:
 
   void teardown();
 
-private:
   test_publish *pub1_;     // SYMBOL1 publisher
   test_publish *pub2_;     // SYMBOL2 publisher
 };
@@ -353,6 +353,11 @@ int usage()
   return 1;
 }
 
+int64_t random_value( )
+{
+  return rand() % 10 + 1;
+}
+
 int main(int argc, char** argv)
 {
   // unpack options
@@ -418,6 +423,15 @@ int main(int argc, char** argv)
   // and requests to submit price
   while( do_run && !mgr.get_is_err() ) {
     mgr.poll( do_wait );
+
+    // Submit new price updates
+    if ( sub.pub1_ != nullptr ) {
+      sub.pub1_->update_price( random_value() ,  uint64_t( random_value() ) );
+    }
+    if ( sub.pub2_ != nullptr ) {
+      sub.pub2_->update_price( random_value() ,  uint64_t( random_value() ) );
+    }
+
   }
 
   // report any errors on exit
