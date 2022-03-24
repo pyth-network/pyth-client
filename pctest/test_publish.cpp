@@ -30,6 +30,9 @@ public:
   // construct publishers on addition of new symbols
   void on_add_symbol( pc::manager *, pc::price * ) override;
 
+  // when we receive a new slot
+  void on_slot_publish( pc::manager * ) override;
+
   // have we received an on_init() callback yet
   bool get_is_init() const;
 
@@ -65,6 +68,9 @@ public:
   // the pyth price publisher for this symbol
   pc::price *sym_;
 
+  // indicates if there is an update pending which should be sent in the next slot
+  bool has_update_pending;
+
 private:
   void unsubscribe();
 
@@ -79,6 +85,7 @@ private:
 
 test_publish::test_publish( pc::price *sym, int64_t px, uint64_t sprd )
 : sym_( sym ),
+  has_update_pending( false ),
   sub_( this ),
   px_( px ),
   sprd_( sprd ),
@@ -167,6 +174,34 @@ void test_connect::on_add_symbol( pc::manager *, pc::price *sym )
       .add( id.get_str(), val_str )
       .end();
   }
+}
+
+// Send any pending updates when a new slot is published.
+void test_connect::on_slot_publish( pc::manager * )
+{
+  // Collect all the prices that are pending updates
+  std::vector<pc::price*> updates;
+  if ( pub1_ && pub1_->has_update_pending ) {
+    updates.emplace_back( pub1_->sym_ );
+  }
+  if ( pub2_ && pub2_->has_update_pending ) {
+    updates.emplace_back( pub2_->sym_ );
+  }
+  
+  // Do nothing if there are no pending updates
+  if ( updates.empty() ) {
+    return;
+  }
+
+  // Send the batch price update
+  if ( !pc::price::send( updates.data(), updates.size()) ) {
+    PC_LOG_ERR( "batch send failed" ).end();
+  }
+
+  // Mark the updates as completed
+  updates.clear();
+  pub1_->has_update_pending = false;
+  pub2_->has_update_pending = false;
 }
 
 test_publish::~test_publish()
@@ -274,6 +309,7 @@ void test_publish::on_response( pc::price_init *ptr, uint64_t )
 // Updates the price value stored locally, without sending the update.
 void test_publish::update_price( int64_t px_, uint64_t sprd_ ) {
   sym_->update_no_send( px_, sprd_, pc::symbol_status::e_trading, false );
+  has_update_pending = true;
 }
 
 std::string get_rpc_host()
