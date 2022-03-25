@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <iostream>
+#include <stdlib.h>
 
 class test_publish;
 
@@ -30,12 +31,14 @@ public:
   // construct publishers on addition of new symbols
   void on_add_symbol( pc::manager *, pc::price * ) override;
 
+  // when we receive a new slot
+  void on_slot_publish( pc::manager * ) override;
+
   // have we received an on_init() callback yet
   bool get_is_init() const;
 
   void teardown();
 
-private:
   test_publish *pub1_;     // SYMBOL1 publisher
   test_publish *pub2_;     // SYMBOL2 publisher
 };
@@ -44,8 +47,7 @@ private:
 class test_publish : public pc::request_sub,
                      public pc::request_sub_i<pc::product>,
                      public pc::request_sub_i<pc::price>,
-                     public pc::request_sub_i<pc::price_init>,
-                     public pc::request_sub_i<pc::price_sched>
+                     public pc::request_sub_i<pc::price_init>
 {
 public:
   test_publish( pc::price *sym, int64_t px, uint64_t sprd );
@@ -57,11 +59,17 @@ public:
   // callback for on-chain aggregate price update
   void on_response( pc::price*, uint64_t ) override;
 
-  // callback for when to submit new price on-chain
-  void on_response( pc::price_sched *, uint64_t ) override;
-
   // callback for re-initialization of price account (with diff. exponent)
   void on_response( pc::price_init *, uint64_t ) override;
+
+  // user-facing method to update the price this publisher will send
+  void update_price( int64_t px_, uint64_t sprd_ );
+
+  // the pyth price publisher for this symbol
+  pc::price *sym_;
+
+  // indicates if there is an update pending which should be sent in the next slot
+  bool has_update_pending;
 
 private:
   void unsubscribe();
@@ -71,13 +79,14 @@ private:
   uint64_t            sprd_;  // confidence interval or bid-ask spread
   double              expo_;  // price exponent
   uint64_t            sid1_;  // subscription id for prices
-  uint64_t            sid2_;  // subscription id for scheduling
-  uint64_t            sid3_;  // subscription id for scheduling
+  uint64_t            sid2_;  // subscription id for products
   uint64_t            rcnt_;  // price receive count
 };
 
 test_publish::test_publish( pc::price *sym, int64_t px, uint64_t sprd )
-: sub_( this ),
+: sym_( sym ),
+  has_update_pending( false ),
+  sub_( this ),
   px_( px ),
   sprd_( sprd ),
   rcnt_( 0UL )
@@ -85,11 +94,8 @@ test_publish::test_publish( pc::price *sym, int64_t px, uint64_t sprd )
   // add subscriptions for price updates from block chain
   sid1_ = sub_.add( sym );
 
-  // add subscription for price scheduling
-  sid2_ = sub_.add( sym->get_sched() );
-
   // add subscription for product updates
-  sid3_ = sub_.add( sym->get_product() );
+  sid2_ = sub_.add( sym->get_product() );
 
   // get price exponent for this symbol
   int64_t expo = sym->get_price_exponent();
@@ -170,6 +176,34 @@ void test_connect::on_add_symbol( pc::manager *, pc::price *sym )
   }
 }
 
+// Send any pending updates when a new slot is published.
+void test_connect::on_slot_publish( pc::manager * )
+{
+  // Collect all the prices that are pending updates
+  std::vector<pc::price*> updates;
+  if ( pub1_ && pub1_->has_update_pending ) {
+    updates.emplace_back( pub1_->sym_ );
+  }
+  if ( pub2_ && pub2_->has_update_pending ) {
+    updates.emplace_back( pub2_->sym_ );
+  }
+  
+  // Do nothing if there are no pending updates
+  if ( updates.empty() ) {
+    return;
+  }
+
+  // Send the batch price update
+  if ( !pc::price::send( updates.data(), updates.size()) ) {
+    PC_LOG_ERR( "batch send failed" ).end();
+  }
+
+  // Mark the updates as completed
+  updates.clear();
+  pub1_->has_update_pending = false;
+  pub2_->has_update_pending = false;
+}
+
 test_publish::~test_publish()
 {
   unsubscribe();
@@ -179,7 +213,6 @@ void test_publish::unsubscribe()
 {
   // unsubscribe to callbacks
   sub_.del( sid1_ ); // unsubscribe price updates
-  sub_.del( sid2_ ); // unsubscribe price schedule updates
 }
 
 void test_publish::on_response( pc::product *prod, uint64_t )
@@ -264,56 +297,6 @@ void test_publish::on_response( pc::price *sym, uint64_t )
   }
 }
 
-void test_publish::on_response( pc::price_sched *ptr, uint64_t sub_id )
-{
-  // check if currently in error
-  pc::price *sym = ptr->get_price();
-  if ( sym->get_is_err() ) {
-    PC_LOG_ERR( "aggregate price in error" )
-      .add( "err", sym->get_err_msg() )
-      .end();
-    unsubscribe();
-    return;
-  }
-
-  // submit next price to block chain for this symbol
-  if ( sym->update( px_, sprd_, pc::symbol_status::e_trading ) ) {
-    double price  = expo_ * (double)px_;
-    double spread = expo_ * (double)sprd_;
-    PC_LOG_INF( "submit price to block-chain" )
-      .add( "symbol", sym->get_symbol() )
-      .add( "price_type", pc::price_type_to_str( sym->get_price_type() ) )
-      .add( "price", price )
-      .add( "spread", spread )
-      .add( "slot", sym->get_manager()->get_slot() )
-      .add( "sub_id", sub_id )
-      .end();
-    // increase price
-    px_ += static_cast< int64_t >( sprd_ );
-  } else if ( !sym->has_publisher() ) {
-    PC_LOG_WRN( "missing publish permission" )
-      .add( "symbol", sym->get_symbol() )
-      .add( "price_type", pc::price_type_to_str( sym->get_price_type() ) )
-      .end();
-    // should work once publisher has been permissioned
-  } else if ( !sym->get_is_ready_publish() ) {
-    PC_LOG_WRN( "not ready to publish next price - check rpc / pyth_tx connection")
-      .add( "symbol", sym->get_symbol() )
-      .add( "price_type", pc::price_type_to_str( sym->get_price_type() ) )
-      .end();
-    // likely that pyth_tx not yet connected
-  } else if ( sym->get_is_err() ) {
-    PC_LOG_WRN( "block-chain error" )
-      .add( "symbol", sym->get_symbol() )
-      .add( "price_type", pc::price_type_to_str( sym->get_price_type() ) )
-      .add( "err_msg", sym->get_err_msg() )
-      .end();
-    unsubscribe();
-    // either bad config or on-chain program problem - cant continue as is
-    // could try calling reset_err() and continue once error is resolved
-  }
-}
-
 void test_publish::on_response( pc::price_init *ptr, uint64_t )
 {
   pc::price *sym = ptr->get_price();
@@ -321,6 +304,12 @@ void test_publish::on_response( pc::price_init *ptr, uint64_t )
     .add( "symbol", sym->get_symbol() )
     .add( "exponent", sym->get_price_exponent() )
     .end();
+}
+
+// Updates the price value stored locally, without sending the update.
+void test_publish::update_price( int64_t px_, uint64_t sprd_ ) {
+  sym_->update_no_send( px_, sprd_, pc::symbol_status::e_trading, false );
+  has_update_pending = true;
 }
 
 std::string get_rpc_host()
@@ -362,6 +351,11 @@ int usage()
   std::cerr << "  [-d]" << std::endl;
   std::cerr << "  [-x]" << std::endl;
   return 1;
+}
+
+int64_t random_value( )
+{
+  return rand() % 10 + 1;
 }
 
 int main(int argc, char** argv)
@@ -429,6 +423,15 @@ int main(int argc, char** argv)
   // and requests to submit price
   while( do_run && !mgr.get_is_err() ) {
     mgr.poll( do_wait );
+
+    // Submit new price updates
+    if ( sub.pub1_ != nullptr ) {
+      sub.pub1_->update_price( random_value() ,  uint64_t( random_value() ) );
+    }
+    if ( sub.pub2_ != nullptr ) {
+      sub.pub2_->update_price( random_value() ,  uint64_t( random_value() ) );
+    }
+
   }
 
   // report any errors on exit
