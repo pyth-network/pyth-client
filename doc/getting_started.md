@@ -1,8 +1,8 @@
 # Getting started with publishing via pyth-client
 
-The pyth-client repo consists of a C++ library (libpc.a), two command-line administration tools (pyth & pyth_admin), a json/websocket-based server (pythd) and a gateway/proxy server for price publishing (pyth_tx).
+The pyth-client repo consists of two command-line administration tools (pyth & pyth_admin), a json/websocket-based server (pythd) and a gateway/proxy server for price publishing (pyth_tx).
 
-You can integrate with libpc directly in your application. See `pctest/test_publish.cpp` for an example. Or, you can integrate with the pythd server via json/websockets. See `pctest/test_publish.py` for an example.
+You can integrate with the pythd server via json/websockets. See `pctest/test_publish.py` for an example.
 
 Before doing this you need to setup a *key-store* directory. A key-store is a collection of cryptographic keys for interracting with the solana block-chain. This can be done via the pyth command-line tool.  First, build the project by following the instructions in the README.md file and cd to the build directory, then run the following:
 
@@ -43,22 +43,16 @@ KENV=devnet  # or testnet, mainnet
 
 This creates two files: `$KDIR/mapping_key.json` and `$KDIR/program_key.json`.
 
-Once permissioned, you can test your setup by running the test_publish.cpp example program for publishing and subscribing to two test symbols.  To test publishing on devnet you need to run:
+Once permissioned, you can test your setup by running the test_publish.py example program against pythd for publishing and subscribing to a test symbol.  To test publishing on devnet you first need to run an instance of the pythd server:
 
 
 ```
 RHOST=api.devnet.solana.com
 THOST=<your_pyth_tx_host>
-./test_publish -k $KDIR -r $RHOST -t $THOST
+./pythd -k $KDIR -r $RHOST -t $THOST
 ```
 
 The -r and -t options correspond to the locations of required solana validator and pyth_tx server instances.
-
-You can also publish to solana using the pythd server. Start up the server using the same key-store directory and host specification:
-
-```
-./pythd -k $KDIR -r $RHOST -t $THOST
-```
 
 Run the test_publish.py example program on the same host to connect to the pythd server:
 
