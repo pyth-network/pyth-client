@@ -650,6 +650,19 @@ Test( oracle, upd_aggregate ) {
   cr_assert( px->timestamp_ == 10 );
   cr_assert( px->prev_slot_ == 1025 );
   cr_assert( px->prev_timestamp_ == 5 );
+
+  // Check that the prev_* fields don't update if the aggregate status is UNKNOWN
+  uint64_t prev_slot_ = px->prev_slot_;
+  int64_t prev_price_ = px->prev_price_;
+  uint64_t prev_conf_ = px->prev_conf_;
+  int64_t prev_timestamp_ = px->prev_timestamp_;
+  upd_aggregate( px, 1028, 12 );
+  cr_assert( px->agg_.status_ == PC_STATUS_UNKNOWN );
+  cr_assert( px->timestamp_ == 12 );
+  cr_assert( px->prev_slot_ == prev_slot_ );
+  cr_assert( px->prev_price_ == prev_price_ );
+  cr_assert( px->prev_conf_ == prev_conf_ );
+  cr_assert( px->prev_timestamp_ == prev_timestamp_ );
 }
 
 Test( oracle, del_publisher ) {
