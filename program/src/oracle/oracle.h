@@ -157,7 +157,7 @@ typedef struct pc_price
   uint64_t        valid_slot_;        // valid on-chain slot of agg. price
   pc_ema_t        twap_;              // time-weighted average price
   pc_ema_t        twac_;              // time-weighted average conf interval
-  int64_t         drv1_;              // space for future derived values
+  int64_t         timestamp_;         // unix timestamp of aggregate price
   uint8_t         min_pub_;           // min publishers for valid price
   int8_t          drv2_;              // space for future derived values
   int16_t         drv3_;              // space for future derived values
@@ -167,7 +167,7 @@ typedef struct pc_price
   uint64_t        prev_slot_;         // valid slot of previous aggregate with TRADING status
   int64_t         prev_price_;        // aggregate price of previous aggregate with TRADING status
   uint64_t        prev_conf_;         // confidence interval of previous aggregate with TRADING status
-  uint64_t        drv5_;              // space for future derived values
+  int64_t         prev_timestamp_;    // unix timestamp of previous aggregate with TRADING status
   pc_price_info_t agg_;               // aggregate price information
   pc_price_comp_t comp_[PC_COMP_SIZE];// component prices
 } pc_price_t;
