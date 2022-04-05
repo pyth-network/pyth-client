@@ -196,10 +196,12 @@ static inline void upd_aggregate( pc_price_t *ptr, uint64_t slot )
   // get number of slots from last published valid price
   int64_t agg_diff = ( int64_t )slot - ( int64_t )( ptr->last_slot_ );
 
-  // copy previous price
-  ptr->prev_slot_  = ptr->valid_slot_;
-  ptr->prev_price_ = ptr->agg_.price_;
-  ptr->prev_conf_  = ptr->agg_.conf_;
+  // Update the value of the previous price, if it had TRADING status.
+  if ( ptr->agg_.status_ == PC_STATUS_TRADING ) {
+    ptr->prev_slot_  = ptr->valid_slot_;
+    ptr->prev_price_ = ptr->agg_.price_;
+    ptr->prev_conf_  = ptr->agg_.conf_;
+  }
 
   // update aggregate details ready for next slot
   ptr->valid_slot_ = ptr->agg_.pub_slot_;// valid slot-time of agg. price

@@ -164,9 +164,9 @@ typedef struct pc_price
   int32_t         drv4_;              // space for future derived values
   pc_pub_key_t    prod_;              // product id/ref-account
   pc_pub_key_t    next_;              // next price account in list
-  uint64_t        prev_slot_;         // valid slot of previous update
-  int64_t         prev_price_;        // aggregate price of previous update
-  uint64_t        prev_conf_;         // confidence interval of previous update
+  uint64_t        prev_slot_;         // valid slot of previous aggregate with TRADING status
+  int64_t         prev_price_;        // aggregate price of previous aggregate with TRADING status
+  uint64_t        prev_conf_;         // confidence interval of previous aggregate with TRADING status
   uint64_t        drv5_;              // space for future derived values
   pc_price_info_t agg_;               // aggregate price information
   pc_price_comp_t comp_[PC_COMP_SIZE];// component prices
