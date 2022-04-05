@@ -266,9 +266,7 @@ void test_upd_ema(int64_t n, int64_t d, pd_t* val) {
     }
     qs->expo_ = -9;
 
-    pc_price_t prc[1];
-    prc->drv1_ = 1;
-    upd_ema(ema, val, conf, 1, qs, prc);
+    upd_ema(ema, val, conf, 1, qs);
 
     pd_t result[1];
     result->v_ = ema->val_;

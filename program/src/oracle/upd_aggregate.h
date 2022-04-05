@@ -82,7 +82,7 @@ static pc_qset_t *qset_new( int expo )
 
 static void upd_ema(
     pc_ema_t *ptr, pd_t *val, pd_t *conf, int64_t nslot, pc_qset_t *qs
-    , pc_price_t *prc_ptr)
+    )
 {
   pd_t numer[1], denom[1], cwgt[1], wval[1], decay[1], diff[1], one[1];
   pd_new( one, 100000000L, -8 );
@@ -103,15 +103,8 @@ static void upd_ema(
     pd_add( decay, decay, one, qs->fact_ );
 
     // compute numer/denom and new value from decay factor
-    if ( prc_ptr->drv1_ ) {
-      pd_load( numer, ptr->numer_ );
-      pd_load( denom, ptr->denom_ );
-    }
-    else {
-      // temporary upgrade code
-      pd_new_scale( numer, ptr->numer_, PD_EMA_EXPO );
-      pd_new_scale( denom, ptr->denom_, PD_EMA_EXPO );
-    }
+    pd_load( numer, ptr->numer_ );
+    pd_load( denom, ptr->denom_ );
     if ( numer->v_ < 0 || denom->v_ < 0 ) {
       // temporary reset twap on negative value
       pd_set( numer, val );
@@ -135,7 +128,6 @@ static void upd_ema(
     ptr->numer_ = numer1;
     ptr->denom_ = denom1;
   }
-  prc_ptr->drv1_ = 1;
 }
 
 static inline void upd_twap(
@@ -144,8 +136,8 @@ static inline void upd_twap(
   pd_t px[1], conf[1];
   pd_new_scale( px, ptr->agg_.price_, ptr->expo_ );
   pd_new_scale( conf, ( int64_t )( ptr->agg_.conf_ ), ptr->expo_ );
-  upd_ema( &ptr->twap_, px, conf, nslots, qs, ptr );
-  upd_ema( &ptr->twac_, conf, conf, nslots, qs, ptr );
+  upd_ema( &ptr->twap_, px, conf, nslots, qs );
+  upd_ema( &ptr->twac_, conf, conf, nslots, qs );
 }
 
 // compute weighted percentile
