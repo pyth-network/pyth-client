@@ -149,7 +149,7 @@ int main( int argc,char** argv )
     ptr->latest_.pub_slot_ =
       static_cast< uint64_t >( static_cast< int64_t >( slot ) + pub_slot );
   }
-  upd_aggregate( px, slot+1 );
+  upd_aggregate( px, slot+1, 1234 );
 
   char const* status = "invalid value";
   switch ( px->agg_.status_ ) {

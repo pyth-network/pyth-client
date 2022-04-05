@@ -82,7 +82,7 @@ static pc_qset_t *qset_new( int expo )
 
 static void upd_ema(
     pc_ema_t *ptr, pd_t *val, pd_t *conf, int64_t nslot, pc_qset_t *qs
-    , pc_price_t *prc_ptr)
+    )
 {
   pd_t numer[1], denom[1], cwgt[1], wval[1], decay[1], diff[1], one[1];
   pd_new( one, 100000000L, -8 );
@@ -103,15 +103,8 @@ static void upd_ema(
     pd_add( decay, decay, one, qs->fact_ );
 
     // compute numer/denom and new value from decay factor
-    if ( prc_ptr->drv1_ ) {
-      pd_load( numer, ptr->numer_ );
-      pd_load( denom, ptr->denom_ );
-    }
-    else {
-      // temporary upgrade code
-      pd_new_scale( numer, ptr->numer_, PD_EMA_EXPO );
-      pd_new_scale( denom, ptr->denom_, PD_EMA_EXPO );
-    }
+    pd_load( numer, ptr->numer_ );
+    pd_load( denom, ptr->denom_ );
     if ( numer->v_ < 0 || denom->v_ < 0 ) {
       // temporary reset twap on negative value
       pd_set( numer, val );
@@ -135,7 +128,6 @@ static void upd_ema(
     ptr->numer_ = numer1;
     ptr->denom_ = denom1;
   }
-  prc_ptr->drv1_ = 1;
 }
 
 static inline void upd_twap(
@@ -144,8 +136,8 @@ static inline void upd_twap(
   pd_t px[1], conf[1];
   pd_new_scale( px, ptr->agg_.price_, ptr->expo_ );
   pd_new_scale( conf, ( int64_t )( ptr->agg_.conf_ ), ptr->expo_ );
-  upd_ema( &ptr->twap_, px, conf, nslots, qs, ptr );
-  upd_ema( &ptr->twac_, conf, conf, nslots, qs, ptr );
+  upd_ema( &ptr->twap_, px, conf, nslots, qs );
+  upd_ema( &ptr->twac_, conf, conf, nslots, qs );
 }
 
 // compute weighted percentile
@@ -185,7 +177,7 @@ static void wgt_ptile(
 }
 
 // update aggregate price
-static inline void upd_aggregate( pc_price_t *ptr, uint64_t slot )
+static inline void upd_aggregate( pc_price_t *ptr, uint64_t slot, int64_t timestamp )
 {
   // only re-compute aggregate in next slot
   if ( slot <= ptr->agg_.pub_slot_ ) {
@@ -196,14 +188,18 @@ static inline void upd_aggregate( pc_price_t *ptr, uint64_t slot )
   // get number of slots from last published valid price
   int64_t agg_diff = ( int64_t )slot - ( int64_t )( ptr->last_slot_ );
 
-  // copy previous price
-  ptr->prev_slot_  = ptr->valid_slot_;
-  ptr->prev_price_ = ptr->agg_.price_;
-  ptr->prev_conf_  = ptr->agg_.conf_;
+  // Update the value of the previous price, if it had TRADING status.
+  if ( ptr->agg_.status_ == PC_STATUS_TRADING ) {
+    ptr->prev_slot_      = ptr->agg_.pub_slot_;
+    ptr->prev_price_     = ptr->agg_.price_;
+    ptr->prev_conf_      = ptr->agg_.conf_;
+    ptr->prev_timestamp_ = ptr->timestamp_;
+  }
 
   // update aggregate details ready for next slot
   ptr->valid_slot_ = ptr->agg_.pub_slot_;// valid slot-time of agg. price
   ptr->agg_.pub_slot_ = slot;            // publish slot-time of agg. price
+  ptr->timestamp_ = timestamp;
 
   uint32_t numv = 0;
   uint32_t vidx[ PC_COMP_SIZE ];

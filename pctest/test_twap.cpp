@@ -77,10 +77,11 @@ int main( int argc,char** argv )
   pc_price_t px[1];
   __builtin_memset( px, 0, sizeof( pc_price_t ) );
   uint64_t slot = 1000;
+  int64_t timestamp = 1234;
   px->last_slot_ = slot;
   px->agg_.pub_slot_ = slot;
   px->num_  = 0;
-  upd_aggregate( px, slot+1 );
+  upd_aggregate( px, slot+1, timestamp );
   pc_qset_t *qs = nullptr;
 
   // skip first line

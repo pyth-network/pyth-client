@@ -459,6 +459,7 @@ static uint64_t upd_test( SolParameters *prm, SolAccountInfo *ka )
 
   // compute aggregate price
   uint64_t slot = 1000UL;
+  int64_t timestamp = 5678;
   px->last_slot_= slot;
   px->agg_.pub_slot_ = slot;
   px->expo_      = cmd->expo_;
@@ -470,7 +471,7 @@ static uint64_t upd_test( SolParameters *prm, SolAccountInfo *ka )
     ptr->latest_.conf_   = cmd->conf_[i];
     ptr->latest_.pub_slot_ = slot + (uint64_t)cmd->slot_diff_[i];
   }
-  upd_aggregate( px, slot+1 );
+  upd_aggregate( px, slot+1, timestamp );
 
   return SUCCESS;
 }
@@ -527,7 +528,7 @@ static uint64_t upd_price( SolParameters *prm, SolAccountInfo *ka )
 
   // update aggregate price as necessary
   if ( sptr->slot_ > pptr->agg_.pub_slot_ ) {
-    upd_aggregate( pptr, sptr->slot_ );
+    upd_aggregate( pptr, sptr->slot_, sptr->unix_timestamp_ );
   }
 
   // update component price if required
