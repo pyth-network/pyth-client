@@ -274,6 +274,7 @@ static uint64_t init_price( SolParameters *prm, SolAccountInfo *ka )
   sptr->prev_slot_  = 0UL;
   sptr->prev_price_ = 0L;
   sptr->prev_conf_  = 0L;
+  sptr->prev_timestamp_ = 0L;
   sol_memset( &sptr->twap_, 0, sizeof( pc_ema_t ) );
   sol_memset( &sptr->twac_, 0, sizeof( pc_ema_t ) );
   sol_memset( &sptr->agg_, 0, sizeof( pc_price_info_t ) );
