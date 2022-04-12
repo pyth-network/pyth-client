@@ -454,7 +454,8 @@ static uint64_t upd_test( SolParameters *prm, SolAccountInfo *ka )
   if ( prm->data_len != sizeof( cmd_upd_test_t ) ||
        px->magic_ != PC_MAGIC ||
        px->ver_ != cmd->ver_ ||
-       px->type_ != PC_ACCTYPE_TEST ) {
+       px->type_ != PC_ACCTYPE_TEST ||
+       cmd->num_ > PC_COMP_SIZE ) {
     return ERROR_INVALID_ARGUMENT;
   }
 
