@@ -4,6 +4,10 @@ char heap_start[8192];
 #include "sort.c"
 #include <criterion/criterion.h>
 
+uint64_t MAPPING_ACCOUNT_LAMPORTS = 143821440;
+uint64_t PRODUCT_ACCOUNT_LAMPORTS = 4454400;
+uint64_t PRICE_ACCOUNT_LAMPORTS = 23942400;
+
 Test(oracle, init_mapping) {
 
   // start with perfect inputs
@@ -30,7 +34,7 @@ Test(oracle, init_mapping) {
       .executable  = false
   },{
       .key         = &mkey,
-      .lamports    = &pqty,
+      .lamports    = &MAPPING_ACCOUNT_LAMPORTS,
       .data_len    = sizeof( pc_map_table_t ),
       .data        = (uint8_t*)mptr,
       .owner       = &p_id,
@@ -96,7 +100,7 @@ Test(oracle, add_mapping ) {
   SolPubkey pkey = {.x = { 1, }};
   SolPubkey tkey = {.x = { 2, }};
   SolPubkey mkey = {.x = { 3, }};
-  uint64_t pqty = 100, tqty = 100;
+  uint64_t pqty = 100;
   pc_map_table_t mptr[1];
   sol_memset( mptr, 0, sizeof( pc_map_table_t ) );
   SolAccountInfo acc[] = {{
@@ -111,7 +115,7 @@ Test(oracle, add_mapping ) {
       .executable  = false
   },{
       .key         = &tkey,
-      .lamports    = &pqty,
+      .lamports    = &MAPPING_ACCOUNT_LAMPORTS,
       .data_len    = sizeof( pc_map_table_t ),
       .data        = (uint8_t*)tptr,
       .owner       = &p_id,
@@ -121,7 +125,7 @@ Test(oracle, add_mapping ) {
       .executable  = false
   },{
       .key         = &mkey,
-      .lamports    = &tqty,
+      .lamports    = &MAPPING_ACCOUNT_LAMPORTS,
       .data_len    = sizeof( pc_map_table_t ),
       .data        = (uint8_t*)mptr,
       .owner       = &p_id,
@@ -186,7 +190,7 @@ Test(oracle, add_product) {
       .executable  = false
   },{
       .key         = &mkey,
-      .lamports    = &pqty,
+      .lamports    = &MAPPING_ACCOUNT_LAMPORTS,
       .data_len    = sizeof( pc_map_table_t ),
       .data        = (uint8_t*)mptr,
       .owner       = &p_id,
@@ -196,7 +200,7 @@ Test(oracle, add_product) {
       .executable  = false
   },{
       .key         = &skey,
-      .lamports    = &pqty,
+      .lamports    = &PRODUCT_ACCOUNT_LAMPORTS,
       .data_len    = PC_PROD_ACC_SIZE,
       .data        = (uint8_t*)sptr,
       .owner       = &p_id,
@@ -259,7 +263,7 @@ Test( oracle, add_publisher ) {
   SolPubkey p_id  = {.x = { 0xff, }};
   SolPubkey pkey = {.x = { 1, }};
   SolPubkey skey = {.x = { 3, }};
-  uint64_t pqty = 100, sqty = 200;
+  uint64_t pqty = 100;
   pc_price_t sptr[1];
   sol_memset( sptr, 0, sizeof( pc_price_t ) );
   sptr->magic_ = PC_MAGIC;
@@ -278,7 +282,7 @@ Test( oracle, add_publisher ) {
       .executable  = false
   },{
       .key         = &skey,
-      .lamports    = &sqty,
+      .lamports    = &pqty,
       .data_len    = sizeof( pc_price_t ),
       .data        = (uint8_t*)sptr,
       .owner       = &p_id,
@@ -294,6 +298,13 @@ Test( oracle, add_publisher ) {
     .data_len   = sizeof( idata ),
     .program_id = &p_id
   };
+
+  // Expect the instruction to fail, because the price account isn't rent exempt
+  cr_assert( ERROR_INVALID_ARGUMENT == dispatch( &prm, acc ) );
+
+  // Now give the price account enough lamports to be rent exempt
+  acc[1].lamports = &PRICE_ACCOUNT_LAMPORTS;
+  
   cr_assert( SUCCESS == dispatch( &prm, acc ) );
   cr_assert( sptr->num_ == 1 );
   cr_assert( pc_pub_key_equal( &idata.pub_, &sptr->comp_[0].pub_ ) );
@@ -358,7 +369,7 @@ Test( oracle, upd_test ) {
       .executable  = false
   },{
       .key         = &mkey,
-      .lamports    = &pqty,
+      .lamports    = &PRICE_ACCOUNT_LAMPORTS,
       .data_len    = sizeof( pc_price_t ),
       .data        = (uint8_t*)mptr,
       .owner       = &p_id,
@@ -436,7 +447,7 @@ Test( oracle, upd_price ) {
       .executable  = false
   },{
       .key         = &skey,
-      .lamports    = &sqty,
+      .lamports    = &PRICE_ACCOUNT_LAMPORTS,
       .data_len    = sizeof( pc_price_t ),
       .data        = (uint8_t*)sptr,
       .owner       = &p_id,
@@ -547,7 +558,7 @@ Test( oracle, upd_price_no_fail_on_error ) {
       .executable  = false
   },{
       .key         = &skey,
-      .lamports    = &sqty,
+      .lamports    = &PRICE_ACCOUNT_LAMPORTS,
       .data_len    = sizeof( pc_price_t ),
       .data        = (uint8_t*)sptr,
       .owner       = &p_id,
@@ -745,7 +756,7 @@ Test( oracle, del_publisher ) {
   };
   SolPubkey pkey = {.x = { 1, }};
   SolPubkey skey = {.x = { 3, }};
-  uint64_t pqty = 100, sqty = 200;
+  uint64_t pqty = 100;
   pc_price_t sptr[1];
   sol_memset( sptr, 0, sizeof( pc_price_t ) );
   sptr->magic_ = PC_MAGIC;
@@ -768,7 +779,7 @@ Test( oracle, del_publisher ) {
       .executable  = false
   },{
       .key         = &skey,
-      .lamports    = &sqty,
+      .lamports    = &PRICE_ACCOUNT_LAMPORTS,
       .data_len    = sizeof( pc_price_t ),
       .data        = (uint8_t*)sptr,
       .owner       = (SolPubkey*)&p_id,
