@@ -5,6 +5,30 @@
 #include "oracle.h"
 #include "upd_aggregate.h"
 
+// Returns the minimum number of lamports required to make an account
+// with dlen bytes of data rent exempt. These values were calculated 
+// using the getMinimumBalanceForRentExemption RPC call, and are
+// guaranteed never to increase.
+static uint64_t rent_exempt_amount( uint64_t dlen )
+{
+  switch ( dlen )
+  {
+  case sizeof( pc_map_table_t ):
+    return 143821440;
+  case PC_PROD_ACC_SIZE:
+    return 4454400;
+  case sizeof( pc_price_t ):
+    return 23942400;
+  default:
+    return UINT64_MAX;
+  }
+}
+
+static bool is_rent_exempt( uint64_t lamports, uint64_t dlen )
+{
+  return lamports >= rent_exempt_amount( dlen );
+}
+
 static bool valid_funding_account( SolAccountInfo *ka )
 {
   return ka->is_signer &&
@@ -18,7 +42,8 @@ static bool valid_signable_account( SolParameters *prm,
   return ka->is_signer &&
          ka->is_writable &&
          SolPubkey_same( ka->owner, prm->program_id ) &&
-         ka->data_len >= dlen;
+         ka->data_len >= dlen &&
+         is_rent_exempt( *ka->lamports, dlen );
 }
 
 static bool valid_writable_account( SolParameters *prm,
@@ -27,7 +52,8 @@ static bool valid_writable_account( SolParameters *prm,
 {
   return ka->is_writable &&
          SolPubkey_same( ka->owner, prm->program_id ) &&
-         ka->data_len >= dlen;
+         ka->data_len >= dlen &&
+         is_rent_exempt( *ka->lamports, dlen );
 }
 
 static uint64_t init_mapping( SolParameters *prm, SolAccountInfo *ka )
