@@ -5,3 +5,7 @@ target
 cmake-build-*
 Cargo.lock
 /venv
+
+# IntelliJ / CLion configuration
+.idea
+*.iml
