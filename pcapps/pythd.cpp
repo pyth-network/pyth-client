@@ -154,6 +154,8 @@ int main(int argc, char **argv)
       << mgr.get_mapping_pub_key_file() << "]" << std::endl;
     return 1;
   }
+  std::cout << "pythd: max batch size " << rpc::MAX_UPDATES;
+
   // set up signal handing
   signal( SIGINT, sig_handle );
   signal( SIGHUP, sig_handle );
