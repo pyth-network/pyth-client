@@ -773,7 +773,7 @@ bool price::send( price *prices[], const unsigned n )
     upds_.emplace_back( p->preq_ );
 
     if (
-      upds_.size() >= rpc::upd_price::MAX_UPDATES
+      upds_.size() >= rpc::upd_price::max_updates
       || ( upds_.size() && ( i + 1 ) == n )
     ) {
       if ( mgr->get_do_tx() ) {

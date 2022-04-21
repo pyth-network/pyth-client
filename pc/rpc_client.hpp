@@ -403,7 +403,8 @@ namespace pc
     class upd_price : public tx_request, public rpc_request
     {
     public:
-      static constexpr unsigned MAX_UPDATES = std::min(std::getenv("PYTH_MAX_BATCH_SIZE"), 8);
+      static unsigned constexpr MAX_BATCH_SIZE = 8;
+      static unsigned max_updates;
 
       // parameters
       void set_symbol_status( symbol_status );
