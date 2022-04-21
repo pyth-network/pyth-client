@@ -185,7 +185,7 @@ void manager::set_max_batch_size( unsigned batch_size )
   max_batch_ = batch_size;
 }
 
-unsigned get_max_batch_size() const
+unsigned manager::get_max_batch_size() const
 {
   return max_batch_;
 }
