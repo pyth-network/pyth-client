@@ -100,6 +100,10 @@ namespace pc
     void set_publish_interval( int64_t mill_secs );
     int64_t get_publish_interval() const;
 
+    // override the default maximum number of price updates to send in a batch
+    void set_max_batch_size( unsigned batch_size );
+    unsigned get_max_batch_size() const;
+
     // event subscription callback
     void set_manager_sub( manager_sub * );
     manager_sub *get_manager_sub() const;
@@ -253,6 +257,7 @@ namespace pc
     capture      cap_;      // aggregate price capture
     tx_parser    txp_;      // handle unexpected errors
     commitment   cmt_;      // account get/subscribe commitment
+    unsigned     max_batch_;// maximum number of price updates that can be sent in a single batch
 
     // requests
     rpc::get_slot              sreq_[1]; // slot subscription
