@@ -101,8 +101,9 @@ int main(int argc, char **argv)
   std::string tx_host  = get_tx_host();
   int pyth_port = get_port();
   int opt = 0;
+  unsigned max_batch_size = 0;
   bool do_wait = true, do_tx = true, do_ws = true, do_debug = false;
-  while( (opt = ::getopt(argc,argv, "r:t:p:k:w:c:l:m:dnxhz" )) != -1 ) {
+  while( (opt = ::getopt(argc,argv, "r:t:p:k:w:c:l:m:b:dnxhz" )) != -1 ) {
     switch(opt) {
       case 'r': rpc_host = optarg; break;
       case 't': tx_host = optarg; break;
@@ -112,6 +113,7 @@ int main(int argc, char **argv)
       case 'w': cnt_dir = optarg; break;
       case 'l': log_file = optarg; break;
       case 'm': cmt = str_to_commitment(optarg); break;
+      case 'b': max_batch_size = strtoul(optarg, NULL, 0); break;
       case 'n': do_wait = false; break;
       case 'x': do_tx = false; break;
       case 'z': do_ws = false; break;
@@ -154,6 +156,12 @@ int main(int argc, char **argv)
       << mgr.get_mapping_pub_key_file() << "]" << std::endl;
     return 1;
   }
+
+  if (max_batch_size > 0) {
+    mgr.set_max_batch_size(max_batch_size);
+  }
+  std::cout << "pythd: max batch size " << mgr.get_max_batch_size() << std::endl;
+
   // set up signal handing
   signal( SIGINT, sig_handle );
   signal( SIGHUP, sig_handle );

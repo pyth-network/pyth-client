@@ -9,6 +9,7 @@ using namespace pc;
 #define PC_BLOCKHASH_TIMEOUT  3
 #define PC_PUB_INTERVAL       (227L*PC_NSECS_IN_MSEC)
 #define PC_RPC_HOST           "localhost"
+#define PC_MAX_BATCH          8
 
 ///////////////////////////////////////////////////////////////////////////
 // manager_sub
@@ -70,6 +71,7 @@ manager::manager()
   do_tx_( true ),
   is_pub_( false ),
   cmt_( commitment::e_confirmed ),
+  max_batch_( PC_MAX_BATCH ),
   sreq_{ { commitment::e_processed } }
 {
   tconn_.set_sub( this );
@@ -176,6 +178,16 @@ void manager::set_publish_interval( int64_t pub_int )
 int64_t manager::get_publish_interval() const
 {
   return pub_int_ / PC_NSECS_IN_MSEC;
+}
+
+void manager::set_max_batch_size( unsigned batch_size )
+{
+  max_batch_ = batch_size;
+}
+
+unsigned manager::get_max_batch_size() const
+{
+  return max_batch_;
 }
 
 void manager::set_do_capture( bool do_cap )
@@ -746,7 +758,6 @@ void manager::on_response( rpc::get_slot *res )
   if (
     has_status( PC_PYTH_RPC_CONNECTED )
   ) {
-    
       // New slot received, so flush all pending updates for all active users
       for( user *uptr = olist_.first(); uptr; uptr = uptr->get_next() ) {
         uptr->send_pending_upds();
