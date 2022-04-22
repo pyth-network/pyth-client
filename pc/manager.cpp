@@ -758,7 +758,6 @@ void manager::on_response( rpc::get_slot *res )
   if (
     has_status( PC_PYTH_RPC_CONNECTED )
   ) {
-
       // New slot received, so flush all pending updates for all active users
       for( user *uptr = olist_.first(); uptr; uptr = uptr->get_next() ) {
         uptr->send_pending_upds();
