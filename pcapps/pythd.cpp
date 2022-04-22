@@ -113,7 +113,7 @@ int main(int argc, char **argv)
       case 'w': cnt_dir = optarg; break;
       case 'l': log_file = optarg; break;
       case 'm': cmt = str_to_commitment(optarg); break;
-      case 'b': max_batch_size = strtoul(optarg); break;
+      case 'b': max_batch_size = strtoul(optarg, NULL, 0); break;
       case 'n': do_wait = false; break;
       case 'x': do_tx = false; break;
       case 'z': do_ws = false; break;
