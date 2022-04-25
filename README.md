@@ -25,7 +25,9 @@ You can run the following command to open a shell in a linux docker container wi
 
 ```
 export PYTH_REPO=/path/to/host/pyth-client
-export IMAGE="docker.io/pythfoundation/pyth-client:devnet-v2.10.1"
+
+// Use the latest mainnet image from https://hub.docker.com/r/pythfoundation/pyth-client/tags?name=mainnet
+export IMAGE=...
 
 docker run -it \
   --volume "${HOME}:/home/pyth/home" \
