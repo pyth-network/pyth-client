@@ -729,6 +729,7 @@ bool price::send( price *prices[], const unsigned n )
 
   manager *mgr1 = nullptr;
 
+  // Build an upd_price rpc request for every price
   for ( unsigned i = 0, j = 0; i < n; ++i ) {
     price *const p = prices[ i ];
     if ( PC_UNLIKELY( ! p->init_ && ! p->init_publish() ) ) {
@@ -772,6 +773,8 @@ bool price::send( price *prices[], const unsigned n )
     p->preq_->set_block_hash( mgr->get_recent_block_hash() );
     upds_.emplace_back( p->preq_ );
 
+    // If the batch is full, or we have reached the end, send the upd_price requests in upds_.
+    // These correspond to the prices[j..i], inclusive.
     if (
       upds_.size() >= mgr->get_max_batch_size()
       || ( upds_.size() && ( i + 1 ) == n )
