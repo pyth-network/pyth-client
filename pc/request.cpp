@@ -823,7 +823,7 @@ bool price::send( price *prices[], const unsigned n )
         p1->inc_sent();
       }
 
-      j = i;
+      j = i + 1;
       upds_.clear();
     }
   }
