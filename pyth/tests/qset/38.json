@@ -4,15 +4,18 @@
 "quotes": [
   {
    "price": 10000,
-   "conf": 0
+   "conf": 0,
+   "status": 1
   },
   {
    "price": 10000,
-   "conf": 0
+   "conf": 0,
+   "status": 1
   },
   {
    "price": 10000,
-   "conf": 0
+   "conf": 0,
+   "status": 1
   }
 ]
 }
