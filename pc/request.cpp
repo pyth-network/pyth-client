@@ -774,7 +774,7 @@ bool price::send( price *prices[], const unsigned n )
     upds_.emplace_back( p->preq_ );
 
     // If the batch is full, or we have reached the end, send the upd_price requests in upds_.
-    // These correspond to the prices[j..i], inclusive.
+    // These correspond to the valid prices[j..i], inclusive.
     if (
       upds_.size() >= mgr->get_max_batch_size()
       || ( upds_.size() && ( i + 1 ) == n )
