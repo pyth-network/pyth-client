@@ -4,57 +4,68 @@
     {
       "price": 4289406500000,
       "conf": 1453500000,
-      "slot_diff": -3
+      "slot_diff": -3,
+      "status": 1
     },
     {
       "price": 4291320000000,
       "conf": 160000000,
-      "slot_diff": 0
+      "slot_diff": 0,
+      "status": 1
     },
     {
       "price": 4290050000000,
       "conf": 1700000000,
-      "slot_diff": -3
+      "slot_diff": -3,
+      "status": 1
     },
     {
       "price": 4279480000000,
       "conf": 16965586211,
-      "slot_diff": -3
+      "slot_diff": -3,
+      "status": 1
     },
     {
       "price": 4289883000000,
       "conf": 2754000000,
-      "slot_diff": -3
+      "slot_diff": -3,
+      "status": 1
     },
     {
       "price": 4290054475519,
       "conf": 785800000,
-      "slot_diff": -4
+      "slot_diff": -4,
+      "status": 1
     },
     {
       "price": 4290271973194,
       "conf": 2576988362,
-      "slot_diff": -3
+      "slot_diff": -3,
+      "status": 1
     },
     {
       "price": 4290171000000,
       "conf": 1000000,
-      "slot_diff": -7
+      "slot_diff": -7,
+      "status": 1
     },
     {
       "price": 4290050000000,
       "conf": 500000000,
-      "slot_diff": -3
+      "slot_diff": -3,
+      "status": 1
     },
     {
       "price": 4290171000000,
       "conf": 1000000,
-      "slot_diff": -3
+      "slot_diff": -3,
+      "status": 1
     },
     {
       "price": 4290050000000,
       "conf": 100001165,
-      "slot_diff": -3
+      "slot_diff": -3,
+      "status": 1
     }
   ]
 }

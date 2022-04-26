@@ -3,47 +3,58 @@
  "quotes": [
   {
    "price": 9900,
-   "conf": 10
+   "conf": 10,
+   "status": 1
   },
   {
    "price": 10100,
-   "conf": 10
+   "conf": 10,
+   "status": 1
   },
   {
    "price": 10100,
-   "conf": 10
+   "conf": 10,
+   "status": 1
   },
   {
    "price": 10100,
-   "conf": 10
+   "conf": 10,
+   "status": 1
   },
   {
    "price": 10100,
-   "conf": 10
+   "conf": 10,
+   "status": 1
   },
   {
    "price": 10100,
-   "conf": 10
+   "conf": 10,
+   "status": 1
   },
   {
    "price": 10100,
-   "conf": 10
+   "conf": 10,
+   "status": 1
   },
   {
    "price": 10100,
-   "conf": 10
+   "conf": 10,
+   "status": 1
   },
   {
    "price": 10100,
-   "conf": 10
+   "conf": 10,
+   "status": 1
   },
   {
    "price": 10100,
-   "conf": 10
+   "conf": 10,
+   "status": 1
   },
   {
    "price": 10100,
-   "conf": 10
+   "conf": 10,
+   "status": 1
   }
  ]
 }

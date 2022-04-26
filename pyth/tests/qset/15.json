@@ -3,31 +3,38 @@
  "quotes": [
   {
    "price": 10000,
-   "conf": 1000
+   "conf": 1000,
+   "status": 1
   },
   {
    "price": 11000,
-   "conf": 1000
+   "conf": 1000,
+   "status": 1
   },
   {
    "price": 12000,
-   "conf": 1000
+   "conf": 1000,
+   "status": 1
   },
   {
    "price": 13000,
-   "conf": 1000
+   "conf": 1000,
+   "status": 1
   },
   {
    "price": 14000,
-   "conf": 1000
+   "conf": 1000,
+   "status": 1
   },
   {
    "price": 15000,
-   "conf": 1000
+   "conf": 1000,
+   "status": 1
   },
   {
    "price": 16000,
-   "conf": 1000
+   "conf": 1000,
+   "status": 1
   }
  ]
 }

@@ -140,7 +140,7 @@ int main( int argc,char** argv )
   uint32_t qt =pt.find_val( 1, "quotes" );
   for( uint32_t it = pt.get_first( qt ); it; it = pt.get_next( it ) ) {
     pc_price_comp_t *ptr = &px->comp_[px->num_++];
-    ptr->latest_.status_ = PC_STATUS_TRADING;
+    ptr->latest_.status_ = pt.get_int( pt.find_val( it, "status" ) );
     ptr->latest_.price_ = pt.get_int( pt.find_val( it, "price" ) );
     int64_t conf = pt.get_int( pt.find_val( it,  "conf" ) );
     assert( conf >= 0 );
