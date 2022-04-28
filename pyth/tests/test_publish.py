@@ -28,7 +28,7 @@ def test_publish(solana_test_validator, pyth_dir,
     cmd = [
         'pyth', 'upd_price_val',
         pyth_init_price['LTC'],
-        '150', '10', 'trading',
+        '150', '7', 'trading',
         '-r', 'localhost',
         '-k', pyth_dir,
         '-c', 'finalized',
@@ -52,5 +52,5 @@ def test_publish(solana_test_validator, pyth_dir,
 
     after = get_price_acct()
     assert after['publisher_accounts'][0]['price'] == 150
-    assert after['publisher_accounts'][0]['conf'] == 10
+    assert after['publisher_accounts'][0]['conf'] == 7
     assert after['publisher_accounts'][0]['status'] == 'trading'

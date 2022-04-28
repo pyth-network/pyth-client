@@ -115,4 +115,6 @@ async def test_batch_update_price(solana_test_validator, solana_logs, pythd, pyt
 
             assert publisher_acc['price'] == new_values[product]['price']
             assert publisher_acc['conf'] == new_values[product]['conf']
-            assert publisher_acc['status'] == new_values[product]['status']
+
+            expected_status = 'trading' if new_values[product]['conf'] < new_values[product]['price'] / 20 else 'unknown'
+            assert publisher_acc['status'] == expected_status
