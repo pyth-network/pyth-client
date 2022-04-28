@@ -566,7 +566,7 @@ static uint64_t upd_price( SolParameters *prm, SolAccountInfo *ka )
     // Set publisher's status to unknown unless their CI is sufficiently tight.
     int64_t threshold_conf = (cptr->price_ / PC_MAX_CI_DIVISOR);
     if (threshold_conf < 0) {
-      // Safe as long as threshold_conf isn't the min int64, which it isn't as long as PRICE_CONF_THRESHOLD > 1.
+      // Safe as long as threshold_conf isn't the min int64, which it isn't as long as PC_MAX_CI_DIVISOR > 1.
       threshold_conf = -threshold_conf;
     }
     if ( cptr->conf_ > (uint64_t) threshold_conf ) {
