@@ -330,17 +330,27 @@ void user::parse_get_product( uint32_t tok, uint32_t itok )
   add_tail( itok );
 }
 
-void user::send_pending_upds()
+uint32_t user::num_pending_upds()
+{
+  return pending_vec_.size();
+}
+
+void user::send_pending_upds(uint32_t n)
 {
   if ( pending_vec_.empty() ) {
     return;
   }
 
-  if ( !price::send( pending_vec_.data(), pending_vec_.size()) ) {
+  uint32_t n_sent = n;
+  if (pending_vec_.size() < n) {
+    n_sent = pending_vec_.size();
+  }
+
+  if ( !price::send( pending_vec_.data(), n_sent) ) {
     add_error( 0, PC_BATCH_SEND_FAILED, "batch send failed - please check the pyth logs" );
   }
 
-  pending_vec_.clear();
+  pending_vec_.erase(0, n_sent);
 }
 
 void user::parse_get_all_products( uint32_t itok )

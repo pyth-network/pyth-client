@@ -500,11 +500,18 @@ void manager::poll( bool do_wait )
     tconn_.reconnect();
   }
 
-  // submit new quotes while connected
   if ( has_status( PC_PYTH_RPC_CONNECTED ) &&
        !hconn_.get_is_err() &&
        ( !wconn_ || !wconn_->get_is_err() ) ) {
+    // request product quotes from pythd's clients while connected
     poll_schedule();
+
+    // send any pending complete price update batches to solana
+    for( user *uptr = olist_.first(); uptr; uptr = uptr->get_next() ) {
+      if (uptr->num_pending_upds() >= get_max_batch_size()) {
+        uptr->send_pending_upds(get_max_batch_size());
+      }
+    }
   } else {
     reconnect_rpc();
   }
@@ -743,6 +750,13 @@ void manager::on_response( rpc::get_slot *res )
     clnt_.send( breq_ );
   }
 
+  if (has_status( PC_PYTH_RPC_CONNECTED ) && !is_pub_) {
+    // Flush any partial batches of updates, as we've reached the end of the list of products.
+    for( user *uptr = olist_.first(); uptr; uptr = uptr->get_next() ) {
+      uptr->send_pending_upds();
+    }
+  }
+
   // reset submit
   if ( !is_pub_ ) {
     kidx_ = 0;
@@ -758,11 +772,6 @@ void manager::on_response( rpc::get_slot *res )
   if (
     has_status( PC_PYTH_RPC_CONNECTED )
   ) {
-      // New slot received, so flush all pending updates for all active users
-      for( user *uptr = olist_.first(); uptr; uptr = uptr->get_next() ) {
-        uptr->send_pending_upds();
-      }
-
     if ( sub_ ) {
       sub_->on_slot_publish( this );
     }
