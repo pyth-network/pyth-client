@@ -534,7 +534,15 @@ Test( oracle, upd_price ) {
   cr_assert( sptr->comp_[0].latest_.conf_ == 6L );
   cr_assert( sptr->comp_[0].latest_.status_ == PC_STATUS_UNKNOWN );
   cr_assert( sptr->comp_[0].latest_.pub_slot_ == 5 );
-  cr_assert( sptr->agg_.pub_slot_ == 5 );
+  cr_assert( sptr->agg_.pub_slot_ == 6 );
+  // Aggregate is still trading because it uses price from previous slot
+  cr_assert( sptr->agg_.status_ == PC_STATUS_TRADING );
+
+  // Crank one more time and aggregate should be unknown
+  idata.pub_slot_ = 6;
+  cvar.slot_ = 7;
+  cr_assert( SUCCESS == dispatch( &prm, acc ) );
+  cr_assert( sptr->agg_.status_ == PC_STATUS_UNKNOWN );
 }
 
 Test( oracle, upd_price_no_fail_on_error ) {
