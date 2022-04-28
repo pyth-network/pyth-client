@@ -506,7 +506,7 @@ void manager::poll( bool do_wait )
     // request product quotes from pythd's clients while connected
     poll_schedule();
 
-    // send any pending complete price update batches to solana
+    // Flush any pending complete batches of price updates by submitting solana TXs.
     for( user *uptr = olist_.first(); uptr; uptr = uptr->get_next() ) {
       if (uptr->num_pending_upds() >= get_max_batch_size()) {
         uptr->send_pending_upds(get_max_batch_size());
