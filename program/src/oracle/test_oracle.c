@@ -303,7 +303,7 @@ Test( oracle, add_publisher ) {
 
   // Now give the price account enough lamports to be rent exempt
   acc[1].lamports = &PRICE_ACCOUNT_LAMPORTS;
-  
+
   cr_assert( SUCCESS == dispatch( &prm, acc ) );
   cr_assert( sptr->num_ == 1 );
   cr_assert( pc_pub_key_equal( &idata.pub_, &sptr->comp_[0].pub_ ) );
@@ -348,7 +348,7 @@ Test(oracle, pc_size ) {
 }
 
 Test( oracle, upd_test ) {
-  
+
   // Initialize the test account
   SolPubkey p_id  = {.x = { 0xff, }};
   SolPubkey pkey = {.x = { 1, }};
@@ -416,7 +416,7 @@ Test( oracle, upd_price ) {
     .cmd_    = e_cmd_upd_price,
     .status_ = PC_STATUS_TRADING,
     .price_  = 42L,
-    .conf_   = 9L,
+    .conf_   = 2L,
     .pub_slot_ = 1
   };
   SolPubkey p_id  = {.x = { 0xff, }};
@@ -474,7 +474,7 @@ Test( oracle, upd_price ) {
   };
   cr_assert( SUCCESS == dispatch( &prm, acc ) );
   cr_assert( sptr->comp_[0].latest_.price_ == 42L );
-  cr_assert( sptr->comp_[0].latest_.conf_ == 9L );
+  cr_assert( sptr->comp_[0].latest_.conf_ == 2L );
   cr_assert( sptr->comp_[0].latest_.pub_slot_ == 1 );
   cr_assert( sptr->agg_.pub_slot_ == 1 );
   cr_assert( sptr->valid_slot_ == 0 );
@@ -519,6 +519,22 @@ Test( oracle, upd_price ) {
   // try to publish back-in-time
   idata.pub_slot_ = 1;
   cr_assert( ERROR_INVALID_ARGUMENT == dispatch( &prm, acc ) );
+
+
+  // Publishing a wide CI results in a status of unknown.
+
+  // check that someone doesn't accidentally break the test.
+  cr_assert(sptr->comp_[0].latest_.status_ == PC_STATUS_TRADING);
+  idata.pub_slot_ = 5;
+  cvar.slot_ = 6;
+  idata.price_ = 50;
+  idata.conf_ = 6;
+  cr_assert( SUCCESS == dispatch( &prm, acc ) );
+  cr_assert( sptr->comp_[0].latest_.price_ == 50L );
+  cr_assert( sptr->comp_[0].latest_.conf_ == 6L );
+  cr_assert( sptr->comp_[0].latest_.status_ == PC_STATUS_UNKNOWN );
+  cr_assert( sptr->comp_[0].latest_.pub_slot_ == 5 );
+  cr_assert( sptr->agg_.pub_slot_ == 5 );
 }
 
 Test( oracle, upd_price_no_fail_on_error ) {
@@ -544,7 +560,7 @@ Test( oracle, upd_price_no_fail_on_error ) {
   sptr->ptype_ = PC_PTYPE_PRICE;
   sptr->type_  = PC_ACCTYPE_PRICE;
   sptr->num_   = 1;
-  
+
   SolAccountInfo acc[] = {{
       .key         = &pkey,
       .lamports    = &pqty,
@@ -592,7 +608,7 @@ Test( oracle, upd_price_no_fail_on_error ) {
   cr_assert( sptr->comp_[0].latest_.conf_ == 0L );
   cr_assert( sptr->comp_[0].latest_.pub_slot_ == 0 );
   cr_assert( sptr->agg_.pub_slot_ == 0 );
-  cr_assert( sptr->valid_slot_ == 0 );  
+  cr_assert( sptr->valid_slot_ == 0 );
 
   // Now permission the publish account for the price account.
   pc_pub_key_assign( &sptr->comp_[0].pub_, (pc_pub_key_t*)&pkey );
@@ -605,7 +621,7 @@ Test( oracle, upd_price_no_fail_on_error ) {
   cr_assert( sptr->agg_.pub_slot_ == 1 );
   cr_assert( sptr->valid_slot_ == 0 );
 
-  // Invalid updates, such as publishing an update for the current slot, 
+  // Invalid updates, such as publishing an update for the current slot,
   // should still fail silently and have no effect.
   idata.price_ = 55L;
   idata.conf_ = 22L;
