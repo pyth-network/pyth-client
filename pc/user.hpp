@@ -48,7 +48,7 @@ namespace pc
 
     // send all pending updates
     // TODO: rename
-    void send_pending_upds();
+    void send_pending_upds(uint32_t n);
 
   private:
 
