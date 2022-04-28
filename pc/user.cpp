@@ -350,7 +350,7 @@ void user::send_pending_upds(uint32_t n)
     add_error( 0, PC_BATCH_SEND_FAILED, "batch send failed - please check the pyth logs" );
   }
 
-  pending_vec_.erase(0, n_sent);
+  pending_vec_.erase(pending_vec_.begin(), pending_vec_.begin() + n_sent);
 }
 
 void user::parse_get_all_products( uint32_t itok )
