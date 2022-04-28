@@ -6,7 +6,7 @@
 #include "upd_aggregate.h"
 
 // Returns the minimum number of lamports required to make an account
-// with dlen bytes of data rent exempt. These values were calculated 
+// with dlen bytes of data rent exempt. These values were calculated
 // using the getMinimumBalanceForRentExemption RPC call, and are
 // guaranteed never to increase.
 static uint64_t rent_exempt_amount( uint64_t dlen )
@@ -561,9 +561,14 @@ static uint64_t upd_price( SolParameters *prm, SolAccountInfo *ka )
 
   // update component price if required
   if ( cptr->cmd_ == e_cmd_upd_price || cptr->cmd_ == e_cmd_upd_price_no_fail_on_error ) {
+    uint32_t status = cptr->status_;
+    if (cptr->conf_ * PC_MAX_CI > cptr->price_) {
+      status = PC_STATUS_UNKNOWN;
+    }
+
     fptr->price_    = cptr->price_;
     fptr->conf_     = cptr->conf_;
-    fptr->status_   = cptr->status_;
+    fptr->status_   = status;
     fptr->pub_slot_ = cptr->pub_slot_;
   }
   return SUCCESS;

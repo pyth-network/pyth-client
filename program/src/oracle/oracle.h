@@ -23,6 +23,9 @@ extern "C" {
 #define PC_MAX_NUM_DECIMALS  16
 #define PC_PROD_ACC_SIZE    512
 #define PC_EXP_DECAY         -9
+// If ci * this number > price, set publisher status to unknown.
+// (e.g., 20 means ci must be < 5% of price)
+#define PC_MAX_CI_MULTIPLE   20
 
 #ifndef PC_HEAP_START
 #define PC_HEAP_START (0x300000000)
