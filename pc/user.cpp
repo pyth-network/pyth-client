@@ -29,14 +29,14 @@ void user::user_http::parse_content( const char *txt, size_t len )
 user::user()
 : rptr_( nullptr ),
   sptr_( nullptr ),
-  psub_( this ),
-  last_update_ts_(0)
+  psub_( this )
 {
   // setup the plumbing
   hsvr_.ptr_ = this;
   hsvr_.set_net_connect( this );
   hsvr_.set_ws_parser( this );
   set_net_parser( &hsvr_ );
+  last_upd_ts_ = get_now();
 }
 
 void user::set_rpc_client( rpc_client *rptr )
@@ -337,7 +337,7 @@ void user::send_pending_upds()
 {
   uint32_t n_sent = 0;
   int64_t curr_ts = get_now();
-  if (curr_ts_ - price_upd_ts_ > PC_FLUSH_INTERVAL) {
+  if (curr_ts - last_upd_ts_ > PC_FLUSH_INTERVAL) {
     n_sent = pending_vec_.size();
   } else if (pending_vec_.size() > max_batch_size_) {
     n_sent = max_batch_size_;
@@ -352,7 +352,7 @@ void user::send_pending_upds()
   }
 
   pending_vec_.erase(pending_vec_.begin(), pending_vec_.begin() + n_sent);
-  price_upd_ts_ = curr_ts_;
+  last_upd_ts_ = curr_ts;
 }
 
 void user::parse_get_all_products( uint32_t itok )
