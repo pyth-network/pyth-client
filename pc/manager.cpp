@@ -748,13 +748,6 @@ void manager::on_response( rpc::get_slot *res )
     clnt_.send( breq_ );
   }
 
-  if (has_status( PC_PYTH_RPC_CONNECTED )) {
-    // Flush any partial batches of updates, as we've reached the end of the list of products.
-    for( user *uptr = olist_.first(); uptr; uptr = uptr->get_next() ) {
-      uptr->send_pending_upds(uptr->num_pending_upds());
-    }
-  }
-
   // reset submit
   if ( !is_pub_ ) {
     kidx_ = 0;
