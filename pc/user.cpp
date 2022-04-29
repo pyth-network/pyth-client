@@ -339,8 +339,8 @@ void user::send_pending_upds()
   int64_t curr_ts = get_now();
   if (curr_ts - last_upd_ts_ > PC_FLUSH_INTERVAL) {
     n_sent = pending_vec_.size();
-  } else if (pending_vec_.size() > max_batch_size_) {
-    n_sent = max_batch_size_;
+  } else if (pending_vec_.size() >= sptr_->get_max_batch_size()) {
+    n_sent = sptr_->get_max_batch_size();
   }
 
   if (n_sent == 0) {
