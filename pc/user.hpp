@@ -43,12 +43,9 @@ namespace pc
     // symbol price schedule callback
     void on_response( price_sched *, uint64_t ) override;
 
-    // Get the number of pending price updates that are queued to be sent.
-    uint32_t num_pending_upds();
-
-    // send up to n pending price updates. If n > the max batch size,
-    // this will split the price updates into multiple transactions.
-    void send_pending_upds(uint32_t n);
+    // send a batch of pending price updates. This function eagerly sends any complete batches.
+    // It also sends partial batches that have not been completed within a short interval of time.
+    void send_pending_upds();
 
   private:
 
@@ -89,6 +86,7 @@ namespace pc
     def_vec_t       dvec_;        // deferred subscriptions
     request_sub_set psub_;        // price subscriptions
     pending_vec_t   pending_vec_; // prices with pending updates
+    int64_t         last_upd_ts_; // timestamp of last price update transaction
   };
 
 }

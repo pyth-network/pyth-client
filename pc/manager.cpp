@@ -507,10 +507,8 @@ void manager::poll( bool do_wait )
     poll_schedule();
 
     // Flush any pending complete batches of price updates by submitting solana TXs.
-    for( user *uptr = olist_.first(); uptr; uptr = uptr->get_next() ) {
-      if (uptr->num_pending_upds() >= get_max_batch_size()) {
-        uptr->send_pending_upds(get_max_batch_size());
-      }
+    for ( user *uptr = olist_.first(); uptr; uptr = uptr->get_next() ) {
+      uptr->send_pending_upds();
     }
   } else {
     reconnect_rpc();

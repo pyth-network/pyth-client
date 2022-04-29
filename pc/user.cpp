@@ -13,6 +13,8 @@
 #define PC_JSON_MISSING_PERMS   -32001
 #define PC_JSON_NOT_READY       -32002
 #define PC_BATCH_SEND_FAILED    -32010
+// Flush partial batches if not completed within 400 ms.
+#define PC_FLUSH_INTERVAL       (400L*PC_NSECS_IN_MSEC)
 
 using namespace pc;
 
@@ -27,7 +29,8 @@ void user::user_http::parse_content( const char *txt, size_t len )
 user::user()
 : rptr_( nullptr ),
   sptr_( nullptr ),
-  psub_( this )
+  psub_( this ),
+  last_update_ts_(0)
 {
   // setup the plumbing
   hsvr_.ptr_ = this;
@@ -330,20 +333,18 @@ void user::parse_get_product( uint32_t tok, uint32_t itok )
   add_tail( itok );
 }
 
-uint32_t user::num_pending_upds()
+void user::send_pending_upds()
 {
-  return pending_vec_.size();
-}
-
-void user::send_pending_upds(uint32_t n)
-{
-  if ( pending_vec_.empty() ) {
-    return;
+  uint32_t n_sent = 0;
+  int64_t curr_ts = get_now();
+  if (curr_ts_ - price_upd_ts_ > PC_FLUSH_INTERVAL) {
+    n_sent = pending_vec_.size();
+  } else if (pending_vec_.size() > max_batch_size_) {
+    n_sent = max_batch_size_;
   }
 
-  uint32_t n_sent = n;
-  if (pending_vec_.size() < n) {
-    n_sent = pending_vec_.size();
+  if (n_sent == 0) {
+    return;
   }
 
   if ( !price::send( pending_vec_.data(), n_sent) ) {
@@ -351,6 +352,7 @@ void user::send_pending_upds(uint32_t n)
   }
 
   pending_vec_.erase(pending_vec_.begin(), pending_vec_.begin() + n_sent);
+  price_upd_ts_ = curr_ts_;
 }
 
 void user::parse_get_all_products( uint32_t itok )
