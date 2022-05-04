@@ -43,7 +43,7 @@ static bool valid_signable_account( SolParameters *prm,
          ka->is_writable &&
          SolPubkey_same( ka->owner, prm->program_id ) &&
          ka->data_len >= dlen &&
-         is_rent_exempt( *ka->lamports, dlen );
+         is_rent_exempt( *ka->lamports, ka->data_len );
 }
 
 static bool valid_writable_account( SolParameters *prm,
@@ -53,7 +53,7 @@ static bool valid_writable_account( SolParameters *prm,
   return ka->is_writable &&
          SolPubkey_same( ka->owner, prm->program_id ) &&
          ka->data_len >= dlen &&
-         is_rent_exempt( *ka->lamports, dlen );
+         is_rent_exempt( *ka->lamports, ka->data_len );
 }
 
 static uint64_t init_mapping( SolParameters *prm, SolAccountInfo *ka )
