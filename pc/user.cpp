@@ -13,6 +13,8 @@
 #define PC_JSON_MISSING_PERMS   -32001
 #define PC_JSON_NOT_READY       -32002
 #define PC_BATCH_SEND_FAILED    -32010
+// Flush partial batches if not completed within 400 ms.
+#define PC_FLUSH_INTERVAL       (400L*PC_NSECS_IN_MSEC)
 
 using namespace pc;
 
@@ -34,6 +36,7 @@ user::user()
   hsvr_.set_net_connect( this );
   hsvr_.set_ws_parser( this );
   set_net_parser( &hsvr_ );
+  last_upd_ts_ = get_now();
 }
 
 void user::set_rpc_client( rpc_client *rptr )
@@ -332,15 +335,24 @@ void user::parse_get_product( uint32_t tok, uint32_t itok )
 
 void user::send_pending_upds()
 {
-  if ( pending_vec_.empty() ) {
+  uint32_t n_to_send = 0;
+  int64_t curr_ts = get_now();
+  if (curr_ts - last_upd_ts_ > PC_FLUSH_INTERVAL) {
+    n_to_send = pending_vec_.size();
+  } else if (pending_vec_.size() >= sptr_->get_max_batch_size()) {
+    n_to_send = sptr_->get_max_batch_size();
+  }
+
+  if (n_to_send == 0) {
     return;
   }
 
-  if ( !price::send( pending_vec_.data(), pending_vec_.size()) ) {
+  if ( !price::send( pending_vec_.data(), n_to_send) ) {
     add_error( 0, PC_BATCH_SEND_FAILED, "batch send failed - please check the pyth logs" );
   }
 
-  pending_vec_.clear();
+  pending_vec_.erase(pending_vec_.begin(), pending_vec_.begin() + n_to_send);
+  last_upd_ts_ = curr_ts;
 }
 
 void user::parse_get_all_products( uint32_t itok )

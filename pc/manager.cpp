@@ -500,11 +500,16 @@ void manager::poll( bool do_wait )
     tconn_.reconnect();
   }
 
-  // submit new quotes while connected
   if ( has_status( PC_PYTH_RPC_CONNECTED ) &&
        !hconn_.get_is_err() &&
        ( !wconn_ || !wconn_->get_is_err() ) ) {
+    // request product quotes from pythd's clients while connected
     poll_schedule();
+
+    // Flush any pending complete batches of price updates by submitting solana TXs.
+    for ( user *uptr = olist_.first(); uptr; uptr = uptr->get_next() ) {
+      uptr->send_pending_upds();
+    }
   } else {
     reconnect_rpc();
   }
@@ -758,11 +763,6 @@ void manager::on_response( rpc::get_slot *res )
   if (
     has_status( PC_PYTH_RPC_CONNECTED )
   ) {
-      // New slot received, so flush all pending updates for all active users
-      for( user *uptr = olist_.first(); uptr; uptr = uptr->get_next() ) {
-        uptr->send_pending_upds();
-      }
-
     if ( sub_ ) {
       sub_->on_slot_publish( this );
     }
