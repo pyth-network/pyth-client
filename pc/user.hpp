@@ -45,6 +45,8 @@ namespace pc
 
     // send a batch of pending price updates. This function eagerly sends any complete batches.
     // It also sends partial batches that have not been completed within a short interval of time.
+    // At most one complete batch will be sent. Additional price updates remain queued until the next
+    // time this function is invoked.
     void send_pending_upds();
 
   private:

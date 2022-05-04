@@ -335,23 +335,23 @@ void user::parse_get_product( uint32_t tok, uint32_t itok )
 
 void user::send_pending_upds()
 {
-  uint32_t n_sent = 0;
+  uint32_t n_to_send = 0;
   int64_t curr_ts = get_now();
   if (curr_ts - last_upd_ts_ > PC_FLUSH_INTERVAL) {
-    n_sent = pending_vec_.size();
+    n_to_send = pending_vec_.size();
   } else if (pending_vec_.size() >= sptr_->get_max_batch_size()) {
-    n_sent = sptr_->get_max_batch_size();
+    n_to_send = sptr_->get_max_batch_size();
   }
 
-  if (n_sent == 0) {
+  if (n_to_send == 0) {
     return;
   }
 
-  if ( !price::send( pending_vec_.data(), n_sent) ) {
+  if ( !price::send( pending_vec_.data(), n_to_send) ) {
     add_error( 0, PC_BATCH_SEND_FAILED, "batch send failed - please check the pyth logs" );
   }
 
-  pending_vec_.erase(pending_vec_.begin(), pending_vec_.begin() + n_sent);
+  pending_vec_.erase(pending_vec_.begin(), pending_vec_.begin() + n_to_send);
   last_upd_ts_ = curr_ts;
 }
 
