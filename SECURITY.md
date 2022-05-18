@@ -31,7 +31,7 @@ Please do not file a GitHub Issue for security vulnerabilities.
 
 Please email security@pyth-network.com and provide your GitHub username and we will setup a draft security advisory for further discussion.
 
-In your email, you can explain the potential impact of the security vulnerability, but please do not include detailed exploitation details until we can establish secure communications with the draft security advisory.
+In your email, you can explain the potential impact of the security vulnerability, but please do not include exploitation details until we can establish secure communications with the draft security advisory.
 
 You should expect a response from our team within 72 hours.
 
