@@ -9,11 +9,11 @@
 We operate a bug bounty program to financially incentivize independent researchers (with up to $1,000,000 USDC) to find and responsibly disclose security issues in Pyth.
 ### Payout Structure
 
-- **Critical** (Up to $1,000,000 USDC)
+- **Critical** (Up to $TBD USDC)
     - Arbitrarily manipulate Pyth oracle prices or other published values.
     - Assume ownership of Pyth’s contracts in mainnet.
     - Locking, loss, or theft of funds staked on Pyth
-- **High** (Up to $100,000 USDC)
+- **High** (Up to $TBD USDC)
     - Software flaws in the on-chain program that cause Pyth to publish an inaccurate price when ≥ 3/4 of the contributing publishers are accurate.
     - Flaws enabling denial-of-service attacks for public-facing APIs
     - Remote code execution
