@@ -25,6 +25,17 @@ _Note: We do encourage vulnerability reporters to submit issues outside of the a
 - **[Pyth-Client](https://github.com/pyth-network/pyth-client)**
 
 _Note: We will be adding additional scope as we complete due diligence efforts for those scopes._
+
+### Out of Scope
+
+- Anything involving social engineering or compromise of Pyth employees or infra
+- Network-based denial of service
+- Best practice critiques
+- Sybil attacks
+- Lack of liquidity
+- Basic economic governance attacks (e.g. 51% attack)
+- Reports from Staff, Auditors, Contractors, and others with privileged information/position
+
 ### How to report a security vulnerability?
 
 Please do not file a GitHub Issue for security vulnerabilities.
