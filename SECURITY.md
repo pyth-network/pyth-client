@@ -6,7 +6,7 @@
 <a name="bounty"></a>
 ## Bug Bounty Program
 
-We operate a bug bounty program to financially incentivize independent researchers (with up to $1,000,000 USDC) to find and responsibly disclose security issues in Pyth.
+We operate a bug bounty program to financially incentivize independent researchers (with up to $TBD USDC) to find and responsibly disclose security issues in Pyth.
 ### Payout Structure
 
 - **Critical** (Up to $TBD USDC)
