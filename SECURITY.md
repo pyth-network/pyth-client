@@ -23,6 +23,8 @@ _Note: We do encourage vulnerability reporters to submit issues outside of the a
 
 ### In Scope Assets
 - **[Pyth-Client](https://github.com/pyth-network/pyth-client)**
+- **[Pyth2Wormhole](https://github.com/pyth-network/pyth2wormhole)**
+
 
 _Note: We will be adding additional scope as we complete due diligence efforts for those scopes._
 
