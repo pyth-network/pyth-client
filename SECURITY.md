@@ -14,3 +14,5 @@ As these 3rd party audits are completed and issues are sufficiently addressed, w
 
 - **[April, 8, 2022 - Zellic](https://github.com/pyth-network/audit-reports/blob/main/2022_04_08/pyth_oracle_client_zellic.pdf)**
     - **Scope**: *Pyth Client*
+- **[April, 27, 2022 - Zellic](https://github.com/pyth-network/audit-reports/blob/main/2022_04_27/pyth2wormhole_zellic.pdf)**
+    - **Scope**: *Pyth2Wormhole*
