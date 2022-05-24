@@ -333,26 +333,43 @@ void user::parse_get_product( uint32_t tok, uint32_t itok )
   add_tail( itok );
 }
 
-void user::send_pending_upds()
+void user::get_pending_upds(std::vector<price*>* upd_ptr)
 {
+  if (!upd_ptr)
+    return;
+
   uint32_t n_to_send = 0;
   int64_t curr_ts = get_now();
   if (curr_ts - last_upd_ts_ > PC_FLUSH_INTERVAL) {
     n_to_send = pending_vec_.size();
-  } else if (pending_vec_.size() >= sptr_->get_max_batch_size()) {
-    n_to_send = sptr_->get_max_batch_size();
   }
 
   if (n_to_send == 0) {
     return;
   }
 
-  if ( !price::send( pending_vec_.data(), n_to_send) ) {
-    add_error( 0, PC_BATCH_SEND_FAILED, "batch send failed - please check the pyth logs" );
+  for(size_t idx = 0; idx < n_to_send; ++idx)
+  {
+    upd_ptr->push_back(pending_vec_[idx]);
   }
 
   pending_vec_.erase(pending_vec_.begin(), pending_vec_.begin() + n_to_send);
   last_upd_ts_ = curr_ts;
+}
+
+void user::add_batch_send_failed()
+{
+  add_error( 0, PC_BATCH_SEND_FAILED, "batch send failed - please check the pyth logs" );
+}
+
+void user::set_incl_price_batch(bool i_incl_price_batch)
+{
+  incl_price_batch_ = i_incl_price_batch;
+}
+
+bool user::get_incl_price_batch() const
+{
+  return incl_price_batch_;
 }
 
 void user::parse_get_all_products( uint32_t itok )

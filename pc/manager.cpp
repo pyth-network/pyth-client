@@ -10,6 +10,8 @@ using namespace pc;
 #define PC_PUB_INTERVAL       (227L*PC_NSECS_IN_MSEC)
 #define PC_RPC_HOST           "localhost"
 #define PC_MAX_BATCH          8
+// Flush partial batches if not completed within 400 ms.
+#define PC_FLUSH_INTERVAL       (400L*PC_NSECS_IN_MSEC)
 
 ///////////////////////////////////////////////////////////////////////////
 // manager_sub
@@ -506,9 +508,45 @@ void manager::poll( bool do_wait )
     // request product quotes from pythd's clients while connected
     poll_schedule();
 
+    // helper used to determine did the user paricipated in the batch
+    size_t prev_size = pr_upds_.size();
+
     // Flush any pending complete batches of price updates by submitting solana TXs.
     for ( user *uptr = olist_.first(); uptr; uptr = uptr->get_next() ) {
-      uptr->send_pending_upds();
+      uptr->get_pending_upds( &pr_upds_ );
+      if ( pr_upds_.size() != prev_size )
+      {
+        // size changed, the user participated in the batch
+        uptr->set_incl_price_batch(true);
+        prev_size = pr_upds_.size();
+      }
+    }
+
+    // the batch will be sent if its size is greater than max batch size
+    // or time since the previously sent batch is greater than PC_FLUSH_INTERVAL
+
+    int64_t curr_ts = get_now();
+    if( pr_upds_.size() >= get_max_batch_size() || curr_ts - previous_ts_ >= PC_FLUSH_INTERVAL ) {
+      // send batch of price updates to solana
+      if ( !price::send( pr_upds_.data(), pr_upds_.size()) ) {
+        // if send failed - notify the users
+        for ( user *uptr = olist_.first(); uptr; uptr = uptr->get_next() ) {
+          // send error message to the users that participated in the batch
+          if ( uptr->get_incl_price_batch() ) {
+            uptr->add_batch_send_failed();
+          }
+        }
+      }
+      // reset price update list
+      pr_upds_.clear();
+
+      // reset participated in the batch flag in pc::user
+      for ( user *uptr = olist_.first(); uptr; uptr = uptr->get_next() ) {
+        uptr->set_incl_price_batch(false);
+      }
+
+      // record the current time
+      previous_ts_ = curr_ts;
     }
   } else {
     reconnect_rpc();

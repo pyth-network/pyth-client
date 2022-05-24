@@ -264,6 +264,12 @@ namespace pc
     rpc::get_recent_block_hash breq_[1]; // block hash request
     rpc::program_subscribe     preq_[1]; // program account subscription
     rpc::get_program_accounts  areq_[1]; // alternative to program_subscribe
+
+    // price updates to be sent as part of the next batch
+    std::vector<price*> pr_upds_;
+
+    // Timestamp of the last batch
+    int64_t previous_ts_ = 0;
   };
 
   inline bool manager::get_is_tx_connect() const

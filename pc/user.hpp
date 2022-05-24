@@ -43,11 +43,25 @@ namespace pc
     // symbol price schedule callback
     void on_response( price_sched *, uint64_t ) override;
 
-    // send a batch of pending price updates. This function eagerly sends any complete batches.
-    // It also sends partial batches that have not been completed within a short interval of time.
-    // At most one complete batch will be sent. Additional price updates remain queued until the next
+    // get a batch of pending price updates. This function eagerly gets any complete batches.
+    // It also gets partial batches that have not been completed within a short interval of time.
+    // All complete batches will be sent. Additional price updates remain queued until the next
     // time this function is invoked.
-    void send_pending_upds();
+    // is nullptr is given then it does nothing
+    void get_pending_upds(std::vector<price*>*);
+
+    // notify the user about bath send failed error
+    void add_batch_send_failed();
+
+    // set info if the user participated in manager::poll price batch
+    // used to store batch in between manager::poll invocations
+    // and notify the user in case of error while sending to the oracle
+    void set_incl_price_batch(bool);
+
+    // get info if the user participated in manager::poll price batch
+    // used to store batch in between manager::poll invocations
+    // and notify the user in case of error while sending to the oracle
+    bool get_incl_price_batch() const;
 
   private:
 
@@ -89,6 +103,10 @@ namespace pc
     request_sub_set psub_;        // price subscriptions
     pending_vec_t   pending_vec_; // prices with pending updates
     int64_t         last_upd_ts_; // timestamp of last price update transaction
+    // was the user included in manager::poll price update
+    // used to store batch in between manager::poll invocations
+    // and notify the user in case of error while sending to the oracle
+    bool            incl_price_batch_ = false;
   };
 
 }
