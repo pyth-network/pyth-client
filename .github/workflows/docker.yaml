@@ -10,6 +10,7 @@ env:
   DOCKER_HUB: docker.io
   DOCKER_USER: ${{ secrets.DOCKER_IO_USER }}
   IS_RELEASE: ${{
+    startsWith( github.ref, 'refs/tags/pythd-' ) ||
     startsWith( github.ref, 'refs/tags/devnet-' ) ||
     startsWith( github.ref, 'refs/tags/testnet-' ) ||
     startsWith( github.ref, 'refs/tags/mainnet-' ) }}
