@@ -43,26 +43,6 @@ namespace pc
     // symbol price schedule callback
     void on_response( price_sched *, uint64_t ) override;
 
-    // get a batch of pending price updates. This function eagerly gets any complete batches.
-    // It also gets partial batches that have not been completed within a short interval of time.
-    // All complete batches will be sent. Additional price updates remain queued until the next
-    // time this function is invoked.
-    // is nullptr is given then it does nothing
-    void get_pending_upds(std::vector<price*>*);
-
-    // notify the user about bath send failed error
-    void add_batch_send_failed();
-
-    // set info if the user participated in manager::poll price batch
-    // used to store batch in between manager::poll invocations
-    // and notify the user in case of error while sending to the oracle
-    void set_incl_price_batch(bool);
-
-    // get info if the user participated in manager::poll price batch
-    // used to store batch in between manager::poll invocations
-    // and notify the user in case of error while sending to the oracle
-    bool get_incl_price_batch() const;
-
   private:
 
     // http-only request parsing
@@ -77,7 +57,6 @@ namespace pc
     };
 
     typedef std::vector<deferred_sub> def_vec_t;
-    typedef std::vector<price*> pending_vec_t;
 
     void parse_request( uint32_t );
     void parse_get_product_list( uint32_t );
@@ -101,12 +80,6 @@ namespace pc
     json_wtr        jw_;          // json writer
     def_vec_t       dvec_;        // deferred subscriptions
     request_sub_set psub_;        // price subscriptions
-    pending_vec_t   pending_vec_; // prices with pending updates
-    int64_t         last_upd_ts_; // timestamp of last price update transaction
-    // was the user included in manager::poll price update
-    // used to store batch in between manager::poll invocations
-    // and notify the user in case of error while sending to the oracle
-    bool            incl_price_batch_ = false;
   };
 
 }

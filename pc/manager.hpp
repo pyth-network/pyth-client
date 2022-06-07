@@ -135,6 +135,9 @@ namespace pc
     product *get_product( const pub_key& );
     price   *get_price( const pub_key& );
 
+    // adds dirty price to pending updates buffer
+    void add_dirty_price(price* sptr);
+
     // submit pyth client api request
     void submit( request * );
     void submit( net_wtr& );

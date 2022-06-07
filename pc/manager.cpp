@@ -1,6 +1,8 @@
 #include "manager.hpp"
 #include "log.hpp"
 
+#include <algorithm>
+
 using namespace pc;
 
 #define PC_TPU_PROXY_PORT     8898
@@ -508,42 +510,16 @@ void manager::poll( bool do_wait )
     // request product quotes from pythd's clients while connected
     poll_schedule();
 
-    // helper used to determine did the user paricipated in the batch
-    size_t prev_size = pr_upds_.size();
-
-    // Flush any pending complete batches of price updates by submitting solana TXs.
-    for ( user *uptr = olist_.first(); uptr; uptr = uptr->get_next() ) {
-      uptr->get_pending_upds( &pr_upds_ );
-      if ( pr_upds_.size() != prev_size )
-      {
-        // size changed, the user participated in the batch
-        uptr->set_incl_price_batch(true);
-        prev_size = pr_upds_.size();
-      }
-    }
-
     // the batch will be sent if its size is greater than max batch size
     // or time since the previously sent batch is greater than PC_FLUSH_INTERVAL
-
+    // the buffer is being updated by user class un user::parse_upd_price
     int64_t curr_ts = get_now();
     if( pr_upds_.size() >= get_max_batch_size() || curr_ts - previous_ts_ >= PC_FLUSH_INTERVAL ) {
       // send batch of price updates to solana
-      if ( !price::send( pr_upds_.data(), pr_upds_.size()) ) {
-        // if send failed - notify the users
-        for ( user *uptr = olist_.first(); uptr; uptr = uptr->get_next() ) {
-          // send error message to the users that participated in the batch
-          if ( uptr->get_incl_price_batch() ) {
-            uptr->add_batch_send_failed();
-          }
-        }
-      }
+      price::send( pr_upds_.data(), pr_upds_.size());
+
       // reset price update list
       pr_upds_.clear();
-
-      // reset participated in the batch flag in pc::user
-      for ( user *uptr = olist_.first(); uptr; uptr = uptr->get_next() ) {
-        uptr->set_incl_price_batch(false);
-      }
 
       // record the current time
       previous_ts_ = curr_ts;
@@ -963,6 +939,13 @@ price *manager::get_price( const pub_key& acc )
 {
   acc_map_t::iter_t it = amap_.find( acc );
   return it ? dynamic_cast<price*>( amap_.obj( it ) ) : nullptr;
+}
+
+void manager::add_dirty_price(price* sptr)
+{
+  if( std::find(pr_upds_.begin(), pr_upds_.end(), sptr) == pr_upds_.end() ) {
+    pr_upds_.emplace_back( sptr );
+  }
 }
 
 unsigned manager::get_num_product() const
