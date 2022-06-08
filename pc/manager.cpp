@@ -441,6 +441,34 @@ void manager::reset_status( int status )
   status_ &= ~status;
 }
 
+void manager::send_pending_ups()
+{
+  uint32_t n_to_send = 0;
+
+  // the batch will be sent if its size is greater than max batch size
+  // or time since the previously sent batch is greater than PC_FLUSH_INTERVAL
+  // the buffer is being updated by user class un user::parse_upd_price
+  int64_t curr_ts = get_now();
+  if (curr_ts - previous_ts_ > PC_FLUSH_INTERVAL) {
+    n_to_send = pr_upds_.size();
+  } else if (pr_upds_.size() >= get_max_batch_size()) {
+    n_to_send = get_max_batch_size();
+  }
+
+  if (n_to_send == 0) {
+    return;
+  }
+
+  // send batch of price updates to solana
+  price::send( pr_upds_.data(), n_to_send);
+
+  // remove the sent elements from the vector
+  pr_upds_.erase(pr_upds_.begin(), pr_upds_.begin() + n_to_send);
+
+  // record the current time
+  previous_ts_ = curr_ts;
+}
+
 void manager::poll( bool do_wait )
 {
   // poll for any socket events
@@ -510,20 +538,7 @@ void manager::poll( bool do_wait )
     // request product quotes from pythd's clients while connected
     poll_schedule();
 
-    // the batch will be sent if its size is greater than max batch size
-    // or time since the previously sent batch is greater than PC_FLUSH_INTERVAL
-    // the buffer is being updated by user class un user::parse_upd_price
-    int64_t curr_ts = get_now();
-    if( pr_upds_.size() >= get_max_batch_size() || curr_ts - previous_ts_ >= PC_FLUSH_INTERVAL ) {
-      // send batch of price updates to solana
-      price::send( pr_upds_.data(), pr_upds_.size());
-
-      // reset price update list
-      pr_upds_.clear();
-
-      // record the current time
-      previous_ts_ = curr_ts;
-    }
+    send_pending_ups();
   } else {
     reconnect_rpc();
   }

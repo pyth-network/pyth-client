@@ -224,6 +224,10 @@ namespace pc
     void poll_schedule();
     void reset_status( int );
 
+    // sends pending updates if the previous send was more than PC_FLUSH_INTERVAL ago
+    // or there is >= get_max_batch_size() pending updates
+    void send_pending_ups();
+
     net_loop     nl_;       // epoll loop
     tcp_connect  hconn_;    // rpc http connection
     ws_connect  *wconn_;    // rpc websocket sonnection
