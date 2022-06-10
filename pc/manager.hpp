@@ -224,8 +224,10 @@ namespace pc
     void poll_schedule();
     void reset_status( int );
 
-    // sends pending updates if the previous send was more than PC_FLUSH_INTERVAL ago
-    // or there is >= get_max_batch_size() pending updates
+    // send a batch of pending price updates. This function eagerly sends any complete batches.
+    // It also sends partial batches that have not been completed within a short interval of time.
+    // At most one complete batch will be sent. Additional price updates remain queued until the next
+    // time this function is invoked.
     void send_pending_ups();
 
     net_loop     nl_;       // epoll loop
@@ -272,11 +274,11 @@ namespace pc
     rpc::program_subscribe     preq_[1]; // program account subscription
     rpc::get_program_accounts  areq_[1]; // alternative to program_subscribe
 
-    // price updates to be sent as part of the next batch
-    std::vector<price*> pr_upds_;
+    // price updates that have not been sent yet
+    std::vector<price*> pending_upds_;
 
     // Timestamp of the last batch
-    int64_t previous_ts_ = 0;
+    int64_t last_upd_ts_= 0;
   };
 
   inline bool manager::get_is_tx_connect() const

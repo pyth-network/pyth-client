@@ -449,9 +449,9 @@ void manager::send_pending_ups()
   // or time since the previously sent batch is greater than PC_FLUSH_INTERVAL
   // the buffer is being updated by user class un user::parse_upd_price
   int64_t curr_ts = get_now();
-  if (curr_ts - previous_ts_ > PC_FLUSH_INTERVAL) {
-    n_to_send = pr_upds_.size();
-  } else if (pr_upds_.size() >= get_max_batch_size()) {
+  if (curr_ts - last_upd_ts_> PC_FLUSH_INTERVAL) {
+    n_to_send = pending_upds_.size();
+  } else if (pending_upds_.size() >= get_max_batch_size()) {
     n_to_send = get_max_batch_size();
   }
 
@@ -460,13 +460,13 @@ void manager::send_pending_ups()
   }
 
   // send batch of price updates to solana
-  price::send( pr_upds_.data(), n_to_send);
+  price::send( pending_upds_.data(), n_to_send);
 
   // remove the sent elements from the vector
-  pr_upds_.erase(pr_upds_.begin(), pr_upds_.begin() + n_to_send);
+  pending_upds_.erase(pending_upds_.begin(), pending_upds_.begin() + n_to_send);
 
   // record the current time
-  previous_ts_ = curr_ts;
+  last_upd_ts_= curr_ts;
 }
 
 void manager::poll( bool do_wait )
@@ -958,8 +958,8 @@ price *manager::get_price( const pub_key& acc )
 
 void manager::add_dirty_price(price* sptr)
 {
-  if( std::find(pr_upds_.begin(), pr_upds_.end(), sptr) == pr_upds_.end() ) {
-    pr_upds_.emplace_back( sptr );
+  if( std::find(pending_upds_.begin(), pending_upds_.end(), sptr) == pending_upds_.end() ) {
+    pending_upds_.emplace_back( sptr );
   }
 }
 
