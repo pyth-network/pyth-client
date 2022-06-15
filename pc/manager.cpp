@@ -1,6 +1,8 @@
 #include "manager.hpp"
 #include "log.hpp"
 
+#include <algorithm>
+
 using namespace pc;
 
 #define PC_TPU_PROXY_PORT     8898
@@ -10,6 +12,8 @@ using namespace pc;
 #define PC_PUB_INTERVAL       (227L*PC_NSECS_IN_MSEC)
 #define PC_RPC_HOST           "localhost"
 #define PC_MAX_BATCH          8
+// Flush partial batches if not completed within 400 ms.
+#define PC_FLUSH_INTERVAL       (400L*PC_NSECS_IN_MSEC)
 
 ///////////////////////////////////////////////////////////////////////////
 // manager_sub
@@ -437,6 +441,34 @@ void manager::reset_status( int status )
   status_ &= ~status;
 }
 
+void manager::send_pending_ups()
+{
+  uint32_t n_to_send = 0;
+
+  // the batch will be sent if its size is greater than max batch size
+  // or time since the previously sent batch is greater than PC_FLUSH_INTERVAL
+  // the buffer is being updated by user class un user::parse_upd_price
+  int64_t curr_ts = get_now();
+  if (curr_ts - last_upd_ts_> PC_FLUSH_INTERVAL) {
+    n_to_send = pending_upds_.size();
+  } else if (pending_upds_.size() >= get_max_batch_size()) {
+    n_to_send = get_max_batch_size();
+  }
+
+  if (n_to_send == 0) {
+    return;
+  }
+
+  // send batch of price updates to solana
+  price::send( pending_upds_.data(), n_to_send);
+
+  // remove the sent elements from the vector
+  pending_upds_.erase(pending_upds_.begin(), pending_upds_.begin() + n_to_send);
+
+  // record the current time
+  last_upd_ts_= curr_ts;
+}
+
 void manager::poll( bool do_wait )
 {
   // poll for any socket events
@@ -506,10 +538,7 @@ void manager::poll( bool do_wait )
     // request product quotes from pythd's clients while connected
     poll_schedule();
 
-    // Flush any pending complete batches of price updates by submitting solana TXs.
-    for ( user *uptr = olist_.first(); uptr; uptr = uptr->get_next() ) {
-      uptr->send_pending_upds();
-    }
+    send_pending_ups();
   } else {
     reconnect_rpc();
   }
@@ -925,6 +954,13 @@ price *manager::get_price( const pub_key& acc )
 {
   acc_map_t::iter_t it = amap_.find( acc );
   return it ? dynamic_cast<price*>( amap_.obj( it ) ) : nullptr;
+}
+
+void manager::add_dirty_price(price* sptr)
+{
+  if( std::find(pending_upds_.begin(), pending_upds_.end(), sptr) == pending_upds_.end() ) {
+    pending_upds_.emplace_back( sptr );
+  }
 }
 
 unsigned manager::get_num_product() const

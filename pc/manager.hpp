@@ -135,6 +135,9 @@ namespace pc
     product *get_product( const pub_key& );
     price   *get_price( const pub_key& );
 
+    // adds dirty price to pending updates buffer
+    void add_dirty_price(price* sptr);
+
     // submit pyth client api request
     void submit( request * );
     void submit( net_wtr& );
@@ -221,6 +224,12 @@ namespace pc
     void poll_schedule();
     void reset_status( int );
 
+    // send a batch of pending price updates. This function eagerly sends any complete batches.
+    // It also sends partial batches that have not been completed within a short interval of time.
+    // At most one complete batch will be sent. Additional price updates remain queued until the next
+    // time this function is invoked.
+    void send_pending_ups();
+
     net_loop     nl_;       // epoll loop
     tcp_connect  hconn_;    // rpc http connection
     ws_connect  *wconn_;    // rpc websocket sonnection
@@ -264,6 +273,12 @@ namespace pc
     rpc::get_recent_block_hash breq_[1]; // block hash request
     rpc::program_subscribe     preq_[1]; // program account subscription
     rpc::get_program_accounts  areq_[1]; // alternative to program_subscribe
+
+    // price updates that have not been sent yet
+    std::vector<price*> pending_upds_;
+
+    // Timestamp of the last batch
+    int64_t last_upd_ts_= 0;
   };
 
   inline bool manager::get_is_tx_connect() const
