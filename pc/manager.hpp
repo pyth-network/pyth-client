@@ -193,6 +193,7 @@ namespace pc
     bool get_is_rpc_send() const;
 
     bool has_secondary() const;
+    bool is_secondary() const;
     manager *get_secondary();
 
   private:
