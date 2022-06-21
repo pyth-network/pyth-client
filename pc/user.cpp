@@ -297,6 +297,11 @@ void user::parse_get_product_list( uint32_t itok )
 
   // If the primary manager has no products, pull them from the secondary
   // manager instead.
+  //
+  // Warning: if the primary network is disconnected but the products still
+  // exist in the primary manager's mapping (i.e. pythd hasn't restarted), the prices
+  // returned from this endpoint will therefore be stale and will only be updated
+  // when the primary network reconnects.
   pc::manager *mgr = sptr_;
   if ( sptr_->get_num_product() == 0 && sptr_->has_secondary() ) {
     mgr = sptr_->get_secondary();
