@@ -294,8 +294,16 @@ void user::parse_get_product_list( uint32_t itok )
 {
   add_header();
   jw_.add_key( "result", json_wtr::e_arr );
-  for( unsigned i=0; i != sptr_->get_num_product(); ++i ) {
-    product *prod = sptr_->get_product( i );
+
+  // If the primary manager has no products, pull them from the secondary
+  // manager instead.
+  pc::manager *mgr = sptr_;
+  if ( sptr_->get_num_product() == 0 && sptr_->has_secondary() ) {
+    mgr = sptr_->get_secondary();
+  }
+
+  for( unsigned i=0; i != mgr->get_num_product(); ++i ) {
+    product *prod = mgr->get_product( i );
     jw_.add_val( json_wtr::e_obj );
     jw_.add_key( "account", *prod->get_account() );
     jw_.add_key( "attr_dict", json_wtr::e_obj );
