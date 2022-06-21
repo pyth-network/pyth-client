@@ -198,7 +198,14 @@ void user::parse_upd_price( uint32_t tok, uint32_t itok )
     pub_key pkey;
     pkey.init_from_text( jp_.get_str( ntok ) );
     price *sptr = sptr_->get_price( pkey );
-    if ( PC_UNLIKELY( !sptr ) ) { add_unknown_symbol(itok); return; }
+    price *sptr_secondary = nullptr;
+    if ( sptr_->has_secondary() ) {
+      sptr_secondary = sptr_->get_secondary()->get_price( pkey );
+    }
+
+    // Bail if we cannot find the price in either manager.
+    if ( PC_UNLIKELY( !sptr && !sptr_secondary ) ) { add_unknown_symbol(itok); return; }
+    
     if ( 0 == (ntok = jp_.find_val( ptok, "price" ) ) ) break;
     int64_t price = jp_.get_int( ntok );
     if ( 0 == (ntok = jp_.find_val( ptok, "conf" ) ) ) break;
@@ -206,11 +213,16 @@ void user::parse_upd_price( uint32_t tok, uint32_t itok )
     if ( 0 == (ntok = jp_.find_val( ptok, "status" ) ) ) break;
     symbol_status stype = str_to_symbol_status( jp_.get_str( ntok ) );
 
-    // Add the updated price to the pending updates
-    sptr->update_no_send( price, conf, stype, false );
-
-    // pass the updated price to manager
-    sptr_->add_dirty_price(sptr);
+    // Add the price to both the managers pending updates, so that it will
+    // be published to both networks if possible.
+    if ( sptr ) {
+      sptr->update_no_send( price, conf, stype, false );
+      sptr_->add_dirty_price( sptr );
+    }
+    if ( sptr_secondary ) {
+      sptr_secondary->update_no_send( price, conf, stype, false );
+      sptr_->get_secondary()->add_dirty_price( sptr_secondary );
+    }
 
     // Send the result back
     add_header();
