@@ -76,7 +76,8 @@ manager::manager()
   is_pub_( false ),
   cmt_( commitment::e_confirmed ),
   max_batch_( PC_MAX_BATCH ),
-  sreq_{ { commitment::e_processed } }
+  sreq_{ { commitment::e_processed } },
+  secondary_{ nullptr }
 {
   tconn_.set_sub( this );
   breq_->set_sub( this );
@@ -98,6 +99,9 @@ manager::~manager()
     delete ptr;
   }
   svec_.clear();
+  if ( has_secondary() ) {
+    delete secondary_;
+  }
 }
 
 bool manager::tx_parser::parse( const char *, size_t len, size_t& res )
@@ -287,6 +291,11 @@ void manager::teardown()
     wconn_ = nullptr;
     clnt_.set_ws_conn( nullptr );
   }
+
+  // Shutdown secondary messenger
+  if ( has_secondary() ) {
+    get_secondary()->teardown();
+  }
 }
 
 bool manager::init()
@@ -377,7 +386,37 @@ bool manager::init()
     .add( "publish_interval(ms)", get_publish_interval() )
     .end();
 
+  // Initialize secondary network manager
+  if ( has_secondary() ) {
+      PC_LOG_INF("initializing secondary manager").end();
+      secondary_->init();
+      PC_LOG_INF("initialized secondary manager").end();
+  }
+
   return true;
+}
+
+void manager::add_secondary( const std::string& rpc_host, const std::string& key_dir )
+{
+
+  manager *mgr = new manager;
+  mgr->set_dir( key_dir );
+  mgr->set_rpc_host( rpc_host );
+  mgr->set_tx_host( thost_ );
+  mgr->set_do_tx( do_tx_ );
+  mgr->set_do_ws( do_ws_ );
+  mgr->set_commitment( cmt_ );
+
+  secondary_ = mgr;
+
+}
+
+bool manager::has_secondary() const {
+  return secondary_ != nullptr;
+}
+
+manager *manager::get_secondary() {
+  return secondary_;
 }
 
 bool manager::get_is_tx_send() const
@@ -541,6 +580,11 @@ void manager::poll( bool do_wait )
     send_pending_ups();
   } else {
     reconnect_rpc();
+  }
+
+  // Call the secondary manager's poll loop if necessary
+  if ( has_secondary() ) {
+    secondary_->poll();
   }
 }
 
