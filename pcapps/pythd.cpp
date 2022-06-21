@@ -97,15 +97,17 @@ int main(int argc, char **argv)
   commitment cmt = commitment::e_confirmed;
   std::string cnt_dir, cap_file, log_file;
   std::string rpc_host = get_rpc_host();
+  std::string secondary_rpc_host = "";
   std::string key_dir  = get_key_store();
   std::string tx_host  = get_tx_host();
   int pyth_port = get_port();
   int opt = 0;
   unsigned max_batch_size = 0;
   bool do_wait = true, do_tx = true, do_ws = true, do_debug = false;
-  while( (opt = ::getopt(argc,argv, "r:t:p:k:w:c:l:m:b:dnxhz" )) != -1 ) {
+  while( (opt = ::getopt(argc,argv, "r:s:t:p:k:w:c:l:m:b:dnxhz" )) != -1 ) {
     switch(opt) {
       case 'r': rpc_host = optarg; break;
+      case 's': secondary_rpc_host = optarg; break;
       case 't': tx_host = optarg; break;
       case 'p': pyth_port = ::atoi(optarg); break;
       case 'k': key_dir = optarg; break;
@@ -147,6 +149,11 @@ int main(int argc, char **argv)
   mgr.set_do_ws( do_ws );
   mgr.set_do_capture( !cap_file.empty() );
   mgr.set_commitment( cmt );
+
+  bool do_secondary = !secondary_rpc_host.empty();
+  if ( do_secondary ) {
+    mgr.add_secondary( secondary_rpc_host, key_dir );
+  }
   if ( !mgr.init() ) {
     std::cerr << "pythd: " << mgr.get_err_msg() << std::endl;
     return 1;
