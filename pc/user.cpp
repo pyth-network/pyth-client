@@ -339,6 +339,13 @@ void user::parse_get_product( uint32_t tok, uint32_t itok )
   pub_key pkey;
   pkey.init_from_text( jp_.get_str( ntok ) );
   product *prod = sptr_->get_product( pkey );
+
+  // If the product is not present in the primary manager's mapping,
+  // attempt to use the one in the secondary manager's mapping instead.
+  if ( PC_UNLIKELY( !prod && sptr_->has_secondary() ) ) {
+    prod = sptr_->get_secondary()->get_product( pkey );
+  }
+
   if ( PC_UNLIKELY( !prod ) )
     return add_unknown_symbol( itok );
 
