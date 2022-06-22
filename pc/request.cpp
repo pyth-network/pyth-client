@@ -235,7 +235,7 @@ void get_mapping::update( T *res )
   // check and get any new product accounts in mapping table
   num_sym_ = tab->num_;
   PC_LOG_INF( "add_mapping" )
-    .add( "secondary", cptr->is_secondary() )
+    .add( "secondary", cptr->get_is_secondary() )
     .add( "account", mkey_ )
     .add( "num_products", num_sym_ )
     .end();
@@ -382,7 +382,7 @@ void product::update( T *res )
   net_buf *jhd, *jtl;
   wtr.detach( jhd, jtl );
   PC_LOG_INF( st_ != e_done ? "add_product" : "upd_product" )
-    .add( "secondary", cptr->is_secondary() )
+    .add( "secondary", cptr->get_is_secondary() )
     .add( "account", acc_ )
     .add( "attr", str( jhd->buf_, jhd->size_) )
     .end();
@@ -693,7 +693,7 @@ bool price::update(
     tvec_.emplace_back( std::string( 100, '\0' ), preq_->get_sent_time() );
     preq_->get_signature()->enc_base58( tvec_.back().first );
     PC_LOG_DBG( "sent price update transaction" )
-      .add( "secondary", mgr->is_secondary() )
+      .add( "secondary", mgr->get_is_secondary() )
       .add( "price_account", *get_account() )
       .add( "product_account", *prod_->get_account() )
       .add( "symbol", get_symbol() )
@@ -703,7 +703,7 @@ bool price::update(
       .end();
     if ( PC_UNLIKELY( tvec_.size() >= 100 ) ) {
       PC_LOG_WRN( "too many unacked price update transactions" )
-        .add( "secondary", mgr->is_secondary() )
+        .add( "secondary", mgr->get_is_secondary() )
         .add( "price_account", *get_account() )
         .add( "product_account", *prod_->get_account() )
         .add( "symbol", get_symbol() )
@@ -739,7 +739,7 @@ bool price::send( price *prices[], const unsigned n )
     manager *const mgr = p->get_manager();
     if ( PC_UNLIKELY( ! p->init_ && ! p->init_publish() ) ) {
       PC_LOG_ERR( "failed to initialize publisher" )
-        .add( "secondary", mgr->is_secondary() )
+        .add( "secondary", mgr->get_is_secondary() )
         .add( "price_account", *p->get_account() )
         .add( "product_account", *p->prod_->get_account() )
         .add( "symbol", p->get_symbol() )
@@ -748,7 +748,7 @@ bool price::send( price *prices[], const unsigned n )
     }
     if ( PC_UNLIKELY( ! p->has_publisher() ) ) {
       PC_LOG_ERR( "missing publish permission" )
-        .add( "secondary", mgr->is_secondary() )
+        .add( "secondary", mgr->get_is_secondary() )
         .add( "price_account", *p->get_account() )
         .add( "product_account", *p->prod_->get_account() )
         .add( "symbol", p->get_symbol() )
@@ -757,7 +757,7 @@ bool price::send( price *prices[], const unsigned n )
     }
     if ( PC_UNLIKELY( ! p->get_is_ready_publish() ) ) {
       PC_LOG_ERR( "not ready to publish - check rpc / pyth_tx connection" )
-        .add( "secondary", mgr->is_secondary() )
+        .add( "secondary", mgr->get_is_secondary() )
         .add( "price_account", *p->get_account() )
         .add( "product_account", *p->prod_->get_account() )
         .add( "symbol", p->get_symbol() )
@@ -770,7 +770,7 @@ bool price::send( price *prices[], const unsigned n )
     }
     else if ( mgr != mgr1 ) {
       PC_LOG_ERR( "unexpected manager" )
-        .add( "secondary", mgr->is_secondary() )
+        .add( "secondary", mgr->get_is_secondary() )
         .add( "price_account", *p->get_account() )
         .add( "product_account", *p->prod_->get_account() )
         .add( "symbol", p->get_symbol() )
@@ -795,7 +795,7 @@ bool price::send( price *prices[], const unsigned n )
         }
         else {
           PC_LOG_ERR( "failed to build msg" )
-            .add( "secondary", mgr->is_secondary() )
+            .add( "secondary", mgr->get_is_secondary() )
             .add( "price_account", *p->get_account() )
             .add( "product_account", *p->prod_->get_account() )
             .add( "symbol", p->get_symbol() )
@@ -811,7 +811,7 @@ bool price::send( price *prices[], const unsigned n )
           );
           p1->preq_->get_signature()->enc_base58( p1->tvec_.back().first );
           PC_LOG_DBG( "sent price update" )
-            .add( "secondary", mgr->is_secondary() )
+            .add( "secondary", mgr->get_is_secondary() )
             .add( "price_account", *p1->get_account() )
             .add( "product_account", *p1->prod_->get_account() )
             .add( "symbol", p1->get_symbol() )
@@ -821,7 +821,7 @@ bool price::send( price *prices[], const unsigned n )
             .end();
           if ( PC_UNLIKELY( p1->tvec_.size() >= 100 ) ) {
             PC_LOG_WRN( "too many unacked price update transactions" )
-              .add( "secondary", mgr->is_secondary() )
+              .add( "secondary", mgr->get_is_secondary() )
               .add( "price_account", *p1->get_account() )
               .add( "product_account", *p1->prod_->get_account() )
               .add( "symbol", p1->get_symbol() )
@@ -872,7 +872,7 @@ void price::on_response( rpc::upd_price *res )
   const int64_t ack_dur = res->get_recv_time() - it->second;
   tvec_.erase( it );
   PC_LOG_DBG( "received price update transaction ack" )
-    .add( "secondary", get_manager()->is_secondary() )
+    .add( "secondary", get_manager()->get_is_secondary() )
     .add( "price_account", *get_account() )
     .add( "product_account", *prod_->get_account() )
     .add( "symbol", get_symbol() )
@@ -898,7 +898,7 @@ void price::on_response( rpc::account_update *res )
 void price::log_update( const char *title )
 {
   PC_LOG_INF( title )
-    .add( "secondary", get_manager()->is_secondary() )
+    .add( "secondary", get_manager()->get_is_secondary() )
     .add( "account", *get_account() )
     .add( "product", *prod_->get_account() )
     .add( "symbol", get_symbol() )

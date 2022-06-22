@@ -77,7 +77,8 @@ manager::manager()
   cmt_( commitment::e_confirmed ),
   max_batch_( PC_MAX_BATCH ),
   sreq_{ { commitment::e_processed } },
-  secondary_{ nullptr }
+  secondary_{ nullptr },
+  is_secondary_( false )
 {
   tconn_.set_sub( this );
   breq_->set_sub( this );
@@ -120,7 +121,7 @@ void manager::del_map_sub()
 {
   if ( --num_sub_ <= 0 && !has_status( PC_PYTH_HAS_MAPPING ) ) {
     set_status( PC_PYTH_HAS_MAPPING );
-    PC_LOG_INF( "completed_mapping_init" ).add( "secondary", is_secondary() ).end();
+    PC_LOG_INF( "completed_mapping_init" ).add( "secondary", get_is_secondary() ).end();
     // notify user that initialization is complete
     if ( sub_ ) {
       sub_->on_init( this );
@@ -270,7 +271,7 @@ uint64_t manager::get_slot() const
 
 void manager::teardown()
 {
-  PC_LOG_INF( "pythd_teardown" ).add( "secondary", is_secondary() ).end();
+  PC_LOG_INF( "pythd_teardown" ).add( "secondary", get_is_secondary() ).end();
 
   // shutdown listener
   lsvr_.close();
@@ -308,15 +309,15 @@ bool manager::init()
   // log import key names
   key_pair *kp = get_publish_key_pair();
   if ( kp ) {
-    PC_LOG_INF( "publish_key" ).add( "key_name", *kp ).add( "secondary", is_secondary() ).end();
+    PC_LOG_INF( "publish_key" ).add( "key_name", *kp ).add( "secondary", get_is_secondary() ).end();
   }
   pub_key *mpub = get_mapping_pub_key();
   if ( mpub ) {
-    PC_LOG_INF( "mapping_key" ).add( "key_name", *mpub ).add( "secondary", is_secondary() ).end();
+    PC_LOG_INF( "mapping_key" ).add( "key_name", *mpub ).add( "secondary", get_is_secondary() ).end();
   }
   pub_key *gpub = get_program_pub_key();
   if ( gpub ) {
-    PC_LOG_INF( "program_key" ).add( "key_name", *gpub ).add( "secondary", is_secondary() ).end();
+    PC_LOG_INF( "program_key" ).add( "key_name", *gpub ).add( "secondary", get_is_secondary() ).end();
   }
 
   // initialize capture
@@ -374,12 +375,12 @@ bool manager::init()
       return set_err_msg( lsvr_.get_err_msg() );
     }
     PC_LOG_INF("listening").add("port",lsvr_.get_port())
-      .add( "secondary", is_secondary() )
+      .add( "secondary", get_is_secondary() )
       .add( "content_dir", get_content_dir() )
       .end();
   }
   PC_LOG_INF( "initialized" )
-    .add( "secondary", is_secondary() )
+    .add( "secondary", get_is_secondary() )
     .add( "version", PC_VERSION )
     .add( "rpc_host", get_rpc_host() )
     .add( "tx_host", get_tx_host() )
@@ -408,6 +409,7 @@ void manager::add_secondary( const std::string& rpc_host, const std::string& key
   mgr->set_do_tx( do_tx_ );
   mgr->set_do_ws( do_ws_ );
   mgr->set_commitment( cmt_ );
+  mgr->set_is_secondary( true );
 
   secondary_ = mgr;
 
@@ -417,8 +419,12 @@ bool manager::has_secondary() const {
   return secondary_ != nullptr;
 }
 
-bool manager::is_secondary() const {
-  return !has_secondary();
+void manager::set_is_secondary(bool is_secondary) {
+  is_secondary_ = is_secondary;
+}
+
+bool manager::get_is_secondary() const {
+  return is_secondary_;
 }
 
 manager *manager::get_secondary() {
@@ -628,7 +634,7 @@ void manager::reconnect_rpc()
 
   // check for successful (re)connect
   if ( !hconn_.get_is_err() && ( !wconn_ || !wconn_->get_is_err() ) ) {
-    PC_LOG_INF( "rpc_connected" ).add( "secondary", is_secondary() ).end();
+    PC_LOG_INF( "rpc_connected" ).add( "secondary", get_is_secondary() ).end();
     set_status( PC_PYTH_RPC_CONNECTED );
 
     // reset state
@@ -735,7 +741,7 @@ void manager::log_disconnect()
 {
   if ( hconn_.get_is_err() ) {
     PC_LOG_ERR( "rpc_http_reset")
-      .add( "secondary", is_secondary() )
+      .add( "secondary", get_is_secondary() )
       .add( "error", hconn_.get_err_msg() )
       .add( "host", rhost_ )
       .add( "port", hconn_.get_port() )
@@ -744,7 +750,7 @@ void manager::log_disconnect()
   }
   if ( wconn_ && wconn_->get_is_err() ) {
     PC_LOG_ERR( "rpc_websocket_reset" )
-      .add( "secondary", is_secondary() )
+      .add( "secondary", get_is_secondary() )
       .add( "error", wconn_->get_err_msg() )
       .add( "host", rhost_ )
       .add( "port", wconn_->get_port() )
@@ -822,7 +828,7 @@ void manager::on_response( rpc::get_slot *res )
   PC_LOG_DBG( "received get_slot" )
     .add( "slot", slot_ )
     .add( "round_trip_time(ms)", 1e-6*ack_ts )
-    .add( "secondary", is_secondary() )
+    .add( "secondary", get_is_secondary() )
     .end();
 
   // submit block hash every N slots
@@ -865,7 +871,7 @@ void manager::on_response( rpc::get_recent_block_hash *m )
   // set initialized status for block hash
   set_status( PC_PYTH_HAS_BLOCK_HASH );
   PC_LOG_INF( "received_recent_block_hash" )
-    .add( "secondary", is_secondary() )
+    .add( "secondary", get_is_secondary() )
     .add( "curr_slot", slot_ )
     .add( "hash_slot", m->get_slot() )
     .add( "round_trip_time(ms)", 1e-6*ack_ts )
@@ -884,7 +890,7 @@ void manager::on_response( rpc::account_update *m )
   if ( m->get_is_http() ) {
     int64_t ack_ts = m->get_recv_time() - m->get_sent_time();
     PC_LOG_DBG( "received account_update" )
-      .add( "secondary", is_secondary() )
+      .add( "secondary", get_is_secondary() )
       .add( "account", *m->get_account() )
       .add( "slot", slot_ )
       .add( "round_trip_time(ms)", 1e-6*ack_ts )
@@ -892,7 +898,7 @@ void manager::on_response( rpc::account_update *m )
   }
   else {
     PC_LOG_DBG( "received account_update" )
-      .add( "secondary", is_secondary() )
+      .add( "secondary", get_is_secondary() )
       .add( "account", *m->get_account() )
       .add( "slot", slot_ )
       .end();
@@ -939,14 +945,14 @@ bool manager::submit_poll( request *req )
   }
   if ( req->get_is_err() ) {
     PC_LOG_ERR( "request error")
-      .add( "secondary", is_secondary() )
+      .add( "secondary", get_is_secondary() )
       .add( "error", req->get_err_msg() )
       .end();
     return false;
   }
   if ( get_is_err() ) {
     PC_LOG_ERR( "request error")
-      .add( "secondary", is_secondary() )
+      .add( "secondary", get_is_secondary() )
       .add( "error", get_err_msg() )
       .end();
     return false;
@@ -966,7 +972,7 @@ void manager::on_connect()
 void manager::on_disconnect()
 {
   // callback user with connection status
-  PC_LOG_INF( "pyth_tx_reset" ).add( "secondary", is_secondary() ).end();
+  PC_LOG_INF( "pyth_tx_reset" ).add( "secondary", get_is_secondary() ).end();
   if ( sub_ ) {
     sub_->on_tx_disconnect( this );
   }
