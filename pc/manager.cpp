@@ -578,6 +578,9 @@ void manager::poll( bool do_wait )
     }
   }
 
+  // request quotes from the publishers
+  poll_schedule();
+
   // try to (re)connect to tx proxy
   if ( do_tx_ && ( !tconn_.get_is_connect() || tconn_.get_is_err() ) ) {
     tconn_.reconnect();
@@ -586,9 +589,6 @@ void manager::poll( bool do_wait )
   if ( has_status( PC_PYTH_RPC_CONNECTED ) &&
        !hconn_.get_is_err() &&
        ( !wconn_ || !wconn_->get_is_err() ) ) {
-    // request product quotes from pythd's clients while connected
-    poll_schedule();
-
     send_pending_ups();
   } else {
     reconnect_rpc();
