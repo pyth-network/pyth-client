@@ -414,6 +414,8 @@ namespace pc
                       bool is_aggregate );
       void set_slot( uint64_t );
 
+      uint64_t get_slot();
+
       // results
       signature *get_signature();
       str        get_ack_signature() const;

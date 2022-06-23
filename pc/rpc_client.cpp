@@ -859,6 +859,10 @@ void rpc::upd_price::set_slot( const uint64_t pub_slot )
   pub_slot_ = pub_slot;
 }
 
+uint64_t rpc::upd_price::get_slot() {
+  return pub_slot_;
+}
+
 signature *rpc::upd_price::get_signature()
 {
   return &sig_;

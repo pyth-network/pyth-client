@@ -722,6 +722,7 @@ void price::update_no_send(
   , const symbol_status st, const bool is_agg
 )
 {
+  preq_->set_slot( get_manager()->get_slot() );
   preq_->set_price( price, conf, st, is_agg );
 }
 
@@ -777,8 +778,6 @@ bool price::send( price *prices[], const unsigned n )
         .add( "price_type", price_type_to_str( p->get_price_type() ) ).end();
       continue;
     }
-    const uint64_t slot = mgr->get_slot();
-    p->preq_->set_slot( slot );
     p->preq_->set_block_hash( mgr->get_recent_block_hash() );
     upds_.emplace_back( p->preq_ );
 
@@ -817,7 +816,7 @@ bool price::send( price *prices[], const unsigned n )
             .add( "symbol", p1->get_symbol() )
             .add( "price_type", price_type_to_str( p1->get_price_type() ) )
             .add( "sig", p1->tvec_.back().first )
-            .add( "pub_slot", slot )
+            .add( "pub_slot", p1->preq_->get_slot() )
             .end();
           if ( PC_UNLIKELY( p1->tvec_.size() >= 100 ) ) {
             PC_LOG_WRN( "too many unacked price update transactions" )
