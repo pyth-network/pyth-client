@@ -602,6 +602,15 @@ void manager::poll( bool do_wait )
 
 void manager::poll_schedule()
 {
+  // Enable publishing mode if enough time has elapsed since last time.
+  int64_t time_since_last_stagger = curr_ts_ - pub_ts_;
+  if ( !is_pub_ && ( time_since_last_stagger > pub_int_ ) ) {
+    is_pub_ = true;
+    kidx_ = 0;
+    pub_ts_ = curr_ts_;
+  }
+
+  // Schedule the price_sched requests in a staggered fashion.
   while ( is_pub_ && kidx_ < kvec_.size() ) {
     price_sched *kptr = kvec_[kidx_];
     int64_t pub_ts = pub_ts_ + static_cast< int64_t >(
@@ -639,10 +648,7 @@ void manager::reconnect_rpc()
 
     // reset state
     wait_conn_ = false;
-    is_pub_ = false;
-    kidx_ = 0;
     ctimeout_ = PC_NSECS_IN_SEC;
-    pub_ts_ = 0L;
     slot_ = 0L;
     slot_cnt_ = 0UL;
     slot_ts_ = 0L;
@@ -834,13 +840,6 @@ void manager::on_response( rpc::get_slot *res )
   // submit block hash every N slots
   if ( slot_cnt_++ % PC_BLOCKHASH_TIMEOUT == 0 ) {
     clnt_.send( breq_ );
-  }
-
-  // reset submit
-  if ( !is_pub_ ) {
-    kidx_ = 0;
-    pub_ts_ = ts;
-    is_pub_ = true;
   }
 
   // flush capture
