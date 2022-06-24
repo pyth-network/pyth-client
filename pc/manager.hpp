@@ -164,6 +164,9 @@ namespace pc
     // accept new pyth client apps
     void accept( int fd ) override;
 
+    // add secondary network manager
+    void add_secondary( const std::string& rpc_host, const std::string& key_dir );
+
     // shut-down server
     void teardown();
 
@@ -188,6 +191,11 @@ namespace pc
     void set_status( int );
     get_mapping *get_last_mapping() const;
     bool get_is_rpc_send() const;
+
+    bool has_secondary() const;
+    void set_is_secondary(bool is_secondary);
+    bool get_is_secondary() const;
+    manager *get_secondary();
 
   private:
 
@@ -279,6 +287,9 @@ namespace pc
 
     // Timestamp of the last batch
     int64_t last_upd_ts_= 0;
+
+    manager    *secondary_;   // manager for secondary network
+    bool       is_secondary_; // flag tracking whether we are a secondary manager
   };
 
   inline bool manager::get_is_tx_connect() const

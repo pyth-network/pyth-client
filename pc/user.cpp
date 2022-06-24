@@ -198,7 +198,14 @@ void user::parse_upd_price( uint32_t tok, uint32_t itok )
     pub_key pkey;
     pkey.init_from_text( jp_.get_str( ntok ) );
     price *sptr = sptr_->get_price( pkey );
-    if ( PC_UNLIKELY( !sptr ) ) { add_unknown_symbol(itok); return; }
+    price *sptr_secondary = nullptr;
+    if ( sptr_->has_secondary() ) {
+      sptr_secondary = sptr_->get_secondary()->get_price( pkey );
+    }
+
+    // Bail if we cannot find the price in either manager.
+    if ( PC_UNLIKELY( !sptr && !sptr_secondary ) ) { add_unknown_symbol(itok); return; }
+    
     if ( 0 == (ntok = jp_.find_val( ptok, "price" ) ) ) break;
     int64_t price = jp_.get_int( ntok );
     if ( 0 == (ntok = jp_.find_val( ptok, "conf" ) ) ) break;
@@ -206,11 +213,16 @@ void user::parse_upd_price( uint32_t tok, uint32_t itok )
     if ( 0 == (ntok = jp_.find_val( ptok, "status" ) ) ) break;
     symbol_status stype = str_to_symbol_status( jp_.get_str( ntok ) );
 
-    // Add the updated price to the pending updates
-    sptr->update_no_send( price, conf, stype, false );
-
-    // pass the updated price to manager
-    sptr_->add_dirty_price(sptr);
+    // Add the price to both the managers pending updates, so that it will
+    // be published to both networks if possible.
+    if ( sptr ) {
+      sptr->update_no_send( price, conf, stype, false );
+      sptr_->add_dirty_price( sptr );
+    }
+    if ( sptr_secondary ) {
+      sptr_secondary->update_no_send( price, conf, stype, false );
+      sptr_->get_secondary()->add_dirty_price( sptr_secondary );
+    }
 
     // Send the result back
     add_header();
@@ -282,8 +294,21 @@ void user::parse_get_product_list( uint32_t itok )
 {
   add_header();
   jw_.add_key( "result", json_wtr::e_arr );
-  for( unsigned i=0; i != sptr_->get_num_product(); ++i ) {
-    product *prod = sptr_->get_product( i );
+
+  // If the primary manager has no products, pull them from the secondary
+  // manager instead.
+  //
+  // Warning: if the primary network is disconnected but the products still
+  // exist in the primary manager's mapping (i.e. pythd hasn't restarted), the prices
+  // returned from this endpoint will therefore be stale and will only be updated
+  // when the primary network reconnects.
+  pc::manager *mgr = sptr_;
+  if ( sptr_->get_num_product() == 0 && sptr_->has_secondary() ) {
+    mgr = sptr_->get_secondary();
+  }
+
+  for( unsigned i=0; i != mgr->get_num_product(); ++i ) {
+    product *prod = mgr->get_product( i );
     jw_.add_val( json_wtr::e_obj );
     jw_.add_key( "account", *prod->get_account() );
     jw_.add_key( "attr_dict", json_wtr::e_obj );
@@ -319,6 +344,13 @@ void user::parse_get_product( uint32_t tok, uint32_t itok )
   pub_key pkey;
   pkey.init_from_text( jp_.get_str( ntok ) );
   product *prod = sptr_->get_product( pkey );
+
+  // If the product is not present in the primary manager's mapping,
+  // attempt to use the one in the secondary manager's mapping instead.
+  if ( PC_UNLIKELY( !prod && sptr_->has_secondary() ) ) {
+    prod = sptr_->get_secondary()->get_product( pkey );
+  }
+
   if ( PC_UNLIKELY( !prod ) )
     return add_unknown_symbol( itok );
 
@@ -334,8 +366,16 @@ void user::parse_get_all_products( uint32_t itok )
 {
   add_header();
   jw_.add_key( "result", json_wtr::e_arr );
-  for( unsigned i=0; i != sptr_->get_num_product(); ++i ) {
-    product *prod = sptr_->get_product( i );
+
+  // If the primary manager has no products, pull them from the secondary
+  // manager instead.
+  pc::manager *mgr = sptr_;
+  if ( sptr_->get_num_product() == 0 && sptr_->has_secondary() ) {
+    mgr = sptr_->get_secondary();
+  }
+
+  for( unsigned i=0; i != mgr->get_num_product(); ++i ) {
+    product *prod = mgr->get_product( i );
     jw_.add_val( json_wtr::e_obj );
     prod->dump_json( jw_ );
     jw_.pop();
