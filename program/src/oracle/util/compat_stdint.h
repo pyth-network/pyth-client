@@ -7,6 +7,9 @@
      1 - Use solana_sdk.h (solana uses its own definitions for stdint
          types and that can conflicts with stdint.h)
    Defaults to 0 or 1 depending on if __bpf__ is set. */
+#if SOLANA
+#define PYTH_ORACLE_UTIL_COMPAT_STDINT_STYLE 1
+#endif
 
 #ifndef PYTH_ORACLE_UTIL_COMPAT_STDINT_STYLE
 #ifndef __bpf__
