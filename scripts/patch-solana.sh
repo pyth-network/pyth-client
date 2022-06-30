@@ -2,7 +2,7 @@
 #
 # Patch BPF makefile and solana_sdk.h:
 # - Build with `-Wall -Wextra -Wconversion`.
-# - Link with `-z defs` and mark `sol_invoke_signed_c` as weak.
+# - Link with `-z defs`.
 # - Add TEST_FLAGS for criterion CLI.
 #
 
