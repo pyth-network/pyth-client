@@ -1,5 +1,5 @@
 diff --git a/sdk/bpf/c/bpf.mk b/sdk/bpf/c/bpf.mk
-index 4b3039db1..018e8deb4 100644
+index 541629ad49..5046be7884 100644
 --- a/sdk/bpf/c/bpf.mk
 +++ b/sdk/bpf/c/bpf.mk
 @@ -14,6 +14,12 @@ TEST_PREFIX ?= test_
@@ -13,9 +13,9 @@ index 4b3039db1..018e8deb4 100644
 +endif
 +
  LLVM_DIR = $(LOCAL_PATH)../dependencies/bpf-tools/llvm
- LLVM_SYSTEM_INC_DIRS := $(LLVM_DIR)/lib/clang/12.0.1/include
+ LLVM_SYSTEM_INC_DIRS := $(LLVM_DIR)/lib/clang/13.0.0/include
  COMPILER_RT_DIR = $(LOCAL_PATH)../dependencies/bpf-tools/rust/lib/rustlib/bpfel-unknown-unknown/lib
-@@ -31,6 +37,9 @@ SYSTEM_INC_DIRS := \
+@@ -33,6 +39,9 @@ SYSTEM_INC_DIRS := \
    $(LLVM_SYSTEM_INC_DIRS) \
  
  C_FLAGS := \
@@ -25,7 +25,14 @@ index 4b3039db1..018e8deb4 100644
    -Werror \
    -O2 \
    -fno-builtin \
-@@ -59,6 +68,7 @@ BPF_CXX_FLAGS := \
+@@ -40,6 +49,8 @@ C_FLAGS := \
+   $(addprefix -isystem,$(SYSTEM_INC_DIRS)) \
+   $(addprefix -I,$(STD_INC_DIRS)) \
+   $(addprefix -I,$(INC_DIRS)) \
+ 
+ ifeq ($(SOL_SBFV2),1)
+ C_FLAGS := \
+@@ -68,6 +79,7 @@ BPF_CXX_FLAGS := \
    -march=bpfel+solana
  
  BPF_LLD_FLAGS := \
@@ -33,24 +40,11 @@ index 4b3039db1..018e8deb4 100644
    -z notext \
    -shared \
    --Bdynamic \
-@@ -195,7 +205,7 @@ endef
- define TEST_EXEC_RULE
+@@ -245,6 +257,7 @@ define TEST_EXEC_RULE
  $1: $2
  	LD_LIBRARY_PATH=$(TESTFRAMEWORK_RPATH) \
--	$2$(\n)
+ 	$2$(\n)
 +	$2 $(TEST_FLAGS)$(\n)
  endef
  
  .PHONY: $(INSTALL_SH)
-diff --git a/sdk/bpf/c/inc/solana_sdk.h b/sdk/bpf/c/inc/solana_sdk.h
-index b5cad9833..b3b496123 100644
---- a/sdk/bpf/c/inc/solana_sdk.h
-+++ b/sdk/bpf/c/inc/solana_sdk.h
-@@ -565,6 +565,7 @@ uint64_t sol_try_find_program_address(
- /**
-  * Internal cross-program invocation function
-  */
-+__attribute__(( weak ))
- uint64_t sol_invoke_signed_c(
-   const SolInstruction *instruction,
-   const SolAccountInfo *account_infos,

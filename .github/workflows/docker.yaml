@@ -6,7 +6,7 @@ on:
     branches: [ main ]
 
 env:
-  SOLANA_VERSION: 1.7.12
+  SOLANA_VERSION: 1.10.29
   DOCKER_HUB: docker.io
   DOCKER_USER: ${{ secrets.DOCKER_IO_USER }}
   IS_RELEASE: ${{
