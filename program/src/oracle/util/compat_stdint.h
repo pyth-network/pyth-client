@@ -8,13 +8,15 @@
          types and that can conflicts with stdint.h)
    Defaults to 0 or 1 depending on if __bpf__ is set. */
 
+
 #ifndef PYTH_ORACLE_UTIL_COMPAT_STDINT_STYLE
-#ifndef __bpf__
+#if !defined(__bpf__) && !defined(SOL_TEST)
 #define PYTH_ORACLE_UTIL_COMPAT_STDINT_STYLE 0
 #else
 #define PYTH_ORACLE_UTIL_COMPAT_STDINT_STYLE 1
 #endif
 #endif
+
 
 #if PYTH_ORACLE_UTIL_COMPAT_STDINT_STYLE==0
 #include <stdint.h>
