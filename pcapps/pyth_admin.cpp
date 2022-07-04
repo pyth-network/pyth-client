@@ -25,7 +25,6 @@ int usage()
        << ")>] [options]" << endl;
   cerr << "  set_min_pub      <price_key> "
        << "[-m <min_pub>]" << endl;
-  cerr << "  init_test        [options]" << endl;
   cerr << "  add_product      [options]" << endl;
   cerr << "  add_price        <product_key> <price_type> "
        << "[-e <price_exponent (default " << DEFAULT_EXPONENT
@@ -33,7 +32,6 @@ int usage()
   cerr << "  add_publisher    <pub_key> <price_key> [options]" << endl;
   cerr << "  del_publisher    <pub_key> <price_key> [options]" << endl;
   cerr << "  upd_product      <product.json> [options]" << endl;
-  cerr << "  upd_test         <test_key> <test.json> [options]" << endl;
   cerr << "  version" << endl;
   cerr << endl;
 
@@ -538,83 +536,6 @@ int on_set_min_pub( int argc, char **argv )
   return 0;
 }
 
-int on_init_test( int argc, char **argv )
-{
-  pyth_arguments args( argc, argv );
-  if ( args.invalid_ )
-    return 1;
-
-  // initialize connection to block-chain
-  manager mgr;
-  mgr.set_rpc_host( args.rpc_host_ );
-  mgr.set_dir( args.key_dir_ );
-  mgr.set_do_tx( false );
-  if ( !mgr.init() || !mgr.bootstrap() ) {
-    std::cerr << "pyth_admin: " << mgr.get_err_msg() << std::endl;
-    return 1;
-  }
-  // get rent-exemption amount
-  get_minimum_balance_rent_exemption req_r[1];
-  req_r->set_size( sizeof( pc_price_t ) );
-  if( !mgr.submit_poll( req_r ) ) {
-    return 1;
-  }
-  std::cerr << "this might take up to 30 seconds..." << std::endl;
-
-  // submit init_test request
-  init_test req_i[1];
-  req_i->set_lamports( req_r->get_lamports() );
-  if( !mgr.submit_poll( req_i ) ) {
-    return 1;
-  }
-
-  // print new key
-  std::string pkstr;
-  pub_key pk( *req_i->get_account() );
-  pk.enc_base58( pkstr );
-  std::cout << pkstr << std::endl;
-
-  return 0;
-}
-
-int on_upd_test( int argc, char **argv )
-{
-  // get input parameters
-  if ( argc < 3 ) {
-    return usage();
-  }
-  std::string test_key = argv[1];
-  std::string test_file = argv[2];
-  argc -= 2;
-  argv += 2;
-  pyth_arguments args( argc, argv );
-  if ( args.invalid_ )
-    return 1;
-
-  // initialize connection to block-chain
-  manager mgr;
-  mgr.set_rpc_host( args.rpc_host_ );
-  mgr.set_dir( args.key_dir_ );
-  mgr.set_do_tx( false );
-  if ( !mgr.init() || !mgr.bootstrap() ) {
-    std::cerr << "pyth_admin: " << mgr.get_err_msg() << std::endl;
-    return 1;
-  }
-
-  // initialize and submit upd_test request
-  upd_test req_u[1];
-  req_u->set_test_key( test_key );
-  if ( !req_u->init_from_file( test_file ) ) {
-    std::cerr << "pyth_admin: " << req_u->get_err_msg() << std::endl;
-    return 1;
-  }
-  if( !mgr.submit_poll( req_u ) ) {
-    return 1;
-  }
-
-  return 0;
-}
-
 int on_upd_publisher( int argc, char **argv, bool is_add )
 {
   // get input parameters
@@ -709,8 +630,6 @@ int main(int argc, char **argv)
     rc = on_init_price( argc, argv );
   } else if ( cmd == "set_min_pub" ) {
     rc = on_set_min_pub( argc, argv );
-  } else if ( cmd == "init_test" ) {
-    rc = on_init_test( argc, argv );
   } else if ( cmd == "add_product" ) {
     rc = on_add_product( argc, argv );
   } else if ( cmd == "add_price" ) {
@@ -721,8 +640,6 @@ int main(int argc, char **argv)
     rc = on_upd_publisher( argc, argv, false );
   } else if ( cmd == "upd_product" ) {
     rc = on_upd_product( argc, argv );
-  } else if ( cmd == "upd_test" ) {
-    rc = on_upd_test( argc, argv );
   } else if ( cmd == "version" ) {
     std::cout << "version: " << PC_VERSION << std::endl;
   } else {

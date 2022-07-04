@@ -314,59 +314,6 @@ namespace pc {
       signature  sig_;
     };
 
-    // initialize test account
-    class init_test : public rpc_request
-    {
-    public:
-      // parameters
-      void set_block_hash( hash * );
-      void set_publish( key_pair * );
-      void set_account( key_pair * );
-      void set_program( pub_key * );
-
-      // results
-      signature *get_signature();
-
-      void request( json_wtr& ) override;
-      void response( const jtree& ) override;
-
-    private:
-      hash     *bhash_;
-      key_pair *pkey_;
-      key_pair *akey_;
-      pub_key  *gkey_;
-      signature sig_;
-    };
-
-    // run aggregate compte test
-    class upd_test : public rpc_request
-    {
-    public:
-      // parameters
-      upd_test();
-      void set_block_hash( hash * );
-      void set_publish( key_pair * );
-      void set_account( key_pair * );
-      void set_program( pub_key * );
-      void set_expo( int );
-      void set_num( uint32_t );
-      void set_price( unsigned i, int64_t px, uint64_t conf, int64_t sdiff );
-
-      // results
-      signature *get_signature();
-
-      void request( json_wtr& ) override;
-      void response( const jtree& ) override;
-
-    private:
-      hash     *bhash_;
-      key_pair *pkey_;
-      key_pair *tkey_;
-      pub_key  *gkey_;
-      signature sig_;
-      cmd_upd_test_t upd_[1];
-    };
-
   }
 
 }
