@@ -237,14 +237,10 @@ typedef enum {
   // key[1] new price account     [signer writable]
   e_cmd_init_price,
 
-  // initialize test account
-  // key[0] funding account       [signer writable]
-  // key[1] test account          [signer writable]
+  // deprecated
   e_cmd_init_test,
 
-  // run aggregate price test
-  // key[0] funding account       [signer writable]
-  // key[1] test account          [signer writable]
+  // deprecated
   e_cmd_upd_test,
 
   // set min publishers
