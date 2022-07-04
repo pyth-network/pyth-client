@@ -437,73 +437,6 @@ static uint64_t del_publisher( SolParameters *prm, SolAccountInfo *ka )
   return ERROR_INVALID_ARGUMENT;
 }
 
-static uint64_t init_test( SolParameters *prm, SolAccountInfo *ka )
-{
-  // Account (1) is the test account
-  // Verify that this is signed, writable with correct ownership
-  // and size
-  cmd_hdr_t *hdr = (cmd_hdr_t*)prm->data;
-  if ( prm->ka_num < 2 ||
-       !valid_funding_account( &ka[0] ) ||
-       !valid_signable_account( prm, &ka[1], sizeof( pc_price_t ) ) ) {
-    return ERROR_INVALID_ARGUMENT;
-  }
-
-  // Check that the account has not already been initialized
-  pc_price_t *tptr = (pc_price_t*)ka[1].data;
-  if ( tptr->magic_ != 0 || tptr->ver_ != 0 ) {
-    return ERROR_INVALID_ARGUMENT;
-  }
-
-  // initialize account header and price factor table
-  sol_memset( tptr, 0, sizeof( pc_price_t ) );
-  tptr->magic_ = PC_MAGIC;
-  tptr->ver_   = hdr->ver_;
-  tptr->type_  = PC_ACCTYPE_TEST;
-  return SUCCESS;
-}
-
-static uint64_t upd_test( SolParameters *prm, SolAccountInfo *ka )
-{
-  // Account (1) is the test account
-  // Verify that this is signed, writable with correct ownership
-  // and size
-  if ( prm->ka_num !=2 ||
-       !valid_funding_account( &ka[0] ) ||
-       !valid_signable_account( prm, &ka[1], sizeof( pc_price_t ) ) ) {
-    return ERROR_INVALID_ARGUMENT;
-  }
-
-  // validate command params and account headers
-  cmd_upd_test_t *cmd = (cmd_upd_test_t*)prm->data;
-  pc_price_t *px = (pc_price_t*)ka[1].data;
-  if ( prm->data_len != sizeof( cmd_upd_test_t ) ||
-       px->magic_ != PC_MAGIC ||
-       px->ver_ != cmd->ver_ ||
-       px->type_ != PC_ACCTYPE_TEST ||
-       cmd->num_ > PC_COMP_SIZE ) {
-    return ERROR_INVALID_ARGUMENT;
-  }
-
-  // compute aggregate price
-  uint64_t slot = 1000UL;
-  int64_t timestamp = 5678;
-  px->last_slot_= slot;
-  px->agg_.pub_slot_ = slot;
-  px->expo_      = cmd->expo_;
-  px->num_       = cmd->num_;
-  for( uint32_t i=0; i != cmd->num_; ++i ) {
-    pc_price_comp_t *ptr = &px->comp_[i];
-    ptr->latest_.status_ = PC_STATUS_TRADING;
-    ptr->latest_.price_  = cmd->price_[i];
-    ptr->latest_.conf_   = cmd->conf_[i];
-    ptr->latest_.pub_slot_ = slot + (uint64_t)cmd->slot_diff_[i];
-  }
-  upd_aggregate( px, slot+1, timestamp );
-
-  return SUCCESS;
-}
-
 static uint64_t upd_price( SolParameters *prm, SolAccountInfo *ka )
 {
   // Validate command parameters
@@ -608,8 +541,8 @@ static uint64_t dispatch( SolParameters *prm, SolAccountInfo *ka )
     case e_cmd_add_publisher:              return add_publisher( prm, ka );
     case e_cmd_del_publisher:              return del_publisher( prm, ka );
     case e_cmd_init_price:                 return init_price( prm, ka );
-    case e_cmd_init_test:                  return init_test( prm, ka );
-    case e_cmd_upd_test:                   return upd_test( prm, ka );
+    case e_cmd_init_test:                  return ERROR_INVALID_ARGUMENT;
+    case e_cmd_upd_test:                   return ERROR_INVALID_ARGUMENT;
     case e_cmd_set_min_pub:                return set_min_pub( prm, ka );
     default:                               return ERROR_INVALID_ARGUMENT;
   }

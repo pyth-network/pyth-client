@@ -347,69 +347,6 @@ Test(oracle, pc_size ) {
       PC_COMP_SIZE * sizeof( pc_price_comp_t ) );
 }
 
-Test( oracle, upd_test ) {
-
-  // Initialize the test account
-  SolPubkey p_id  = {.x = { 0xff, }};
-  SolPubkey pkey = {.x = { 1, }};
-  SolPubkey mkey = {.x = { 2, }};
-  uint64_t pqty = 100;
-  pc_map_table_t mptr[1];
-  sol_memset( mptr, 0, sizeof( pc_price_t ) );
-  SolAccountInfo acc[] = {{
-      .key         = &pkey,
-      .lamports    = &pqty,
-      .data_len    = 0,
-      .data        = NULL,
-      .owner       = NULL,
-      .rent_epoch  = 0,
-      .is_signer   = true,
-      .is_writable = true,
-      .executable  = false
-  },{
-      .key         = &mkey,
-      .lamports    = &PRICE_ACCOUNT_LAMPORTS,
-      .data_len    = sizeof( pc_price_t ),
-      .data        = (uint8_t*)mptr,
-      .owner       = &p_id,
-      .rent_epoch  = 0,
-      .is_signer   = true,
-      .is_writable = true,
-      .executable  = false
-  }};
-  cmd_hdr_t hdata = {
-    .ver_ = PC_VERSION,
-    .cmd_ = e_cmd_init_test,
-  };
-  SolParameters prm = {
-    .ka         = acc,
-    .ka_num     = 2,
-    .data       = (const uint8_t*)&hdata,
-    .data_len   = sizeof( hdata ),
-    .program_id = &p_id
-  };
-  cr_assert( SUCCESS == dispatch( &prm, acc ) );
-
-  // Try and send an upd_test instruction with an invalid num_ parameter
-  cmd_upd_test_t idata = {
-    .ver_ = PC_VERSION,
-    .cmd_ = e_cmd_upd_test,
-    .num_ = PC_COMP_SIZE + 1,
-    .expo_ = -8,
-    .slot_diff_ = {1, 1},
-    .price_ = {10, 10},
-    .conf_ = {20, 20}
-    };
-  prm.data = (const uint8_t*)&idata;
-  prm.data_len = sizeof( idata );
-  cr_assert( ERROR_INVALID_ARGUMENT == dispatch( &prm, acc ) );
-
-  // Send an upd_test instruction with a valid num_ parameter
-  idata.num_ = 2;
-  cr_assert( SUCCESS == dispatch( &prm, acc ) );
-
-}
-
 Test( oracle, upd_price ) {
   cmd_upd_price_t idata = {
     .ver_    = PC_VERSION,
