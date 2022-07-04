@@ -37,9 +37,6 @@ setup_admin()
 
   # setup mapping account
   check "$PYTH_ADMIN init_mapping $OPT"
-
-  # setup test account
-  check "$PYTH_ADMIN init_test $OPT"
 }
 
 # create key_store directory and initialize key, program and mapping
