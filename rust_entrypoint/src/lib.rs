@@ -1,7 +1,4 @@
-use solana_program::{msg};
-
-
-#[link(name = "legacyc")]
+#[link(name = "cpyth")]
 extern "C" {
     fn c_entrypoint(input: *mut u8) -> u64;
 }
