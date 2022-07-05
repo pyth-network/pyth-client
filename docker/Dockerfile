@@ -34,7 +34,8 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
 
 # Fixes a bug in the solana docker image
 # https://github.com/solana-labs/solana/issues/20577
-RUN sudo chown -R $(whoami) "/usr/bin"
+RUN sudo mkdir /usr/bin/sdk/bpf/dependencies \
+    && sudo chmod 777 /usr/bin/sdk/bpf/dependencies
 
 RUN echo "\n\
 export PATH=\"\${PATH}:\${HOME}/pyth-client/build:\${HOME}/.cargo/bin\"\n\
