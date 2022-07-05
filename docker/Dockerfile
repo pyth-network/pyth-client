@@ -32,7 +32,7 @@ WORKDIR /home/pyth
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
   | sh -s -- -y 
 
-# So give us permission to run cargo
+# Fixes a bug in the solana docker image
 # https://github.com/solana-labs/solana/issues/20577
 RUN sudo chown -R $(whoami) "/usr/bin"
 
