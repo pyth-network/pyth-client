@@ -39,10 +39,6 @@ export PYTHONPATH=\"\${PYTHONPATH:+\$PYTHONPATH:}\${HOME}/pyth-client\"\n\
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
   | sh -s -- -y 
 
-#UPDATE HOME and PATH so that cargo works
-ENV HOME "/home/pyth"
-ENV PATH "/home/pyth/.cargo/bin:${PATH}"
-
 #So give us permission to run cargo
 RUN sudo chown -R $(whoami) "/usr/bin"
 
