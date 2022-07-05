@@ -8,15 +8,29 @@
 
 set -eu
 
-BUILD_DIR="$( cd "${1:-.}" && pwd )"
+C_DIR="$( cd "${1:-.}" && pwd )"
 
-if [[ ! -f "${BUILD_DIR}/makefile" ]]
+if [[ ! -f "${C_DIR}/makefile" ]]
 then
-  if [[ -f "${BUILD_DIR}/program/makefile" ]]
+  if [[ -f "${C_DIR}/program/makefile" ]]
   then
-    BUILD_DIR="${BUILD_DIR}/program"
+    C_DIR="${C_DIR}/program"
   else
-    >&2 echo "Not a makefile dir: ${BUILD_DIR}"
+    >&2 echo "Not a makefile dir: ${C_DIR}"
+    exit 1
+  fi
+fi
+
+
+RUST_DIR="$( cd "${1:-.}" && pwd )"
+
+if [[ ! -f "${RUST_DIR}/cargo.toml" ]]
+then
+  if [[ -f "${RUST_DIR}/rust_entrypoint/Cargo.toml" ]]
+  then
+    RUST_DIR="${RUST_DIR}/rust_entrypoint"
+  else
+    >&2 echo "Not a rust dir: ${RUST_DIR}"
     exit 1
   fi
 fi
@@ -27,11 +41,27 @@ then
   source "${CARGO_HOME:-$HOME/.cargo}/env"
 fi
 
+
 set -x
 
-cd "${BUILD_DIR}"
+
+cd "${C_DIR}"
 export V="${V:-1}"
 make clean
-make "${@:2}"
-sha256sum ../target/*.so
-rm ../target/*-keypair.json
+make  "${@:2}"
+make liblegacyc
+rm ./target/*-keypair.json
+
+
+
+cd "${RUST_DIR}"
+cargo clean
+cargo build-bpf
+sha256sum ./target/**/*.so
+rm ./target/**/*-keypair.json
+rm -r ../target || true
+mv ./target ..
+
+
+
+

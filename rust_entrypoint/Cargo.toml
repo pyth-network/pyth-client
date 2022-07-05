@@ -1,0 +1,14 @@
+cargo-features = ["edition2021"]
+
+[package]
+name = "pyth-oracle"
+version = "0.1.0"
+edition = "2021"
+license = "WTFPL"
+publish = false
+
+[dependencies]
+solana-program = "=1.10.28"
+
+[lib]
+crate-type = ["cdylib", "lib"]

@@ -31,16 +31,24 @@ WORKDIR /home/pyth
 COPY --chown=pyth:pyth . pyth-client/
 
 RUN echo "\n\
-export PATH=\"\${PATH}:\${HOME}/pyth-client/build\"\n\
+export PATH=\"\${PATH}:\${HOME}/pyth-client/build:\${HOME}/.cargo/bin\"\n\
 export PYTHONPATH=\"\${PYTHONPATH:+\$PYTHONPATH:}\${HOME}/pyth-client\"\n\
 " >> .profile
+
+
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+  | sh -s -- -y 
+
+#UPDATE HOME and PATH so that cargo works
+ENV HOME "/home/pyth"
+ENV PATH "/home/pyth/.cargo/bin:${PATH}"
+
+#So give us permission to run cargo
+RUN sudo chown -R $(whoami) "/usr/bin"
 
 # Build off-chain binaries.
 RUN cd pyth-client && ./scripts/build.sh
 
-# Install rust and add ". ~/.cargo/env" to ~/.profile.
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
-  | sh -s -- -y --default-toolchain none
 
 # Copy solana sdk and apply patch.
 RUN mkdir solana
@@ -48,7 +56,7 @@ RUN cp -a /usr/bin/sdk solana
 RUN ./pyth-client/scripts/patch-solana.sh
 
 # Build and test the oracle program.
-RUN cd pyth-client && ./scripts/build-bpf.sh program
+RUN cd pyth-client && ./scripts/build-bpf.sh .
 RUN /bin/bash -l -c "pytest-3 --pyargs pyth"
 
 ENTRYPOINT []
