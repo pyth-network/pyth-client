@@ -28,13 +28,6 @@ RUN useradd -m pyth
 
 USER pyth
 WORKDIR /home/pyth
-COPY --chown=pyth:pyth . pyth-client/
-
-RUN echo "\n\
-export PATH=\"\${PATH}:\${HOME}/pyth-client/build:\${HOME}/.cargo/bin\"\n\
-export PYTHONPATH=\"\${PYTHONPATH:+\$PYTHONPATH:}\${HOME}/pyth-client\"\n\
-" >> .profile
-
 
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
   | sh -s -- -y 
@@ -42,6 +35,13 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
 # So give us permission to run cargo
 # https://github.com/solana-labs/solana/issues/20577
 RUN sudo chown -R $(whoami) "/usr/bin"
+
+RUN echo "\n\
+export PATH=\"\${PATH}:\${HOME}/pyth-client/build:\${HOME}/.cargo/bin\"\n\
+export PYTHONPATH=\"\${PYTHONPATH:+\$PYTHONPATH:}\${HOME}/pyth-client\"\n\
+" >> .profile
+
+COPY --chown=pyth:pyth . pyth-client/
 
 # Build off-chain binaries.
 RUN cd pyth-client && ./scripts/build.sh
