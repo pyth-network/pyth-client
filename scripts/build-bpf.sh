@@ -49,7 +49,7 @@ cd "${C_DIR}"
 export V="${V:-1}"
 make clean
 make  "${@:2}"
-make liblegacyc
+make cpyth
 rm ./target/*-keypair.json
 
 
