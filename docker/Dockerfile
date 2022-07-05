@@ -39,7 +39,8 @@ export PYTHONPATH=\"\${PYTHONPATH:+\$PYTHONPATH:}\${HOME}/pyth-client\"\n\
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
   | sh -s -- -y 
 
-#So give us permission to run cargo
+# So give us permission to run cargo
+# https://github.com/solana-labs/solana/issues/20577
 RUN sudo chown -R $(whoami) "/usr/bin"
 
 # Build off-chain binaries.
