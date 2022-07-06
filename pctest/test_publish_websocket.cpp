@@ -162,7 +162,7 @@ void pythd_websocket::get_product_list_and_subscribe( )
   });
 
   req->connect(req.get(), &jcon::JsonRpcRequest::error, [](int code, const QString& message) {
-    std::cout << "error sending get_product_list " << message.toStdString() << std::endl;
+    std::cout << "error sending get_product_list (" << code << ") " << message.toStdString() << std::endl;
   });
 }
 
@@ -196,7 +196,7 @@ void pythd_websocket::update_price( account_pubkey_t account, int price, uint co
       });
 
   req->connect(req.get(), &jcon::JsonRpcRequest::error, [account](int code, const QString& message) {
-    std::cout << "error sending update_price " << message.toStdString() << std::endl;
+    std::cout << "error sending update_price  (" << code << ") " << message.toStdString() << std::endl;
   });
 }
 
