@@ -27,9 +27,9 @@ index 541629ad49..31e4f46856 100644
    -fno-builtin \
 @@ -245,6 +254,7 @@ define TEST_EXEC_RULE
  $1: $2
-        LD_LIBRARY_PATH=$(TESTFRAMEWORK_RPATH) \
-        $2$(\n)
-+       $2 $(TEST_FLAGS)$(\n)
+ 	LD_LIBRARY_PATH=$(TESTFRAMEWORK_RPATH) \
+ 	$2$(\n)
++	$2 $(TEST_FLAGS)$(\n)
  endef
  
  .PHONY: $(INSTALL_SH)
