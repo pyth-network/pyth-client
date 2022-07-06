@@ -20,7 +20,7 @@ This file demonstrates how to use publish price updates to the Pyth Network usin
 the pythd websocket API described at https://docs.pyth.network/publish-data/pyth-client-websocket-api.
 
 High-level flow:
-- Call get_product_list to fetch the product metadata, enabling us to associate the price account public 
+- Call get_product_list_and_subscribe to fetch the product metadata, enabling us to associate the price account public 
   keys with the symbols we want to publish for.
 - For each price account public key, call subscribe_price_sched to subscribe to the price update schedule
   for that price account. This will return a subscription ID.
@@ -74,7 +74,7 @@ class pythd_websocket
     // The pythd websocket API calls
 
     // Fetch the product list, and update the internal mapping of symbols to accounts.
-    void get_product_list( );
+    void get_product_list_and_subscribe( );
 
     // Send an update_price websocket message for the given price account.
     void update_price( account_pubkey_t account, int price, uint conf, status_t status );
@@ -106,7 +106,7 @@ pythd_websocket::pythd_websocket( QObject* parent, std::string pythd_websocket_e
   QObject::connect(timer, &QTimer::timeout, parent, [this](){
     if ( !rpc_client_->isConnected() ) {
       connect();
-      get_product_list();
+      get_product_list_and_subscribe();
     }
   });
   timer->start(1000);
@@ -117,7 +117,7 @@ void pythd_websocket::connect()
   rpc_client_->connectToServer(QUrl(QString::fromStdString(pythd_websocket_endpoint_)));
 }
 
-void pythd_websocket::get_product_list( )
+void pythd_websocket::get_product_list_and_subscribe( )
 {
   auto req = rpc_client_->callAsync("get_product_list");
 
