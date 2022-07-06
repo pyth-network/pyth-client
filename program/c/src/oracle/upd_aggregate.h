@@ -1,5 +1,6 @@
 #pragma once
 
+#include <solana_sdk.h>
 #include "oracle.h"
 #include "model/price_model.h"
 #include "model/price_model.c" /* FIXME: HACK TO DEAL WITH DOCKER LINKAGE ISSUES */
