@@ -1,6 +1,5 @@
 #pragma once
 
-#include <solana_sdk.h>
 #include "oracle.h"
 #include "model/price_model.h"
 #include "model/price_model.c" /* FIXME: HACK TO DEAL WITH DOCKER LINKAGE ISSUES */
@@ -232,9 +231,6 @@ static inline void upd_aggregate( pc_price_t *ptr, uint64_t slot, int64_t timest
   ptr->agg_.conf_   = (uint64_t)agg_conf;
 
   upd_twap( ptr, agg_diff, qs );
-  sol_log("Instruction: UpdateAggregatePrice");
-  sol_log("price, conf, status, pub_slot");
-  sol_log_64(ptr->agg_.price_, ptr->agg_.conf_, ptr->agg_.status_, ptr->last_slot_, 0);
 }
 
 #ifdef __cplusplus
