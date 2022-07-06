@@ -510,6 +510,9 @@ static uint64_t upd_price( SolParameters *prm, SolAccountInfo *ka )
     fptr->conf_     = cptr->conf_;
     fptr->status_   = status;
     fptr->pub_slot_ = cptr->pub_slot_;
+    sol_log("Instruction: UpdatePrice");
+    sol_log("price, conf, status, pub_slot");
+    sol_log_64(fptr->price_ , fptr->conf_, fptr->status_, fptr->pub_slot_, 0);
   }
   return SUCCESS;
 }
