@@ -26,16 +26,18 @@ RUN apt-get install -qq \
 RUN echo "pyth ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 RUN useradd -m pyth
 
+# Fixes a bug in the solana docker image
+# https://github.com/solana-labs/solana/issues/20577
+RUN mkdir /usr/bin/sdk/bpf/dependencies \
+    && chmod 777 /usr/bin/sdk/bpf/dependencies
+
+
 USER pyth
 WORKDIR /home/pyth
 
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
   | sh -s -- -y 
 
-# Fixes a bug in the solana docker image
-# https://github.com/solana-labs/solana/issues/20577
-RUN sudo mkdir /usr/bin/sdk/bpf/dependencies \
-    && sudo chmod 777 /usr/bin/sdk/bpf/dependencies
 
 RUN echo "\n\
 export PATH=\"\${PATH}:\${HOME}/pyth-client/build:\${HOME}/.cargo/bin\"\n\
