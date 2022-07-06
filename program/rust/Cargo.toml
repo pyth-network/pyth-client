@@ -2,7 +2,7 @@ cargo-features = ["edition2021"]
 
 [package]
 name = "pyth-oracle"
-version = "0.1.0"
+version = "2.13.1"
 edition = "2021"
 license = "Apache 2.0"
 publish = false
