@@ -30,6 +30,9 @@ High-level flow:
   - Look up the price account associated with the subscription ID.
   - If we have any new price information for that price account, send an update_price message to submit this
     to the network.
+
+This example uses the jcon-cpp library, which depends on qt, but you can use any JSON-RPC protocol that
+suits your stack.
 */
 
 // This class is responsible for the communication with pythd over the websocket protocol
