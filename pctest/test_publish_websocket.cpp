@@ -5,6 +5,8 @@
 #include <iostream>
 #include <memory>
 #include <list>
+#include <ctime>
+#include <iostream>
 
 #include <jcon/json_rpc_tcp_client.h>
 #include <jcon/json_rpc_websocket_client.h>
@@ -54,6 +56,7 @@ class pythd_websocket
       int64_t price;
       uint64_t conf;
       std::string status;
+      time_t timestamp;
     } update_t;
 
     typedef int64_t subscription_id_t;
@@ -72,6 +75,10 @@ class pythd_websocket
     std::string pythd_websocket_endpoint_;
     jcon::JsonRpcWebSocketClient *rpc_client_;
     void connect( );
+
+    // The duration between the price update being submitted and notify_price_sched being received
+    // after which the update will be dropped.
+    long update_staleness_threshold_secs_ = 15;
 
     // The pythd websocket API calls
 
@@ -195,6 +202,12 @@ void pythd_websocket::on_notify_price_sched( subscription_id_t subscription_id )
     return;
   }
   update_t update = pending_updates_[account];
+  pending_updates_.erase(account);
+
+  // Check that the update is not stale
+  if ( (std::time(nullptr) - update.timestamp) > update_staleness_threshold_secs_) {
+    return;
+  }
 
   // Send the price update
   update_price( account, update.price, update.conf, update.status );
@@ -210,6 +223,7 @@ void pythd_websocket::add_price_update( symbol_t symbol, int64_t price, uint64_t
     price: price,
     conf: conf,
     status: status,
+    timestamp: std::time(nullptr),
   };
 }
 
