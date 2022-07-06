@@ -21,7 +21,10 @@ RUN apt-get install -qq \
   sudo \
   zlib1g \
   zlib1g-dev \
-  qt5-default \
+  qtbase5-dev \
+  qtchooser \
+  qt5-qmake \
+  qtbase5-dev-tools \
   libqt5websockets5-dev
 
 # Install jcon-cpp library
