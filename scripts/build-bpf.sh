@@ -8,6 +8,8 @@
 
 set -eu
 
+#start from pyth-client/ and find /program/makefile
+#use that to compile the c portion of pyth
 C_DIR="$( cd "${1:-.}" && pwd )"
 
 if [[ ! -f "${C_DIR}/makefile" ]]
@@ -21,7 +23,8 @@ then
   fi
 fi
 
-
+#start from pyth-client/ and find /program/rust_entrypoint/Cargo.toml
+#use that to compile the c portion of pyth
 RUST_DIR="$( cd "${1:-.}" && pwd )"
 
 if [[ ! -f "${RUST_DIR}/cargo.toml" ]]
