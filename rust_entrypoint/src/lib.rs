@@ -4,6 +4,8 @@ extern "C" {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn entrypoint(input: *mut u8) -> u64 {
-    return c_entrypoint(input);
+pub extern "C" fn entrypoint(input: *mut u8) -> u64 {
+    unsafe{
+        return c_entrypoint(input);
+    }
 }
