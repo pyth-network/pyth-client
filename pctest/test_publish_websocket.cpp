@@ -101,28 +101,28 @@ class pythd_websocket
 
 pythd_websocket::pythd_websocket( QObject* parent, std::string pythd_websocket_endpoint )
 {
-  pythd_websocket_endpoint_ = pythd_websocket_endpoint;
-  rpc_client_ = new jcon::JsonRpcWebSocketClient(parent);
+  this->pythd_websocket_endpoint_ = pythd_websocket_endpoint;
+  this->rpc_client_ = new jcon::JsonRpcWebSocketClient(parent);
 
   // Set up the handler for notify_price_sched
-  rpc_client_->enableReceiveNotification(true);
+  this->rpc_client_->enableReceiveNotification(true);
   QObject::connect(rpc_client_, &jcon::JsonRpcClient::notificationReceived, parent, [this](const QString& key, const QVariant& value){
     if (key == "notify_price_sched") {
-      on_notify_price_sched( value.toMap()["subscription"].toInt() );
+      this->on_notify_price_sched( value.toMap()["subscription"].toInt() );
     }
   });
 
   // Continually check the connection and reconnect if dropped
   QTimer *timer = new QTimer( parent );
   QObject::connect(timer, &QTimer::timeout, parent, [this](){
-    if ( !rpc_client_->isConnected() ) {
+    if ( !this->rpc_client_->isConnected() ) {
       // Reset the subscription state
-      subscription_to_account_.clear();
-      account_to_subscription_.clear();
+      this->subscription_to_account_.clear();
+      this->account_to_subscription_.clear();
 
       // Reconnect
-      connect();
-      get_product_list_and_subscribe();
+      this->connect();
+      this->get_product_list_and_subscribe();
     }
   });
   timer->start(1000);
@@ -130,12 +130,12 @@ pythd_websocket::pythd_websocket( QObject* parent, std::string pythd_websocket_e
 
 void pythd_websocket::connect()
 {
-  rpc_client_->connectToServer(QUrl(QString::fromStdString(pythd_websocket_endpoint_)));
+  this->rpc_client_->connectToServer(QUrl(QString::fromStdString(pythd_websocket_endpoint_)));
 }
 
 void pythd_websocket::get_product_list_and_subscribe( )
 {
-  auto req = rpc_client_->callAsync("get_product_list");
+  auto req = this->rpc_client_->callAsync("get_product_list");
 
   req->connect(req.get(), &jcon::JsonRpcRequest::result, [this](const QVariant& result){
     // Loop over all the products
@@ -150,13 +150,13 @@ void pythd_websocket::get_product_list_and_subscribe( )
       symbol_t symbol = attr_dict["symbol"].toString().toStdString();
 
       // If this is a new symbol, associate the symbol with the account
-      if (symbol_to_account_.find(account) == symbol_to_account_.end() || symbol_to_account_[symbol] != account) {
-        symbol_to_account_[symbol] = account;
+      if (this->symbol_to_account_.find(account) == this->symbol_to_account_.end() || this->symbol_to_account_[symbol] != account) {
+        this->symbol_to_account_[symbol] = account;
       } 
       
       // If we don't already have a subscription for this account, subscribe to it
       if (account_to_subscription_.find(account) == account_to_subscription_.end()) {
-        subscribe_price_sched(account);
+        this->subscribe_price_sched(account);
       }
     }
   });
@@ -168,7 +168,7 @@ void pythd_websocket::get_product_list_and_subscribe( )
 
 void pythd_websocket::subscribe_price_sched( account_pubkey_t account )
 {
-  auto req = rpc_client_->callAsyncNamedParams("subscribe_price_sched",
+  auto req = this->rpc_client_->callAsyncNamedParams("subscribe_price_sched",
     QVariantMap{
       {"account", QString::fromStdString(account)},
       });
@@ -187,7 +187,7 @@ void pythd_websocket::subscribe_price_sched( account_pubkey_t account )
 
 void pythd_websocket::update_price( account_pubkey_t account, int price, uint conf, status_t status )
 {
-  auto req = rpc_client_->callAsyncNamedParams("update_price",
+  auto req = this->rpc_client_->callAsyncNamedParams("update_price",
     QVariantMap{
       {"account", QString::fromStdString(account)},
       {"price", price},
@@ -203,17 +203,17 @@ void pythd_websocket::update_price( account_pubkey_t account, int price, uint co
 void pythd_websocket::on_notify_price_sched( subscription_id_t subscription_id )
 {
   // Fetch the account associated with the subscription
-  if (subscription_to_account_.find(subscription_id) == subscription_to_account_.end()) {
+  if (this->subscription_to_account_.find(subscription_id) == this->subscription_to_account_.end()) {
     return;
   }
   account_pubkey_t account = subscription_to_account_[subscription_id];
 
   // Fetch any price update we have for this account
-  if (pending_updates_.find(account) == pending_updates_.end()) {
+  if (this->pending_updates_.find(account) == this->pending_updates_.end()) {
     return;
   }
   update_t update = pending_updates_[account];
-  pending_updates_.erase(account);
+  this->pending_updates_.erase(account);
 
   // Check that the update is not stale
   if ( (std::time(nullptr) - update.timestamp) > update_staleness_threshold_secs_) {
@@ -225,7 +225,7 @@ void pythd_websocket::on_notify_price_sched( subscription_id_t subscription_id )
 }
 
 void pythd_websocket::add_price_update( symbol_t symbol, int64_t price, uint64_t conf, status_t status ) {
-  if (symbol_to_account_.find(symbol) == symbol_to_account_.end()) {
+  if (this->symbol_to_account_.find(symbol) == this->symbol_to_account_.end()) {
     return;
   }
   account_pubkey_t account = symbol_to_account_[symbol];
@@ -260,12 +260,12 @@ test_publish::test_publish(
   std::string pythd_websocket_endpoint )
 {
     pythd_websocket_ = new pythd_websocket( parent, pythd_websocket_endpoint );
-    symbols_to_publish_.insert(symbols_to_publish_.end(), symbols_to_publish.begin(), symbols_to_publish.end());
+    this->symbols_to_publish_.insert(this->symbols_to_publish_.end(), symbols_to_publish.begin(), symbols_to_publish.end());
 
     // Continually generate new values for the symbols
     QTimer *timer = new QTimer( parent );
     QObject::connect(timer, &QTimer::timeout, parent, [this](){
-      update_symbols();
+      this->update_symbols();
     });
     timer->start(1000);
 }
@@ -277,8 +277,8 @@ void test_publish::update_symbols() {
     int64_t next_price = std::rand();
     uint64_t next_conf = (uint64_t) std::rand();
   
-    pythd_websocket_->add_price_update(
-      symbols_to_publish_[i], next_price, next_conf, "trading" );
+    this->pythd_websocket_->add_price_update(
+      this->symbols_to_publish_[i], next_price, next_conf, "trading" );
   }
 
 }
