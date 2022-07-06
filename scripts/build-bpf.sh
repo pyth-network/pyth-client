@@ -8,35 +8,16 @@
 
 set -eu
 
-#start from pyth-client/ and find /program/makefile
-#use that to compile the c portion of pyth
-C_DIR="$( cd "${1:-.}" && pwd )"
 
-if [[ ! -f "${C_DIR}/makefile" ]]
-then
-  if [[ -f "${C_DIR}/program/makefile" ]]
-  then
-    C_DIR="${C_DIR}/program"
-  else
-    >&2 echo "Not a makefile dir: ${C_DIR}"
-    exit 1
-  fi
-fi
+#find the makefile in pyth-client
+#ASSUMES THAT there is only one makefile there 
+C_DIR="$( cd "${1:-.}" && find $(pwd) | grep makefile)"
+C_DIR=$(dirname $C_DIR)
 
-#start from pyth-client/ and find /program/rust_entrypoint/Cargo.toml
-#use that to compile the c portion of pyth
-RUST_DIR="$( cd "${1:-.}" && pwd )"
-
-if [[ ! -f "${RUST_DIR}/cargo.toml" ]]
-then
-  if [[ -f "${RUST_DIR}/rust_entrypoint/Cargo.toml" ]]
-  then
-    RUST_DIR="${RUST_DIR}/rust_entrypoint"
-  else
-    >&2 echo "Not a rust dir: ${RUST_DIR}"
-    exit 1
-  fi
-fi
+#finds Cargo.toml in pyth-client
+#ASSUMES THAT there is only one Cargo.toml there 
+RUST_DIR="$( cd "${1:-.}" && find $(pwd) | grep Cargo.toml )"
+RUST_DIR=$(dirname $RUST_DIR)
 
 if ! which cargo 2> /dev/null
 then
