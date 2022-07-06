@@ -37,7 +37,9 @@ High-level flow:
 class pythd_websocket
 {  
   public:
+    // The status of a given symbol. Either "trading" or "halted".
     typedef std::string status_t;
+    // The symbol of the product. For example "Crypto.BTC/USD" or "Equity.US.GOOG/USD".
     typedef std::string symbol_t;
 
     pythd_websocket( QObject* parent, std::string pythd_websocket_endpoint );
