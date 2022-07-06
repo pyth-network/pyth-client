@@ -80,7 +80,7 @@ class pythd_websocket
 
     // The duration between the price update being submitted and notify_price_sched being received
     // after which the update will be dropped.
-    long update_staleness_threshold_secs_ = 15;
+    long update_staleness_threshold_secs_ = 3;
 
     // The pythd websocket API calls
 
