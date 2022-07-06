@@ -63,9 +63,11 @@ class pythd_websocket
     typedef std::string account_pubkey_t;
 
     // Mapping of product symbols to price account public keys. 
-    std::map<symbol_t, account_pubkey_t> accounts_;
+    std::map<symbol_t, account_pubkey_t> symbol_to_account_;
     // Mapping of pythd subscription identifiers to price account public keys.
-    std::map<int64_t, account_pubkey_t> subscriptions_;
+    std::map<subscription_id_t, account_pubkey_t> subscription_to_account_;
+    // Mapping of price account public key to pythd subscription identifiers
+    std::map<account_pubkey_t, subscription_id_t> account_to_subscription_;
     // Mapping of price account public keys to the updates we will send to pythd
     // next time we receive a notify_price_sched message with a subscription identifier
     // corresponding to the price account public key.
@@ -114,6 +116,11 @@ pythd_websocket::pythd_websocket( QObject* parent, std::string pythd_websocket_e
   QTimer *timer = new QTimer( parent );
   QObject::connect(timer, &QTimer::timeout, parent, [this](){
     if ( !rpc_client_->isConnected() ) {
+      // Reset the subscription state
+      subscription_to_account_.clear();
+      account_to_subscription_.clear();
+
+      // Reconnect
       connect();
       get_product_list_and_subscribe();
     }
@@ -141,13 +148,16 @@ void pythd_websocket::get_product_list_and_subscribe( )
       account_pubkey_t account = product["price"].toList()[0].toMap()["account"].toString().toStdString();
       auto attr_dict = product["attr_dict"].toMap();
       symbol_t symbol = attr_dict["symbol"].toString().toStdString();
-      
+
       // If this is a new symbol, associate the symbol with the account
-      // and subscribe to updates from this symbol.
-      if (accounts_.find(account) == accounts_.end() || accounts_[symbol] != account) {
-        accounts_[symbol] = account;
-        subscribe_price_sched(account);
+      if (symbol_to_account_.find(account) == symbol_to_account_.end() || symbol_to_account_[symbol] != account) {
+        symbol_to_account_[symbol] = account;
       } 
+      
+      // If we don't already have a subscription for this account, subscribe to it
+      if (account_to_subscription_.find(account) == account_to_subscription_.end()) {
+        subscribe_price_sched(account);
+      }
     }
   });
 
@@ -169,7 +179,8 @@ void pythd_websocket::subscribe_price_sched( account_pubkey_t account )
 
   req->connect(req.get(), &jcon::JsonRpcRequest::result, [this, account](const QVariant& result){
     auto subscription_id = result.toMap()["subscription"].toInt();
-    subscriptions_[subscription_id] = account; 
+    subscription_to_account_[subscription_id] = account; 
+    account_to_subscription_[account] = subscription_id;
     std::cout << "received subscription id " << subscription_id << " for account " << account << std::endl;
   });
 }
@@ -192,10 +203,10 @@ void pythd_websocket::update_price( account_pubkey_t account, int price, uint co
 void pythd_websocket::on_notify_price_sched( subscription_id_t subscription_id )
 {
   // Fetch the account associated with the subscription
-  if (subscriptions_.find(subscription_id) == subscriptions_.end()) {
+  if (subscription_to_account_.find(subscription_id) == subscription_to_account_.end()) {
     return;
   }
-  account_pubkey_t account = subscriptions_[subscription_id];
+  account_pubkey_t account = subscription_to_account_[subscription_id];
 
   // Fetch any price update we have for this account
   if (pending_updates_.find(account) == pending_updates_.end()) {
@@ -214,10 +225,10 @@ void pythd_websocket::on_notify_price_sched( subscription_id_t subscription_id )
 }
 
 void pythd_websocket::add_price_update( symbol_t symbol, int64_t price, uint64_t conf, status_t status ) {
-  if (accounts_.find(symbol) == accounts_.end()) {
+  if (symbol_to_account_.find(symbol) == symbol_to_account_.end()) {
     return;
   }
-  account_pubkey_t account = accounts_[symbol];
+  account_pubkey_t account = symbol_to_account_[symbol];
 
   pending_updates_[account] = update_t{
     price: price,
