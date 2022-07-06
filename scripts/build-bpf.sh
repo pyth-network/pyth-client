@@ -28,7 +28,7 @@ fi
 
 set -x
 
-
+#build the C code and make an archive file out of it
 cd "${C_DIR}"
 export V="${V:-1}"
 make clean
@@ -37,7 +37,7 @@ make cpyth
 rm ./target/*-keypair.json
 
 
-
+#build Rust and link it with C
 cd "${RUST_DIR}"
 cargo clean
 cargo build-bpf
