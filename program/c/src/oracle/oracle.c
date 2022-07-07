@@ -7,7 +7,7 @@
 
 
 // Returns the respective log messages given the command.
-static const char* get_log_message( command_t cmd )
+static const char* get_log_message( int32_t cmd )
 {
   switch ( cmd )
   {
@@ -39,6 +39,8 @@ static const char* get_log_message( command_t cmd )
     return "Instruction: SetMinPub";
   case e_cmd_upd_price_no_fail_on_error:
     return "Instruction: UpdatePriceNoFailOnError";
+  default:
+    return "Instruction: Unknown";
   }
 }
 
