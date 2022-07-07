@@ -8,18 +8,17 @@
 
 set -eu
 
-BUILD_DIR="$( cd "${1:-.}" && pwd )"
+PYTH_DIR=$( cd "${1:-.}" && pwd)
 
-if [[ ! -f "${BUILD_DIR}/makefile" ]]
-then
-  if [[ -f "${BUILD_DIR}/program/makefile" ]]
-  then
-    BUILD_DIR="${BUILD_DIR}/program"
-  else
-    >&2 echo "Not a makefile dir: ${BUILD_DIR}"
-    exit 1
-  fi
-fi
+#find the makefile in pyth-client
+#ASSUMES THAT there is only one makefile there 
+C_DIR="$( find $PYTH_DIR | grep makefile)"
+C_DIR=$(dirname $C_DIR)
+
+#finds Cargo.toml in pyth-client
+#ASSUMES THAT there is only one Cargo.toml there 
+RUST_DIR="$( find $PYTH_DIR | grep Cargo.toml )"
+RUST_DIR=$(dirname $RUST_DIR)
 
 if ! which cargo 2> /dev/null
 then
@@ -27,11 +26,27 @@ then
   source "${CARGO_HOME:-$HOME/.cargo}/env"
 fi
 
+
 set -x
 
-cd "${BUILD_DIR}"
+#build the C code and make an archive file out of it
+cd "${C_DIR}"
 export V="${V:-1}"
-make clean
-make "${@:2}"
-sha256sum ../target/*.so
-rm ../target/*-keypair.json
+make clean 
+make  "${@:2}" 
+make cpyth 
+rm ./target/*-keypair.json
+
+
+#build Rust and link it with C
+cd "${RUST_DIR}"
+cargo clean
+cargo build-bpf
+sha256sum ./target/**/*.so
+rm ./target/**/*-keypair.json
+rm -r $PYTH_DIR/target || true
+mv ./target $PYTH_DIR/target
+
+
+
+

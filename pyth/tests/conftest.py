@@ -191,7 +191,7 @@ def solana_program_deploy(
     cmd = [
         'solana', 'program', 'deploy',
         os.path.abspath(
-            os.path.join(__this_dir, '..', '..', 'target', 'oracle.so')
+            os.path.join(__this_dir, '..', '..', 'target', 'deploy','pyth_oracle.so')
         ),
         '--commitment', 'finalized',
         '--url', 'localhost',

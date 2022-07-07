@@ -12,7 +12,7 @@ endif()
 set( CMAKE_INCLUDE_CURRENT_DIR ON )
 
 # find oracle header files
-include_directories( program/src/ )
+include_directories( program/c/src/ )
 
 # gcc compiler/linker flags
 add_compile_options( -ggdb -Wall -Wextra -Wsign-conversion -Werror -Wno-deprecated-declarations -m64 )
@@ -39,7 +39,7 @@ set( PC_SRC
   pc/request.cpp;
   pc/rpc_client.cpp;
   pc/user.cpp;
-  program/src/oracle/model/price_model.c
+  program/c/src/oracle/model/price_model.c
   )
 
 set( PC_HDR
@@ -88,7 +88,7 @@ target_link_libraries( pyth_tx ${PC_DEP} )
 install( TARGETS pc DESTINATION lib )
 install( TARGETS pyth pyth_admin pythd pyth_csv pyth_tx DESTINATION bin )
 install( FILES ${PC_HDR} DESTINATION include/pc )
-install( FILES program/src/oracle/oracle.h DESTINATION include/oracle )
+install( FILES program/c/src/oracle/oracle.h DESTINATION include/oracle )
 
 #
 # test programs
@@ -147,4 +147,4 @@ function( add_bpf_lib targ )
 endfunction()
 
 # test_oracle.c includes oracle.c
-add_bpf_lib( test-oracle-bpf program/src/oracle/test_oracle.c )
+add_bpf_lib( test-oracle-bpf program/c/src/oracle/test_oracle.c )
