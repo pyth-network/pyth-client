@@ -5,6 +5,43 @@
 #include "oracle.h"
 #include "upd_aggregate.h"
 
+
+// Returns the respective log messages given the command.
+static const char* get_log_message( command_t cmd )
+{
+  switch ( cmd )
+  {
+  case e_cmd_init_mapping:
+    return "Instruction: InitMapping";
+  case e_cmd_add_mapping:
+    return "Instruction: AddMapping";
+  case e_cmd_add_product:
+    return "Instruction: AddProduct";
+  case e_cmd_upd_product:
+    return "Instruction: UpdateProduct";
+  case e_cmd_add_price:
+    return "Instruction: AddPrice";
+  case e_cmd_add_publisher:
+    return "Instruction: AddPublisher";
+  case e_cmd_del_publisher:
+    return "Instruction: DeletePublisher";
+  case e_cmd_upd_price:
+    return "Instruction: UpdatePrice";
+  case e_cmd_agg_price:
+    return "Instruction: AggregatePrice";
+  case e_cmd_init_price:
+    return "Instruction: InitPrice";
+  case e_cmd_init_test:
+    return "Instruction: InitTest";
+  case e_cmd_upd_test:
+    return "Instruction: UpdateTest";
+  case e_cmd_set_min_pub:
+    return "Instruction: SetMinPub";
+  case e_cmd_upd_price_no_fail_on_error:
+    return "Instruction: UpdatePriceNoFailOnError";
+  }
+}
+
 // Returns the minimum number of lamports required to make an account
 // with dlen bytes of data rent exempt. These values were calculated
 // using the getMinimumBalanceForRentExemption RPC call, and are
@@ -490,9 +527,11 @@ static uint64_t upd_price( SolParameters *prm, SolAccountInfo *ka )
   // update aggregate price as necessary
   if ( sptr->slot_ > pptr->agg_.pub_slot_ ) {
     upd_aggregate( pptr, sptr->slot_, sptr->unix_timestamp_ );
-    sol_log("Instruction: UpdateAggregatePrice");
-    sol_log("price, conf, status, pub_slot");
-    sol_log_64(pptr->agg_.price_, pptr->agg_.conf_, pptr->agg_.status_, pptr->last_slot_, 0);
+    if (pptr->agg_.status_ == PC_STATUS_TRADING) {
+      sol_log("agg_price, agg_conf, status, pub_slot");
+      // last value is 0 because sol_log_64() takes in 5 args
+      sol_log_64(pptr->agg_.price_, pptr->agg_.conf_, pptr->agg_.status_, pptr->last_slot_, 0);
+    }
   }
 
   // update component price if required
@@ -513,8 +552,8 @@ static uint64_t upd_price( SolParameters *prm, SolAccountInfo *ka )
     fptr->conf_     = cptr->conf_;
     fptr->status_   = status;
     fptr->pub_slot_ = cptr->pub_slot_;
-    sol_log("Instruction: UpdatePrice");
     sol_log("price, conf, status, pub_slot");
+    // last value is 0 because sol_log_64() takes in 5 args
     sol_log_64(fptr->price_ , fptr->conf_, fptr->status_, fptr->pub_slot_, 0);
   }
   return SUCCESS;
@@ -535,6 +574,7 @@ static uint64_t dispatch( SolParameters *prm, SolAccountInfo *ka )
   if ( hdr->ver_ != PC_VERSION ) {
     return ERROR_INVALID_ARGUMENT;
   }
+  sol_log(get_log_message(hdr->cmd_));
   switch(hdr->cmd_) {
     case e_cmd_upd_price:
     case e_cmd_agg_price:                  return upd_price( prm, ka );
