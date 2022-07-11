@@ -103,9 +103,12 @@ target_link_libraries( test_net ${PC_DEP} )
 add_executable( test_publish pctest/test_publish.cpp )
 target_link_libraries( test_publish ${PC_DEP} )
 
-find_package(Qt5 COMPONENTS Core Network WebSockets)
-add_executable( test_publish_websocket pctest/test_publish_websocket.cpp )
-target_link_libraries( test_publish_websocket Qt5::Core Qt5::Network Qt5::WebSockets /usr/local/lib/libjcon.so)
+# This doesn't build on the bullseye base image, due to a packaging bug
+# in the newer version of libqt5websockets5-dev for Debian. The below build instructions
+# are left in for completeness, and work with libqt5websockets5-dev=5.11.3-5 (buster).
+# find_package(Qt5 COMPONENTS Core Network WebSockets)
+# add_executable( test_publish_websocket pctest/test_publish_websocket.cpp )
+# target_link_libraries( test_publish_websocket Qt5::Core Qt5::Network Qt5::WebSockets /usr/local/lib/libjcon.so)
 
 add_executable( test_qset pctest/test_qset.cpp )
 target_link_libraries( test_qset ${PC_DEP} )
