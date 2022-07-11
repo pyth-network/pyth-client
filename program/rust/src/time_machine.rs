@@ -54,6 +54,7 @@ impl<const GRANUALITY: u64, const NUM_ENTRIES: usize, const THRESHOLD: u64>
         }
     }
     fn get_entry(&self, entry: usize) -> (u64, u8) {
+        //FIXME: handle overflow, left for until we settle on integer type used
         if (self.current_entry - entry + NUM_ENTRIES) % NUM_ENTRIES > NUM_ENTRIES - 2 {
             return (0, 0);
         }
