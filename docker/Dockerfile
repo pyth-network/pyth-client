@@ -20,7 +20,15 @@ RUN apt-get install -qq \
   python3-websockets \
   sudo \
   zlib1g \
-  zlib1g-dev
+  zlib1g-dev \
+  qtbase5-dev \
+  qtchooser \
+  qt5-qmake \
+  qtbase5-dev-tools \
+  libqt5websockets5-dev
+
+# Install jcon-cpp library
+RUN git clone https://github.com/joncol/jcon-cpp.git /jcon-cpp && cd /jcon-cpp && git checkout 2235654e39c7af505d7158bf996e47e37a23d6e3 && mkdir build && cd build && cmake .. && make -j4 && make install
 
 # Grant sudo access to pyth user
 RUN echo "pyth ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers

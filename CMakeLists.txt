@@ -16,7 +16,8 @@ include_directories( program/c/src/ )
 
 # gcc compiler/linker flags
 add_compile_options( -ggdb -Wall -Wextra -Wsign-conversion -Werror -Wno-deprecated-declarations -m64 )
-set( CMAKE_CXX_FLAGS -std=c++11 )
+set( CMAKE_CXX_STANDARD 14)
+set( CMAKE_CXX_FLAGS -std=c++14 )
 set( CMAKE_C_FLAGS -std=c99 )
 set( CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread")
 
@@ -101,6 +102,14 @@ add_executable( test_net pctest/test_net.cpp )
 target_link_libraries( test_net ${PC_DEP} )
 add_executable( test_publish pctest/test_publish.cpp )
 target_link_libraries( test_publish ${PC_DEP} )
+
+# This doesn't build on the bullseye base image, due to a packaging bug
+# in the newer version of libqt5websockets5-dev for Debian. The below build instructions
+# are left in for completeness, and work with libqt5websockets5-dev=5.11.3-5 (buster).
+# find_package(Qt5 COMPONENTS Core Network WebSockets)
+# add_executable( test_publish_websocket pctest/test_publish_websocket.cpp )
+# target_link_libraries( test_publish_websocket Qt5::Core Qt5::Network Qt5::WebSockets /usr/local/lib/libjcon.so)
+
 add_executable( test_qset pctest/test_qset.cpp )
 target_link_libraries( test_qset ${PC_DEP} )
 add_executable( test_twap pctest/test_twap.cpp )
