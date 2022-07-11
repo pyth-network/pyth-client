@@ -13,8 +13,6 @@ We engage 3rd party firms to conduct independent security audits of Pyth.  At an
 As these 3rd party audits are completed and issues are sufficiently addressed, we make those audit reports public.
 
 - **[April 8, 2022 - Zellic](https://github.com/pyth-network/audit-reports/blob/main/2022_04_08/pyth_oracle_client_zellic.pdf)**
-    - **Scope**: *Pyth Client*
-- **[April 27, 2022 - Zellic](https://github.com/pyth-network/audit-reports/blob/main/2022_04_27/pyth2wormhole_zellic.pdf)**
-    - **Scope**: *Pyth2Wormhole*
-- **[May 6, 2022 - Zellic](https://github.com/pyth-network/audit-reports/blob/main/2022_05_06/pyth_governance_zellic.pdf)**
-    - **Scope**: *Pyth Governance*
+    - **Scope**: *Pyth Oracle*
+- **[July 8, 2022 - OtterSec](https://github.com/pyth-network/audit-reports/blob/main/2022_07_08/pyth-oracle-ottersec.pdf)**
+    - **Scope**: *Pyth Oracle*
