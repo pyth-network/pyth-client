@@ -7,6 +7,7 @@
 #include <list>
 #include <ctime>
 #include <iostream>
+#include <math.h>
 
 #include <jcon/json_rpc_tcp_client.h>
 #include <jcon/json_rpc_websocket_client.h>
@@ -62,9 +63,15 @@ class pythd_websocket
       time_t timestamp;
     } update_t;
 
+    typedef struct {
+      int64_t exponent;
+    } account_metadata_t;
+
     typedef int64_t subscription_id_t;
     typedef std::string account_pubkey_t;
 
+    // Mapping of account public keys to account metadata
+    std::map<account_pubkey_t, account_metadata_t> account_to_metadata_;
     // Mapping of product symbols to price account public keys. 
     std::map<symbol_t, account_pubkey_t> symbol_to_account_;
     // Mapping of pythd subscription identifiers to price account public keys.
@@ -147,15 +154,22 @@ void pythd_websocket::get_product_list_and_subscribe( )
 
       auto product = products[i].toMap();
 
-      // Extract the symbol and price account
-      account_pubkey_t account = product["price"].toList()[0].toMap()["account"].toString().toStdString();
+      // Extract the symbol, price account and exponent
       auto attr_dict = product["attr_dict"].toMap();
       symbol_t symbol = attr_dict["symbol"].toString().toStdString();
+      auto price_account = product["price"].toList()[0].toMap();
+      account_pubkey_t account = price_account["account"].toString().toStdString();
+      int64_t exponent = price_account["price_exponent"].toInt();
 
       // If this is a new symbol, associate the symbol with the account
       if (this->symbol_to_account_.find(account) == this->symbol_to_account_.end() || this->symbol_to_account_[symbol] != account) {
         this->symbol_to_account_[symbol] = account;
-      } 
+      }
+
+      // Update the account metadata
+      this->account_to_metadata_[account] = account_metadata_t{
+        exponent = exponent,
+      };
       
       // If we don't already have a subscription for this account, subscribe to it
       if (account_to_subscription_.find(account) == account_to_subscription_.end()) {
@@ -190,11 +204,16 @@ void pythd_websocket::subscribe_price_sched( account_pubkey_t account )
 
 void pythd_websocket::update_price( account_pubkey_t account, int price, uint conf, status_t status )
 {
+  // Scale the price and confidence by the exponent
+  int64_t exponent = (-1) * this->account_to_metadata_[account].exponent;
+  double scaled_price = price * pow(10, exponent);
+  double scaled_conf = conf * pow(10, exponent);
+
   auto req = this->rpc_client_->callAsyncNamedParams("update_price",
     QVariantMap{
       {"account", QString::fromStdString(account)},
-      {"price", price},
-      {"conf", conf},
+      {"price", scaled_price},
+      {"conf", scaled_conf},
       {"status", QString::fromStdString(status)}
       });
 
