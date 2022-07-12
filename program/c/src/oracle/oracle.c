@@ -529,11 +529,9 @@ static uint64_t upd_price( SolParameters *prm, SolAccountInfo *ka )
   // update aggregate price as necessary
   if ( sptr->slot_ > pptr->agg_.pub_slot_ ) {
     upd_aggregate( pptr, sptr->slot_, sptr->unix_timestamp_ );
-    if (pptr->agg_.status_ == PC_STATUS_TRADING) {
-      sol_log("agg_price, agg_conf, status, pub_slot");
-      // last value is 0 because sol_log_64() takes in 5 args
-      sol_log_64(pptr->agg_.price_, pptr->agg_.conf_, pptr->agg_.status_, pptr->last_slot_, 0);
-    }
+    sol_log("agg_price, agg_conf, status, pub_slot");
+    // last value is 0 because sol_log_64() takes in 5 args
+    sol_log_64(pptr->agg_.price_, pptr->agg_.conf_, pptr->agg_.status_, pptr->last_slot_, 0);
   }
 
   // update component price if required
