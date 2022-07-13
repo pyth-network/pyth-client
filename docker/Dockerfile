@@ -1,5 +1,6 @@
 ARG SOLANA_VERSION
-FROM solanalabs/solana:v${SOLANA_VERSION}
+ARG SOLANA_DOCKER_IMAGE_HASH
+FROM solanalabs/solana:v${SOLANA_VERSION}@sha256:${SOLANA_DOCKER_IMAGE_HASH}
 
 # Redeclare SOLANA_VERSION in the new build stage.
 # Persist in env for docker run & inspect.
