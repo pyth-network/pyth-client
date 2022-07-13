@@ -9,7 +9,6 @@
 # Explaination of regex ignore choices
 #   - We ignore sha256 because it suggests that the image dep is pinned
 #   - We ignore scratch because it's literally the docker base image
-#   - We ignore solana AS (builder|ci_tests) because it's a relative reference to another FROM call
 #
 git ls-files | grep "Dockerfile*" | xargs grep -s "FROM" | egrep -v 'sha256|scratch'
 if [ $? -eq 0 ]; then
