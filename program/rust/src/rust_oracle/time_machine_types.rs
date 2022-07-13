@@ -2,13 +2,10 @@
 //TODO: Handle overflows
 //TODO: Find a way to use macros to make the wrapper
 use std::cmp;
-use solana_program::program_error::ProgramError;
-
 fn get_requested_entry_offset(granuality : u64, last_update_time:u64, entry_time:u64)->usize{
-    //TODO: do the Solana panicks thing
     let entry_time = entry_time % granuality;
     if last_update_time < entry_time{
-        panic!("too soon!");
+        panic!("prices unavailable yet");
     }
     ((last_update_time - entry_time + granuality - 1) / granuality).try_into().unwrap()
 }
@@ -159,16 +156,15 @@ impl TimeMachineWrapper{
         self.tick_tracker3.add_price(current_time, prev_time, new_price, old_price);
     }
     /// gets the given entry from the tracker with the
-    fn get_entry(&self, current_time: u64, entry_time: u64,granuality: u64, is_twap: bool) -> Result<(u64, u8), ProgramError> {
+    fn get_entry(&self, current_time: u64, entry_time: u64,granuality: u64, is_twap: bool) -> (u64, u8) {
         match (granuality, is_twap){
-            (THIRTY_MINUTES, true) => Ok(self.sma_tracker1.get_entry(current_time, entry_time)),
-            (FIVE_MINUTES, true) => Ok(self.sma_tracker2.get_entry(current_time, entry_time)),
-            (THIRTY_SECONDS, true) => Ok(self.sma_tracker3.get_entry(current_time, entry_time)),
-            (THIRTY_MINUTES, false) => Ok(self.tick_tracker1.get_entry(current_time, entry_time)),
-            (FIVE_MINUTES, false) => Ok(self.tick_tracker2.get_entry(current_time, entry_time)),
-            (THIRTY_SECONDS, false) => Ok(self.tick_tracker3.get_entry(current_time, entry_time)),
-            _ => Err(ProgramError::InvalidArgument),
-            
+            (THIRTY_MINUTES, true) => self.sma_tracker1.get_entry(current_time, entry_time),
+            (FIVE_MINUTES, true) => self.sma_tracker2.get_entry(current_time, entry_time),
+            (THIRTY_SECONDS, true) => self.sma_tracker3.get_entry(current_time, entry_time),
+            (THIRTY_MINUTES, false) => self.tick_tracker1.get_entry(current_time, entry_time),
+            (FIVE_MINUTES, false) => self.tick_tracker2.get_entry(current_time, entry_time),
+            (THIRTY_SECONDS, false) => self.tick_tracker3.get_entry(current_time, entry_time),
+            _ => panic!("incorrect tracker"),
         }
     }
 }

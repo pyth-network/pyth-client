@@ -439,6 +439,7 @@ static uint64_t del_publisher( SolParameters *prm, SolAccountInfo *ka )
 
 static uint64_t upd_price( SolParameters *prm, SolAccountInfo *ka )
 {
+  sol_log_64(5, 55, 555, 5555, 55555); 
   // Validate command parameters
   cmd_upd_price_t *cptr = (cmd_upd_price_t*)prm->data;
   if ( prm->data_len != sizeof( cmd_upd_price_t ) ) {

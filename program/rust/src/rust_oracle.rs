@@ -1,4 +1,4 @@
-mod time_machine_types;
+pub mod time_machine_types;
 
 #[link(name = "cpyth")]
 extern "C" {
@@ -6,7 +6,11 @@ extern "C" {
 }
 
 pub fn update_price(input: *mut u8) -> u64{
-    panic!("it's a trap")
+    solana_program::log::sol_log("I am updating a price");
+    let c_ret_val = unsafe{c_entrypoint(input)} ;
+    solana_program::log::sol_log("I have updated a price");
+    c_ret_val
+
 }
 
 /*fn update_price(program_id: &Pubkey, accounts: &[AccountInfo], instruction_data: &[u8]) -> u64{
