@@ -1,4 +1,4 @@
-mod time_machine;
+mod time_machine_types;
 #[link(name = "cpyth")]
 extern "C" {
     fn c_entrypoint(input: *mut u8) -> u64;
