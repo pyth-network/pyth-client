@@ -19,6 +19,8 @@ static uint64_t rent_exempt_amount( uint64_t dlen )
     return 4454400;
   case sizeof( pc_price_t ):
     return 23942400;
+  case sizeof( pc_price_t ) + 1864:
+    return 23942400; //FIXME!!
   default:
     return UINT64_MAX;
   }
@@ -439,7 +441,6 @@ static uint64_t del_publisher( SolParameters *prm, SolAccountInfo *ka )
 
 static uint64_t upd_price( SolParameters *prm, SolAccountInfo *ka )
 {
-  sol_log_64(5, 55, 555, 5555, 55555); 
   // Validate command parameters
   cmd_upd_price_t *cptr = (cmd_upd_price_t*)prm->data;
   if ( prm->data_len != sizeof( cmd_upd_price_t ) ) {

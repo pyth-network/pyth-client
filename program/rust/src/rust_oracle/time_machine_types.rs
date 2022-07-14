@@ -63,6 +63,17 @@ impl<const GRANUALITY: u64, const NUM_ENTRIES: usize, const THRESHOLD: u64>
             self.max_update_time = update_time;
         }
     }
+
+    fn first_add_price(&mut self, current_time: u64, prev_time: u64, new_price: u64, old_price: u64){
+        //make sure the type we missed in the current entry is reflected is max_update_time to get
+        //correct validities at the end
+        let missed_time = prev_time % GRANUALITY;
+        self.max_update_time = cmp::max(self.max_update_time, missed_time);
+        self.add_price(current_time, prev_time, new_price, old_price);
+        
+
+    }
+
     fn get_entry(&self, last_update_time: u64, entry_time: u64) -> (u64, u8) {
         //FIXME: handle overflow, left for until we settle on integer type used
         let offset = get_requested_entry_offset(GRANUALITY, last_update_time, entry_time) % NUM_ENTRIES;
@@ -109,6 +120,10 @@ impl<const GRANUALITY: u64, const NUM_ENTRIES: usize, const THRESHOLD: u64>
             self.ticks[self.current_entry] = new_price;
         }
     }
+    fn first_add_price(&mut self, current_time: u64, prev_time: u64, new_price: u64, old_price: u64){
+        //this is just here for consistency. optimizerr should inline this
+        self.add_price(current_time, prev_time, new_price, old_price);
+    }
     fn get_entry(&self, last_update_time: u64, entry_time: u64) -> (u64, u8) {
         let offset = get_requested_entry_offset(GRANUALITY, last_update_time, entry_time) % NUM_ENTRIES;
         if offset > NUM_ENTRIES - 1 {
@@ -154,6 +169,14 @@ impl TimeMachineWrapper{
         self.tick_tracker1.add_price(current_time, prev_time, new_price, old_price);
         self.tick_tracker2.add_price(current_time, prev_time, new_price, old_price);
         self.tick_tracker3.add_price(current_time, prev_time, new_price, old_price);
+    }
+    fn first_add_price(&mut self, current_time: u64, prev_time: u64, new_price: u64, old_price: u64) {
+        self.sma_tracker1.first_add_price(current_time, prev_time, new_price, old_price);
+        self.sma_tracker2.first_add_price(current_time, prev_time, new_price, old_price);
+        self.sma_tracker3.first_add_price(current_time, prev_time, new_price, old_price);
+        self.tick_tracker1.first_add_price(current_time, prev_time, new_price, old_price);
+        self.tick_tracker2.first_add_price(current_time, prev_time, new_price, old_price);
+        self.tick_tracker3.first_add_price(current_time, prev_time, new_price, old_price);
     }
     /// gets the given entry from the tracker with the
     fn get_entry(&self, current_time: u64, entry_time: u64,granuality: u64, is_twap: bool) -> (u64, u8) {
