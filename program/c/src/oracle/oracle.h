@@ -253,6 +253,13 @@ typedef enum {
   // key[1] price account         [writable]
   // key[2] sysvar_clock account  [readable]
   e_cmd_upd_price_no_fail_on_error,
+
+  // resizes price account to fit trackers, updates version number of other accounts.
+  // key[0] funding account
+  // key[1] upgraded account
+  // key[2] system program
+
+  e_cmd_upd_account_version,
 } command_t;
 
 typedef struct cmd_hdr
