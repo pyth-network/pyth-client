@@ -507,11 +507,11 @@ static uint64_t upd_price( SolParameters *prm, SolAccountInfo *ka )
     if ( cptr->conf_ > (uint64_t) threshold_conf ) {
       status = PC_STATUS_UNKNOWN;
     }
-
     fptr->price_    = cptr->price_;
     fptr->conf_     = cptr->conf_;
     fptr->status_   = status;
     fptr->pub_slot_ = cptr->pub_slot_;
+    sol_log("I updated the price!");
   }
   return SUCCESS;
 }

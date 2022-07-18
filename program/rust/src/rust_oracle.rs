@@ -36,6 +36,7 @@ pub fn update_price(program_id: &Pubkey, accounts: Vec<AccountInfo>, instruction
         return unsafe{c_entrypoint(input)};
     }
     let c_ret_value = unsafe{c_entrypoint(input)};
+    //
     update_tracker();
     c_ret_value
 }
@@ -51,13 +52,21 @@ pub fn update_ptice_account(program_id: &Pubkey, accounts: &Vec<AccountInfo>, in
             exemption_threshold : solana_program::rent::DEFAULT_EXEMPTION_THRESHOLD,
             burn_percent : solana_program::rent::DEFAULT_BURN_PERCENT,
         };
+        solana_program::log::sol_log("Below is current lamports");
+        solana_program::log::sol_log_64(accounts[1].lamports(), 0, accounts[1].lamports(), 0, accounts[1].lamports());
         let lamports_needed: u64 = rent.minimum_balance(price_t_size + tracker_size).saturating_sub(accounts[1].lamports());
-    
+        solana_program::log::sol_log("Below is the new minimum lamports");
+        let lamports = rent.minimum_balance(price_t_size + tracker_size);
+        solana_program::log::sol_log_64(lamports, 0, lamports, 0, lamports);
         //transfer lamports if nescissary
         if lamports_needed > 0{
-            solana_program::system_instruction::transfer(accounts[0].key,
+            let transfer_instruction = solana_program::system_instruction::transfer(accounts[0].key,
                 accounts[1].key,
                 lamports_needed);
+            solana_program::program::invoke(&transfer_instruction, &accounts[..2]);
+
+        solana_program::log::sol_log("Below is new lamports");
+        solana_program::log::sol_log_64(accounts[1].lamports(), 0, accounts[1].lamports(), 0, accounts[1].lamports());
         }
         //resize
         accounts[1].realloc(price_t_size + tracker_size, false).unwrap();

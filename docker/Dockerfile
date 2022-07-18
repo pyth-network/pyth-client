@@ -45,6 +45,11 @@ export PYTHONPATH=\"\${PYTHONPATH:+\$PYTHONPATH:}\${HOME}/pyth-client\"\n\
 " >> .profile
 
 COPY --chown=pyth:pyth . pyth-client/
+RUN sudo apt install python3-pip -y
+#RUN python3 -m pip install --upgrade pip
+RUN pip3 install solana
+RUN pip3 install construct
+
 
 # Build off-chain binaries.
 RUN cd pyth-client && ./scripts/build.sh

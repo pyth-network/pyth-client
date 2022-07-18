@@ -29,7 +29,7 @@ pub extern "C" fn entrypoint(input: *mut u8) -> u64 {
     }
 
     match cmd_data.cmd_ as u32{
-        rust_oracle::c_oracle_header::command_t_e_cmd_upd_price | rust_oracle::c_oracle_header::command_t_e_cmd_upd_price_no_fail_on_error => rust_oracle::update_price(program_id, accounts, instruction_data, input), 
+        rust_oracle::c_oracle_header::command_t_e_cmd_upd_price | rust_oracle::c_oracle_header::command_t_e_cmd_upd_price_no_fail_on_error | rust_oracle::c_oracle_header::command_t_e_cmd_agg_price => rust_oracle::update_price(program_id, accounts, instruction_data, input), 
         rust_oracle::c_oracle_header::command_t_e_cmd_upd_account_version => rust_oracle::update_version(program_id, accounts, instruction_data),
         _ => unsafe { return c_entrypoint(input) },
     }
