@@ -71,13 +71,15 @@ async def test_batch_update_price(solana_test_validator, solana_logs, pythd, pyt
             return price_acc['publisher_accounts'][0]
 
         # Check that the prices are 0 initially
-        for product in PRODUCTS.keys():
-            product_acc = await get_product(pyth_init_product[product])
-            publisher_acc = get_publisher_acc(product_acc)
+        #for product in PRODUCTS.keys():
+        #    product_acc = await get_product(pyth_init_product[product])
+        #    publisher_acc = get_publisher_acc(product_acc)
 
-            assert publisher_acc['price'] == 0
-            assert publisher_acc['conf'] == 0
-            assert publisher_acc['status'] == 'unknown'
+        #    assert publisher_acc['price'] == 0
+        #    assert publisher_acc['conf'] == 0
+        #    assert publisher_acc['status'] == 'unknown'
+
+        time.sleep(600)
 
         # Generate new values for this test
         new_values = {

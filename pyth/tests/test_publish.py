@@ -128,4 +128,3 @@ def test_publish(solana_test_validator, pyth_dir,
     assert after['publisher_accounts'][0]['status'] == 'trading'
 
 
-    
