@@ -6,6 +6,11 @@
 extern "C" {
 #endif
 
+//a new custom return value to indicate to rust that aggregate was updated
+//this triggers SMA trackers to update
+//values 0-14 are defined in solana_sdk.h
+#define SUCCESSFULLY_UPDATED_AGGREGATE 15ULL
+
 // magic number at head of account
 #define PC_MAGIC 0xa1b2c3d4
 
