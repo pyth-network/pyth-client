@@ -559,7 +559,7 @@ Test( oracle, upd_price_no_fail_on_error ) {
   pc_pub_key_assign( &sptr->comp_[0].pub_, (pc_pub_key_t*)&pkey );
 
   // The update should now succeed, and have an effect.
-  cr_assert( SUCCESS == dispatch( &prm, acc ) );
+  cr_assert( SUCCESSFULLY_UPDATED_AGGREGATE == dispatch( &prm, acc ) );
   cr_assert( sptr->comp_[0].latest_.price_ == 42L );
   cr_assert( sptr->comp_[0].latest_.conf_ == 9L );
   cr_assert( sptr->comp_[0].latest_.pub_slot_ == 1 );

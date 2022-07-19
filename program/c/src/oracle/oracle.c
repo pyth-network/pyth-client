@@ -520,8 +520,7 @@ static uint64_t upd_price( SolParameters *prm, SolAccountInfo *ka )
 
 static uint64_t upd_price_no_fail_on_error( SolParameters *prm, SolAccountInfo *ka )
 {
-  upd_price( prm, ka );
-  return SUCCESS;
+  return upd_price( prm, ka ) == SUCCESSFULLY_UPDATED_AGGREGATE? SUCCESSFULLY_UPDATED_AGGREGATE : SUCCESS;
 }
 
 static uint64_t dispatch( SolParameters *prm, SolAccountInfo *ka )
