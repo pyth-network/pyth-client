@@ -40,7 +40,7 @@ rm ./target/*-keypair.json
 
 #build Rust and link it with C
 cd "${RUST_DIR}"
-cargo install bindgen
+cargo install --version "0.60.1" bindgen
 HEADER_FILE=./src/bindings.h
 BINDINGS_FILE=./src/c_oracle_header.rs
 bindgen $HEADER_FILE -o $BINDINGS_FILE
