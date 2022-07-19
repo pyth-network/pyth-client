@@ -486,10 +486,11 @@ static uint64_t upd_price( SolParameters *prm, SolAccountInfo *ka )
        cptr->pub_slot_ <= fptr->pub_slot_ ) {
     return ERROR_INVALID_ARGUMENT;
   }
-
+  bool updated_aggregate = false;
   // update aggregate price as necessary
   if ( sptr->slot_ > pptr->agg_.pub_slot_ ) {
     upd_aggregate( pptr, sptr->slot_, sptr->unix_timestamp_ );
+    updated_aggregate = true;
   }
 
   // update component price if required
@@ -511,13 +512,15 @@ static uint64_t upd_price( SolParameters *prm, SolAccountInfo *ka )
     fptr->status_   = status;
     fptr->pub_slot_ = cptr->pub_slot_;
   }
+  if (updated_aggregate){
+    return SUCCESSFULLY_UPDATED_AGGREGATE;
+  }
   return SUCCESS;
 }
 
 static uint64_t upd_price_no_fail_on_error( SolParameters *prm, SolAccountInfo *ka )
 {
-  upd_price( prm, ka );
-  return SUCCESS;
+  return upd_price( prm, ka ) == SUCCESSFULLY_UPDATED_AGGREGATE? SUCCESSFULLY_UPDATED_AGGREGATE : SUCCESS;
 }
 
 static uint64_t dispatch( SolParameters *prm, SolAccountInfo *ka )
