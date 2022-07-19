@@ -41,13 +41,17 @@ rm ./target/*-keypair.json
 #build Rust and link it with C
 cd "${RUST_DIR}"
 cargo install bindgen
-bindgen ./src/bindings.h -o ./src/c_oracle_header.rs
+HEADER_FILE=./src/bindings.h
+BINDINGS_FILE=./src/c_oracle_header.rs
+bindgen $HEADER_FILE -o $BINDINGS_FILE
+python3 ./src/derive_borsh.py $BINDINGS_FILE pc_acc cmd_hdr
 cargo clean
 cargo build-bpf
 sha256sum ./target/**/*.so
 rm ./target/**/*-keypair.json
 rm -r $PYTH_DIR/target || true
 mv ./target $PYTH_DIR/target
+
 
 
 
