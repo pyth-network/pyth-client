@@ -9,12 +9,7 @@ extern "C" {
 #[no_mangle]
 pub extern "C" fn entrypoint(input: *mut u8) -> u64 {
     let c_ret_val = unsafe{c_entrypoint(input)};
-    //bingen insists on turning small defines into u32
-    //I believe this casting is safe, we can either do it or pass
-    //some flag to rustc to stop being so strict about integers
-    //or maybe patch the output
-    //otherwise this won't build
-    if c_ret_val == (c_oracle_header::SUCCESSFULLY_UPDATED_AGGREGATE as u64){
+    if c_ret_val == c_oracle_header::SUCCESSFULLY_UPDATED_AGGREGATE{
         return 0;
     } else {
         return c_ret_val;
