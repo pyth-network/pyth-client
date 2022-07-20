@@ -1,6 +1,7 @@
 use bindgen::callbacks::ParseCallbacks;
 use std::collections::HashMap;
 use std::panic::UnwindSafe;
+
 ///This type stores a hashmap from structnames
 ///to vectors of trait names, and ensures
 ///that the traits of each struct are added to its
