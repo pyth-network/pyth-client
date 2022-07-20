@@ -11,10 +11,9 @@ extern "C" {
 pub extern "C" fn entrypoint(input: *mut u8) -> u64 {
     let c_ret_val = unsafe{c_entrypoint(input)};
     if c_ret_val == c_oracle_header::SUCCESSFULLY_UPDATED_AGGREGATE{
+        //0 is the SUCCESS value for solana
         return 0;
     } else {
         return c_ret_val;
     }
-
-
 }
