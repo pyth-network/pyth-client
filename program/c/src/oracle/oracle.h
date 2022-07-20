@@ -11,7 +11,7 @@ extern "C" {
 //values 0-14 are defined in solana_sdk.h
 //used consts instead of define because bingen always turns
 // defines to u32 (even with ULL suffix)
-const uint64_t SUCCESSFULLY_UPDATED_AGGREGATE = 15ULL;
+const uint64_t SUCCESSFULLY_UPDATED_AGGREGATE = 1000ULL;
 
 // magic number at head of account
 #define PC_MAGIC 0xa1b2c3d4
