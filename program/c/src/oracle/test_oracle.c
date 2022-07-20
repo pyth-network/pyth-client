@@ -409,7 +409,7 @@ Test( oracle, upd_price ) {
     .data_len   = sizeof( idata ),
     .program_id = &p_id
   };
-  cr_assert( SUCCESS == dispatch( &prm, acc ) );
+  cr_assert( SUCCESSFULLY_UPDATED_AGGREGATE == dispatch( &prm, acc ) );
   cr_assert( sptr->comp_[0].latest_.price_ == 42L );
   cr_assert( sptr->comp_[0].latest_.conf_ == 2L );
   cr_assert( sptr->comp_[0].latest_.pub_slot_ == 1 );
@@ -426,7 +426,7 @@ Test( oracle, upd_price ) {
   idata.price_ = 81;
   idata.pub_slot_ = 2;
   cvar.slot_ = 3;
-  cr_assert( SUCCESS == dispatch( &prm, acc ) );
+  cr_assert( SUCCESSFULLY_UPDATED_AGGREGATE == dispatch( &prm, acc ) );
   cr_assert( sptr->comp_[0].latest_.price_ == 81L );
   cr_assert( sptr->comp_[0].agg_.price_ == 42L );
   cr_assert( sptr->comp_[0].latest_.pub_slot_ == 2 );
@@ -436,7 +436,7 @@ Test( oracle, upd_price ) {
   // next price doesnt change but slot does
   cvar.slot_ = 4;
   idata.pub_slot_ = 3;
-  cr_assert( SUCCESS == dispatch( &prm, acc ) );
+  cr_assert( SUCCESSFULLY_UPDATED_AGGREGATE == dispatch( &prm, acc ) );
   cr_assert( sptr->comp_[0].latest_.price_ == 81L );
   cr_assert( sptr->comp_[0].agg_.price_ == 81L );
   cr_assert( sptr->comp_[0].latest_.pub_slot_ == 3 );
@@ -446,7 +446,7 @@ Test( oracle, upd_price ) {
   // next price doesnt change and neither does aggregate but slot does
   idata.pub_slot_ = 4;
   cvar.slot_ = 5;
-  cr_assert( SUCCESS == dispatch( &prm, acc ) );
+  cr_assert( SUCCESSFULLY_UPDATED_AGGREGATE == dispatch( &prm, acc ) );
   cr_assert( sptr->comp_[0].latest_.price_ == 81L );
   cr_assert( sptr->comp_[0].agg_.price_ == 81L );
   cr_assert( sptr->comp_[0].latest_.pub_slot_ == 4 );
@@ -466,7 +466,7 @@ Test( oracle, upd_price ) {
   cvar.slot_ = 6;
   idata.price_ = 50;
   idata.conf_ = 6;
-  cr_assert( SUCCESS == dispatch( &prm, acc ) );
+  cr_assert( SUCCESSFULLY_UPDATED_AGGREGATE == dispatch( &prm, acc ) );
   cr_assert( sptr->comp_[0].latest_.price_ == 50L );
   cr_assert( sptr->comp_[0].latest_.conf_ == 6L );
   cr_assert( sptr->comp_[0].latest_.status_ == PC_STATUS_UNKNOWN );
@@ -478,7 +478,7 @@ Test( oracle, upd_price ) {
   // Crank one more time and aggregate should be unknown
   idata.pub_slot_ = 6;
   cvar.slot_ = 7;
-  cr_assert( SUCCESS == dispatch( &prm, acc ) );
+  cr_assert( SUCCESSFULLY_UPDATED_AGGREGATE == dispatch( &prm, acc ) );
   cr_assert( sptr->agg_.status_ == PC_STATUS_UNKNOWN );
 }
 
@@ -559,7 +559,7 @@ Test( oracle, upd_price_no_fail_on_error ) {
   pc_pub_key_assign( &sptr->comp_[0].pub_, (pc_pub_key_t*)&pkey );
 
   // The update should now succeed, and have an effect.
-  cr_assert( SUCCESS == dispatch( &prm, acc ) );
+  cr_assert( SUCCESSFULLY_UPDATED_AGGREGATE == dispatch( &prm, acc ) );
   cr_assert( sptr->comp_[0].latest_.price_ == 42L );
   cr_assert( sptr->comp_[0].latest_.conf_ == 9L );
   cr_assert( sptr->comp_[0].latest_.pub_slot_ == 1 );

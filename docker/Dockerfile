@@ -26,8 +26,9 @@ RUN apt-get install -qq \
   qtchooser \
   qt5-qmake \
   qtbase5-dev-tools \
-  libqt5websockets5-dev
-
+  libqt5websockets5-dev\
+  libclang-dev
+  
 # Install jcon-cpp library
 RUN git clone https://github.com/joncol/jcon-cpp.git /jcon-cpp && cd /jcon-cpp && git checkout 2235654e39c7af505d7158bf996e47e37a23d6e3 && mkdir build && cd build && cmake .. && make -j4 && make install
 
