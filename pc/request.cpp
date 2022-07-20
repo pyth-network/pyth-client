@@ -6,6 +6,8 @@
 #include <zstd.h>
 #include <algorithm>
 
+ #define new_size sizeof( pc_price_t ) + 1864
+
 using namespace pc;
 
 ///////////////////////////////////////////////////////////////////////////
@@ -354,7 +356,7 @@ void product::update( T *res )
     return;
   }
   pc_prod_t *prod;
-  size_t plen = std::max( sizeof(pc_price_t), (size_t)PC_PROD_ACC_SIZE );
+  size_t plen = std::max( new_size, (size_t)PC_PROD_ACC_SIZE );
   if ( sizeof( pc_prod_t ) > res->get_data_ref( prod, plen ) ||
        prod->magic_ != PC_MAGIC ||
        !init_from_account( prod ) ) {
@@ -464,7 +466,7 @@ price::price( const pub_key& acc, product *prod )
   preq_->set_account( &apub_ );
   areq_->set_sub( this );
   preq_->set_sub( this );
-  size_t tlen = ZSTD_compressBound( sizeof(pc_price_t) );
+  size_t tlen = ZSTD_compressBound( new_size );
   pptr_ = (pc_price_t*)new char[tlen];
   __builtin_memset( pptr_, 0, tlen );
 }
@@ -952,7 +954,7 @@ void price::update( T *res )
   }
 
   // get account data
-  size_t tlen = ZSTD_compressBound( sizeof(pc_price_t) );
+  size_t tlen = ZSTD_compressBound( new_size );
   res->get_data_val( pptr_, tlen );
   if ( PC_UNLIKELY( pptr_->magic_ != PC_MAGIC ) ) {
     on_error_sub( "bad price account header", this );
