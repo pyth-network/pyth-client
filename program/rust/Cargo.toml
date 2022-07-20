@@ -7,8 +7,13 @@ edition = "2021"
 license = "Apache 2.0"
 publish = false
 
+[build-dependencies]
+bindgen = "0.60.1"
+
 [dependencies]
 solana-program = "=1.10.29"
+borsh = "0.9"
+
 
 [lib]
 crate-type = ["cdylib", "lib"]
