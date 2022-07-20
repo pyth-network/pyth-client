@@ -6,7 +6,6 @@
 extern "C" {
 #endif
 
-
 //A return value indicating that the aggregate price was updated
 //this triggers SMA trackers to update
 //values 0-14 are defined in solana_sdk.h (v1.10.31 )
