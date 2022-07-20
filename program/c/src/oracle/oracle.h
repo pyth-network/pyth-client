@@ -6,9 +6,9 @@
 extern "C" {
 #endif
 
-//a new custom return value to indicate to rust that aggregate was updated
+//A return value indicating that the aggregate price was updated
 //this triggers SMA trackers to update
-//values 0-14 are defined in solana_sdk.h
+//values 0-14 are defined in solana_sdk.h (v1.10.31 )
 //used consts instead of define because bingen always turns
 // defines to u32 (even with ULL suffix)
 const uint64_t SUCCESSFULLY_UPDATED_AGGREGATE = 1000ULL;
