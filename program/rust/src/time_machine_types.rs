@@ -14,7 +14,7 @@ pub struct TimeMachineWrapper{
 fn c_time_machine_size_is_correct() {
     assert_eq!(
         ::std::mem::size_of::<TimeMachineWrapper>(),
-        c_oracle_header::TIME_MACHINE_SIZE.try_into().unwrap(),
-        "expected TIME_MACHINE_SIZE in oracle.h to the same as the size of TimeMachineWrapper"
+        c_oracle_header::TIME_MACHINE_STRUCT_SIZE.try_into().unwrap(),
+        "expected TIME_MACHINE_STRUCT_SIZE in oracle.h to the same as the size of TimeMachineWrapper"
     );
 }

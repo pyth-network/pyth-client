@@ -15,7 +15,7 @@ const uint64_t SUCCESSFULLY_UPDATED_AGGREGATE = 1000ULL;
 
 // The size of the "time machine" account defined in the 
 // Rust portion of the codebase.
-const uint64_t TIME_MACHINE_SIZE = 1864ULL;
+const uint64_t TIME_MACHINE_STRUCT_SIZE = 1864ULL;
 
 // magic number at head of account
 #define PC_MAGIC 0xa1b2c3d4
