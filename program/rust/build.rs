@@ -5,6 +5,9 @@ use bindgen::Builder;
 fn main() {
     println!("cargo:rustc-link-search=../c/target");
 
+    let borsh_derives: Vec<String> =
+        vec!["BorshSerialize".to_string(), "BorshDeserialize".to_string()];
+
     let borsh_derives = ["BorshSerialize".to_string(), "BorshDeserialize".to_string()];
 
     //make a parser and to it type, traits pairs
