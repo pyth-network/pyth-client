@@ -1,7 +1,8 @@
 use super::c_oracle_header;
 #[derive(Debug, Clone)]
 #[repr(C)]
-/// this wraps all the structs we plan on using
+/// this wraps multiple SMA and tick trackers, and includes all the state 
+/// used by the time machine 
 pub struct TimeMachineWrapper{
     //Place holder with the size of the fields I am planning to add
     place_holder: [u8;1864],
