@@ -13,8 +13,8 @@ extern "C" {
 // defines to u32 (even with ULL suffix)
 const uint64_t SUCCESSFULLY_UPDATED_AGGREGATE = 1000ULL;
 
-//The size of the time machine defined in rust
-//used to infer the size of price accounts
+// The size of the "time machine" account defined in the 
+// Rust portion of the codebase.
 const uint64_t TIME_MACHINE_SIZE = 1864ULL;
 
 // magic number at head of account
