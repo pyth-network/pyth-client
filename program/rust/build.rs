@@ -1,6 +1,6 @@
 mod build_utils;
 use bindgen::Builder;
-use std::vec::Vec;
+use std::collections::HashMap;
 
 fn main() {
     println!("cargo:rustc-link-search=../c/target");
