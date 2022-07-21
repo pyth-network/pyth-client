@@ -16,6 +16,6 @@ fn main() {
     ])};
 
     //generate and write bindings
-    let bindings = Builder::default().header("./src/bindings.h").parse_callbacks(Box::new(parser)).generate().expect("Unable to generate bindings");
+    let bindings = Builder::default().header("./src/bindings.h").parse_callbacks(Box::new(parser)).rustfmt_bindings(true).generate().expect("Unable to generate bindings");
     bindings.write_to_file("./bindings.rs").expect("Couldn't write bindings!");
 }
