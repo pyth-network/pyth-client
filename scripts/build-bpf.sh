@@ -43,11 +43,16 @@ cd "${RUST_DIR}"
 cargo install bindgen
 bindgen ./src/bindings.h -o ./src/c_oracle_header.rs
 cargo clean
+cargo test
+cargo clean
 cargo build-bpf
+
 sha256sum ./target/**/*.so
 rm ./target/**/*-keypair.json
 rm -r $PYTH_DIR/target || true
 mv ./target $PYTH_DIR/target
+
+
 
 
 
