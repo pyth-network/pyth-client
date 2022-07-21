@@ -190,6 +190,8 @@ typedef struct pc_price
 
 static_assert( sizeof( pc_price_t ) == 3312, "" );
 
+const uint64_t PRICE_ACCOUNT_SIZE = TIME_MACHINE_STRUCT_SIZE + sizeof( pc_price_t );
+
 // command enumeration
 typedef enum {
 
