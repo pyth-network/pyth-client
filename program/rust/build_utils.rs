@@ -28,10 +28,6 @@ impl UnwindSafe for DeriveAdderParserCallback<'_> {}
 
 impl ParseCallbacks for DeriveAdderParserCallback<'_>{
     fn add_derives(&self, _name: &str) -> Vec<String>{
-        let traits = self.types_to_traits.get(_name);
-        match traits{
-            Some(trait_names)=>trait_names.to_vec(),
-            None => vec![],
-        }
+        self.types_to_traits.get(_name).unwrap_or(&Vec::<String>::new()).to_vec()
     }
 }
