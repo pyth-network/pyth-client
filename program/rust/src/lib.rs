@@ -9,8 +9,13 @@ extern "C" {
     fn c_entrypoint(input: *mut u8) -> u64;
 }
 
-//do not add an entry point during unit tests (which can't be linked to the C entrypoint as explained above) 
-#[cfg(target_arch = "bpf")]
+//make the C entrypoint a no-op when running cargo test
+#[cfg(not(target_arch = "bpf"))]
+pub extern "C" fn c_entrypoint(input: *mut u8) -> u64{
+    0//SUCCESS value
+}
+
+
 #[no_mangle]
 pub extern "C" fn entrypoint(input: *mut u8) -> u64 {
     let c_ret_val = unsafe{c_entrypoint(input)};
