@@ -40,8 +40,6 @@ rm ./target/*-keypair.json
 
 #build Rust and link it with C
 cd "${RUST_DIR}"
-#cargo install bindgen
-#bindgen ./src/bindings.h -o ./src/c_oracle_header.rs
 cargo clean
 cargo test
 cargo clean
