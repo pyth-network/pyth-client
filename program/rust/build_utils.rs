@@ -1,4 +1,4 @@
-use bindgen;
+use bindgen::callbacks::ParseCallbacks;
 use std::panic::UnwindSafe;
 use std::collections::HashMap;
 ///This type stores a hashmap from structnames
@@ -14,7 +14,7 @@ pub struct DeriveAdderParserCallback<'a>{
 //this is required to implement the callback trait
 impl UnwindSafe for DeriveAdderParserCallback<'_> {}
 
-impl bindgen::callbacks::ParseCallbacks for DeriveAdderParserCallback<'_>{
+impl ParseCallbacks for DeriveAdderParserCallback<'_>{
     fn add_derives(&self, _name: &str) -> Vec<String>{
         let traits = self.types_to_traits.get(_name);
         match traits{

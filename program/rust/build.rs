@@ -1,5 +1,5 @@
 mod build_utils;
-use bindgen;
+use bindgen::Builder;
 use std::collections::HashMap;
 use std::vec::Vec;
 
@@ -16,6 +16,6 @@ fn main() {
     ])};
 
     //generate and write bindings
-    let bindings = bindgen::Builder::default().header("./src/bindings.h").parse_callbacks(Box::new(parser)).generate().expect("Unable to generate bindings");
+    let bindings = Builder::default().header("./src/bindings.h").parse_callbacks(Box::new(parser)).generate().expect("Unable to generate bindings");
     bindings.write_to_file("./bindings.rs").expect("Couldn't write bindings!");
 }
