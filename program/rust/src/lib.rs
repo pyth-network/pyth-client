@@ -1,7 +1,26 @@
 mod c_oracle_header;
 mod time_machine_types;
 
-//do not link with C during unit tests (which are built in native architecture, unlike libpyth.o)
+
+//Below is a high lever description of the rust/c setup.
+
+//As we migrate from C to Rust, our Rust code needs to be able to interract with C
+//build-bpf.sh is set up to compile the C code into a bpf archive file, that build.rs
+//is set up to link the rust targets to. This enables to interact with the c_entrypoint
+//as well as similarly declare other C functions in Rust and call them
+
+//We also generate bindings for the types and constants in oracle.h (as well as other things
+//included in bindings.h), these bindings can be accessed through c_oracle_header.rs
+//Bindings allow us to access type definitions, function definitions and constants. In order to
+//add traits to the bindings, we use the parser in build.rs. The traits must be defined/included
+//at the the top of c_oracle_headers.rs. One of the most important traits we deal are the Borsh
+//serialization traits.
+
+//the only limitation of our set up is that we can not unit test in rust, anything that calls
+//a c function. Though we can test functions that use constants/types defined in oracle.h
+
+
+//do not link with C during unit tests (which are built in native architecture, unlike libpyth.o) 
 #[cfg(target_arch = "bpf")]
 #[link(name = "cpyth")]
 extern "C" {
