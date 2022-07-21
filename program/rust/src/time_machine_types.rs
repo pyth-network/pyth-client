@@ -8,6 +8,8 @@ pub struct TimeMachineWrapper{
 }
 
 #[test]
+///test that the size defined in C matches that
+///defined in Rust
 fn c_time_machine_size_is_correct() {
     assert_eq!(
         ::std::mem::size_of::<TimeMachineWrapper>(),
