@@ -24,17 +24,6 @@ impl<'a> DeriveAdderParserCallback<'a> {
     }
 }
 
-impl<'a> DeriveAdderParserCallback<'a> {
-    ///create a parser that does not add any traits
-    pub fn new() -> Self {
-        Default::default()
-    }
-    //add pairs of types and their desired traits
-    pub fn register_traits(&mut self, type_name: &'a str, traits: Vec<String>) {
-        self.types_to_traits.insert(&type_name, traits);
-    }
-}
-
 //this is required to implement the callback trait
 impl UnwindSafe for DeriveAdderParserCallback<'_> {}
 
