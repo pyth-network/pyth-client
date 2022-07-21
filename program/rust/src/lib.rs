@@ -1,7 +1,6 @@
 mod c_oracle_header;
 mod time_machine_types;
 
-
 //Below is a high lever description of the rust/c setup.
 
 //As we migrate from C to Rust, our Rust code needs to be able to interract with C
@@ -19,8 +18,7 @@ mod time_machine_types;
 //the only limitation of our set up is that we can not unit test in rust, anything that calls
 //a c function. Though we can test functions that use constants/types defined in oracle.h
 
-
-//do not link with C during unit tests (which are built in native architecture, unlike libpyth.o) 
+//do not link with C during unit tests (which are built in native architecture, unlike libpyth.o)
 #[cfg(target_arch = "bpf")]
 #[link(name = "cpyth")]
 extern "C" {
