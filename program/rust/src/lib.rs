@@ -60,8 +60,7 @@ pub extern "C" fn entrypoint(input: *mut u8) -> u64 {
     if cmd_data.ver_ != c_oracle_header::PC_VERSION {
         //FIXME: I am not sure what's best to do here (this is copied from C)
         // it seems to me like we should not break when version numbers change
-        //instead we should maintain the update logic accross version in the
-        //upd_account_version command
+        //instead we should log a message that asks users to call update_version
         panic!("incorrect version numbers");
     }
 
