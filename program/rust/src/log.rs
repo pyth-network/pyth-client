@@ -84,7 +84,8 @@ pub fn post_log(c_ret_val: u64, accounts: &[AccountInfo]) -> ProgramResult {
         let start: usize = PRICE_T_AGGREGATE_OFFSET
             .try_into()
             .map_err(|_| OracleError::Generic)?;
-        let price_struct: pc_price_info = pc_price_info::try_from_slice(
+        // We trust that the C oracle has properly checked this account
+        let aggregate_price_info: pc_price_info = pc_price_info::try_from_slice(
             &accounts
                 .get(1)
                 .ok_or(OracleError::Generic)?
@@ -92,9 +93,9 @@ pub fn post_log(c_ret_val: u64, accounts: &[AccountInfo]) -> ProgramResult {
         )?;
         msg!(
             "Aggregate updated : price={:}, conf={:}, status={:}",
-            price_struct.price_,
-            price_struct.conf_,
-            price_struct.status_
+            aggregate_price_info.price_,
+            aggregate_price_info.conf_,
+            aggregate_price_info.status_
         );
     }
     Ok(())
