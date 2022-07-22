@@ -489,8 +489,7 @@ static uint64_t upd_price( SolParameters *prm, SolAccountInfo *ka )
   bool updated_aggregate = false;
   // update aggregate price as necessary
   if ( sptr->slot_ > pptr->agg_.pub_slot_ ) {
-    upd_aggregate( pptr, sptr->slot_, sptr->unix_timestamp_ );
-    updated_aggregate = true;
+    updated_aggregate = upd_aggregate( pptr, sptr->slot_, sptr->unix_timestamp_ );
   }
 
   // update component price if required
