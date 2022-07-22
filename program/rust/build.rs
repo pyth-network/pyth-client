@@ -5,9 +5,6 @@ use bindgen::Builder;
 fn main() {
     println!("cargo:rustc-link-search=../c/target");
 
-    let borsh_derives: Vec<String> =
-        vec!["BorshSerialize".to_string(), "BorshDeserialize".to_string()];
-
     let borsh_derives = ["BorshSerialize".to_string(), "BorshDeserialize".to_string()];
 
     //make a parser and to it type, traits pairs
@@ -16,6 +13,7 @@ fn main() {
     parser.register_traits("pc_acc", borsh_derives.to_vec());
     parser.register_traits("pc_price_info", borsh_derives.to_vec());
     parser.register_traits("cmd_upd_price", borsh_derives.to_vec());
+
 
     //generate and write bindings
     let bindings = Builder::default()
