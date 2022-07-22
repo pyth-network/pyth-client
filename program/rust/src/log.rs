@@ -10,7 +10,7 @@ use crate::error::OracleError;
 use borsh::BorshDeserialize;
 use solana_program::entrypoint::ProgramResult;
 use solana_program::msg;
-use solana_program::{account_info::AccountInfo, pubkey::Pubkey};
+use solana_program::{account_info::AccountInfo};
 use std::mem::size_of;
 
 pub fn pre_log(instruction_data: &[u8]) -> ProgramResult {
@@ -23,7 +23,7 @@ pub fn pre_log(instruction_data: &[u8]) -> ProgramResult {
         .map_err(|_| OracleError::Generic)?;
     match instruction_id {
         command_t_e_cmd_upd_price_no_fail_on_error => {
-            let instruction: cmd_upd_price = cmd_upd_price::try_from_slice(&instruction_data)?;
+            let instruction: cmd_upd_price = cmd_upd_price::try_from_slice(instruction_data)?;
             msg!(
                 "Update price no fail on error: price={:}, conf={:}, status={:}",
                 instruction.price_,
@@ -32,7 +32,7 @@ pub fn pre_log(instruction_data: &[u8]) -> ProgramResult {
             );
         }
         command_t_e_cmd_upd_price => {
-            let instruction: cmd_upd_price = cmd_upd_price::try_from_slice(&instruction_data)?;
+            let instruction: cmd_upd_price = cmd_upd_price::try_from_slice(instruction_data)?;
             msg!(
                 "Update price: price={:}, conf={:}, status={:}",
                 instruction.price_,
@@ -41,7 +41,7 @@ pub fn pre_log(instruction_data: &[u8]) -> ProgramResult {
             );
         }
         command_t_e_cmd_agg_price => {
-            let instruction: cmd_upd_price = cmd_upd_price::try_from_slice(&instruction_data)?;
+            let instruction: cmd_upd_price = cmd_upd_price::try_from_slice(instruction_data)?;
             msg!(
                 "Update price: price={:}, conf={:}, status={:}",
                 instruction.price_,
