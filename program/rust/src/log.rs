@@ -4,7 +4,7 @@ use crate::c_oracle_header::{
     command_t_e_cmd_del_publisher, command_t_e_cmd_init_mapping, command_t_e_cmd_init_price,
     command_t_e_cmd_set_min_pub, command_t_e_cmd_upd_price,
     command_t_e_cmd_upd_price_no_fail_on_error, command_t_e_cmd_upd_product, pc_price_info,
-    PRICE_T_CONF_OFFSET, SUCCESSFULLY_UPDATED_AGGREGATE,
+    PRICE_T_AGGREGATE_OFFSET, SUCCESSFULLY_UPDATED_AGGREGATE,
 };
 use crate::error::OracleError;
 use borsh::BorshDeserialize;
@@ -87,7 +87,7 @@ pub fn pre_log(instruction_data: &[u8]) -> ProgramResult {
 
 pub fn post_log(c_ret_val: u64, accounts: &[AccountInfo]) -> ProgramResult {
     if c_ret_val == SUCCESSFULLY_UPDATED_AGGREGATE {
-        let start: usize = PRICE_T_CONF_OFFSET
+        let start: usize = PRICE_T_AGGREGATE_OFFSET
             .try_into()
             .map_err(|_| OracleError::Generic)?;
         let price_struct: pc_price_info = pc_price_info::try_from_slice(
