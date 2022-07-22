@@ -5,12 +5,13 @@ use std::vec::Vec;
 fn main() {
     println!("cargo:rustc-link-search=../c/target");
 
-    let borsh_derives: Vec<String> =
-        vec!["BorshSerialize".to_string(), "BorshDeserialize".to_string()];
+    let borsh_derives = ["BorshSerialize".to_string(), "BorshDeserialize".to_string()];
 
     //make a parser and to it type, traits pairs
     let mut parser = build_utils::DeriveAdderParserCallback::new();
-    parser.register_traits("cmd_hdr", borsh_derives);
+    parser.register_traits("cmd_hdr", borsh_derives.to_vec());
+    parser.register_traits("pc_acc", borsh_derives.to_vec());
+
 
     //generate and write bindings
     let bindings = Builder::default()
