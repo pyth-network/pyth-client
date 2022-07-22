@@ -141,11 +141,11 @@ static inline void upd_twap(
 }
 
 // update aggregate price
-static inline void upd_aggregate( pc_price_t *ptr, uint64_t slot, int64_t timestamp )
+static inline bool upd_aggregate( pc_price_t *ptr, uint64_t slot, int64_t timestamp )
 {
   // only re-compute aggregate in next slot
   if ( slot <= ptr->agg_.pub_slot_ ) {
-    return;
+    return false;
   }
   pc_qset_t *qs = qset_new( ptr->expo_ );
 
@@ -195,7 +195,7 @@ static inline void upd_aggregate( pc_price_t *ptr, uint64_t slot, int64_t timest
     ptr->num_qt_ = numv;
     if ( numv == 0 || numv < ptr->min_pub_ ) {
       ptr->agg_.status_ = PC_STATUS_UNKNOWN;
-      return;
+      return false;
     }
 
     // evaluate the model to get the p25/p50/p75 prices
@@ -220,7 +220,7 @@ static inline void upd_aggregate( pc_price_t *ptr, uint64_t slot, int64_t timest
     // positive confidences given the current pricing model
     if( agg_conf <= (int64_t)0 ) {
       ptr->agg_.status_ = PC_STATUS_UNKNOWN;
-      return;
+      return false;
     }
   }
 
@@ -231,6 +231,7 @@ static inline void upd_aggregate( pc_price_t *ptr, uint64_t slot, int64_t timest
   ptr->agg_.conf_   = (uint64_t)agg_conf;
 
   upd_twap( ptr, agg_diff, qs );
+  return true;
 }
 
 #ifdef __cplusplus
