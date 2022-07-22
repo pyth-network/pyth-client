@@ -1,21 +1,19 @@
-use solana_program::{account_info::AccountInfo, pubkey::Pubkey};
-use solana_program::msg;
-use solana_program::entrypoint::{ ProgramResult};
-use borsh::{BorshDeserialize};
-use crate::error::OracleError;
 use crate::c_oracle_header::{
     cmd_hdr, cmd_upd_price, command_t_e_cmd_add_mapping, command_t_e_cmd_add_price,
-    command_t_e_cmd_add_product, command_t_e_cmd_add_publisher, command_t_e_cmd_del_publisher,
-    command_t_e_cmd_init_mapping, command_t_e_cmd_init_price, command_t_e_cmd_set_min_pub,
-    command_t_e_cmd_upd_price, command_t_e_cmd_upd_price_no_fail_on_error, command_t_e_cmd_agg_price,
-    command_t_e_cmd_upd_product
+    command_t_e_cmd_add_product, command_t_e_cmd_add_publisher, command_t_e_cmd_agg_price,
+    command_t_e_cmd_del_publisher, command_t_e_cmd_init_mapping, command_t_e_cmd_init_price,
+    command_t_e_cmd_set_min_pub, command_t_e_cmd_upd_price,
+    command_t_e_cmd_upd_price_no_fail_on_error, command_t_e_cmd_upd_product, pc_price_info,
+    PRICE_T_CONF_OFFSET, SUCCESSFULLY_UPDATED_AGGREGATE,
 };
+use crate::error::OracleError;
+use borsh::BorshDeserialize;
+use solana_program::entrypoint::ProgramResult;
+use solana_program::msg;
+use solana_program::{account_info::AccountInfo, pubkey::Pubkey};
+use std::mem::size_of;
 
-pub fn pre_log(
-    program_id: &Pubkey,
-    accounts: &[AccountInfo],
-    instruction_data: &[u8],
-) -> ProgramResult {
+pub fn pre_log(instruction_data: &[u8]) -> ProgramResult {
     msg!("Pyth oracle contract");
 
     let instruction_header: cmd_hdr = cmd_hdr::try_from_slice(&instruction_data[..8])?;
@@ -25,8 +23,7 @@ pub fn pre_log(
         .map_err(|_| OracleError::Generic)?;
     match instruction_id {
         command_t_e_cmd_upd_price_no_fail_on_error => {
-            let instruction: cmd_upd_price =
-                cmd_upd_price::try_from_slice(&instruction_data).unwrap();
+            let instruction: cmd_upd_price = cmd_upd_price::try_from_slice(&instruction_data)?;
             msg!(
                 "Update price no fail on error: price={:}, conf={:}, status={:}",
                 instruction.price_,
@@ -35,8 +32,7 @@ pub fn pre_log(
             );
         }
         command_t_e_cmd_upd_price => {
-            let instruction: cmd_upd_price =
-                cmd_upd_price::try_from_slice(&instruction_data).unwrap();
+            let instruction: cmd_upd_price = cmd_upd_price::try_from_slice(&instruction_data)?;
             msg!(
                 "Update price: price={:}, conf={:}, status={:}",
                 instruction.price_,
@@ -45,8 +41,7 @@ pub fn pre_log(
             );
         }
         command_t_e_cmd_agg_price => {
-            let instruction: cmd_upd_price =
-            cmd_upd_price::try_from_slice(&instruction_data).unwrap();
+            let instruction: cmd_upd_price = cmd_upd_price::try_from_slice(&instruction_data)?;
             msg!(
                 "Update price: price={:}, conf={:}, status={:}",
                 instruction.price_,
@@ -76,16 +71,37 @@ pub fn pre_log(
             msg!("Initialize mapping account");
         }
 
-        command_t_e_cmd_set_min_pub =>{
+        command_t_e_cmd_set_min_pub => {
             msg!("Set minimum number of publishers");
         }
-        command_t_e_cmd_upd_product =>{
+        command_t_e_cmd_upd_product => {
             msg!("Update product");
         }
         _ => {
             msg!("Unrecognized instruction");
             return Err(OracleError::Generic.into());
         }
+    }
+    Ok(())
+}
+
+pub fn post_log(c_ret_val: u64, accounts: &[AccountInfo]) -> ProgramResult {
+    if c_ret_val == SUCCESSFULLY_UPDATED_AGGREGATE {
+        let start: usize = PRICE_T_CONF_OFFSET
+            .try_into()
+            .map_err(|_| OracleError::Generic)?;
+        let price_struct: pc_price_info = pc_price_info::try_from_slice(
+            &accounts
+                .get(1)
+                .ok_or(OracleError::Generic)?
+                .try_borrow_data()?[start..(start + size_of::<pc_price_info>())],
+        )?;
+        msg!(
+            "Aggregate updated : price={:}, conf={:}, status={:}",
+            price_struct.price_,
+            price_struct.conf_,
+            price_struct.status_
+        );
     }
     Ok(())
 }

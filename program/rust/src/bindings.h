@@ -11,4 +11,7 @@ typedef unsigned int uint32_t;
 typedef signed long int int64_t;
 typedef unsigned long int uint64_t;
 
+#include <stddef.h>
 #include "../../c/src/oracle/oracle.h"
+
+const size_t PRICE_T_CONF_OFFSET = offsetof(struct pc_price, agg_);

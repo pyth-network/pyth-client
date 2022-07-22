@@ -54,6 +54,63 @@ pub const PC_ACCTYPE_MAPPING: u32 = 1;
 pub const PC_ACCTYPE_PRODUCT: u32 = 2;
 pub const PC_ACCTYPE_PRICE: u32 = 3;
 pub const PC_ACCTYPE_TEST: u32 = 4;
+pub type size_t = ::std::os::raw::c_ulong;
+pub type wchar_t = ::std::os::raw::c_int;
+#[repr(C)]
+#[repr(align(16))]
+#[derive(Debug, Copy, Clone)]
+pub struct max_align_t {
+    pub __clang_max_align_nonce1: ::std::os::raw::c_longlong,
+    pub __bindgen_padding_0: u64,
+    pub __clang_max_align_nonce2: u128,
+}
+#[test]
+fn bindgen_test_layout_max_align_t() {
+    assert_eq!(
+        ::std::mem::size_of::<max_align_t>(),
+        32usize,
+        concat!("Size of: ", stringify!(max_align_t))
+    );
+    assert_eq!(
+        ::std::mem::align_of::<max_align_t>(),
+        16usize,
+        concat!("Alignment of ", stringify!(max_align_t))
+    );
+    fn test_field___clang_max_align_nonce1() {
+        assert_eq!(
+            unsafe {
+                let uninit = ::std::mem::MaybeUninit::<max_align_t>::uninit();
+                let ptr = uninit.as_ptr();
+                ::std::ptr::addr_of!((*ptr).__clang_max_align_nonce1) as usize - ptr as usize
+            },
+            0usize,
+            concat!(
+                "Offset of field: ",
+                stringify!(max_align_t),
+                "::",
+                stringify!(__clang_max_align_nonce1)
+            )
+        );
+    }
+    test_field___clang_max_align_nonce1();
+    fn test_field___clang_max_align_nonce2() {
+        assert_eq!(
+            unsafe {
+                let uninit = ::std::mem::MaybeUninit::<max_align_t>::uninit();
+                let ptr = uninit.as_ptr();
+                ::std::ptr::addr_of!((*ptr).__clang_max_align_nonce2) as usize - ptr as usize
+            },
+            16usize,
+            concat!(
+                "Offset of field: ",
+                stringify!(max_align_t),
+                "::",
+                stringify!(__clang_max_align_nonce2)
+            )
+        );
+    }
+    test_field___clang_max_align_nonce2();
+}
 pub const SUCCESSFULLY_UPDATED_AGGREGATE: u64 = 1000;
 pub const TIME_MACHINE_STRUCT_SIZE: u64 = 1864;
 extern "C" {
@@ -528,7 +585,7 @@ fn bindgen_test_layout_pc_prod() {
 }
 pub type pc_prod_t = pc_prod;
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, BorshSerialize, BorshDeserialize)]
 pub struct pc_price_info {
     pub price_: i64,
     pub conf_: u64,
@@ -2216,3 +2273,4 @@ fn bindgen_test_layout_sysvar_clock() {
     test_field_unix_timestamp_();
 }
 pub type sysvar_clock_t = sysvar_clock;
+pub const PRICE_T_CONF_OFFSET: size_t = 208;

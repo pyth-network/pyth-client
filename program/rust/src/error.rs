@@ -1,10 +1,7 @@
 //! Error types
 
-use solana_program::{
-    program_error::{ProgramError},
-};
+use solana_program::program_error::ProgramError;
 use thiserror::Error;
-
 
 /// Errors that may be returned by the oracle program
 #[derive(Clone, Debug, Eq, Error, PartialEq)]

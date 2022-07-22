@@ -11,6 +11,8 @@ fn main() {
     let mut parser = build_utils::DeriveAdderParserCallback::new();
     parser.register_traits("cmd_hdr", borsh_derives.to_vec());
     parser.register_traits("pc_acc", borsh_derives.to_vec());
+    parser.register_traits("pc_price_info", borsh_derives.to_vec());
+
 
 
     //generate and write bindings
