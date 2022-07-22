@@ -8,8 +8,6 @@ use crate::log::{post_log, pre_log};
 use solana_program::entrypoint::deserialize;
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::entrypoint::deserialize;
-use solana_program::pubkey::Pubkey;
-use solana_program::sysvar::slot_history::AccountInfo;
 
 
 //Below is a high lever description of the rust/c setup.
