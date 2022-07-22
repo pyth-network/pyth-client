@@ -100,8 +100,6 @@ add_executable( test_unit pctest/test_unit.cpp )
 target_link_libraries( test_unit ${PC_DEP} )
 add_executable( test_net pctest/test_net.cpp )
 target_link_libraries( test_net ${PC_DEP} )
-add_executable( test_publish pctest/test_publish.cpp )
-target_link_libraries( test_publish ${PC_DEP} )
 
 # This doesn't build on the bullseye base image, due to a packaging bug
 # in the newer version of libqt5websockets5-dev for Debian. The below build instructions
