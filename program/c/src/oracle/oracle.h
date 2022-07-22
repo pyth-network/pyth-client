@@ -17,6 +17,9 @@ const uint64_t SUCCESSFULLY_UPDATED_AGGREGATE = 1000ULL;
 // Rust portion of the codebase.
 const uint64_t TIME_MACHINE_STRUCT_SIZE = 1864ULL;
 
+const uint64_t EXTRA_PUBLISHER_SPACE = 1000ULL;
+
+
 // magic number at head of account
 #define PC_MAGIC 0xa1b2c3d4
 
@@ -190,7 +193,7 @@ typedef struct pc_price
 
 static_assert( sizeof( pc_price_t ) == 3312, "" );
 
-const uint64_t PRICE_ACCOUNT_SIZE = TIME_MACHINE_STRUCT_SIZE + sizeof( pc_price_t );
+const uint64_t PRICE_ACCOUNT_SIZE = TIME_MACHINE_STRUCT_SIZE + EXTRA_PUBLISHER_SPACE + sizeof( pc_price_t );
 
 // command enumeration
 typedef enum {
