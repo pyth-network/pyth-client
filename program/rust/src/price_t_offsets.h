@@ -5,6 +5,7 @@
 #include <stddef.h>
 const size_t PRICE_T_EXPO_OFFSET = offsetof(struct pc_price, expo_);
 const size_t PRICE_T_TIMESTAMP_OFFSET = offsetof(struct pc_price, timestamp_);
+const size_t PRICE_T_AGGREGATE_OFFSET = offsetof(struct pc_price, agg_);
 const size_t PRICE_T_AGGREGATE_CONF_OFFSET = offsetof(struct pc_price, agg_) + offsetof(struct pc_price_info, conf_);
 const size_t PRICE_T_AGGREGATE_PRICE_OFFSET = offsetof(struct pc_price, agg_) + offsetof(struct pc_price_info, price_);
 const size_t PRICE_T_AGGREGATE_STATUS_OFFSET = offsetof(struct pc_price, agg_) + offsetof(struct pc_price_info, status_);
