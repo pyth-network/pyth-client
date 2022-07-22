@@ -1,19 +1,16 @@
 pub mod c_oracle_header;
 mod rust_oracle;
 mod time_machine_types;
-<<<<<<< HEAD
 mod error;
 mod log;
 
 use crate::log::{post_log, pre_log};
 use solana_program::entrypoint::deserialize;
-=======
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::entrypoint::deserialize;
 use solana_program::pubkey::Pubkey;
 use solana_program::sysvar::slot_history::AccountInfo;
 
->>>>>>> 4656a2b (add a new insctruction and interecepted update price calls)
 
 //Below is a high lever description of the rust/c setup.
 
@@ -59,7 +56,8 @@ pub extern "C" fn entrypoint(input: *mut u8) -> u64 {
         panic!("insufficient data, could not parse instruction");
     }
 
-    let cmd_data = c_oracle_header::cmd_hdr::try_from_slice(&instruction_data[..cmd_hdr_size]).unwrap();
+    let cmd_data =
+        c_oracle_header::cmd_hdr::try_from_slice(&instruction_data[..cmd_hdr_size]).unwrap();
 
     if cmd_data.ver_ != c_oracle_header::PC_VERSION {
         //FIXME: I am not sure what's best to do here (this is copied from C)
