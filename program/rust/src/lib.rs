@@ -7,7 +7,6 @@ mod time_machine_types;
 use crate::log::{post_log, pre_log};
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::entrypoint::deserialize;
-use solana_program::entrypoint::deserialize;
 
 //Below is a high lever description of the rust/c setup.
 
@@ -41,7 +40,7 @@ pub extern "C" fn c_entrypoint(input: *mut u8) -> u64 {
 
 #[no_mangle]
 pub extern "C" fn entrypoint(input: *mut u8) -> u64 {
-    let (_program_id, accounts, instruction_data) = unsafe { deserialize(input) };
+    let (program_id, accounts, instruction_data) = unsafe { deserialize(input) };
 
     match pre_log(&accounts, instruction_data) {
         Err(error) => return error.into(),
@@ -67,10 +66,10 @@ pub extern "C" fn entrypoint(input: *mut u8) -> u64 {
         c_oracle_header::command_t_e_cmd_upd_price
         | c_oracle_header::command_t_e_cmd_upd_price_no_fail_on_error
         | c_oracle_header::command_t_e_cmd_agg_price => {
-            rust_oracle::update_price(program_id, accounts, instruction_data, input)
+            rust_oracle::update_price(program_id, &accounts, &instruction_data, input)
         }
         c_oracle_header::command_t_e_cmd_upd_account_version => {
-            rust_oracle::update_version(program_id, accounts, instruction_data)
+            rust_oracle::update_version(program_id, &accounts, &instruction_data)
         }
         _ => unsafe { return c_entrypoint(input) },
     };
