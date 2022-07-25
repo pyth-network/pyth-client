@@ -4,6 +4,7 @@ mod log;
 mod rust_oracle;
 mod time_machine_types;
 
+use ::std::mem::size_of;
 use crate::log::{post_log, pre_log};
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::entrypoint::deserialize;
@@ -47,7 +48,7 @@ pub extern "C" fn entrypoint(input: *mut u8) -> u64 {
         _ => {}
     }
 
-    let cmd_hdr_size = ::std::mem::size_of::<c_oracle_header::cmd_hdr>();
+    let cmd_hdr_size = size_of::<c_oracle_header::cmd_hdr>();
     if instruction_data.len() < cmd_hdr_size {
         panic!("insufficient data, could not parse instruction");
     }
