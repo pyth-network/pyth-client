@@ -12,13 +12,7 @@ pub fn update_price(
 ) -> u64 {
     //For now, we did not change the behavior of this. this is just to show the proposed structure of the
     //program
-    let c_ret_val = unsafe { c_entrypoint(input) };
-    if c_ret_val == c_oracle_header::SUCCESSFULLY_UPDATED_AGGREGATE {
-        //0 is the SUCCESS value for solana
-        return 0;
-    } else {
-        return c_ret_val;
-    }
+    unsafe { c_entrypoint(input) }
 }
 /// has version number/ account type dependant logic to make sure the given account is compatible
 /// with the current version
