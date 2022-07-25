@@ -1,5 +1,10 @@
 mod c_oracle_header;
 mod time_machine_types;
+mod error;
+mod log;
+
+use crate::log::{post_log, pre_log};
+use solana_program::entrypoint::deserialize;
 
 //Below is a high lever description of the rust/c setup.
 
@@ -33,7 +38,20 @@ pub extern "C" fn c_entrypoint(input: *mut u8) -> u64 {
 
 #[no_mangle]
 pub extern "C" fn entrypoint(input: *mut u8) -> u64 {
+    let (_program_id, accounts, instruction_data) = unsafe { deserialize(input) };
+
+    match pre_log(instruction_data) {
+        Err(error) => return error.into(),
+        _ => {}
+    }
+
     let c_ret_val = unsafe { c_entrypoint(input) };
+
+    match post_log(c_ret_val, &accounts) {
+        Err(error) => return error.into(),
+        _ => {}
+    }
+
     if c_ret_val == c_oracle_header::SUCCESSFULLY_UPDATED_AGGREGATE {
         //0 is the SUCCESS value for solana
         return 0;
@@ -41,3 +59,6 @@ pub extern "C" fn entrypoint(input: *mut u8) -> u64 {
         return c_ret_val;
     }
 }
+
+solana_program::custom_heap_default!();
+solana_program::custom_panic_default!();
