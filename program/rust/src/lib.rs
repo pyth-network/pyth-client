@@ -55,10 +55,6 @@ pub extern "C" fn entrypoint(input: *mut u8) -> u64 {
     }
 
     let cmd_hdr_size = size_of::<cmd_hdr>();
-    if instruction_data.len() < cmd_hdr_size {
-        panic!("insufficient data, could not parse instruction");
-    }
-
     let cmd_data = cmd_hdr::try_from_slice(&instruction_data[..cmd_hdr_size]).unwrap();
 
     if cmd_data.ver_ != PC_VERSION {
