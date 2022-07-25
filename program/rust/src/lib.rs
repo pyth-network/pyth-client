@@ -40,7 +40,7 @@ pub extern "C" fn c_entrypoint(input: *mut u8) -> u64 {
 pub extern "C" fn entrypoint(input: *mut u8) -> u64 {
     let (_program_id, accounts, instruction_data) = unsafe { deserialize(input) };
 
-    match pre_log(instruction_data) {
+    match pre_log(&accounts,instruction_data) {
         Err(error) => return error.into(),
         _ => {}
     }
