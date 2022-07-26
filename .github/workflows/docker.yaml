@@ -32,17 +32,20 @@ jobs:
 
       - name: Build Docker Image
         run: |
-          set -eux
+          set -eux \
+          pwd \
           docker build \
             --file docker/Dockerfile \
             --build-arg SOLANA_VERSION="${SOLANA_VERSION}" \
             --build-arg SOLANA_DOCKER_IMAGE_HASH="${SOLANA_DOCKER_IMAGE_HASH}" \
             --tag "${DOCKER_IMAGE}" \
-            --output ./ .
+            --output ./ . \
+          ls
 
       - name: LS
         run: |
-          ls
+          ls docker
+          pwd
 
       - name : Publish binary
         if : env.IS_RELEASE == 'true'
