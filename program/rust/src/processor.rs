@@ -3,6 +3,7 @@ use crate::c_oracle_header::{
     cmd_hdr, command_t_e_cmd_agg_price, command_t_e_cmd_upd_account_version,
     command_t_e_cmd_upd_price, command_t_e_cmd_upd_price_no_fail_on_error, PC_VERSION,
 };
+use crate::error::{OracleError, OracleResult};
 use crate::rust_oracle::{update_price, update_version};
 use ::std::mem::size_of;
 use borsh::{BorshDeserialize, BorshSerialize};
@@ -14,7 +15,7 @@ pub fn process_instruction(
     accounts: &Vec<AccountInfo>,
     instruction_data: &[u8],
     input: *mut u8,
-) -> u64 {
+) -> OracleResult {
     let cmd_hdr_size = size_of::<cmd_hdr>();
     let cmd_data = cmd_hdr::try_from_slice(&instruction_data[..cmd_hdr_size]).unwrap();
 
@@ -25,7 +26,11 @@ pub fn process_instruction(
         panic!("incorrect version numbers");
     }
 
-    match cmd_data.cmd_ as u32 {
+    match cmd_data
+        .cmd_
+        .try_into()
+        .map_err(|_| OracleError::IntegerCastingError)?
+    {
         command_t_e_cmd_upd_price
         | command_t_e_cmd_upd_price_no_fail_on_error
         | command_t_e_cmd_agg_price => {
@@ -34,6 +39,6 @@ pub fn process_instruction(
         command_t_e_cmd_upd_account_version => {
             update_version(program_id, &accounts, &instruction_data)
         }
-        _ => unsafe { return c_entrypoint(input) },
+        _ => Ok(unsafe { c_entrypoint(input) }),
     }
 }

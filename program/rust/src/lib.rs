@@ -51,7 +51,10 @@ pub extern "C" fn entrypoint(input: *mut u8) -> u64 {
         _ => {}
     }
 
-    let c_ret_val = process_instruction(program_id, &accounts, instruction_data, input);
+    let c_ret_val = match process_instruction(program_id, &accounts, instruction_data, input) {
+        Err(error) => error.into(),
+        Ok(success_status) => success_status,
+    };
 
     match post_log(c_ret_val, &accounts) {
         Err(error) => return error.into(),

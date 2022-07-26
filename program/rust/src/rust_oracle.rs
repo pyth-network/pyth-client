@@ -1,5 +1,6 @@
 use super::c_entrypoint;
 use super::c_oracle_header;
+use crate::error::{OracleError, OracleResult};
 use solana_program::pubkey::Pubkey;
 use solana_program::sysvar::slot_history::AccountInfo;
 
@@ -9,10 +10,10 @@ pub fn update_price(
     accounts: &Vec<AccountInfo>,
     instruction_data: &[u8],
     input: *mut u8,
-) -> u64 {
+) -> OracleResult {
     //For now, we did not change the behavior of this. this is just to show the proposed structure of the
     //program
-    unsafe { c_entrypoint(input) }
+    Ok(unsafe { c_entrypoint(input) })
 }
 /// has version number/ account type dependant logic to make sure the given account is compatible
 /// with the current version
@@ -21,7 +22,7 @@ pub fn update_version(
     program_id: &Pubkey,
     accounts: &Vec<AccountInfo>,
     instruction_data: &[u8],
-) -> u64 {
+) -> OracleResult {
     panic!("Need to merge fix to pythd in order to implement this");
-    0 //SUCCESS
+    Ok(0) //SUCCESS
 }
