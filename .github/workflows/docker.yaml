@@ -56,8 +56,8 @@ jobs:
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ./out/pyth_oracle.so
-          asset_name: oracle
+          file: ./out/home/pyth/pyth-client/target/deploy/pyth_oracle.so
+          asset_name: pyth_oracle.so
           tag: ${{ github.ref }}
           overwrite: true
           body: "This is my release text"

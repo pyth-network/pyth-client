@@ -1,6 +1,6 @@
 ARG SOLANA_VERSION
 ARG SOLANA_DOCKER_IMAGE_HASH
-FROM solanalabs/solana:v${SOLANA_VERSION}@sha256:${SOLANA_DOCKER_IMAGE_HASH} AS BUILD_STAGE
+FROM solanalabs/solana:v${SOLANA_VERSION}@sha256:${SOLANA_DOCKER_IMAGE_HASH}
 
 # Redeclare SOLANA_VERSION in the new build stage.
 # Persist in env for docker run & inspect.
@@ -29,15 +29,15 @@ RUN apt-get install -qq \
   libqt5websockets5-dev\
   libclang-dev
   
-# # Install jcon-cpp library
+# Install jcon-cpp library
 RUN git clone https://github.com/joncol/jcon-cpp.git /jcon-cpp && cd /jcon-cpp && git checkout 2235654e39c7af505d7158bf996e47e37a23d6e3 && mkdir build && cd build && cmake .. && make -j4 && make install
 
-# # Grant sudo access to pyth user
+# Grant sudo access to pyth user
 RUN echo "pyth ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 RUN useradd -m pyth
 
-# # Fixes a bug in the solana docker image
-# # https://github.com/solana-labs/solana/issues/20577
+# Fixes a bug in the solana docker image
+# https://github.com/solana-labs/solana/issues/20577
 RUN mkdir /usr/bin/sdk/bpf/dependencies \
     && chmod 777 /usr/bin/sdk/bpf/dependencies
 
@@ -57,7 +57,7 @@ export PYTHONPATH=\"\${PYTHONPATH:+\$PYTHONPATH:}\${HOME}/pyth-client\"\n\
 COPY --chown=pyth:pyth . pyth-client/
 
 # Build off-chain binaries.
-# RUN cd pyth-client && ./scripts/build.sh
+RUN cd pyth-client && ./scripts/build.sh
 
 
 # Copy solana sdk and apply patch.
@@ -67,13 +67,7 @@ RUN ./pyth-client/scripts/patch-solana.sh
 
 # Build and test the oracle program.
 RUN cd pyth-client && ./scripts/build-bpf.sh .
-# RUN /bin/bash -l -c "pytest-3 --pyargs pyth"
+RUN /bin/bash -l -c "pytest-3 --pyargs pyth"
 
-
-ENTRYPOINT []
-CMD []
-
-FROM scratch AS EXPORT_STAGE
-COPY --from=BUILD_STAGE /home/pyth/pyth-client/target/deploy/pyth_oracle.so /
 ENTRYPOINT []
 CMD []
