@@ -74,7 +74,7 @@ RUN touch /home/pyth/pyth-client/target/deploy/pyth_oracle.so
 ENTRYPOINT []
 CMD []
 
-FROM solanalabs/solana:v${SOLANA_VERSION}@sha256:${SOLANA_DOCKER_IMAGE_HASH} AS EXPORT_STAGE
+FROM scratch AS EXPORT_STAGE
 COPY --from=BUILD_STAGE /home/pyth/pyth-client/target/deploy/pyth_oracle.so /
 ENTRYPOINT []
 CMD []
