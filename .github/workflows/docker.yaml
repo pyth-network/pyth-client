@@ -39,7 +39,7 @@ jobs:
             --build-arg SOLANA_VERSION="${SOLANA_VERSION}" \
             --build-arg SOLANA_DOCKER_IMAGE_HASH="${SOLANA_DOCKER_IMAGE_HASH}" \
             --tag "${DOCKER_IMAGE}" \
-            --output . . \
+            --output type=local,dest=. . \
           ls
 
       - name: LS
