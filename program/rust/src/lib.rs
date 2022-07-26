@@ -57,21 +57,20 @@ pub fn c_entrypoint_wrapper(input: *mut u8) -> OracleResult {
 pub extern "C" fn entrypoint(input: *mut u8) -> u64 {
     let (program_id, accounts, instruction_data) = unsafe { deserialize(input) };
 
-    /*
     match pre_log(&accounts, instruction_data) {
         Err(error) => return error.into(),
         _ => {}
-    }*/
+    }
 
     let c_ret_val = match process_instruction(program_id, &accounts, instruction_data, input) {
         Err(error) => error.into(),
         Ok(success_status) => success_status,
     };
-    /*
+
     match post_log(c_ret_val, &accounts) {
         Err(error) => return error.into(),
         _ => {}
-    }*/
+    }
 
     if c_ret_val == SUCCESSFULLY_UPDATED_AGGREGATE {
         //0 is the SUCCESS value for solana
