@@ -9,7 +9,7 @@ use ::std::mem::size_of;
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::pubkey::Pubkey;
 use solana_program::sysvar::slot_history::AccountInfo;
-
+///dispatch to the right instruction in the oracle
 pub fn process_instruction(
     program_id: &Pubkey,
     accounts: &Vec<AccountInfo>,

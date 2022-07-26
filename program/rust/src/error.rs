@@ -14,12 +14,9 @@ pub enum OracleError {
     /// integer casting error
     #[error("IntegerCastingError")]
     IntegerCastingError = 601,
-
+    /// c_entrypoint returned an unexpected value
     #[error("UnknownCError")]
     UnknownCError = 602,
-
-    #[error("UnknownCPanic")]
-    UnknownCPanic = 603,
 }
 
 impl From<OracleError> for ProgramError {
