@@ -42,15 +42,15 @@ jobs:
             .
 
       - name : Publish binary
-         if : env.IS_RELEASE == 'true'
-         uses: svenstaro/upload-release-action@v2
-         with:
-            repo_token: ${{ secrets.GITHUB_TOKEN }}
-            file: ./out/pyth_oracle.so
-            asset_name: oracle
-            tag: ${{ github.ref }}
-            overwrite: true
-            body: "This is my release text"
+        if : env.IS_RELEASE == 'true'
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ./out/pyth_oracle.so
+          asset_name: oracle
+          tag: ${{ github.ref }}
+          overwrite: true
+          body: "This is my release text"
   pinning:
     runs-on: ubuntu-latest
     steps:
