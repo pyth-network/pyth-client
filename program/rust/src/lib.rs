@@ -10,10 +10,7 @@ use crate::error::{OracleError, OracleResult};
 use crate::log::{post_log, pre_log};
 use processor::process_instruction;
 use solana_program::program_error::ProgramError;
-use solana_program::pubkey::Pubkey;
-use solana_program::sysvar::slot_history::AccountInfo;
 use solana_program::{custom_heap_default, custom_panic_default, entrypoint::deserialize};
-use std::panic::catch_unwind;
 
 //Below is a high lever description of the rust/c setup.
 

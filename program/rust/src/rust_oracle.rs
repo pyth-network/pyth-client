@@ -1,6 +1,5 @@
 use super::c_entrypoint_wrapper;
-use super::c_oracle_header;
-use crate::error::{OracleError, OracleResult};
+use crate::error::OracleResult;
 use solana_program::pubkey::Pubkey;
 use solana_program::sysvar::slot_history::AccountInfo;
 

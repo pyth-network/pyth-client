@@ -1,4 +1,5 @@
-use super::c_oracle_header;
+use super::c_oracle_header::TIME_MACHINE_STRUCT_SIZE;
+use ::std::mem::size_of;
 #[derive(Debug, Clone)]
 #[repr(C)]
 /// this wraps multiple SMA and tick trackers, and includes all the state
@@ -13,10 +14,10 @@ pub struct TimeMachineWrapper {
 ///defined in Rust
 fn c_time_machine_size_is_correct() {
     assert_eq!(
-        ::std::mem::size_of::<TimeMachineWrapper>(),
-        c_oracle_header::TIME_MACHINE_STRUCT_SIZE.try_into().unwrap(),
+        size_of::<TimeMachineWrapper>(),
+        TIME_MACHINE_STRUCT_SIZE.try_into().unwrap(),
         "expected TIME_MACHINE_STRUCT_SIZE ({}) in oracle.h to the same as the size of TimeMachineWrapper ({})",
-        c_oracle_header::TIME_MACHINE_STRUCT_SIZE,
-        ::std::mem::size_of::<TimeMachineWrapper>()
+        TIME_MACHINE_STRUCT_SIZE,
+        size_of::<TimeMachineWrapper>()
     );
 }

@@ -6,7 +6,7 @@ use crate::c_oracle_header::{
 use crate::error::{OracleError, OracleResult};
 use crate::rust_oracle::{update_price, update_version};
 use ::std::mem::size_of;
-use borsh::{BorshDeserialize, BorshSerialize};
+use borsh::BorshDeserialize;
 use solana_program::pubkey::Pubkey;
 use solana_program::sysvar::slot_history::AccountInfo;
 ///dispatch to the right instruction in the oracle
