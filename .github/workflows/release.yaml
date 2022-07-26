@@ -1,0 +1,44 @@
+name: Release smart contract
+
+on:
+  release:
+    types: [created]
+
+env:
+  DOCKER_HUB: docker.io
+  DOCKER_USER: ${{ secrets.DOCKER_IO_USER }}
+  IS_ONCHAIN_RELEASE: ${{
+    startsWith( github.ref, 'refs/tags/devnet-' ) ||
+    startsWith( github.ref, 'refs/tags/testnet-' ) ||
+    startsWith( github.ref, 'refs/tags/mainnet-' ) }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Initialize Environment
+        run: |
+          set -eux
+          REPO_NAME="$( basename "${GITHUB_REPOSITORY}" )"
+          REF_NAME="$( basename "${GITHUB_REF}" )"
+          echo "DOCKER_IMAGE=${REPO_NAME}:${REF_NAME}" >> "${GITHUB_ENV}"
+      - name: Release binary
+        run: |
+          set -eux
+          PUB_IMAGE="pythfoundation/pyth-client:pythd-v2.14.0"
+          docker pull "${PUB_IMAGE}"
+          docker create -ti --name instance "${PUB_IMAGE}" bash
+          docker cp instance:/home/pyth/pyth-client/target/deploy/pyth_oracle.so .
+          docker rm -f instance
+
+      - name : Publish binary
+        if : env.IS_RELEASE == 'true'
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ./pyth_oracle.so
+          asset_name: pyth_oracle.so
+          tag: ${{ github.ref }}
+          overwrite: true
