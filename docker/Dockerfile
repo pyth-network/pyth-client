@@ -1,6 +1,6 @@
 ARG SOLANA_VERSION
 ARG SOLANA_DOCKER_IMAGE_HASH
-FROM solanalabs/solana:v${SOLANA_VERSION}@sha256:${SOLANA_DOCKER_IMAGE_HASH}
+FROM solanalabs/solana:v${SOLANA_VERSION}@sha256:${SOLANA_DOCKER_IMAGE_HASH} AS BUILD_STAGE
 
 # Redeclare SOLANA_VERSION in the new build stage.
 # Persist in env for docker run & inspect.
@@ -57,7 +57,7 @@ export PYTHONPATH=\"\${PYTHONPATH:+\$PYTHONPATH:}\${HOME}/pyth-client\"\n\
 COPY --chown=pyth:pyth . pyth-client/
 
 # Build off-chain binaries.
-RUN cd pyth-client && ./scripts/build.sh
+# RUN cd pyth-client && ./scripts/build.sh
 
 
 # Copy solana sdk and apply patch.
@@ -67,7 +67,10 @@ RUN ./pyth-client/scripts/patch-solana.sh
 
 # Build and test the oracle program.
 RUN cd pyth-client && ./scripts/build-bpf.sh .
-RUN /bin/bash -l -c "pytest-3 --pyargs pyth"
+# RUN /bin/bash -l -c "pytest-3 --pyargs pyth"
 
 ENTRYPOINT []
 CMD []
+
+FROM scratch AS EXPORT_STAGE
+COPY --from=BUILD_STAGE /home/pyth/pyth-client/target/deploy/pyth_oracle.so /

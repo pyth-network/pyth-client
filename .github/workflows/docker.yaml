@@ -38,6 +38,7 @@ jobs:
             --build-arg SOLANA_VERSION="${SOLANA_VERSION}" \
             --build-arg SOLANA_DOCKER_IMAGE_HASH="${SOLANA_DOCKER_IMAGE_HASH}" \
             --tag "${DOCKER_IMAGE}" \
+            --output out .
             .
 
       - name: Publish Docker Image
@@ -51,6 +52,16 @@ jobs:
             docker image push "${PUB_IMAGE}"
           }
           echo "${{ secrets.DOCKER_IO_PASS }}" | publish
+        -name : Publish binary
+         if : env.IS_RELEASE == 'true'
+         uses: svenstaro/upload-release-action@v2
+         with:
+            repo_token: ${{ secrets.GITHUB_TOKEN }}
+            file: ./out/pyth_oracle.so
+            asset_name: oracle
+            tag: ${{ github.ref }}
+            overwrite: true
+            body: "This is my release text"
   pinning:
     runs-on: ubuntu-latest
     steps:
