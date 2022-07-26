@@ -56,7 +56,7 @@ jobs:
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ./pyth_oracle.so
+          file: ./out/pyth_oracle.so
           asset_name: oracle
           tag: ${{ github.ref }}
           overwrite: true
