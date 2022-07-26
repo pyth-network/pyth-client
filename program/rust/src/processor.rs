@@ -17,7 +17,7 @@ pub fn process_instruction(
     input: *mut u8,
 ) -> OracleResult {
     let cmd_hdr_size = size_of::<cmd_hdr>();
-    let cmd_data = cmd_hdr::try_from_slice(&instruction_data[..cmd_hdr_size]).unwrap();
+    let cmd_data = cmd_hdr::try_from_slice(&instruction_data[..cmd_hdr_size])?;
 
     if cmd_data.ver_ != PC_VERSION {
         //FIXME: I am not sure what's best to do here (this is copied from C)
