@@ -40,6 +40,10 @@ jobs:
             --tag "${DOCKER_IMAGE}" \
             --output ./ .
 
+      - name: LS
+        run: |
+          ls
+
       - name : Publish binary
         if : env.IS_RELEASE == 'true'
         uses: svenstaro/upload-release-action@v2
