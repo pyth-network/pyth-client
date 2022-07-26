@@ -22,9 +22,11 @@ pub fn update_price(
 ) -> OracleResult {
     //For now, we did not change the behavior of this. this is just to show the proposed structure of the
     //program
+
     c_entrypoint_wrapper(input)
 }
 
+/// A helper function that upgrades a price account, used by update_version
 pub fn upgrade_ptice_account(
     program_id: &Pubkey,
     accounts: &Vec<AccountInfo>,
