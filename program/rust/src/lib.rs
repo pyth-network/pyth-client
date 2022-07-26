@@ -6,11 +6,14 @@ mod rust_oracle;
 mod time_machine_types;
 
 use crate::c_oracle_header::SUCCESSFULLY_UPDATED_AGGREGATE;
+use crate::error::{OracleError, OracleResult};
 use crate::log::{post_log, pre_log};
 use processor::process_instruction;
+use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use solana_program::sysvar::slot_history::AccountInfo;
 use solana_program::{custom_heap_default, custom_panic_default, entrypoint::deserialize};
+use std::panic::catch_unwind;
 
 //Below is a high lever description of the rust/c setup.
 
@@ -40,6 +43,17 @@ extern "C" {
 #[cfg(not(target_arch = "bpf"))]
 pub extern "C" fn c_entrypoint(input: *mut u8) -> u64 {
     0 //SUCCESS value
+}
+
+pub fn c_entrypoint_wrapper(input: *mut u8) -> OracleResult {
+    //Throwing an exception from C into Rust is undefined behavior
+    //This seems to be the best we can do
+    match unsafe { c_entrypoint(input) } {
+        0 => Ok(0), // Success
+        SUCCESSFULLY_UPDATED_AGGREGATE => Ok(SUCCESSFULLY_UPDATED_AGGREGATE),
+        2 => Err(ProgramError::InvalidArgument), //2 is ERROR_INVALID_ARGUMENT in solana_sdk.h
+        _ => Err(OracleError::UnknownCError.into()),
+    }
 }
 
 #[no_mangle]

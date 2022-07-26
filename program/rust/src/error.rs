@@ -1,5 +1,4 @@
 //! Error types
-
 use solana_program::program_error::ProgramError;
 use std::result::Result;
 use thiserror::Error;
@@ -13,8 +12,14 @@ pub enum OracleError {
     #[error("Generic")]
     Generic = 600,
     /// integer casting error
-    #[error("IntegerCasting")]
+    #[error("IntegerCastingError")]
     IntegerCastingError = 601,
+
+    #[error("UnknownCError")]
+    UnknownCError = 602,
+
+    #[error("UnknownCPanic")]
+    UnknownCPanic = 603,
 }
 
 impl From<OracleError> for ProgramError {

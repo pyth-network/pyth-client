@@ -1,4 +1,4 @@
-use super::c_entrypoint;
+use super::c_entrypoint_wrapper;
 use super::c_oracle_header;
 use crate::error::{OracleError, OracleResult};
 use solana_program::pubkey::Pubkey;
@@ -13,7 +13,7 @@ pub fn update_price(
 ) -> OracleResult {
     //For now, we did not change the behavior of this. this is just to show the proposed structure of the
     //program
-    Ok(unsafe { c_entrypoint(input) })
+    c_entrypoint_wrapper(input)
 }
 /// has version number/ account type dependant logic to make sure the given account is compatible
 /// with the current version

@@ -1,4 +1,4 @@
-use crate::c_entrypoint;
+use crate::c_entrypoint_wrapper;
 use crate::c_oracle_header::{
     cmd_hdr, command_t_e_cmd_agg_price, command_t_e_cmd_upd_account_version,
     command_t_e_cmd_upd_price, command_t_e_cmd_upd_price_no_fail_on_error, PC_VERSION,
@@ -39,6 +39,6 @@ pub fn process_instruction(
         command_t_e_cmd_upd_account_version => {
             update_version(program_id, &accounts, &instruction_data)
         }
-        _ => Ok(unsafe { c_entrypoint(input) }),
+        _ => c_entrypoint_wrapper(input),
     }
 }
