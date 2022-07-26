@@ -1,16 +1,16 @@
 mod c_oracle_header;
 mod error;
 mod log;
+mod processor;
 mod rust_oracle;
 mod time_machine_types;
-mod processor;
 
 use crate::c_oracle_header::SUCCESSFULLY_UPDATED_AGGREGATE;
 use crate::log::{post_log, pre_log};
-use solana_program::{custom_heap_default, custom_panic_default, entrypoint::deserialize};
 use processor::process_instruction;
 use solana_program::pubkey::Pubkey;
 use solana_program::sysvar::slot_history::AccountInfo;
+use solana_program::{custom_heap_default, custom_panic_default, entrypoint::deserialize};
 
 //Below is a high lever description of the rust/c setup.
 
@@ -51,12 +51,7 @@ pub extern "C" fn entrypoint(input: *mut u8) -> u64 {
         _ => {}
     }
 
-    let c_ret_val = process_instruction(
-        program_id,
-        &accounts, 
-        instruction_data,  
-        input
-    );
+    let c_ret_val = process_instruction(program_id, &accounts, instruction_data, input);
 
     match post_log(c_ret_val, &accounts) {
         Err(error) => return error.into(),
