@@ -38,7 +38,7 @@ jobs:
             --build-arg SOLANA_VERSION="${SOLANA_VERSION}" \
             --build-arg SOLANA_DOCKER_IMAGE_HASH="${SOLANA_DOCKER_IMAGE_HASH}" \
             --tag "${DOCKER_IMAGE}" \
-            --output out .
+            --output ./out .
 
       - name : Publish binary
         if : env.IS_RELEASE == 'true'
