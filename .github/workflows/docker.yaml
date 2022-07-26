@@ -34,29 +34,21 @@ jobs:
       - name: Build Docker Image
         run: |
           set -eux 
-          pwd 
           docker build \
             --file docker/Dockerfile \
             --build-arg SOLANA_VERSION="${SOLANA_VERSION}" \
             --build-arg SOLANA_DOCKER_IMAGE_HASH="${SOLANA_DOCKER_IMAGE_HASH}" \
             --tag "${DOCKER_IMAGE}" \
-            --output type=local,dest=./out \
             .
-          echo "HERE"
-          ls out
-
-      - name: LS
-        run: |
-          ls
-          ls docker
-          pwd
-
+          docker create -ti --name instance "${DOCKER_IMAGE}" bash
+          docker cp instance:/home/pyth/pyth-client/target/deploy/pyth_oracle.so ./out/
+          docker rm -f instance
       - name : Publish binary
         if : env.IS_RELEASE == 'true'
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ./out/home/pyth/pyth-client/target/deploy/pyth_oracle.so
+          file: ./out/pyth_oracle.so
           asset_name: pyth_oracle.so
           tag: ${{ github.ref }}
           overwrite: true

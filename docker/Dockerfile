@@ -57,7 +57,7 @@ export PYTHONPATH=\"\${PYTHONPATH:+\$PYTHONPATH:}\${HOME}/pyth-client\"\n\
 COPY --chown=pyth:pyth . pyth-client/
 
 # Build off-chain binaries.
-RUN cd pyth-client && ./scripts/build.sh
+# RUN cd pyth-client && ./scripts/build.sh
 
 
 # Copy solana sdk and apply patch.
@@ -67,7 +67,7 @@ RUN ./pyth-client/scripts/patch-solana.sh
 
 # Build and test the oracle program.
 RUN cd pyth-client && ./scripts/build-bpf.sh .
-RUN /bin/bash -l -c "pytest-3 --pyargs pyth"
+# RUN /bin/bash -l -c "pytest-3 --pyargs pyth"
 
 ENTRYPOINT []
 CMD []
