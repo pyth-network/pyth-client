@@ -26,6 +26,7 @@ jobs:
       - name: Initialize Environment
         run: |
           set -eux
+          DOCKER_BUILDKIT=1
           REPO_NAME="$( basename "${GITHUB_REPOSITORY}" )"
           REF_NAME="$( basename "${GITHUB_REF}" )"
           echo "DOCKER_IMAGE=${REPO_NAME}:${REF_NAME}" >> "${GITHUB_ENV}"
