@@ -34,7 +34,7 @@ jobs:
         run: |
           set -eux 
           pwd 
-          docker build 
+          docker build \
             --file docker/Dockerfile \
             --build-arg SOLANA_VERSION="${SOLANA_VERSION}" \
             --build-arg SOLANA_DOCKER_IMAGE_HASH="${SOLANA_DOCKER_IMAGE_HASH}" \
