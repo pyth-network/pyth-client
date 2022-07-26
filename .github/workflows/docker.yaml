@@ -41,18 +41,18 @@ jobs:
             --tag "${DOCKER_IMAGE}" \
             .
           docker create -ti --name instance "${DOCKER_IMAGE}" bash
-          docker cp instance:/home/pyth/pyth-client/target/deploy/pyth_oracle.so ./out/
+          docker cp instance:/home/pyth/pyth-client/target/deploy/pyth_oracle.so .
           docker rm -f instance
       - name : Publish binary
         if : env.IS_RELEASE == 'true'
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ./out/pyth_oracle.so
+          file: ./pyth_oracle.so
           asset_name: pyth_oracle.so
           tag: ${{ github.ref }}
           overwrite: true
-          body: "This is my release text"
+          
   pinning:
     runs-on: ubuntu-latest
     steps:
