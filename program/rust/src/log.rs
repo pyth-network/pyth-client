@@ -71,6 +71,9 @@ pub fn pre_log(accounts: &[AccountInfo], instruction_data: &[u8]) -> ProgramResu
         command_t_e_cmd_upd_product => {
             msg!("UpdateProduct");
         }
+        command_t_e_cmd_upd_account_version => {
+            msg!("UpdateAccountVersion");
+        }
         _ => {
             msg!("UnrecognizedInstruction");
             return Err(OracleError::Generic.into());
