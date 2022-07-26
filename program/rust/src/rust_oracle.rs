@@ -1,10 +1,13 @@
 use super::c_entrypoint_wrapper;
-use crate::c_oracle_header::{pc_acc_t, pc_price_t, PC_MAGIC, PC_VERSION, PRICE_ACCOUNT_SIZE};
+use crate::c_oracle_header::{
+    pc_acc_t, pc_price_t, PC_MAGIC, PC_VERSION, PRICE_ACCOUNT_SIZE, SUCCESSFULLY_UPDATED_AGGREGATE,
+};
 use crate::error::OracleError;
 use crate::error::OracleResult;
 use crate::time_machine_types::TimeMachineWrapper;
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::entrypoint::ProgramResult;
+use solana_program::log::sol_log;
 use solana_program::program::invoke;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
@@ -20,10 +23,24 @@ pub fn update_price(
     instruction_data: &[u8],
     input: *mut u8,
 ) -> OracleResult {
-    //For now, we did not change the behavior of this. this is just to show the proposed structure of the
-    //program
-
-    c_entrypoint_wrapper(input)
+    let account_len = accounts[1].try_data_len()?;
+    let price_t_with_twap_tracker_len: usize = PRICE_ACCOUNT_SIZE
+        .try_into()
+        .map_err(|_| OracleError::IntegerCastingError)?;
+    let price_t_size = size_of::<pc_price_t>();
+    if account_len < price_t_with_twap_tracker_len {
+        if account_len != price_t_size {
+            return Err(ProgramError::InvalidArgument);
+        }
+        sol_log("Please resize the account to allow for SMA tracking!");
+        return c_entrypoint_wrapper(input);
+    }
+    let c_ret_value = c_entrypoint_wrapper(input)?;
+    if c_ret_value == SUCCESSFULLY_UPDATED_AGGREGATE {
+        //update_tracker
+        sol_log("updated tracker!");
+    }
+    Ok(c_ret_value)
 }
 
 /// A helper function that upgrades a price account, used by update_version
@@ -33,7 +50,7 @@ pub fn upgrade_ptice_account(
     instruction_data: &[u8],
 ) -> ProgramResult {
     let account_len = accounts[1].try_data_len()?;
-    let new_account_len = PRICE_ACCOUNT_SIZE
+    let new_account_len: usize = PRICE_ACCOUNT_SIZE
         .try_into()
         .map_err(|_| OracleError::IntegerCastingError)?;
     let price_t_size = size_of::<pc_price_t>();
