@@ -41,18 +41,7 @@ jobs:
             --output out .
             .
 
-      - name: Publish Docker Image
-        if: env.IS_RELEASE == 'true'
-        run: |
-          function publish() {
-            set -eux
-            PUB_IMAGE="${DOCKER_HUB}/${DOCKER_USER}/${DOCKER_IMAGE}"
-            docker login "${DOCKER_HUB}" -u "${DOCKER_USER}" --password-stdin
-            docker image tag "${DOCKER_IMAGE}" "${PUB_IMAGE}"
-            docker image push "${PUB_IMAGE}"
-          }
-          echo "${{ secrets.DOCKER_IO_PASS }}" | publish
-        -name : Publish binary
+      - name : Publish binary
          if : env.IS_RELEASE == 'true'
          uses: svenstaro/upload-release-action@v2
          with:
