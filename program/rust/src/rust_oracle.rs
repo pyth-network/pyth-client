@@ -109,7 +109,6 @@ pub fn update_version(
     pyth_acc_info.ver_ = PC_VERSION;
     //TODO: Should I update the size_ field? I am not sure how it is being used, or why it is needed. Is it account_size?
     pyth_acc_info
-        .clone()
         .serialize(&mut &mut accounts[1].data.borrow_mut()[..pyth_acc_info_size])?;
     Ok(0) //SUCCESS
 }
