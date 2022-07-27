@@ -124,11 +124,11 @@ def test_publish(solana_test_validator, pyth_dir,
     assert after['publisher_accounts'][0]['conf'] == 7
     assert after['publisher_accounts'][0]['status'] == 'trading'
 
-    resize_account(before["account"])
+    resize_account(pyth_init_price['LTC'])
     time.sleep(20)
     #defined in oracle.h
     new_accounr_size = 6176
-    assert get_account_size(before["account"]) >= 6176
+    assert get_account_size(pyth_init_price['LTC']) >= 6176
     time.sleep(20)
 
 
