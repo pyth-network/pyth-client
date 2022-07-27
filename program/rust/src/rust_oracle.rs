@@ -44,7 +44,7 @@ pub fn update_price(
 }
 
 /// A helper function that upgrades a price account, used by update_version
-pub fn upgrade_ptice_account(
+pub fn upgrade_price_account(
     program_id: &Pubkey,
     accounts: &Vec<AccountInfo>,
     instruction_data: &[u8],
@@ -98,7 +98,7 @@ pub fn update_version(
 
     //update the accounts depending on type
     match pyth_acc_info.type_ {
-        PC_ACCTYPE_PRICE => upgrade_ptice_account(program_id, &accounts, instruction_data)?,
+        PC_ACCTYPE_PRICE => upgrade_price_account(program_id, &accounts, instruction_data)?,
         _ => (),
     }
 
