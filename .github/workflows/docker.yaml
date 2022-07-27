@@ -1,4 +1,4 @@
-name: Docker 
+name: Docker
 
 on:
   push:
@@ -10,13 +10,11 @@ env:
   SOLANA_DOCKER_IMAGE_HASH: 78900501ccd1ade1bf088fa0830c46bc6095c6799469ff9b335e1f02d957e53a
   DOCKER_HUB: docker.io
   DOCKER_USER: ${{ secrets.DOCKER_IO_USER }}
-  IS_ONCHAIN_RELEASE: ${{
+  IS_RELEASE: ${{
+    startsWith( github.ref, 'refs/tags/pythd-' ) ||
     startsWith( github.ref, 'refs/tags/devnet-' ) ||
     startsWith( github.ref, 'refs/tags/testnet-' ) ||
     startsWith( github.ref, 'refs/tags/mainnet-' ) }}
-  IS_RELEASE: ${{
-    startsWith( github.ref, 'refs/tags/pythd-' ) || 
-    env.IS_ONCHAIN_RELEASE }}
 
 jobs:
   build:
@@ -24,15 +22,17 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+
       - name: Initialize Environment
         run: |
           set -eux
           REPO_NAME="$( basename "${GITHUB_REPOSITORY}" )"
           REF_NAME="$( basename "${GITHUB_REF}" )"
           echo "DOCKER_IMAGE=${REPO_NAME}:${REF_NAME}" >> "${GITHUB_ENV}"
+
       - name: Build Docker Image
         run: |
-          set -eux 
+          set -eux
           docker build \
             --file docker/Dockerfile \
             --build-arg SOLANA_VERSION="${SOLANA_VERSION}" \
@@ -53,14 +53,14 @@ jobs:
           echo "${{ secrets.DOCKER_IO_PASS }}" | publish
 
       - name : Get binary from docker
-        if : env.IS_ONCHAIN_RELEASE == 'true'
+        if : env.IS_RELEASE == 'true'
         run : | 
             docker create -ti --name container "${DOCKER_IMAGE}" bash
             docker cp container:/home/pyth/pyth-client/target/deploy/pyth_oracle.so .
             docker rm -f container
 
       - name : Publish binary
-        if : env.IS_ONCHAIN_RELEASE == 'true'
+        if : env.IS_RELEASE == 'true'
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
