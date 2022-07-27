@@ -40,17 +40,17 @@ jobs:
             --tag "${DOCKER_IMAGE}" \
             .
 
-      - name: Publish Docker Image
-        if: env.IS_RELEASE == 'true'
-        run: |
-          function publish() {
-            set -eux
-            PUB_IMAGE="${DOCKER_HUB}/${DOCKER_USER}/${DOCKER_IMAGE}"
-            docker login "${DOCKER_HUB}" -u "${DOCKER_USER}" --password-stdin
-            docker image tag "${DOCKER_IMAGE}" "${PUB_IMAGE}"
-            docker image push "${PUB_IMAGE}"
-          }
-          echo "${{ secrets.DOCKER_IO_PASS }}" | publish
+      # - name: Publish Docker Image
+      #   if: env.IS_RELEASE == 'true'
+      #   run: |
+      #     function publish() {
+      #       set -eux
+      #       PUB_IMAGE="${DOCKER_HUB}/${DOCKER_USER}/${DOCKER_IMAGE}"
+      #       docker login "${DOCKER_HUB}" -u "${DOCKER_USER}" --password-stdin
+      #       docker image tag "${DOCKER_IMAGE}" "${PUB_IMAGE}"
+      #       docker image push "${PUB_IMAGE}"
+      #     }
+      #     echo "${{ secrets.DOCKER_IO_PASS }}" | publish
 
       - name : Get binary from docker
         if : env.IS_RELEASE == 'true'
@@ -76,4 +76,3 @@ jobs:
         uses: actions/checkout@v2
       - run: chmod 755 ./scripts/check-docker-pin.sh
       - run: ./scripts/check-docker-pin.sh
-      
