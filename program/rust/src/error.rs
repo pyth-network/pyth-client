@@ -17,6 +17,9 @@ pub enum OracleError {
     /// c_entrypoint returned an unexpected value
     #[error("UnknownCError")]
     UnknownCError = 602,
+    /// c_entrypoint returned an unexpected value
+    #[error("IncorrectMagicNumber")]
+    IncorrectMagicNumber = 603,
 }
 
 impl From<OracleError> for ProgramError {

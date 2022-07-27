@@ -93,7 +93,7 @@ pub fn update_version(
     //check magic number
     if pyth_acc_info.magic_ != PC_MAGIC {
         //TODO: once we settle on error stuff fix this
-        panic!("incorrect magic number");
+        return Err(OracleError::IncorrectMagicNumber.into());
     }
 
     //update the accounts depending on type
