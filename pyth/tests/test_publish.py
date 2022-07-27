@@ -8,6 +8,8 @@ from solana.transaction import AccountMeta, TransactionInstruction, Transaction
 from solana.keypair import Keypair
 from solana.rpc.api import Client
 
+import asyncio
+
 import json
 import time
 from subprocess import check_call, check_output
@@ -29,6 +31,64 @@ def test_publish(solana_test_validator, pyth_dir,
         output = output.decode('ascii')
         output = json.loads(output)
         return output['price_accounts'][0]
+    
+    def resize_account(price_acc_address):
+        """
+        given a string with the pubkey of a price accountm it calls the resize instruction of the Oracle on it
+        """
+        #constants from oracle.h
+        PROGRAM_VERSION = 2 #TODO: update this
+        COMMAND_UPD_ACCOUNT = 14
+        SYSTEM_PROGRAM = "11111111111111111111111111111111"
+
+        #update version of price accounts to make sure they resize
+        layout = Struct("version" / Int32ul, "command" / Int32sl)
+        data = layout.build(dict(version=PROGRAM_VERSION, command=COMMAND_UPD_ACCOUNT))
+        funding_key = PublicKey(solana_keygen[0])
+        price_key = PublicKey(price_acc_address)
+        system_key = PublicKey(SYSTEM_PROGRAM)
+        print("program id is", solana_program_deploy)
+        resize_instruction = TransactionInstruction(
+            data=data,
+            keys=[
+                AccountMeta(pubkey=funding_key, is_signer=True, is_writable=True),
+                AccountMeta(pubkey=price_key, is_signer=False, is_writable=True),
+                AccountMeta(pubkey=system_key, is_signer=False, is_writable=False),
+            ],
+            program_id = PublicKey(solana_program_deploy),
+        )
+        txn = Transaction().add(resize_instruction)
+        solana_client = Client("http://localhost:8899")
+        key_file = open(solana_keygen[1])
+        key_data = json.load(key_file)
+        key_file.close()
+
+        sender = Keypair.from_secret_key(key_data)
+        txn.sign(sender)
+        solana_client.send_transaction(txn, sender)
+        #solana_client.close()
+
+
+    def base64_len_to_byte_len(base64_len):
+        #note that 3 bytes are the same number of bits as four base64 characters.
+        #Assuming that base64_len is using the minimum number of characters
+        #then the number of characters would be ceiling(8 * byte_len / 6)
+        #meaning that byte_len is floor(6 * base64_len / 8)
+        return base64_len * 3 // 4
+
+    def get_account_size(acc_address):
+        """
+        given a string with the pubkey of an account, resize it
+        """
+        PublicKey(acc_address)
+        solana_client = Client("http://localhost:8899")
+        base64_len = len(solana_client.get_account_info(PublicKey(acc_address), encoding = 'base64')['result']['value']['data'][0])
+        return base64_len_to_byte_len(base64_len)
+        
+
+
+
+
 
     before = get_price_acct()
     assert before['publisher_accounts'][0]['price'] == 0
@@ -59,45 +119,20 @@ def test_publish(solana_test_validator, pyth_dir,
     check_call(cmd)
 
     time.sleep(20)
-
     after = get_price_acct()
     assert after['publisher_accounts'][0]['price'] == 150
     assert after['publisher_accounts'][0]['conf'] == 7
     assert after['publisher_accounts'][0]['status'] == 'trading'
-    
-    #constants from oracle.h
-    PROGRAM_VERSION = 2 #TODO: update this
-    COMMAND_UPD_ACCOUNT = 14
-    SYSTEM_PROGRAM = "11111111111111111111111111111111"
 
-    #update version of price accounts to make sure they resize
-    layout = Struct("version" / Int32ul, "command" / Int32sl)
-    data = layout.build(dict(version=PROGRAM_VERSION, command=COMMAND_UPD_ACCOUNT))
-    funding_key = PublicKey(solana_keygen[0])
-    price_key = PublicKey(before["account"])
-    system_key = PublicKey(SYSTEM_PROGRAM)
-    print("program id is", solana_program_deploy)
-    resize_instruction = TransactionInstruction(
-        data=data,
-        keys=[
-            AccountMeta(pubkey=funding_key, is_signer=True, is_writable=True),
-            AccountMeta(pubkey=price_key, is_signer=False, is_writable=True),
-            AccountMeta(pubkey=system_key, is_signer=False, is_writable=False),
-        ],
-        program_id = PublicKey(solana_program_deploy),
-    )
-    print("key pair", type(solana_keygen[1]), solana_keygen[1])
-    txn = Transaction().add(resize_instruction)
-    solana_client = Client("http://localhost:8899")
-    key_file = open(solana_keygen[1])
-    key_data = json.load(key_file)
-    key_file.close()
+    resize_account(before["account"])
+    time.sleep(20)
+    #defined in oracle.h
+    new_accounr_size = 6176
+    assert get_account_size(before["account"]) >= 6176
+    time.sleep(20)
 
-    sender = Keypair.from_secret_key(key_data)
-    txn.sign(sender)
-    print(solana_client.send_transaction(txn, sender))
 
-    time.sleep(40)
+
     
     #try adding a new price to the resized accounts
     cmd = [
