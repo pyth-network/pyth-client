@@ -61,7 +61,7 @@ pub fn upgrade_price_account(
             let lamports_needed: u64 = rent
                 .minimum_balance(new_account_len)
                 .saturating_sub(accounts[1].lamports());
-            //transfer lamports if nescissary
+            //transfer lamports if necessary
             if lamports_needed > 0 {
                 let transfer_instruction =
                     transfer(accounts[0].key, accounts[1].key, lamports_needed);
