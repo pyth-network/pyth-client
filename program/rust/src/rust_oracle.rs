@@ -7,7 +7,7 @@ use crate::error::OracleResult;
 use crate::time_machine_types::TimeMachineWrapper;
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::entrypoint::ProgramResult;
-use solana_program::log::sol_log;
+use solana_program::msg;
 use solana_program::program::invoke;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
@@ -32,13 +32,13 @@ pub fn update_price(
         if account_len != price_t_size {
             return Err(ProgramError::InvalidArgument);
         }
-        sol_log("Please resize the account to allow for SMA tracking!");
+        msg!("Please resize the account to allow for SMA tracking!");
         return c_entrypoint_wrapper(input);
     }
     let c_ret_value = c_entrypoint_wrapper(input)?;
     if c_ret_value == SUCCESSFULLY_UPDATED_AGGREGATE {
         //update_tracker
-        sol_log("updated tracker!");
+        msg!("updated tracker!");
     }
     Ok(c_ret_value)
 }
