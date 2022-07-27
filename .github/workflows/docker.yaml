@@ -68,3 +68,11 @@ jobs:
           asset_name: pyth_oracle.so
           tag: ${{ github.ref }}
           overwrite: true
+
+  pinning:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v2
+      - run: chmod 755 ./scripts/check-docker-pin.sh
+      - run: ./scripts/check-docker-pin.sh
