@@ -1,12 +1,21 @@
 use super::c_oracle_header::TIME_MACHINE_STRUCT_SIZE;
 use ::std::mem::size_of;
-#[derive(Debug, Clone)]
+use borsh::{BorshDeserialize, BorshSerialize};
+#[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
 #[repr(C)]
 /// this wraps multiple SMA and tick trackers, and includes all the state
 /// used by the time machine
 pub struct TimeMachineWrapper {
     //Place holder with the size of the fields I am planning to add
     place_holder: [u8; 1864],
+}
+
+impl Default for TimeMachineWrapper {
+    fn default() -> TimeMachineWrapper {
+        TimeMachineWrapper {
+            place_holder: [0; 1864],
+        }
+    }
 }
 
 #[test]

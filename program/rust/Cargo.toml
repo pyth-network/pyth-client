@@ -15,7 +15,7 @@ bindgen = "0.60.1"
 
 [dependencies]
 solana-program = "=1.10.29"
-borsh = "0.9"
+borsh = { version = "0.9", features = ["const-generics"] }
 thiserror = "1.0"
 
 
