@@ -15,7 +15,7 @@ env:
     startsWith( github.ref, 'refs/tags/testnet-' ) ||
     startsWith( github.ref, 'refs/tags/mainnet-' ) }}
   IS_RELEASE: ${{
-    {{ startsWith( github.ref, 'refs/tags/pythd-' ) || 
+    startsWith( github.ref, 'refs/tags/pythd-' ) || 
     env.IS_ONCHAIN_RELEASE }}
 
 jobs:
