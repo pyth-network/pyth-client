@@ -51,6 +51,24 @@ jobs:
             docker image push "${PUB_IMAGE}"
           }
           echo "${{ secrets.DOCKER_IO_PASS }}" | publish
+
+      - name : Get binary from docker
+        if : env.IS_RELEASE == 'true'
+        run : |
+            docker create -ti --name container "${DOCKER_IMAGE}" bash
+            docker cp container:/home/pyth/pyth-client/target/deploy/pyth_oracle.so .
+            docker rm -f container
+
+      - name : Publish binary
+        if : env.IS_RELEASE == 'true'
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ./pyth_oracle.so
+          asset_name: pyth_oracle.so
+          tag: ${{ github.ref }}
+          overwrite: true
+
   pinning:
     runs-on: ubuntu-latest
     steps:
