@@ -1,8 +1,9 @@
-name: Release 
+name: Docker 
 
 on:
-  release:
-    types: [created]
+  push:
+  pull_request:
+    branches: [ main ]
 
 env:
   SOLANA_VERSION: 1.10.29
@@ -14,10 +15,8 @@ env:
     startsWith( github.ref, 'refs/tags/testnet-' ) ||
     startsWith( github.ref, 'refs/tags/mainnet-' ) }}
   IS_RELEASE: ${{
-    startsWith( github.ref, 'refs/tags/pythd-' ) ||
-    startsWith( github.ref, 'refs/tags/devnet-' ) ||
-    startsWith( github.ref, 'refs/tags/testnet-' ) ||
-    startsWith( github.ref, 'refs/tags/mainnet-' ) }}
+    ${IS_ONCHAIN_RELEASE} ||
+     startsWith( github.ref, 'refs/tags/pythd-' )}}
 
 jobs:
   build:
