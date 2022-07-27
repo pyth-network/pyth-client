@@ -7,6 +7,7 @@ from solana.publickey import PublicKey
 from solana.transaction import AccountMeta, TransactionInstruction, Transaction
 from solana.keypair import Keypair
 from solana.rpc.api import Client
+import base64
 
 import asyncio
 
@@ -66,15 +67,6 @@ def test_publish(solana_test_validator, pyth_dir,
         sender = Keypair.from_secret_key(key_data)
         txn.sign(sender)
         solana_client.send_transaction(txn, sender)
-        #solana_client.close()
-
-
-    def base64_len_to_byte_len(base64_len):
-        #note that 3 bytes are the same number of bits as four base64 characters.
-        #Assuming that base64_len is using the minimum number of characters
-        #then the number of characters would be ceiling(8 * byte_len / 6)
-        #meaning that byte_len is floor(6 * base64_len / 8)
-        return base64_len * 3 // 4
 
     def get_account_size(acc_address):
         """
@@ -82,13 +74,10 @@ def test_publish(solana_test_validator, pyth_dir,
         """
         PublicKey(acc_address)
         solana_client = Client("http://localhost:8899")
-        base64_len = len(solana_client.get_account_info(PublicKey(acc_address), encoding = 'base64')['result']['value']['data'][0])
-        return base64_len_to_byte_len(base64_len)
+        data = solana_client.get_account_info(PublicKey(acc_address), encoding = 'base64')['result']['value']['data'][0]
+        data = base64.b64decode(data)
+        return len(data)
         
-
-
-
-
 
     before = get_price_acct()
     assert before['publisher_accounts'][0]['price'] == 0
@@ -127,10 +116,9 @@ def test_publish(solana_test_validator, pyth_dir,
     resize_account(pyth_init_price['LTC'])
     time.sleep(20)
     #defined in oracle.h
-    new_accounr_size = 6176
-    assert get_account_size(pyth_init_price['LTC']) >= 6176
+    new_account_size = 6176
+    assert get_account_size(pyth_init_price['LTC']) == new_account_size
     time.sleep(20)
-
 
 
     
