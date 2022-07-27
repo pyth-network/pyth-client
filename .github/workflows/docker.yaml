@@ -76,3 +76,4 @@ jobs:
         uses: actions/checkout@v2
       - run: chmod 755 ./scripts/check-docker-pin.sh
       - run: ./scripts/check-docker-pin.sh
+      
