@@ -175,7 +175,7 @@ def solana_keygen():
 def solana_airdrop(solana_test_validator, solana_keygen):
 
     cmd = [
-        'solana', 'airdrop', '1000', solana_keygen[0],
+        'solana', 'airdrop', '100', solana_keygen[0],
         '--commitment', 'finalized',
         '--url', 'localhost',
         '--keypair', solana_keygen[1],
