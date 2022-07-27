@@ -17,7 +17,7 @@ pub enum OracleError {
     /// c_entrypoint returned an unexpected value
     #[error("UnknownCError")]
     UnknownCError = 602,
-    /// c_entrypoint returned an unexpected value
+    /// magic number of an account is incorrect
     #[error("IncorrectMagicNumber")]
     IncorrectMagicNumber = 603,
 }
