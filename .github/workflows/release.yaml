@@ -34,7 +34,7 @@ jobs:
           docker rm -f instance
 
       - name : Publish binary
-        if : env.IS_RELEASE == 'true'
+        if : env.IS_ONCHAIN_RELEASE == 'true'
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
