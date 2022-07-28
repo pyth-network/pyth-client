@@ -1,4 +1,5 @@
 mod c_oracle_header;
+mod time_machine_types;
 mod error;
 mod log;
 mod processor;
@@ -67,7 +68,7 @@ pub fn c_entrypoint_wrapper(input: *mut u8) -> OracleResult {
 pub extern "C" fn entrypoint(input: *mut u8) -> u64 {
     let (program_id, accounts, instruction_data) = unsafe { deserialize(input) };
 
-    match pre_log(&accounts, instruction_data) {
+    match pre_log(&accounts,instruction_data) {
         Err(error) => return error.into(),
         _ => {}
     }
