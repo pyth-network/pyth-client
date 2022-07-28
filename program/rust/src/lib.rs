@@ -1,10 +1,16 @@
 mod c_oracle_header;
-mod time_machine_types;
 mod error;
 mod log;
+mod processor;
+mod rust_oracle;
+mod time_machine_types;
 
+use crate::c_oracle_header::SUCCESSFULLY_UPDATED_AGGREGATE;
+use crate::error::{OracleError, OracleResult};
 use crate::log::{post_log, pre_log};
-use solana_program::entrypoint::deserialize;
+use processor::process_instruction;
+use solana_program::program_error::ProgramError;
+use solana_program::{custom_heap_default, custom_panic_default, entrypoint::deserialize};
 
 //Below is a high lever description of the rust/c setup.
 
@@ -36,23 +42,37 @@ pub extern "C" fn c_entrypoint(input: *mut u8) -> u64 {
     0 //SUCCESS value
 }
 
+pub fn c_entrypoint_wrapper(input: *mut u8) -> OracleResult {
+    //Throwing an exception from C into Rust is undefined behavior
+    //This seems to be the best we can do
+    match unsafe { c_entrypoint(input) } {
+        0 => Ok(0), // Success
+        SUCCESSFULLY_UPDATED_AGGREGATE => Ok(SUCCESSFULLY_UPDATED_AGGREGATE),
+        2 => Err(ProgramError::InvalidArgument), //2 is ERROR_INVALID_ARGUMENT in solana_sdk.h
+        _ => Err(OracleError::UnknownCError.into()),
+    }
+}
+
 #[no_mangle]
 pub extern "C" fn entrypoint(input: *mut u8) -> u64 {
-    let (_program_id, accounts, instruction_data) = unsafe { deserialize(input) };
+    let (program_id, accounts, instruction_data) = unsafe { deserialize(input) };
 
-    match pre_log(&accounts,instruction_data) {
+    match pre_log(&accounts, instruction_data) {
         Err(error) => return error.into(),
         _ => {}
     }
 
-    let c_ret_val = unsafe { c_entrypoint(input) };
+    let c_ret_val = match process_instruction(program_id, &accounts, instruction_data, input) {
+        Err(error) => error.into(),
+        Ok(success_status) => success_status,
+    };
 
     match post_log(c_ret_val, &accounts) {
         Err(error) => return error.into(),
         _ => {}
     }
 
-    if c_ret_val == c_oracle_header::SUCCESSFULLY_UPDATED_AGGREGATE {
+    if c_ret_val == SUCCESSFULLY_UPDATED_AGGREGATE {
         //0 is the SUCCESS value for solana
         return 0;
     } else {
@@ -60,5 +80,5 @@ pub extern "C" fn entrypoint(input: *mut u8) -> u64 {
     }
 }
 
-solana_program::custom_heap_default!();
-solana_program::custom_panic_default!();
+custom_heap_default!();
+custom_panic_default!();

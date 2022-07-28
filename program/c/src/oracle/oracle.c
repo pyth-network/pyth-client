@@ -5,6 +5,7 @@
 #include "oracle.h"
 #include "upd_aggregate.h"
 
+
 // Returns the minimum number of lamports required to make an account
 // with dlen bytes of data rent exempt. These values were calculated
 // using the getMinimumBalanceForRentExemption RPC call, and are
@@ -19,6 +20,8 @@ static uint64_t rent_exempt_amount( uint64_t dlen )
     return 4454400;
   case sizeof( pc_price_t ):
     return 23942400;
+  case PRICE_ACCOUNT_SIZE:
+    return 36915840;
   default:
     return UINT64_MAX;
   }
