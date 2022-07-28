@@ -6,11 +6,21 @@ mod rust_oracle;
 mod time_machine_types;
 
 use crate::c_oracle_header::SUCCESSFULLY_UPDATED_AGGREGATE;
-use crate::error::{OracleError, OracleResult};
-use crate::log::{post_log, pre_log};
+use crate::error::{
+    OracleError,
+    OracleResult,
+};
+use crate::log::{
+    post_log,
+    pre_log,
+};
 use processor::process_instruction;
+use solana_program::entrypoint::deserialize;
 use solana_program::program_error::ProgramError;
-use solana_program::{custom_heap_default, custom_panic_default, entrypoint::deserialize};
+use solana_program::{
+    custom_heap_default,
+    custom_panic_default,
+};
 
 //Below is a high lever description of the rust/c setup.
 

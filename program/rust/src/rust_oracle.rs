@@ -10,8 +10,8 @@ pub fn update_price(
     instruction_data: &[u8],
     input: *mut u8,
 ) -> OracleResult {
-    //For now, we did not change the behavior of this. this is just to show the proposed structure of the
-    //program
+    //For now, we did not change the behavior of this. this is just to show the proposed structure
+    // of the program
     c_entrypoint_wrapper(input)
 }
 /// has version number/ account type dependant logic to make sure the given account is compatible
