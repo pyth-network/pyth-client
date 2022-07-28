@@ -9,6 +9,7 @@ const size_t PRICE_T_AGGREGATE_OFFSET = offsetof(struct pc_price, agg_);
 const size_t PRICE_T_AGGREGATE_CONF_OFFSET = offsetof(struct pc_price, agg_) + offsetof(struct pc_price_info, conf_);
 const size_t PRICE_T_AGGREGATE_PRICE_OFFSET = offsetof(struct pc_price, agg_) + offsetof(struct pc_price_info, price_);
 const size_t PRICE_T_AGGREGATE_STATUS_OFFSET = offsetof(struct pc_price, agg_) + offsetof(struct pc_price_info, status_);
+const size_t PRICE_T_EMA_OFFSET = offsetof(struct pc_price, twap_);
 const size_t PRICE_T_PREV_TIMESTAMP_OFFSET = offsetof(struct pc_price, prev_timestamp_);
 const size_t PRICE_T_PREV_CONF_OFFSET = offsetof(struct pc_price, prev_conf_);
 const size_t PRICE_T_PREV_AGGREGATE_OFFSET = offsetof(struct pc_price, prev_price_);

@@ -2,8 +2,10 @@ use crate::c_oracle_header::*;
 use crate::error::OracleError;
 use borsh::BorshDeserialize;
 use solana_program::account_info::AccountInfo;
+use solana_program::clock::Clock;
 use solana_program::entrypoint::ProgramResult;
 use solana_program::msg;
+use solana_program::sysvar::Sysvar;
 use std::mem::size_of;
 
 pub fn pre_log(accounts: &[AccountInfo], instruction_data: &[u8]) -> ProgramResult {
@@ -14,11 +16,14 @@ pub fn pre_log(accounts: &[AccountInfo], instruction_data: &[u8]) -> ProgramResu
         .cmd_
         .try_into()
         .map_err(|_| OracleError::Generic)?;
+
+    let clock = Clock::get()?;
+
     match instruction_id {
         command_t_e_cmd_upd_price | command_t_e_cmd_agg_price => {
             let instruction: cmd_upd_price = cmd_upd_price::try_from_slice(instruction_data)?;
             msg!(
-                "UpdatePrice: publisher={:}, price_account={:}, price={:}, conf={:}, status={:}, slot={:}",
+                "UpdatePrice: publisher={:}, price_account={:}, price={:}, conf={:}, status={:}, slot={:}, solana_time={:}",
                 accounts.get(0)
                 .ok_or(OracleError::Generic)?.key,
                 accounts.get(1)
@@ -26,13 +31,14 @@ pub fn pre_log(accounts: &[AccountInfo], instruction_data: &[u8]) -> ProgramResu
                 instruction.price_,
                 instruction.conf_,
                 instruction.status_,
-                instruction.pub_slot_
+                instruction.pub_slot_,
+                clock.unix_timestamp
             );
         }
         command_t_e_cmd_upd_price_no_fail_on_error => {
             let instruction: cmd_upd_price = cmd_upd_price::try_from_slice(instruction_data)?;
             msg!(
-                "UpdatePriceNoFailOnError: publisher={:}, price_account={:}, price={:}, conf={:}, status={:}, slot={:}",
+                "UpdatePriceNoFailOnError: publisher={:}, price_account={:}, price={:}, conf={:}, status={:}, slot={:}, solana_time={:}",
                 accounts.get(0)
                 .ok_or(OracleError::Generic)?.key,
                 accounts.get(1)
@@ -40,7 +46,8 @@ pub fn pre_log(accounts: &[AccountInfo], instruction_data: &[u8]) -> ProgramResu
                 instruction.price_,
                 instruction.conf_,
                 instruction.status_,
-                instruction.pub_slot_
+                instruction.pub_slot_,
+                clock.unix_timestamp
             );
         }
         command_t_e_cmd_add_mapping => {
@@ -91,13 +98,26 @@ pub fn post_log(c_ret_val: u64, accounts: &[AccountInfo]) -> ProgramResult {
                 .ok_or(OracleError::Generic)?
                 .try_borrow_data()?[start..(start + size_of::<pc_price_info>())],
         )?;
+
+        let ema_info: pc_ema = pc_ema::try_from_slice(
+            &accounts
+                .get(1)
+                .ok_or(OracleError::Generic)?
+                .try_borrow_data()?[start..(start + size_of::<pc_ema>())],
+        )?;
+
+        let clock = Clock::get()?;
+
         msg!(
-            "UpdateAggregate : price_account={:}, price={:}, conf={:}, status={:}, slot={:}",
-            accounts.get(1).ok_or(OracleError::Generic)?.key,
+            "UpdateAggregate : price_account={:}, price={:}, conf={:}, status={:}, slot={:}, solana_time={:}, ema={:}",
+            accounts.get(1)
+            .ok_or(OracleError::Generic)?.key,
             aggregate_price_info.price_,
             aggregate_price_info.conf_,
             aggregate_price_info.status_,
-            aggregate_price_info.pub_slot_
+            aggregate_price_info.pub_slot_,
+            clock.unix_timestamp,
+            ema_info.val_
         );
     }
     Ok(())
