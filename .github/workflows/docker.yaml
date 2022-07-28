@@ -15,6 +15,9 @@ env:
     startsWith( github.ref, 'refs/tags/devnet-' ) ||
     startsWith( github.ref, 'refs/tags/testnet-' ) ||
     startsWith( github.ref, 'refs/tags/mainnet-' ) }}
+  IS_DEVNET_RELEASE: ${{
+    startsWith( github.ref, 'refs/tags/devnet-' ) }}
+
 
 jobs:
   build:
@@ -61,7 +64,7 @@ jobs:
 
       - name : Publish binary
         if : env.IS_RELEASE == 'true'
-        uses: svenstaro/upload-release-action@v2
+        uses: svenstaro/upload-release-action@133984371c30d34e38222a64855679a414cb7575
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ./pyth_oracle.so
