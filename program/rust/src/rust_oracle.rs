@@ -1,6 +1,6 @@
 use super::c_entrypoint_wrapper;
 use crate::c_oracle_header::{
-    pc_acc_t, pc_price_t, PC_MAGIC, PC_VERSION, PRICE_ACCOUNT_SIZE, SUCCESSFULLY_UPDATED_AGGREGATE,
+    pc_acc_t, pc_price_t, PC_MAGIC, PC_VERSION, PRICE_ACCOUNT_SIZE, SUCCESSFULLY_UPDATED_AGGREGATE, PRICE_T_TIMESTAMP_OFFSET, PRICE_T_AGGREGATE_CONF_OFFSET, PRICE_T_AGGREGATE_PRICE_OFFSET, PRICE_T_PREV_TIMESTAMP_OFFSET, PRICE_T_PREV_CONF_OFFSET, PRICE_T_PREV_AGGREGATE_OFFSET, EXTRA_PUBLISHER_SPACE
 };
 use crate::error::OracleError;
 use crate::error::OracleResult;
@@ -15,6 +15,30 @@ use solana_program::rent::Rent;
 use solana_program::system_instruction::transfer;
 use solana_program::sysvar::slot_history::AccountInfo;
 use std::mem::size_of;
+use std::result::Result;
+use std::cell::Ref;
+
+fn u64_to_usize(x: u64)-> Result<usize, ProgramError>{
+    <u64 as TryInto<usize>>::try_into(x).map_err(|_| OracleError::IntegerCastingError.into())
+}
+
+fn get_u64_from_offset(offset : u64, data : &Ref<'_, &mut [u8]>) -> OracleResult{
+    let u64_size : usize = 8;
+    let offset : usize = u64_to_usize(offset)?; 
+    u64::try_from_slice(&data[offset..offset + u64_size]).map_err(|_| ProgramError::BorshIoError("Could not parse price t member".to_string()))
+}
+fn get_tracker_params(price_account: &AccountInfo)->Result<(u64, u64, u64, u64, u64, u64), ProgramError>{
+    let data = price_account.try_borrow_data()?;
+    let current_time = get_u64_from_offset(PRICE_T_TIMESTAMP_OFFSET, &data)?;
+    let prev_time = get_u64_from_offset(PRICE_T_PREV_TIMESTAMP_OFFSET, &data)?;
+    let current_price = get_u64_from_offset(PRICE_T_AGGREGATE_PRICE_OFFSET, &data)?;
+    let prev_price = get_u64_from_offset(PRICE_T_PREV_AGGREGATE_OFFSET, &data)?;
+    let current_conf = get_u64_from_offset(PRICE_T_AGGREGATE_CONF_OFFSET, &data)?;
+    let prev_conf = get_u64_from_offset(PRICE_T_PREV_CONF_OFFSET, &data)?;
+    
+
+    Ok((current_time, prev_time, current_price, prev_price, current_conf, prev_conf))
+}
 
 ///Calls the c oracle update_price, and updates the Time Machine if needed
 pub fn update_price(
@@ -37,7 +61,12 @@ pub fn update_price(
     }
     let c_ret_value = c_entrypoint_wrapper(input)?;
     if c_ret_value == SUCCESSFULLY_UPDATED_AGGREGATE {
-        //update_tracker
+        let (current_time, prev_time, current_price, prev_price, current_conf, prev_conf) = get_tracker_params(&accounts[1])?;
+        let extra_publisher_space = u64_to_usize(EXTRA_PUBLISHER_SPACE)?;
+        let time_machine_size = size_of::<TimeMachineWrapper>();
+        let mut time_machine = TimeMachineWrapper::try_from_slice(&accounts[1].try_borrow_mut_data()?[price_t_size + extra_publisher_space .. price_t_size + extra_publisher_space + time_machine_size]).map_err(|_| ProgramError::BorshIoError("Could not parse time machine".to_string()))?;
+        time_machine.add_price(current_time, prev_time, current_price, prev_price, current_conf, prev_conf);
+        time_machine.serialize(&mut &mut accounts[1].data.borrow_mut()[price_t_size + extra_publisher_space .. price_t_size + extra_publisher_space + time_machine_size])?;
         msg!("updated tracker!");
     }
     Ok(c_ret_value)
@@ -69,7 +98,12 @@ pub fn upgrade_price_account(
             }
             //resize
             accounts[1].realloc(new_account_len, false)?;
-            //initialize_tracker();
+            let (current_time, prev_time, current_price, prev_price, current_conf, prev_conf) = get_tracker_params(&accounts[1])?;
+            let extra_publisher_space = u64_to_usize(EXTRA_PUBLISHER_SPACE)?;
+            let time_machine_size = size_of::<TimeMachineWrapper>();
+            let mut time_machine : TimeMachineWrapper = Default::default();
+            time_machine.add_first_price(current_time, current_price, current_conf);
+            time_machine.serialize(&mut &mut accounts[1].data.borrow_mut()[price_t_size + extra_publisher_space .. price_t_size + extra_publisher_space + time_machine_size])?;
             Ok(())
         }
         new_account_len => Ok(()),
