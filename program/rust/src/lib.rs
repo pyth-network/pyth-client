@@ -7,7 +7,6 @@ mod rust_oracle;
 mod time_machine_types;
 
 use crate::c_oracle_header::SUCCESSFULLY_UPDATED_AGGREGATE;
-use crate::deserialize::deserialize_single_field_from_buffer;
 use crate::error::{
     OracleError,
     OracleResult,
