@@ -71,4 +71,3 @@ hash_inverse_uint64( uint64_t x ) {
 #endif
 
 #endif /* _pyth_oracle_util_hash_h_ */
-

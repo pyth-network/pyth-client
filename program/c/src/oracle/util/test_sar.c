@@ -12,7 +12,7 @@ main( int     argc,
   /* FIXME: EXPLICT COVERAGE OF EDGE CASES (PROBABLY STATICALLY FULLY
      SAMPLED ALREADY THOUGH FOR 8 AND 16 BIT TYPES) */
 
-  int ctr = 0;                                                                                                                      
+  int ctr = 0;
   for( int i=0; i<1000000000; i++ ) {
     if( !ctr ) { printf( "Completed %i iterations\n", i ); ctr = 10000000; }
     ctr--;
@@ -46,4 +46,3 @@ main( int     argc,
 
   return 0;
 }
-

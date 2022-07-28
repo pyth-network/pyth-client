@@ -56,4 +56,3 @@ main( int     argc,
   printf( "pass\n" );
   return 0;
 }
-

@@ -10,12 +10,12 @@ main( int     argc,
   prng_t * prng = prng_join( prng_new( _prng, (uint32_t)0, (uint64_t)0 ) );
 
   int ctr;
-  
-  ctr = 0;                                                                                                                      
+
+  ctr = 0;
   for( int i=0; i<1000000000; i++ ) {
     if( !ctr ) { printf( "reg: Completed %i iterations\n", i ); ctr = 10000000; }
     ctr--;
-     
+
 #   define TEST(w) do {                                                                      \
       uint##w##_t x = prng_uint##w( prng );                                                  \
       uint##w##_t y = prng_uint##w( prng );                                                  \
@@ -140,4 +140,3 @@ main( int     argc,
 
   return 0;
 }
-

@@ -563,4 +563,3 @@ extern uint64_t c_entrypoint(const uint8_t *input)
   }
   return dispatch( prm, ka );
 }
-

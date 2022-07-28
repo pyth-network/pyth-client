@@ -145,12 +145,12 @@ SORT_IMPL(stable_node)( SORT_KEY_T * x,
   SORT_KEY_T * tr = t + nl;
   SORT_IDX_T   nr = n - nl;
   SORT_KEY_T * yr = SORT_IMPL(stable_node)( xr,nr, tr );
-  
+
   /* If left subsort result ended up in orig array, merge into temp
      array.  Otherwise, merge into orig array. */
 
   if( yl==xl ) x = t;
- 
+
   /* At this point, note that yl does not overlap with the location for
      merge output at this point.  yr might overlap (with the right half)
      with the location for merge output but this will still work in that
@@ -193,4 +193,3 @@ SORT_IMPL(stable)( SORT_KEY_T * key,
 #undef SORT_IDX_T
 #undef SORT_KEY_T
 #undef SORT_NAME
-

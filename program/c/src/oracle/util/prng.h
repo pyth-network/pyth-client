@@ -5,7 +5,7 @@
    generator.  Supports parallel generation, interprocess shared memory
    usage, checkpointing, random access, reversible, atomic, etc.  Passes
    extremely strict tests of randomness.
-   
+
    Assumes hash.h provides a high quality 64<>64-bit integer hash
    functions (i.e. full avalanche) with the property hash_uint64(0)==0
    and hash_uint64(i) for i in [0,2^64) yields a permutation of [0,2^64)
@@ -88,7 +88,7 @@ prng_private_contract( uint64_t seq ) {
    state of a _prng and returns ownership of the underlying memory
    region to the caller.  There should be no joins in the system on the
    prng.  Returns a pointer to the underlying memory region.
-   
+
    FIXME: CONSIDER FLATTENING ALIGN? */
 
 static inline uint64_t prng_footprint( void ) { return (uint64_t)sizeof ( prng_t ); }
@@ -143,7 +143,7 @@ prng_idx_set( prng_t * prng,
    possible values of of a signed int uniform IID can be obtained by
    casting the output of the unsigned generator of the same, assuming
    typical twos complement arithmetic platform.)
-   
+
    The theory for this that hash_uint64(i) for i in [0,2^64) specifies a
    random looking permutation of the integers in [0,2^64).  Returning
    the low order bits of this random permutation then yields a high
@@ -207,7 +207,7 @@ static inline int64_t prng_int64( prng_t * prng ) { return (int64_t)( prng_uint6
    goes from [i/N,(i+1)/N) where i is in [0,N).  For single (double)
    precision, "float" ("double"), the largest N for which the range of
    each interval is _exactly_ representable is N = 2^24 (2^53).
-   
+
    Given then a uniform IID uint32_t random input, the
    prng_uint32_to_float_c0 converter output is as though an continuous
    IID uniform random in [0,1) was generated and then rounded down to
@@ -246,7 +246,7 @@ static inline int64_t prng_int64( prng_t * prng ) { return (int64_t)( prng_uint6
    Note that it is possible to make converters that will handle exactly
    rounding toward all possible floating point representations in [0,1]
    but this are significantly more expensive.
-   
+
    Assumes IEEE-754 style float and doubles.
 
    FIXME: ADD UNIT TEST COVERAGE */
