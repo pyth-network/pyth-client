@@ -1,5 +1,6 @@
 use super::c_oracle_header::TIME_MACHINE_STRUCT_SIZE;
 use ::std::mem::size_of;
+use solana_program::msg;
 use borsh::{BorshDeserialize, BorshSerialize};
 #[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
 #[repr(C)]
@@ -26,16 +27,16 @@ impl TimeMachineWrapper{
             self.add_first_price(current_time, current_price, current_conf);
             return ();
         }
-        panic!("implement me!");
+        msg!("implement me!");
     }
     /// Add a price to the tracker when the tracker is first initialized or
     /// price account is new
     pub fn add_first_price(&mut self, current_time: u64, current_price: u64,  current_conf: u64) {
-        panic!("implement me!");
+        msg!("implement me!");
     }
     /// gets the given entry from the tracker with the
     pub fn get_entry(&self, current_time: u64, entry_time: u64,granuality: u64, is_twap: bool) -> (u64, u64, u8) {
-        panic!("implement me!");
+        msg!("implement me!");
         (0, 0, 0)
     }
 }
