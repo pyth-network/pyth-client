@@ -77,6 +77,7 @@ pub fn upgrade_price_account(
     }
 }
 
+#[cfg(feature = "resize-account")]
 /// has version number/ account type dependant logic to make sure the given account is compatible
 /// with the current version
 /// updates the version number for all accounts, and resizes price accounts
@@ -109,5 +110,17 @@ pub fn update_version(
     pyth_acc_info.ver_ = PC_VERSION;
     //TODO: Should I update the size_ field? I am not sure how it is being used, or why it is needed. Is it account_size?
     pyth_acc_info.serialize(&mut &mut accounts[1].data.borrow_mut()[..pyth_acc_info_size])?;
+    Ok(0) //SUCCESS
+}
+
+#[cfg(not(feature = "resize-account"))]
+/// Disabled update_version until pythd is updated
+pub fn update_version(
+    program_id: &Pubkey,
+    accounts: &Vec<AccountInfo>,
+    instruction_data: &[u8],
+) -> OracleResult {
+    //read account info
+    panic!("implement me!");
     Ok(0) //SUCCESS
 }

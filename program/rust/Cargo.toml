@@ -7,6 +7,9 @@ edition = "2021"
 license = "Apache 2.0"
 publish = false
 
+[features]
+resize-account = []
+
 [build-dependencies]
 bindgen = "0.60.1"
 
