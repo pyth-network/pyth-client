@@ -30,9 +30,9 @@ impl TimeMachineWrapper{
         panic!("implement me!");
     }
     /// gets the given entry from the tracker with the
-    fn get_entry(&self, current_time: u64, entry_time: u64,granuality: u64, is_twap: bool) -> (u64, u8) {
+    fn get_entry(&self, current_time: u64, entry_time: u64,granuality: u64, is_twap: bool) -> (u64, u64, u8) {
         panic!("implement me!");
-        (0, 0)
+        (0, 0, 0)
     }
 }
 
