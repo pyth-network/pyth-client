@@ -15,11 +15,6 @@ PYTH_DIR=$( cd "${1:-.}" && pwd)
 C_DIR="$( find $PYTH_DIR | grep makefile)"
 C_DIR=$(dirname $C_DIR)
 
-#finds Cargo.toml in pyth-client
-#ASSUMES THAT there is only one Cargo.toml there 
-RUST_DIR="$( find $PYTH_DIR | grep Cargo.toml )"
-RUST_DIR=$(dirname $RUST_DIR)
-
 if ! which cargo 2> /dev/null
 then
   # shellcheck disable=SC1090
@@ -39,16 +34,13 @@ rm ./target/*-keypair.json
 
 
 #build Rust and link it with C
-cd "${RUST_DIR}"
+cd "${PYTH_DIR}"
 cargo clean
 cargo test
 cargo clean
 cargo build-bpf
 
 sha256sum ./target/**/*.so
-rm ./target/**/*-keypair.json
-rm -r $PYTH_DIR/target || true
-mv ./target $PYTH_DIR/target
 
 
 
