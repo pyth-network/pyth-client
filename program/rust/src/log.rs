@@ -88,7 +88,7 @@ pub fn pre_log(accounts: &[AccountInfo], instruction_data: &[u8]) -> ProgramResu
 
 pub fn post_log(c_ret_val: u64, accounts: &[AccountInfo]) -> ProgramResult {
     if c_ret_val == SUCCESSFULLY_UPDATED_AGGREGATE {
-        let start: usize = PRICE_T_AGGREGATE_OFFSET
+        let aggregate_price_start: usize = PRICE_T_AGGREGATE_OFFSET
             .try_into()
             .map_err(|_| OracleError::Generic)?;
         // We trust that the C oracle has properly checked this account
@@ -96,14 +96,18 @@ pub fn post_log(c_ret_val: u64, accounts: &[AccountInfo]) -> ProgramResult {
             &accounts
                 .get(1)
                 .ok_or(OracleError::Generic)?
-                .try_borrow_data()?[start..(start + size_of::<pc_price_info>())],
+                .try_borrow_data()?[aggregate_price_start..(aggregate_price_start + size_of::<pc_price_info>())],
         )?;
+
+        let ema_start: usize = PRICE_T_EMA_OFFSET
+            .try_into()
+            .map_err(|_| OracleError::Generic)?;
 
         let ema_info: pc_ema = pc_ema::try_from_slice(
             &accounts
                 .get(1)
                 .ok_or(OracleError::Generic)?
-                .try_borrow_data()?[start..(start + size_of::<pc_ema>())],
+                .try_borrow_data()?[ema_start..(ema_start + size_of::<pc_ema>())],
         )?;
 
         let clock = Clock::get()?;
