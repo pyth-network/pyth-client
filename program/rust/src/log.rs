@@ -19,17 +19,28 @@ pub fn pre_log(accounts: &[AccountInfo], instruction_data: &[u8]) -> ProgramResu
 
     let clock = Clock::get()?;
 
+    let expo_start : usize = PRICE_T_EXPO_OFFSET.try_into()
+    .map_err(|_| OracleError::Generic)?;
+
+    let expo: i32 = i32::try_from_slice(
+        &accounts
+            .get(1)
+            .ok_or(OracleError::Generic)?
+            .try_borrow_data()?[expo_start..(expo_start + size_of::<i32>())],
+    )?;
+
     match instruction_id {
         command_t_e_cmd_upd_price | command_t_e_cmd_agg_price => {
             let instruction: cmd_upd_price = cmd_upd_price::try_from_slice(instruction_data)?;
             msg!(
-                "UpdatePrice: publisher={:}, price_account={:}, price={:}, conf={:}, status={:}, slot={:}, solana_time={:}",
+                "UpdatePrice: publisher={:}, price_account={:}, price={:}, conf={:}, expo={:}, status={:}, slot={:}, solana_time={:}",
                 accounts.get(0)
                 .ok_or(OracleError::Generic)?.key,
                 accounts.get(1)
                 .ok_or(OracleError::Generic)?.key,
                 instruction.price_,
                 instruction.conf_,
+                expo,
                 instruction.status_,
                 instruction.pub_slot_,
                 clock.unix_timestamp
@@ -38,13 +49,14 @@ pub fn pre_log(accounts: &[AccountInfo], instruction_data: &[u8]) -> ProgramResu
         command_t_e_cmd_upd_price_no_fail_on_error => {
             let instruction: cmd_upd_price = cmd_upd_price::try_from_slice(instruction_data)?;
             msg!(
-                "UpdatePriceNoFailOnError: publisher={:}, price_account={:}, price={:}, conf={:}, status={:}, slot={:}, solana_time={:}",
+                "UpdatePriceNoFailOnError: publisher={:}, price_account={:}, price={:}, conf={:}, expo={:}, status={:}, slot={:}, solana_time={:}",
                 accounts.get(0)
                 .ok_or(OracleError::Generic)?.key,
                 accounts.get(1)
                 .ok_or(OracleError::Generic)?.key,
                 instruction.price_,
                 instruction.conf_,
+                expo,
                 instruction.status_,
                 instruction.pub_slot_,
                 clock.unix_timestamp
@@ -110,14 +122,25 @@ pub fn post_log(c_ret_val: u64, accounts: &[AccountInfo]) -> ProgramResult {
                 .try_borrow_data()?[ema_start..(ema_start + size_of::<pc_ema>())],
         )?;
 
+        let expo_start : usize = PRICE_T_EXPO_OFFSET.try_into()
+        .map_err(|_| OracleError::Generic)?;
+
+        let expo: i32 = i32::try_from_slice(
+            &accounts
+                .get(1)
+                .ok_or(OracleError::Generic)?
+                .try_borrow_data()?[expo_start..(expo_start + size_of::<i32>())],
+        )?;
+
         let clock = Clock::get()?;
 
         msg!(
-            "UpdateAggregate : price_account={:}, price={:}, conf={:}, status={:}, slot={:}, solana_time={:}, ema={:}",
+            "UpdateAggregate : price_account={:}, price={:}, conf={:}, expo={:}, status={:}, slot={:}, solana_time={:}, ema={:}",
             accounts.get(1)
             .ok_or(OracleError::Generic)?.key,
             aggregate_price_info.price_,
             aggregate_price_info.conf_,
+            expo,
             aggregate_price_info.status_,
             aggregate_price_info.pub_slot_,
             clock.unix_timestamp,
