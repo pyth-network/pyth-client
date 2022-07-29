@@ -19,6 +19,7 @@ RUN apt-get install -qq \
   python3-pytest \
   python3-pytest-asyncio \
   python3-websockets \
+  python3-pip \
   sudo \
   zlib1g \
   zlib1g-dev \
@@ -56,8 +57,7 @@ export PYTHONPATH=\"\${PYTHONPATH:+\$PYTHONPATH:}\${HOME}/pyth-client\"\n\
 
 COPY --chown=pyth:pyth . pyth-client/
 
-#install python packages needed for testing
-RUN sudo apt install python3-pip -y
+# Install python packages needed for testing
 RUN pip3 install solana
 
 # Build off-chain binaries.
@@ -72,6 +72,9 @@ RUN ./pyth-client/scripts/patch-solana.sh
 # Build and test the oracle program.
 RUN cd pyth-client && ./scripts/build-bpf.sh . "test"
 RUN /bin/bash -l -c "pytest-3 --pyargs pyth"
+
+# Build for releases
+RUN cd pyth-client && ./scripts/build-bpf.sh .
 
 ENTRYPOINT []
 CMD []
