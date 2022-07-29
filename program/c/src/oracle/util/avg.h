@@ -66,8 +66,8 @@ avg_2_int64( int64_t x,
   /* Similar considerations as above */
 
 # if 1 /* Fewer ops but less parallel issue */
-  /* x+y = x+2^63 + y+2^63 - 2^64 ... exact ops 
-         = ux     + uy     - 2^64 ... exact ops where ux and uy are exactly representable as a 64-bit uint 
+  /* x+y = x+2^63 + y+2^63 - 2^64 ... exact ops
+         = ux     + uy     - 2^64 ... exact ops where ux and uy are exactly representable as a 64-bit uint
          = uz     + 2^64 c - 2^64 ... exact ops where uz is a 64-bit uint and c is in [0,1].
      Thus, as before
        uz = ux+uy   ... c ops
@@ -86,7 +86,7 @@ avg_2_int64( int64_t x,
      using the signed and unsigned adds are the same operation binary
      in we have:
        x+2^63              ... exact ops
-       ==x+/-2^63 mod 2^64 ... exact ops 
+       ==x+/-2^63 mod 2^64 ... exact ops
        ==x+/-2^63          ... c ops  */
    uint64_t t = (uint64_t)x;
    uint64_t z = t + (uint64_t)y;
@@ -165,4 +165,3 @@ PYTH_ORACLE_UTIL_AVG_DECL( avg_int32, int32_t )
 #endif
 
 #endif /* _pyth_oracle_util_avg_h_ */
-

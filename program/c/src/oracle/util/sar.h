@@ -71,4 +71,3 @@ sar_int64( int64_t x,
 #endif
 
 #endif /* _pyth_oracle_util_sar_h_ */
-

@@ -8,4 +8,3 @@
 #include "prng.h"   /* includes stdalign.h and hash.h */
 
 #endif /* _pyth_oracle_util_util_h_ */
-

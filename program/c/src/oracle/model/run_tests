@@ -15,4 +15,3 @@ $CC test_price_model.c price_model.c -o bin/test_price_model || exit 1
 bin/test_price_model || exit 1
 
 echo all tests passed
-
