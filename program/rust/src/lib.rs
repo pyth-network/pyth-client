@@ -1,5 +1,4 @@
 mod c_oracle_header;
-mod deserialize;
 mod error;
 mod log;
 mod processor;
