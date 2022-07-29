@@ -1,5 +1,3 @@
-use super::c_oracle_header::TIME_MACHINE_STRUCT_SIZE;
-use ::std::mem::size_of;
 #[derive(Debug, Clone)]
 #[repr(C)]
 /// this wraps multiple SMA and tick trackers, and includes all the state

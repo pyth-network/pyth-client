@@ -26,11 +26,11 @@ pub fn deserialize_single_field_from_account<T: BorshDeserialize>(
     i: usize,
     offset: Option<size_t>,
 ) -> Result<T, ProgramError> {
-    Ok(deserialize_single_field_from_buffer::<T>(
+    deserialize_single_field_from_buffer::<T>(
         &accounts
             .get(i)
             .ok_or(ProgramError::NotEnoughAccountKeys)?
             .try_borrow_data()?,
         offset,
-    )?)
+    )
 }

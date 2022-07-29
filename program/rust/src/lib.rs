@@ -51,14 +51,14 @@ extern "C" {
 
 //make the C entrypoint a no-op when running cargo test
 #[cfg(not(target_arch = "bpf"))]
-pub extern "C" fn c_entrypoint(input: *mut u8) -> u64 {
+pub extern "C" fn c_entrypoint(_input: *mut u8) -> u64 {
     0 //SUCCESS value
 }
 
 pub fn c_entrypoint_wrapper(input: *mut u8) -> OracleResult {
     //Throwing an exception from C into Rust is undefined behavior
     //This seems to be the best we can do
-    match unsafe { c_entrypoint(input) } {
+    match c_entrypoint(input) {
         0 => Ok(0), // Success
         SUCCESSFULLY_UPDATED_AGGREGATE => Ok(SUCCESSFULLY_UPDATED_AGGREGATE),
         2 => Err(ProgramError::InvalidArgument), //2 is ERROR_INVALID_ARGUMENT in solana_sdk.h
@@ -71,9 +71,8 @@ pub extern "C" fn entrypoint(input: *mut u8) -> u64 {
     #[allow(clippy::not_unsafe_ptr_arg_deref)]
     let (program_id, accounts, instruction_data) = unsafe { deserialize(input) };
 
-    match pre_log(&accounts, instruction_data) {
-        Err(error) => return error.into(),
-        _ => {}
+    if let Err(error) = pre_log(&accounts, instruction_data) {
+        return error.into();
     }
 
     let c_ret_val = match process_instruction(program_id, &accounts, instruction_data, input) {
@@ -81,16 +80,15 @@ pub extern "C" fn entrypoint(input: *mut u8) -> u64 {
         Ok(success_status) => success_status,
     };
 
-    match post_log(c_ret_val, &accounts) {
-        Err(error) => return error.into(),
-        _ => {}
+    if let Err(error) = post_log(c_ret_val, &accounts) {
+        return error.into();
     }
 
     if c_ret_val == SUCCESSFULLY_UPDATED_AGGREGATE {
         //0 is the SUCCESS value for solana
-        return 0;
+        0
     } else {
-        return c_ret_val;
+        c_ret_val
     }
 }
 
