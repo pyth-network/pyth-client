@@ -10,16 +10,18 @@ pub type OracleResult = Result<u64, ProgramError>;
 pub enum OracleError {
     /// Generic catch all error
     #[error("Generic")]
-    Generic              = 600,
+    Generic                 = 600,
     /// integer casting error
     #[error("IntegerCastingError")]
-    IntegerCastingError  = 601,
+    IntegerCastingError     = 601,
     /// c_entrypoint returned an unexpected value
     #[error("UnknownCError")]
-    UnknownCError        = 602,
+    UnknownCError           = 602,
+    #[error("UnrecognizedInstruction")]
+    UnrecognizedInstruction = 603,
     /// magic number of an account is incorrect
     #[error("IncorrectMagicNumber")]
-    IncorrectMagicNumber = 603,
+    IncorrectMagicNumber    = 604,
 }
 
 impl From<OracleError> for ProgramError {
