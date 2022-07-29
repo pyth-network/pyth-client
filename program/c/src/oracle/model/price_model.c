@@ -17,14 +17,14 @@ price_model_core( uint64_t  cnt,
      optimized mergesort (merge with an unrolled insertion sorting
      network small n base cases).  The best case is ~0.5 n lg n compares
      and the average and worst cases are ~n lg n compares.
-     
+
      While not completely data oblivious, this has quite low variance in
      operation count practically and this is _better_ than quicksort's
      average case and quicksort's worst case is a computational
      denial-of-service and timing attack vulnerable O(n^2).  Unlike
      quicksort, this is also stable (but this stability does not
      currently matter ... it might be a factor in future models).
-     
+
      A data oblivious sorting network approach might be viable here with
      and would have a completely deterministic operations count.  It
      currently isn't used as the best known practical approaches for
@@ -101,7 +101,7 @@ price_model_core( uint64_t  cnt,
 
     *_p50 = avg_2_int64( vl, vr );
   }
-  
+
   /* Extract the p75 (this is the mirror image of the p25 case) */
 
   uint64_t p75_idx = cnt - ((uint64_t)1) - p25_idx;
@@ -110,4 +110,3 @@ price_model_core( uint64_t  cnt,
 
   return sort_quote;
 }
-

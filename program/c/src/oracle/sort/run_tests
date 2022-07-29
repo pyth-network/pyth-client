@@ -15,4 +15,3 @@ $CC test_sort_stable.c -o bin/test_sort_stable || exit 1
 bin/test_sort_stable || exit 1
 
 echo all tests passed
-

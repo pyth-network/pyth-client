@@ -237,4 +237,3 @@ static inline bool upd_aggregate( pc_price_t *ptr, uint64_t slot, int64_t timest
 #ifdef __cplusplus
 }
 #endif
-

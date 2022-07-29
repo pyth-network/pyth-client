@@ -1,10 +1,20 @@
 use crate::c_entrypoint_wrapper;
 use crate::c_oracle_header::{
-    cmd_hdr, command_t_e_cmd_agg_price, command_t_e_cmd_upd_account_version,
-    command_t_e_cmd_upd_price, command_t_e_cmd_upd_price_no_fail_on_error, PC_VERSION,
+    cmd_hdr,
+    command_t_e_cmd_agg_price,
+    command_t_e_cmd_upd_account_version,
+    command_t_e_cmd_upd_price,
+    command_t_e_cmd_upd_price_no_fail_on_error,
+    PC_VERSION,
 };
-use crate::error::{OracleError, OracleResult};
-use crate::rust_oracle::{update_price, update_version};
+use crate::error::{
+    OracleError,
+    OracleResult,
+};
+use crate::rust_oracle::{
+    update_price,
+    update_version,
+};
 use ::std::mem::size_of;
 use borsh::BorshDeserialize;
 use solana_program::pubkey::Pubkey;

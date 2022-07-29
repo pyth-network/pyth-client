@@ -1,11 +1,21 @@
 use super::c_entrypoint_wrapper;
 use crate::c_oracle_header::{
-    pc_acc_t, pc_price_t, PC_MAGIC, PC_VERSION, PRICE_ACCOUNT_SIZE, SUCCESSFULLY_UPDATED_AGGREGATE,
+    pc_acc_t,
+    pc_price_t,
+    PC_MAGIC,
+    PC_VERSION,
+    PRICE_ACCOUNT_SIZE,
+    SUCCESSFULLY_UPDATED_AGGREGATE,
 };
-use crate::error::OracleError;
-use crate::error::OracleResult;
+use crate::error::{
+    OracleError,
+    OracleResult,
+};
 use crate::time_machine_types::TimeMachineWrapper;
-use borsh::{BorshDeserialize, BorshSerialize};
+use borsh::{
+    BorshDeserialize,
+    BorshSerialize,
+};
 use solana_program::entrypoint::ProgramResult;
 use solana_program::msg;
 use solana_program::program::invoke;
@@ -103,12 +113,13 @@ pub fn update_version(
         _ => (),
     }
 
-    //I do not think that we need to have PC_VERSION dependent logic now, but here seems like a good place to
-    //do such a thing
+    //I do not think that we need to have PC_VERSION dependent logic now, but here seems like a
+    // good place to do such a thing
 
     //update the account info
     pyth_acc_info.ver_ = PC_VERSION;
-    //TODO: Should I update the size_ field? I am not sure how it is being used, or why it is needed. Is it account_size?
+    //TODO: Should I update the size_ field? I am not sure how it is being used, or why it is
+    // needed. Is it account_size?
     pyth_acc_info.serialize(&mut &mut accounts[1].data.borrow_mut()[..pyth_acc_info_size])?;
     Ok(0) //SUCCESS
 }

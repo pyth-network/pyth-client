@@ -52,4 +52,3 @@ bin/test_avg   || exit 1
 #bin/test_prng_battery 4 0 0 || exit 1 # BigCrush: Takes >~3 hours (seq 0, idx 0)
 
 echo all tests passed
-

@@ -188,4 +188,3 @@ static inline void pd_sqrt( pd_t *r, pd_t *val, const int64_t *f )
 #ifdef __cplusplus
 }
 #endif
-

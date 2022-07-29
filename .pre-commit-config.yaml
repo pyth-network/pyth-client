@@ -1,0 +1,16 @@
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v3.2.0
+  hooks:
+  - id: trailing-whitespace
+    files : program/
+  - id: end-of-file-fixer
+    files : program/
+  - id: check-added-large-files
+- repo: local
+  hooks:
+    - id: cargo-fmt-nightly
+      name: Cargo Fmt Nightly
+      language: "rust"
+      entry: cargo +nightly fmt
+      pass_filenames: false
