@@ -1,3 +1,5 @@
+#![allow(non_upper_case_globals)]
+
 mod c_oracle_header;
 mod deserialize;
 mod error;
@@ -66,6 +68,7 @@ pub fn c_entrypoint_wrapper(input: *mut u8) -> OracleResult {
 
 #[no_mangle]
 pub extern "C" fn entrypoint(input: *mut u8) -> u64 {
+    #[allow(clippy::not_unsafe_ptr_arg_deref)]
     let (program_id, accounts, instruction_data) = unsafe { deserialize(input) };
 
     match pre_log(&accounts, instruction_data) {
