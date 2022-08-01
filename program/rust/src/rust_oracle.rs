@@ -4,7 +4,7 @@ use crate::error::OracleResult;
 use solana_program::pubkey::Pubkey;
 use solana_program::sysvar::slot_history::AccountInfo;
 use solana_program::program_memory::sol_memset;
-use c_oracle_headers::{pc_map_table_t, SUCCESS};
+use crate::c_oracle_headers::{pc_map_table_t, SUCCESS};
 use std::mem::{size_of, size_of_val};
 
 ///Calls the c oracle update_price, and updates the Time Machine if needed
@@ -38,14 +38,13 @@ pub fn init_mapping(
 ) -> OracleResult {
     // FIXME: this is an extremely scary way to assert because if you forget the ? it doesn't do anything.
     pyth_assert(accounts.len() == 2 &&
-                  valid_funding_account(accounts.get(0)) &&
-                  valid_signable_account(program_id, accounts.get(1), sizeof( pc_map_table_t )),
+                  valid_funding_account(accounts.get(0)!) &&
+                  valid_signable_account(program_id, accounts.get(1)!, sizeof( pc_map_table_t )),
                 ERROR_INVALID_ARGUMENT)?;
 
-
-    let data = accounts.get(1)
+    let data = accounts.get(1)!
       .try_borrow_data()
-      .map_err(|_| PythError::InvalidAccountData)?;
+      .map_err(|_| ERROR_INVALID_ARGUMENT)?;
     let mapping_account = load::<pc_map_table_t>(*data)?;
 
     // Check that the account has not already been initialized
@@ -63,10 +62,18 @@ pub fn init_mapping(
     return Result::Ok(SUCCESS);
 }
 
-fn pyth_assert(condition: bool, error_code: ProgramError) -> Result<(), ProgramError> {
+pub fn pyth_assert(condition: bool, error_code: ProgramError) -> Result<(), ProgramError> {
     return if !condition {
         Result::Err(error_code)
     } else {
         Result::Ok(())
     }
+}
+
+pub fn valid_funding_account(account: &AccountInfo) -> bool {
+    true
+}
+
+pub fn valid_signable_account(program_id: &Pubkey, account: &AccountInfo, expected_size: usize) -> bool {
+    true
 }
