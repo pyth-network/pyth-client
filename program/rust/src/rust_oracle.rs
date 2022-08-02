@@ -62,14 +62,14 @@ pub fn init_mapping(
 
     let mut mut_data = accounts.get(1)
       .unwrap()
-      .try_borrow_data_mut()
+      .try_borrow_mut_data()
       .map_err(|_| ProgramError::InvalidArgument)?;
     sol_memset( *mut_data, 0, size_of::<pc_map_table_t>() );
 
 
     let data2 = accounts.get(1)
       .unwrap()
-      .try_borrow_data_mut()
+      .try_borrow_mut_data()
       .map_err(|_| ProgramError::InvalidArgument)?;
     let mut mapping_account = load_mut::<pc_map_table_t>(*data2).map_err(|_| ProgramError::InvalidArgument)?;
     mapping_account.magic_ = PC_MAGIC_V;
