@@ -2,6 +2,7 @@
 use solana_program::program_error::ProgramError;
 use std::result::Result;
 use thiserror::Error;
+
 // similar to ProgramResult but allows for multiple success values
 pub type OracleResult = Result<u64, ProgramError>;
 

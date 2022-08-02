@@ -38,3 +38,11 @@ unsafe impl Zeroable for pc_price {
 #[cfg(target_endian = "little")]
 unsafe impl Pod for pc_price {
 }
+
+#[cfg(target_endian = "little")]
+unsafe impl Zeroable for cmd_hdr {
+}
+
+#[cfg(target_endian = "little")]
+unsafe impl Pod for cmd_hdr {
+}
