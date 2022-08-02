@@ -13,6 +13,10 @@ fn main() {
     parser.register_traits("pc_price_info", borsh_derives.to_vec());
     parser.register_traits("cmd_upd_price", borsh_derives.to_vec());
     parser.register_traits("pc_ema", borsh_derives.to_vec());
+    parser.register_traits("pc_price", borsh_derives.to_vec());
+    parser.register_traits("pc_prod", borsh_derives.to_vec());
+    parser.register_traits("pc_map_table", borsh_derives.to_vec());
+
 
     //generate and write bindings
     let bindings = Builder::default()
