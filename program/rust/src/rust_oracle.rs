@@ -1,6 +1,6 @@
 use std::mem::{size_of, size_of_val};
 
-use bytemuck::{from_bytes, try_cast_slice, cast_slice, Pod, PodCastError};
+use bytemuck::{from_bytes, try_cast_slice, cast_slice, from_bytes_mut, try_cast_slice_mut, cast_slice_mut, Pod, PodCastError};
 use solana_program::entrypoint::SUCCESS;
 use solana_program::program_error::ProgramError;
 use solana_program::program_memory::sol_memset;
