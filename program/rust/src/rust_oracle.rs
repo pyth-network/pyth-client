@@ -63,7 +63,7 @@ pub fn init_mapping(
     mapping_account.magic_ = PC_MAGIC_V;
     mapping_account.ver_   = hdr.ver_;
     mapping_account.type_  = PC_ACCTYPE_MAPPING_V;
-    mapping_account.size_  = (size_of::<pc_map_table_t>() - size_of_val( &mapping_account.prod_ )) as usize;
+    mapping_account.size_  = (size_of::<pc_map_table_t>() - size_of_val( &mapping_account.prod_ )) as u32;
 
     Result::Ok(SUCCESS)
 }

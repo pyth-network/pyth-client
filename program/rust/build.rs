@@ -18,6 +18,7 @@ fn main() {
     parser.register_traits("pc_price", pod_derives.to_vec());
     parser.register_traits("pc_prod", pod_derives.to_vec());
     parser.register_traits("pc_map_table", pod_derives.to_vec());
+    parser.
 
 
     //generate and write bindings

@@ -72,9 +72,8 @@ const uint64_t sysvar_clock[] = {
 };
 
 // public key of symbol or publisher account
-typedef union pc_pub_key
+typedef struct pc_pub_key
 {
-  uint8_t  k1_[PC_PUBKEY_SIZE];
   uint64_t k8_[PC_PUBKEY_SIZE_64];
 } pc_pub_key_t;
 
