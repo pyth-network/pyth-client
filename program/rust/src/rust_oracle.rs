@@ -58,12 +58,12 @@ pub fn init_mapping(
 
     // Initialize by setting to zero again (just in case) and setting
     // the version number
-    let hdr = load::<cmd_hdr_t>(instruction_data);
+    let hdr = load::<cmd_hdr_t>(instruction_data)?;
     sol_memset( *data, 0, size_of::<pc_map_table_t>() );
     mapping_account.magic_ = PC_MAGIC_V;
     mapping_account.ver_   = hdr.ver_;
     mapping_account.type_  = PC_ACCTYPE_MAPPING_V;
-    mapping_account.size_  = size_of::<pc_map_table_t>() - size_of_val( mapping_account.prod_ );
+    mapping_account.size_  = (size_of::<pc_map_table_t>() - size_of_val( &mapping_account.prod_ )) as usize;
 
     Result::Ok(SUCCESS)
 }
