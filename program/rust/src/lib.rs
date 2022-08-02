@@ -1,3 +1,4 @@
+#![deny(warnings)]
 #![allow(non_upper_case_globals)]
 #![allow(clippy::not_unsafe_ptr_arg_deref)]
 
