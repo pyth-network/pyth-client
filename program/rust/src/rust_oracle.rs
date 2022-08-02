@@ -41,7 +41,6 @@ pub fn init_mapping(
     accounts: &Vec<AccountInfo>,
     instruction_data: &[u8],
 ) -> OracleResult {
-    // FIXME: this is an extremely scary way to assert because if you forget the ? it doesn't do anything.
     pyth_assert(accounts.len() == 2 &&
                   valid_funding_account(accounts.get(0).unwrap()) &&
                   valid_signable_account(program_id, accounts.get(1).unwrap(), size_of::<pc_map_table_t>()),
@@ -68,6 +67,7 @@ pub fn init_mapping(
     Result::Ok(SUCCESS)
 }
 
+// FIXME: this is an extremely scary way to check errors because if you forget the ? after calling it, it doesn't do anything.
 pub fn pyth_assert(condition: bool, error_code: ProgramError) -> Result<(), ProgramError> {
     return if !condition {
         Result::Err(error_code)
@@ -86,4 +86,15 @@ pub fn valid_signable_account(program_id: &Pubkey, account: &AccountInfo, minimu
       account.owner == program_id &&
       account.data_len() >= minimum_size &&
       Rent::default().is_exempt(account.lamports(), account.data_len())
+}
+
+fn load<T: Pod>(data: &[u8]) -> Result<&T, PodCastError> {
+    let size = size_of::<T>();
+    if data.len() >= size {
+        Ok(from_bytes(cast_slice::<u8, u8>(try_cast_slice(
+            &data[0..size],
+        )?)))
+    } else {
+        Err(PodCastError::SizeMismatch)
+    }
 }
