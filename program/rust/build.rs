@@ -4,7 +4,7 @@ use bindgen::Builder;
 fn main() {
     println!("cargo:rustc-link-search=./program/c/target");
 
-    let borsh_derives = ["BorshSerialize".to_string(), "BorshDeserialize".to_string(), "Pod".to_string()];
+    let borsh_derives = ["BorshSerialize".to_string(), "BorshDeserialize".to_string(), "Pod".to_string(), "Zeroable".to_string()];
 
     //make a parser and to it type, traits pairs
     let mut parser = build_utils::DeriveAdderParserCallback::new();
