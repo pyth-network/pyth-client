@@ -104,7 +104,7 @@ fn load_mut<T: Pod>(data: &mut[u8]) -> Result<&mut T, PodCastError> {
     let size = size_of::<T>();
     if data.len() >= size {
         Ok(from_bytes_mut(cast_slice_mut::<u8, u8>(try_cast_slice_mut(
-            &data[0..size],
+            &mut data[0..size],
         )?)))
     } else {
         Err(PodCastError::SizeMismatch)
