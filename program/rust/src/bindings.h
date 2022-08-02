@@ -14,4 +14,4 @@ typedef unsigned long int uint64_t;
 #include "../../c/src/oracle/oracle.h"
 #include "price_t_offsets.h"
 
-const uint32_t PC_MAGIC_T = PC_MAGIC;
+const uint32_t PC_MAGIC = PC_MAGIC;
