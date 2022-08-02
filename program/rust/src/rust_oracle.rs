@@ -1,5 +1,6 @@
 use std::mem::{size_of, size_of_val};
 
+use bytemuck::{from_bytes, try_cast_slice, cast_slice, Pod, PodCastError};
 use solana_program::entrypoint::SUCCESS;
 use solana_program::program_error::ProgramError;
 use solana_program::program_memory::sol_memset;
@@ -7,7 +8,7 @@ use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
 use solana_program::sysvar::slot_history::AccountInfo;
 
-use crate::c_oracle_header::{cmd_hdr_t, pc_map_table_t, PC_MAGIC_V, PC_ACCTYPE_MAPPING_V};
+use crate::c_oracle_header::{cmd_hdr_t, PC_ACCTYPE_MAPPING_V, PC_MAGIC_V, pc_map_table_t};
 use crate::error::OracleResult;
 
 use super::c_entrypoint_wrapper;
