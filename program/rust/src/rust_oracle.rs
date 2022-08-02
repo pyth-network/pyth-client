@@ -47,11 +47,11 @@ pub fn init_mapping(
                   valid_signable_account(program_id, accounts.get(1).unwrap(), size_of::<pc_map_table_t>()),
                 ProgramError::InvalidArgument)?;
 
-    let mut data = accounts.get(1)
+    let data = accounts.get(1)
       .unwrap()
-      .try_borrow_mut_data()
+      .try_borrow_data()
       .map_err(|_| ProgramError::InvalidArgument)?;
-    let mapping_account = load_mut::<pc_map_table_t>(*data).map_err(|_| ProgramError::InvalidArgument)?;
+    let mapping_account = load::<pc_map_table_t>(*data).map_err(|_| ProgramError::InvalidArgument)?;
 
     // Check that the account has not already been initialized
     pyth_assert(mapping_account.magic_ == 0 && mapping_account.ver_ == 0, ProgramError::InvalidArgument)?;
@@ -59,7 +59,19 @@ pub fn init_mapping(
     // Initialize by setting to zero again (just in case) and setting
     // the version number
     let hdr = load::<cmd_hdr_t>(instruction_data).map_err(|_| ProgramError::InvalidArgument)?;
-    sol_memset( *data, 0, size_of::<pc_map_table_t>() );
+
+    let mut mut_data = accounts.get(1)
+      .unwrap()
+      .try_borrow_data_mut()
+      .map_err(|_| ProgramError::InvalidArgument)?;
+    sol_memset( *mut_data, 0, size_of::<pc_map_table_t>() );
+
+
+    let data2 = accounts.get(1)
+      .unwrap()
+      .try_borrow_data_mut()
+      .map_err(|_| ProgramError::InvalidArgument)?;
+    let mut mapping_account = load_mut::<pc_map_table_t>(*data2).map_err(|_| ProgramError::InvalidArgument)?;
     mapping_account.magic_ = PC_MAGIC_V;
     mapping_account.ver_   = hdr.ver_;
     mapping_account.type_  = PC_ACCTYPE_MAPPING_V;
