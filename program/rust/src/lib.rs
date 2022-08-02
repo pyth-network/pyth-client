@@ -1,4 +1,5 @@
 #![allow(non_upper_case_globals)]
+#![allow(clippy::not_unsafe_ptr_arg_deref)]
 
 mod c_oracle_header;
 mod deserialize;
@@ -18,6 +19,7 @@ use crate::log::{
     pre_log,
 };
 use processor::process_instruction;
+
 use solana_program::entrypoint::deserialize;
 use solana_program::program_error::ProgramError;
 use solana_program::{
@@ -68,7 +70,6 @@ pub fn c_entrypoint_wrapper(input: *mut u8) -> OracleResult {
 
 #[no_mangle]
 pub extern "C" fn entrypoint(input: *mut u8) -> u64 {
-    #[allow(clippy::not_unsafe_ptr_arg_deref)]
     let (program_id, accounts, instruction_data) = unsafe { deserialize(input) };
 
     if let Err(error) = pre_log(&accounts, instruction_data) {
