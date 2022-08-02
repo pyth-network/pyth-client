@@ -51,14 +51,14 @@ pub fn init_mapping(
       .unwrap()
       .try_borrow_data()
       .map_err(|_| ProgramError::InvalidArgument)?;
-    let mapping_account = load::<pc_map_table_t>(*data).map_err(ProgramError::InvalidArgument)?;
+    let mapping_account = load::<pc_map_table_t>(*data).map_err(|_| ProgramError::InvalidArgument)?;
 
     // Check that the account has not already been initialized
     pyth_assert(mapping_account.magic_ == 0 && mapping_account.ver_ == 0, ProgramError::InvalidArgument)?;
 
     // Initialize by setting to zero again (just in case) and setting
     // the version number
-    let hdr = load::<cmd_hdr_t>(instruction_data).map_err(ProgramError::InvalidArgument)?;
+    let hdr = load::<cmd_hdr_t>(instruction_data).map_err(|_| ProgramError::InvalidArgument)?;
     sol_memset( *data, 0, size_of::<pc_map_table_t>() );
     mapping_account.magic_ = PC_MAGIC_V;
     mapping_account.ver_   = hdr.ver_;
