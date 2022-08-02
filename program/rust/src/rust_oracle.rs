@@ -1,8 +1,10 @@
 use std::mem::{size_of, size_of_val};
 
+use solana_program::entrypoint::SUCCESS;
 use solana_program::program_error::ProgramError;
 use solana_program::program_memory::sol_memset;
 use solana_program::pubkey::Pubkey;
+use solana_program::rent::Rent;
 use solana_program::sysvar::slot_history::AccountInfo;
 
 use crate::c_oracle_header::{cmd_hdr_t, pc_map_table_t, PC_MAGIC_V, PC_ACCTYPE_MAPPING_V};
@@ -30,7 +32,7 @@ pub fn update_version(
     instruction_data: &[u8],
 ) -> OracleResult {
     panic!("Need to merge fix to pythd in order to implement this");
-    Ok(0) //SUCCESS
+    Ok(SUCCESS)
 }
 
 
@@ -63,8 +65,7 @@ pub fn init_mapping(
     mapping_account.type_  = PC_ACCTYPE_MAPPING_V;
     mapping_account.size_  = size_of::<pc_map_table_t>() - size_of_val( mapping_account.prod_ );
 
-    // TODO: bind SUCCESS
-    return Result::Ok(0);
+    Result::Ok(SUCCESS)
 }
 
 pub fn pyth_assert(condition: bool, error_code: ProgramError) -> Result<(), ProgramError> {
@@ -76,9 +77,13 @@ pub fn pyth_assert(condition: bool, error_code: ProgramError) -> Result<(), Prog
 }
 
 pub fn valid_funding_account(account: &AccountInfo) -> bool {
-    true
+    account.is_signer && account.is_writable
 }
 
-pub fn valid_signable_account(program_id: &Pubkey, account: &AccountInfo, expected_size: usize) -> bool {
-    true
+pub fn valid_signable_account(program_id: &Pubkey, account: &AccountInfo, minimum_size: usize) -> bool {
+    account.is_signer &&
+      account.is_writable &&
+      account.owner == program_id &&
+      account.data_len() >= minimum_size &&
+      Rent::default().is_exempt(account.lamports(), account.data_len())
 }
