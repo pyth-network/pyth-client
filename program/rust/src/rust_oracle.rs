@@ -49,9 +49,9 @@ pub fn init_mapping(
 
     let data = accounts.get(1)
       .unwrap()
-      .try_borrow_data()
+      .try_borrow_mut_data()
       .map_err(|_| ProgramError::InvalidArgument)?;
-    let mapping_account = load::<pc_map_table_t>(*data).map_err(|_| ProgramError::InvalidArgument)?;
+    let mapping_account = load_mut::<pc_map_table_t>(*data).map_err(|_| ProgramError::InvalidArgument)?;
 
     // Check that the account has not already been initialized
     pyth_assert(mapping_account.magic_ == 0 && mapping_account.ver_ == 0, ProgramError::InvalidArgument)?;
@@ -93,6 +93,17 @@ fn load<T: Pod>(data: &[u8]) -> Result<&T, PodCastError> {
     let size = size_of::<T>();
     if data.len() >= size {
         Ok(from_bytes(cast_slice::<u8, u8>(try_cast_slice(
+            &data[0..size],
+        )?)))
+    } else {
+        Err(PodCastError::SizeMismatch)
+    }
+}
+
+fn load_mut<T: Pod>(data: mut &[u8]) -> Result<mut &T, PodCastError> {
+    let size = size_of::<T>();
+    if data.len() >= size {
+        Ok(from_bytes_mut(cast_slice_mut::<u8, u8>(try_cast_slice_mut(
             &data[0..size],
         )?)))
     } else {
