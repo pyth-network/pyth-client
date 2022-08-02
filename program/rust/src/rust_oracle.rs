@@ -5,7 +5,7 @@ use solana_program::program_memory::sol_memset;
 use solana_program::pubkey::Pubkey;
 use solana_program::sysvar::slot_history::AccountInfo;
 
-use crate::c_oracle_header::{pc_map_table_t, PC_MAGIC_V, PC_ACCTYPE_MAPPING_V};
+use crate::c_oracle_header::{cmd_hdr_t, pc_map_table_t, PC_MAGIC_V, PC_ACCTYPE_MAPPING_V};
 use crate::error::OracleResult;
 
 use super::c_entrypoint_wrapper;
