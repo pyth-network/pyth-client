@@ -47,7 +47,7 @@ pub fn init_mapping(
                   valid_signable_account(program_id, accounts.get(1).unwrap(), size_of::<pc_map_table_t>()),
                 ProgramError::InvalidArgument)?;
 
-    let data = accounts.get(1)
+    let mut data = accounts.get(1)
       .unwrap()
       .try_borrow_mut_data()
       .map_err(|_| ProgramError::InvalidArgument)?;
