@@ -67,7 +67,7 @@ pub fn init_mapping(
     sol_memset( *mut_data, 0, size_of::<pc_map_table_t>() );
 
 
-    let data2 = accounts.get(1)
+    let mut data2 = accounts.get(1)
       .unwrap()
       .try_borrow_mut_data()
       .map_err(|_| ProgramError::InvalidArgument)?;
