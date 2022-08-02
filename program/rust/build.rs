@@ -9,7 +9,7 @@ fn main() {
 
     //make a parser and to it type, traits pairs
     let mut parser = build_utils::DeriveAdderParserCallback::new();
-    parser.register_traits("cmd_hdr", borsh_derives.to_vec());
+    parser.register_traits("cmd_hdr", [borsh_derives, pod_derives].concat());
     parser.register_traits("pc_acc", borsh_derives.to_vec());
     parser.register_traits("pc_price_info", borsh_derives.to_vec());
     parser.register_traits("cmd_upd_price", borsh_derives.to_vec());
