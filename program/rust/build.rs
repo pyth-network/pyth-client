@@ -15,6 +15,8 @@ fn main() {
     parser.register_traits("cmd_upd_price", borsh_derives.to_vec());
     parser.register_traits("pc_ema", [borsh_derives.clone(), pod_derives.clone()].concat());
     parser.register_traits("pc_pub_key", pod_derives.to_vec());
+    parser.register_traits("[pc_pub_key; 640]", pod_derives.to_vec());
+
     parser.register_traits("pc_price", pod_derives.to_vec());
     parser.register_traits("pc_prod", pod_derives.to_vec());
     parser.register_traits("pc_map_table", pod_derives.to_vec());
