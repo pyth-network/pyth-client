@@ -5,7 +5,7 @@ use solana_program::program_memory::sol_memset;
 use solana_program::pubkey::Pubkey;
 use solana_program::sysvar::slot_history::AccountInfo;
 
-use crate::c_oracle_header::{pc_map_table_t, PC_MAGIC};
+use crate::c_oracle_header::{pc_map_table_t, PC_MAGIC_V, PC_ACCTYPE_MAPPING_V};
 use crate::error::OracleResult;
 
 use super::c_entrypoint_wrapper;
@@ -58,9 +58,9 @@ pub fn init_mapping(
     // the version number
     let hdr = load::<cmd_hdr_t>(instruction_data);
     sol_memset( data, 0, size_of::<pc_map_table_t>() );
-    mapping_account.magic_ = PC_MAGIC_T;
+    mapping_account.magic_ = PC_MAGIC_V;
     mapping_account.ver_   = hdr.ver_;
-    mapping_account.type_  = PC_ACCTYPE_MAPPING;
+    mapping_account.type_  = PC_ACCTYPE_MAPPING_V;
     mapping_account.size_  = size_of::<pc_map_table_t>() - size_of_val( mapping_account.prod_ );
 
     // TODO: bind SUCCESS
