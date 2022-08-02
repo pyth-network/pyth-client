@@ -5,7 +5,7 @@ use solana_program::program_memory::sol_memset;
 use solana_program::pubkey::Pubkey;
 use solana_program::sysvar::slot_history::AccountInfo;
 
-use crate::c_oracle_header::pc_map_table_t;
+use crate::c_oracle_header::{pc_map_table_t, PC_MAGIC_T};
 use crate::error::OracleResult;
 
 use super::c_entrypoint_wrapper;
@@ -42,7 +42,7 @@ pub fn init_mapping(
     // FIXME: this is an extremely scary way to assert because if you forget the ? it doesn't do anything.
     pyth_assert(accounts.len() == 2 &&
                   valid_funding_account(accounts.get(0).unwrap()) &&
-                  valid_signable_account(program_id, accounts.get(1).unwrap(), size_of::<pc_map_table_t>),
+                  valid_signable_account(program_id, accounts.get(1).unwrap(), size_of::<pc_map_table_t>()),
                 ProgramError::InvalidArgument)?;
 
     let data = accounts.get(1)
@@ -61,7 +61,7 @@ pub fn init_mapping(
     mapping_account.magic_ = PC_MAGIC_T;
     mapping_account.ver_   = hdr.ver_;
     mapping_account.type_  = PC_ACCTYPE_MAPPING;
-    mapping_account.size_  = size_of::<pc_map_table_t> - size_of_val( mapping_account.prod_ );
+    mapping_account.size_  = size_of::<pc_map_table_t>() - size_of_val( mapping_account.prod_ );
 
     // TODO: bind SUCCESS
     return Result::Ok(0);
