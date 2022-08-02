@@ -13,8 +13,8 @@ bindgen = "0.60.1"
 [dependencies]
 solana-program = "=1.10.29"
 borsh = "0.9"
+bytemuck = "1.7.2"
 thiserror = "1.0"
-
 
 [lib]
 crate-type = ["cdylib", "lib"]
