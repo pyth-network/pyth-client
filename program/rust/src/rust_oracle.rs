@@ -37,6 +37,9 @@ pub fn update_version(
 }
 
 
+/// initialize the first mapping account in a new linked-list of mapping accounts
+/// accounts[0] funding account           [signer writable]
+/// accounts[1] new mapping account       [signer writable]
 pub fn init_mapping(
     program_id: &Pubkey,
     accounts: &Vec<AccountInfo>,
@@ -47,31 +50,19 @@ pub fn init_mapping(
                   valid_signable_account(program_id, accounts.get(1).unwrap(), size_of::<pc_map_table_t>()),
                 ProgramError::InvalidArgument)?;
 
-    let data = accounts.get(1)
-      .unwrap()
-      .try_borrow_data()
-      .map_err(|_| ProgramError::InvalidArgument)?;
-    let mapping_account = load::<pc_map_table_t>(*data).map_err(|_| ProgramError::InvalidArgument)?;
-
     // Check that the account has not already been initialized
+    let mapping_account = load_account_as::<pc_map_table_t>(&accounts.get(1).unwrap())
+      .map_err(|_| ProgramError::InvalidArgument)?;
     pyth_assert(mapping_account.magic_ == 0 && mapping_account.ver_ == 0, ProgramError::InvalidArgument)?;
 
     // Initialize by setting to zero again (just in case) and setting
     // the version number
     let hdr = load::<cmd_hdr_t>(instruction_data).map_err(|_| ProgramError::InvalidArgument)?;
+    let mut data = accounts.get(1).unwrap().try_borrow_mut_data().map_err(|_| ProgramError::InvalidArgument)?;
+    sol_memset( *data, 0, size_of::<pc_map_table_t>() );
 
-    let mut mut_data = accounts.get(1)
-      .unwrap()
-      .try_borrow_mut_data()
+    let mut mapping_account = load_account_as_mut::<pc_map_table_t>(&accounts.get(1).unwrap())
       .map_err(|_| ProgramError::InvalidArgument)?;
-    sol_memset( *mut_data, 0, size_of::<pc_map_table_t>() );
-
-
-    let mut data2 = accounts.get(1)
-      .unwrap()
-      .try_borrow_mut_data()
-      .map_err(|_| ProgramError::InvalidArgument)?;
-    let mut mapping_account = load_mut::<pc_map_table_t>(*data2).map_err(|_| ProgramError::InvalidArgument)?;
     mapping_account.magic_ = PC_MAGIC_V;
     mapping_account.ver_   = hdr.ver_;
     mapping_account.type_  = PC_ACCTYPE_MAPPING_V;
@@ -89,11 +80,11 @@ pub fn pyth_assert(condition: bool, error_code: ProgramError) -> Result<(), Prog
     }
 }
 
-pub fn valid_funding_account(account: &AccountInfo) -> bool {
+fn valid_funding_account(account: &AccountInfo) -> bool {
     account.is_signer && account.is_writable
 }
 
-pub fn valid_signable_account(program_id: &Pubkey, account: &AccountInfo, minimum_size: usize) -> bool {
+fn valid_signable_account(program_id: &Pubkey, account: &AccountInfo, minimum_size: usize) -> bool {
     account.is_signer &&
       account.is_writable &&
       account.owner == program_id &&
@@ -101,24 +92,35 @@ pub fn valid_signable_account(program_id: &Pubkey, account: &AccountInfo, minimu
       Rent::default().is_exempt(account.lamports(), account.data_len())
 }
 
+/// Interpret the bytes in `data` as a value of type `T`
 fn load<T: Pod>(data: &[u8]) -> Result<&T, PodCastError> {
     let size = size_of::<T>();
     if data.len() >= size {
-        Ok(from_bytes(cast_slice::<u8, u8>(try_cast_slice(
-            &data[0..size],
-        )?)))
+        Ok(from_bytes(cast_slice::<u8, u8>(try_cast_slice(&data[0..size])?)))
     } else {
         Err(PodCastError::SizeMismatch)
     }
 }
 
+/// Interpret the bytes in `data` as a mutable value of type `T`
 fn load_mut<T: Pod>(data: &mut[u8]) -> Result<&mut T, PodCastError> {
     let size = size_of::<T>();
     if data.len() >= size {
-        Ok(from_bytes_mut(cast_slice_mut::<u8, u8>(try_cast_slice_mut(
-            &mut data[0..size],
-        )?)))
+        Ok(from_bytes_mut(cast_slice_mut::<u8, u8>(try_cast_slice_mut(&mut data[0..size])?)))
     } else {
         Err(PodCastError::SizeMismatch)
     }
+}
+
+/// Get the data stored in `account` as a value of type `T`
+fn load_account_as<T: Pod>(account: &AccountInfo) -> Result<&T, ProgramError> {
+    let data = account.unwrap().try_borrow_data().map_err(|_| ProgramError::InvalidArgument)?;
+    load::<T>(*data).map_err(|_| ProgramError::InvalidArgument)
+}
+
+/// Mutably borrow the data in `account` as a value of type `T`.
+/// Any mutations to the returned value will be reflected in the account data.
+fn load_account_as_mut<T: Pod>(account: &AccountInfo) -> Result<&mut T, ProgramError> {
+    let mut data = account.unwrap().try_borrow_mut_data().map_err(|_| ProgramError::InvalidArgument)?;
+    load_mut::<T>(*data).map_err(|_| ProgramError::InvalidArgument)
 }

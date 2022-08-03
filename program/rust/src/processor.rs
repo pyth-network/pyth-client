@@ -1,7 +1,14 @@
+use ::std::mem::size_of;
+
+use borsh::BorshDeserialize;
+use solana_program::pubkey::Pubkey;
+use solana_program::sysvar::slot_history::AccountInfo;
+
 use crate::c_entrypoint_wrapper;
 use crate::c_oracle_header::{
     cmd_hdr,
     command_t_e_cmd_agg_price,
+    command_t_e_cmd_init_mapping,
     command_t_e_cmd_upd_account_version,
     command_t_e_cmd_upd_price,
     command_t_e_cmd_upd_price_no_fail_on_error,
@@ -11,14 +18,8 @@ use crate::error::{
     OracleError,
     OracleResult,
 };
-use crate::rust_oracle::{
-    update_price,
-    update_version,
-};
-use ::std::mem::size_of;
-use borsh::BorshDeserialize;
-use solana_program::pubkey::Pubkey;
-use solana_program::sysvar::slot_history::AccountInfo;
+use crate::rust_oracle::{init_mapping, update_price, update_version};
+
 ///dispatch to the right instruction in the oracle
 pub fn process_instruction(
     program_id: &Pubkey,
@@ -49,6 +50,10 @@ pub fn process_instruction(
         command_t_e_cmd_upd_account_version => {
             update_version(program_id, &accounts, &instruction_data)
         }
+        command_t_e_cmd_init_mapping => {
+            init_mapping(program_id, &accounts, &instruction_data)
+        }
         _ => c_entrypoint_wrapper(input),
     }
 }
+
