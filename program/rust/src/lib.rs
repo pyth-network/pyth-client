@@ -54,14 +54,15 @@ extern "C" {
 
 //make the C entrypoint a no-op when running cargo test
 #[cfg(not(target_arch = "bpf"))]
-pub extern "C" fn c_entrypoint(_input: *mut u8) -> u64 {
+#[allow(clippy::missing_safety_doc)]
+pub unsafe extern "C" fn c_entrypoint(_input: *mut u8) -> u64 {
     0 //SUCCESS value
 }
 
 pub fn c_entrypoint_wrapper(input: *mut u8) -> OracleResult {
     //Throwing an exception from C into Rust is undefined behavior
     //This seems to be the best we can do
-    match c_entrypoint(input) {
+    match unsafe { c_entrypoint(input) } {
         0 => Ok(0), // Success
         SUCCESSFULLY_UPDATED_AGGREGATE => Ok(SUCCESSFULLY_UPDATED_AGGREGATE),
         2 => Err(ProgramError::InvalidArgument), //2 is ERROR_INVALID_ARGUMENT in solana_sdk.h
