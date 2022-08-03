@@ -1,3 +1,7 @@
+use std::cell::{
+    Ref,
+    RefMut,
+};
 use std::mem::{
     size_of,
     size_of_val,
@@ -83,7 +87,7 @@ pub fn init_mapping(
 
     // Initialize by setting to zero again (just in case) and setting
     // the version number
-    let hdr = load::<cmd_hdr_t>(instruction_data).map_err(|_| ProgramError::InvalidArgument)?;
+    let hdr = load::<cmd_hdr_t>(instruction_data);
     let mut data = accounts
         .get(1)
         .unwrap()
@@ -125,42 +129,32 @@ fn valid_signable_account(program_id: &Pubkey, account: &AccountInfo, minimum_si
 }
 
 /// Interpret the bytes in `data` as a value of type `T`
-fn load<T: Pod>(data: &[u8]) -> Result<&T, PodCastError> {
-    let size = size_of::<T>();
-    if data.len() >= size {
-        Ok(from_bytes(cast_slice::<u8, u8>(try_cast_slice(
-            &data[0..size],
-        )?)))
-    } else {
-        Err(PodCastError::SizeMismatch)
-    }
+fn load<T: Pod>(data: &[u8]) -> &T {
+    from_bytes(&data[0..size_of::<T>()])
 }
 
 /// Interpret the bytes in `data` as a mutable value of type `T`
-fn load_mut<T: Pod>(data: &mut [u8]) -> Result<&mut T, PodCastError> {
-    let size = size_of::<T>();
-    if data.len() >= size {
-        Ok(from_bytes_mut(cast_slice_mut::<u8, u8>(
-            try_cast_slice_mut(&mut data[0..size])?,
-        )))
-    } else {
-        Err(PodCastError::SizeMismatch)
-    }
+fn load_mut<T: Pod>(data: &mut [u8]) -> &mut T {
+    from_bytes_mut(&mut data[0..size_of::<T>()])
 }
 
 /// Get the data stored in `account` as a value of type `T`
-fn load_account_as<'a, T: Pod>(account: &AccountInfo<'a>) -> Result<&'a T, ProgramError> {
-    let data = account
-        .try_borrow_data()
-        .map_err(|_| ProgramError::InvalidArgument)?;
-    load::<T>(*data).map_err(|_| ProgramError::InvalidArgument)
+fn load_account_as<'a, T: Pod>(account: &'a AccountInfo) -> Result<Ref<'a, T>, ProgramError> {
+    let data = account.try_borrow_data()?;
+
+    Ok(Ref::map(data, |data| {
+        bytemuck::from_bytes(&data[0..size_of::<T>()])
+    }))
 }
 
 /// Mutably borrow the data in `account` as a value of type `T`.
 /// Any mutations to the returned value will be reflected in the account data.
-fn load_account_as_mut<'a, T: Pod>(account: &AccountInfo<'a>) -> Result<&'a mut T, ProgramError> {
-    let mut data = account
-        .try_borrow_mut_data()
-        .map_err(|_| ProgramError::InvalidArgument)?;
-    load_mut::<T>(*data).map_err(|_| ProgramError::InvalidArgument)
+fn load_account_as_mut<'a, T: Pod>(
+    account: &'a AccountInfo,
+) -> Result<RefMut<'a, T>, ProgramError> {
+    let data = account.try_borrow_mut_data()?;
+
+    Ok(RefMut::map(data, |data| {
+        bytemuck::from_bytes_mut(&mut data[0..size_of::<T>()])
+    }))
 }
