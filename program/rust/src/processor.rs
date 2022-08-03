@@ -18,7 +18,11 @@ use crate::error::{
     OracleError,
     OracleResult,
 };
-use crate::rust_oracle::{init_mapping, update_price, update_version};
+use crate::rust_oracle::{
+    init_mapping,
+    update_price,
+    update_version,
+};
 
 ///dispatch to the right instruction in the oracle
 pub fn process_instruction(
@@ -50,10 +54,7 @@ pub fn process_instruction(
         command_t_e_cmd_upd_account_version => {
             update_version(program_id, &accounts, &instruction_data)
         }
-        command_t_e_cmd_init_mapping => {
-            init_mapping(program_id, &accounts, &instruction_data)
-        }
+        command_t_e_cmd_init_mapping => init_mapping(program_id, &accounts, &instruction_data),
         _ => c_entrypoint_wrapper(input),
     }
 }
-

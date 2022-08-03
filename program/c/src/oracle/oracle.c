@@ -59,6 +59,33 @@ static bool valid_writable_account( SolParameters *prm,
          is_rent_exempt( *ka->lamports, ka->data_len );
 }
 
+static uint64_t init_mapping( SolParameters *prm, SolAccountInfo *ka )
+{
+  // Verify that the new account is signed and writable, with correct
+  // ownership and size
+  if ( prm->ka_num != 2 ||
+       !valid_funding_account( &ka[0] ) ||
+       !valid_signable_account( prm, &ka[1], sizeof( pc_map_table_t ) ) ) {
+    return ERROR_INVALID_ARGUMENT;
+  }
+
+  // Check that the account has not already been initialized
+  pc_map_table_t *tptr = (pc_map_table_t*)ka[1].data;
+  if ( tptr->magic_ != 0 || tptr->ver_ != 0 ) {
+    return ERROR_INVALID_ARGUMENT;
+  }
+
+  // Initialize by setting to zero again (just in case) and setting
+  // the version number
+  cmd_hdr_t *hdr = (cmd_hdr_t*)prm->data;
+  sol_memset( tptr, 0, sizeof( pc_map_table_t ) );
+  tptr->magic_ = PC_MAGIC;
+  tptr->ver_   = hdr->ver_;
+  tptr->type_  = PC_ACCTYPE_MAPPING;
+  tptr->size_  = sizeof( pc_map_table_t ) - sizeof( tptr->prod_ );
+  return SUCCESS;
+}
+
 static uint64_t add_mapping( SolParameters *prm, SolAccountInfo *ka )
 {
   // Account (1) is the tail or last mapping account in the chain
@@ -511,7 +538,8 @@ static uint64_t dispatch( SolParameters *prm, SolAccountInfo *ka )
     case e_cmd_upd_price:
     case e_cmd_agg_price:                  return upd_price( prm, ka );
     case e_cmd_upd_price_no_fail_on_error: return upd_price_no_fail_on_error( prm, ka );
-    case e_cmd_init_mapping:               return ERROR_INVALID_ARGUMENT;
+    // init_mapping is overridden in Rust, but still implemented here to make the C unit tests pass.
+    case e_cmd_init_mapping:               return init_mapping( prm, ka );
     case e_cmd_add_mapping:                return add_mapping( prm, ka );
     case e_cmd_add_product:                return add_product( prm, ka );
     case e_cmd_upd_product:                return upd_product( prm, ka );
