@@ -1,4 +1,4 @@
-use ::std::mem::size_of;
+use std::mem::size_of;
 
 use borsh::BorshDeserialize;
 use solana_program::pubkey::Pubkey;
