@@ -5,6 +5,7 @@ fn main() {
     println!("cargo:rustc-link-search=./program/c/target");
 
     let borsh_derives = ["BorshSerialize".to_string(), "BorshDeserialize".to_string()];
+    let pod_derive = ["Pod".to_string(), "Zeroable".to_string()];
 
     //make a parser and to it type, traits pairs
     let mut parser = build_utils::DeriveAdderParserCallback::new();
@@ -13,6 +14,7 @@ fn main() {
     parser.register_traits("pc_price_info", borsh_derives.to_vec());
     parser.register_traits("cmd_upd_price", borsh_derives.to_vec());
     parser.register_traits("pc_ema", borsh_derives.to_vec());
+    parser.register_traits("cmd_add_price", pod_derive.to_vec());
 
     //generate and write bindings
     let bindings = Builder::default()

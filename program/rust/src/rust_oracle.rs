@@ -21,11 +21,19 @@ use solana_program::rent::Rent;
 use solana_program::sysvar::slot_history::AccountInfo;
 
 use crate::c_oracle_header::{
+    cmd_add_price_t,
     cmd_hdr_t,
     pc_acc,
     pc_map_table_t,
+    pc_price_t,
+    pc_prod_t,
     PC_ACCTYPE_MAPPING,
+    PC_ACCTYPE_PRICE,
+    PC_ACCTYPE_PRODUCT,
     PC_MAGIC,
+    PC_MAX_NUM_DECIMALS,
+    PC_PROD_ACC_SIZE,
+    PC_PTYPE_UNKNOWN,
 };
 use crate::error::OracleResult;
 
@@ -86,6 +94,63 @@ pub fn init_mapping(
         mapping_account.size_ =
             (size_of::<pc_map_table_t>() - size_of_val(&mapping_account.prod_)) as u32;
     }
+
+    Ok(SUCCESS)
+}
+
+/// add a price account to a product account
+/// accounts[0] funding account                                   [signer writable]
+/// accounts[1] product account to add the price account to       [signer writable]
+/// accounts[2] newly created price account                       [signer writable]
+pub fn add_price(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
+    instruction_data: &[u8],
+) -> OracleResult {
+    if instruction_data.len() < size_of::<cmd_add_price_t>() {
+        return Err(ProgramError::InvalidArgument);
+    }
+    let cmd_args = load::<cmd_add_price_t>(instruction_data);
+
+    if cmd_args.expo_ > PC_MAX_NUM_DECIMALS as i32
+        || cmd_args.expo_ < -(PC_MAX_NUM_DECIMALS as i32)
+        || cmd_args.ptype_ == PC_PTYPE_UNKNOWN
+    {
+        return Err(ProgramError::InvalidArgument);
+    }
+
+    let [_funding_account, product_account, price_account] = match accounts {
+        [x, y, z]
+            if valid_funding_account(x)
+                && valid_signable_account(program_id, y, PC_PROD_ACC_SIZE as usize)
+                && valid_signable_account(program_id, z, size_of::<pc_price_t>()) =>
+        {
+            Ok([x, y, z])
+        }
+        _ => Err(ProgramError::InvalidArgument),
+    }?;
+
+    let mut product_data = load_account_as_mut::<pc_prod_t>(product_account)?;
+    let mut price_data = load_account_as_mut::<pc_price_t>(price_account)?;
+
+    if product_data.magic_ != PC_MAGIC
+        || product_data.ver_ != cmd_args.ver_
+        || product_data.type_ != PC_ACCTYPE_PRODUCT
+        || price_data.magic_ != 0
+    {
+        return Err(ProgramError::InvalidArgument);
+    }
+
+    clear_account(price_account)?;
+    price_data.magic_ = PC_MAGIC;
+    price_data.ver_ = cmd_args.ver_;
+    price_data.type_ = PC_ACCTYPE_PRICE;
+    price_data.size_ = (size_of::<pc_price_t>() - size_of_val(&price_data.comp_)) as u32;
+    price_data.expo_ = cmd_args.expo_;
+    price_data.ptype_ = cmd_args.ptype_;
+    price_data.prod_.k1_ = product_account.key.to_bytes();
+    price_data.next_ = product_data.px_acc_;
+    product_data.px_acc_.k1_ = price_account.key.to_bytes();
 
     Ok(SUCCESS)
 }

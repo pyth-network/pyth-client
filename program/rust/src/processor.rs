@@ -7,6 +7,7 @@ use solana_program::sysvar::slot_history::AccountInfo;
 use crate::c_entrypoint_wrapper;
 use crate::c_oracle_header::{
     cmd_hdr,
+    command_t_e_cmd_add_price,
     command_t_e_cmd_agg_price,
     command_t_e_cmd_init_mapping,
     command_t_e_cmd_upd_account_version,
@@ -19,6 +20,7 @@ use crate::error::{
     OracleResult,
 };
 use crate::rust_oracle::{
+    add_price,
     init_mapping,
     update_price,
     update_version,
@@ -52,6 +54,7 @@ pub fn process_instruction(
         command_t_e_cmd_upd_account_version => {
             update_version(program_id, accounts, instruction_data)
         }
+        command_t_e_cmd_add_price => add_price(program_id, accounts, instruction_data),
         command_t_e_cmd_init_mapping => init_mapping(program_id, accounts, instruction_data),
         _ => c_entrypoint_wrapper(input),
     }
