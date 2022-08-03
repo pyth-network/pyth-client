@@ -22,6 +22,7 @@ use solana_program::sysvar::slot_history::AccountInfo;
 
 use crate::c_oracle_header::{
     cmd_hdr_t,
+    pc_acc,
     pc_map_table_t,
     PC_ACCTYPE_MAPPING_V,
     PC_MAGIC_V,
@@ -62,42 +63,23 @@ pub fn init_mapping(
     accounts: &[AccountInfo],
     instruction_data: &[u8],
 ) -> OracleResult {
-    pyth_assert(
-        accounts.len() == 2
-            && valid_funding_account(accounts.get(0).unwrap())
-            && valid_signable_account(
-                program_id,
-                accounts.get(1).unwrap(),
-                size_of::<pc_map_table_t>(),
-            ),
-        ProgramError::InvalidArgument,
-    )?;
+    let [_funding_account, fresh_mapping_account] = match accounts {
+        [x, y]
+            if valid_funding_account(x)
+                && valid_signable_account(program_id, y, size_of::<pc_map_table_t>())
+                && valid_fresh_account(y) =>
+        {
+            Ok([x, y])
+        }
+        _ => Err(ProgramError::InvalidArgument),
+    }?;
 
-    // Check that the account has not already been initialized
-    {
-        let mapping_account = load_account_as::<pc_map_table_t>(accounts.get(1).unwrap())
-            .map_err(|_| ProgramError::InvalidArgument)?;
-        pyth_assert(
-            mapping_account.magic_ == 0 && mapping_account.ver_ == 0,
-            ProgramError::InvalidArgument,
-        )?;
-    }
+    // Initialize by setting to zero again (just in case) and populating the account header
+    clear_account(fresh_mapping_account)?;
 
-    // Initialize by setting to zero again (just in case) and setting
-    // the version number
     let hdr = load::<cmd_hdr_t>(instruction_data);
     {
-        let mut data = accounts
-            .get(1)
-            .unwrap()
-            .try_borrow_mut_data()
-            .map_err(|_| ProgramError::InvalidArgument)?;
-        sol_memset(data.borrow_mut(), 0, size_of::<pc_map_table_t>());
-    }
-
-    {
-        let mut mapping_account = load_account_as_mut::<pc_map_table_t>(accounts.get(1).unwrap())
-            .map_err(|_| ProgramError::InvalidArgument)?;
+        let mut mapping_account = load_account_as_mut::<pc_map_table_t>(fresh_mapping_account)?;
         mapping_account.magic_ = PC_MAGIC_V;
         mapping_account.ver_ = hdr.ver_;
         mapping_account.type_ = PC_ACCTYPE_MAPPING_V;
@@ -105,15 +87,7 @@ pub fn init_mapping(
             (size_of::<pc_map_table_t>() - size_of_val(&mapping_account.prod_)) as u32;
     }
 
-    Result::Ok(SUCCESS)
-}
-
-pub fn pyth_assert(condition: bool, error_code: ProgramError) -> Result<(), ProgramError> {
-    if !condition {
-        Result::Err(error_code)
-    } else {
-        Result::Ok(())
-    }
+    Ok(SUCCESS)
 }
 
 fn valid_funding_account(account: &AccountInfo) -> bool {
@@ -126,6 +100,26 @@ fn valid_signable_account(program_id: &Pubkey, account: &AccountInfo, minimum_si
         && account.owner == program_id
         && account.data_len() >= minimum_size
         && Rent::default().is_exempt(account.lamports(), account.data_len())
+}
+
+/// Returns `true` if the `account` is fresh, i.e., its data can be overwritten.
+/// Use this check to prevent accidentally overwriting accounts whose data is already populated.
+fn valid_fresh_account(account: &AccountInfo) -> bool {
+    let pyth_acc = load_account_as::<pc_acc>(account);
+    match pyth_acc {
+        Ok(pyth_acc) => pyth_acc.magic_ == 0 && pyth_acc.ver_ == 0,
+        Err(_) => false,
+    }
+}
+
+/// Sets the data of account to all-zero
+fn clear_account(account: &AccountInfo) -> Result<(), ProgramError> {
+    let mut data = account
+        .try_borrow_mut_data()
+        .map_err(|_| ProgramError::InvalidArgument)?;
+    let length = data.len();
+    sol_memset(data.borrow_mut(), 0, length);
+    Ok(())
 }
 
 /// Interpret the bytes in `data` as a value of type `T`

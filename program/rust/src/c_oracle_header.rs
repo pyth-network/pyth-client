@@ -17,6 +17,14 @@ use bytemuck::{
 include!("../bindings.rs");
 
 #[cfg(target_endian = "little")]
+unsafe impl Zeroable for pc_acc {
+}
+
+#[cfg(target_endian = "little")]
+unsafe impl Pod for pc_acc {
+}
+
+#[cfg(target_endian = "little")]
 unsafe impl Zeroable for pc_map_table {
 }
 
