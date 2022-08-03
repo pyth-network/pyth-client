@@ -1,5 +1,7 @@
 #![deny(warnings)]
+// Allow non upper case globals from C
 #![allow(non_upper_case_globals)]
+// Allow using the solana_program::entrypoint::deserialize function
 #![allow(clippy::not_unsafe_ptr_arg_deref)]
 
 mod c_oracle_header;
@@ -53,6 +55,7 @@ extern "C" {
 }
 
 //make the C entrypoint a no-op when running cargo test
+// Missing safety doc OK because this is just a no-op
 #[cfg(not(target_arch = "bpf"))]
 #[allow(clippy::missing_safety_doc)]
 pub unsafe extern "C" fn c_entrypoint(_input: *mut u8) -> u64 {
