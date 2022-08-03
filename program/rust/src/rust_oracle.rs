@@ -75,7 +75,7 @@ pub fn init_mapping(
                 size_of::<pc_map_table_t>(),
             ),
         ProgramError::InvalidArgument,
-    );
+    )?;
 
     // Check that the account has not already been initialized
     let mapping_account = load_account_as::<pc_map_table_t>(&accounts.get(1).unwrap())
