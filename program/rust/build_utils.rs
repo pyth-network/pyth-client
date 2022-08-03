@@ -19,7 +19,7 @@ impl<'a> DeriveAdderParserCallback<'a> {
     }
     //add pairs of types and their desired traits
     pub fn register_traits(&mut self, type_name: &'a str, traits: Vec<String>) {
-        self.types_to_traits.insert(&type_name, traits);
+        self.types_to_traits.insert(type_name, traits);
     }
 }
 

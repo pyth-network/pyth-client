@@ -1,5 +1,3 @@
-cargo-features = ["edition2021"]
-
 [package]
 name = "pyth-oracle"
 version = "2.13.1"

@@ -1,3 +1,4 @@
+use std::borrow::BorrowMut;
 use std::cell::{
     Ref,
     RefMut,
@@ -8,14 +9,9 @@ use std::mem::{
 };
 
 use bytemuck::{
-    cast_slice,
-    cast_slice_mut,
     from_bytes,
     from_bytes_mut,
-    try_cast_slice,
-    try_cast_slice_mut,
     Pod,
-    PodCastError,
 };
 use solana_program::entrypoint::SUCCESS;
 use solana_program::program_error::ProgramError;
@@ -36,9 +32,9 @@ use super::c_entrypoint_wrapper;
 
 ///Calls the c oracle update_price, and updates the Time Machine if needed
 pub fn update_price(
-    program_id: &Pubkey,
-    accounts: &Vec<AccountInfo>,
-    instruction_data: &[u8],
+    _program_id: &Pubkey,
+    _accounts: &[AccountInfo],
+    _instruction_data: &[u8],
     input: *mut u8,
 ) -> OracleResult {
     //For now, we did not change the behavior of this. this is just to show the proposed structure
@@ -49,12 +45,12 @@ pub fn update_price(
 /// with the current version
 /// updates the version number for all accounts, and resizes price accounts
 pub fn update_version(
-    program_id: &Pubkey,
-    accounts: &Vec<AccountInfo>,
-    instruction_data: &[u8],
+    _program_id: &Pubkey,
+    _accounts: &[AccountInfo],
+    _instruction_data: &[u8],
 ) -> OracleResult {
     panic!("Need to merge fix to pythd in order to implement this");
-    Ok(SUCCESS)
+    // Ok(SUCCESS)
 }
 
 
@@ -63,7 +59,7 @@ pub fn update_version(
 /// accounts[1] new mapping account       [signer writable]
 pub fn init_mapping(
     program_id: &Pubkey,
-    accounts: &Vec<AccountInfo>,
+    accounts: &[AccountInfo],
     instruction_data: &[u8],
 ) -> OracleResult {
     pyth_assert(
@@ -78,42 +74,46 @@ pub fn init_mapping(
     )?;
 
     // Check that the account has not already been initialized
-    let mapping_account = load_account_as::<pc_map_table_t>(&accounts.get(1).unwrap())
-        .map_err(|_| ProgramError::InvalidArgument)?;
-    pyth_assert(
-        mapping_account.magic_ == 0 && mapping_account.ver_ == 0,
-        ProgramError::InvalidArgument,
-    )?;
+    {
+        let mapping_account = load_account_as::<pc_map_table_t>(accounts.get(1).unwrap())
+            .map_err(|_| ProgramError::InvalidArgument)?;
+        pyth_assert(
+            mapping_account.magic_ == 0 && mapping_account.ver_ == 0,
+            ProgramError::InvalidArgument,
+        )?;
+    }
 
     // Initialize by setting to zero again (just in case) and setting
     // the version number
     let hdr = load::<cmd_hdr_t>(instruction_data);
-    let mut data = accounts
-        .get(1)
-        .unwrap()
-        .try_borrow_mut_data()
-        .map_err(|_| ProgramError::InvalidArgument)?;
-    sol_memset(*data, 0, size_of::<pc_map_table_t>());
+    {
+        let mut data = accounts
+            .get(1)
+            .unwrap()
+            .try_borrow_mut_data()
+            .map_err(|_| ProgramError::InvalidArgument)?;
+        sol_memset(data.borrow_mut(), 0, size_of::<pc_map_table_t>());
+    }
 
-    let mut mapping_account = load_account_as_mut::<pc_map_table_t>(&accounts.get(1).unwrap())
-        .map_err(|_| ProgramError::InvalidArgument)?;
-    mapping_account.magic_ = PC_MAGIC_V;
-    mapping_account.ver_ = hdr.ver_;
-    mapping_account.type_ = PC_ACCTYPE_MAPPING_V;
-    mapping_account.size_ =
-        (size_of::<pc_map_table_t>() - size_of_val(&mapping_account.prod_)) as u32;
+    {
+        let mut mapping_account = load_account_as_mut::<pc_map_table_t>(accounts.get(1).unwrap())
+            .map_err(|_| ProgramError::InvalidArgument)?;
+        mapping_account.magic_ = PC_MAGIC_V;
+        mapping_account.ver_ = hdr.ver_;
+        mapping_account.type_ = PC_ACCTYPE_MAPPING_V;
+        mapping_account.size_ =
+            (size_of::<pc_map_table_t>() - size_of_val(&mapping_account.prod_)) as u32;
+    }
 
     Result::Ok(SUCCESS)
 }
 
-// FIXME: this is an extremely scary way to check errors because if you forget the ? after calling
-// it, it doesn't do anything.
 pub fn pyth_assert(condition: bool, error_code: ProgramError) -> Result<(), ProgramError> {
-    return if !condition {
+    if !condition {
         Result::Err(error_code)
     } else {
         Result::Ok(())
-    };
+    }
 }
 
 fn valid_funding_account(account: &AccountInfo) -> bool {
@@ -134,6 +134,7 @@ fn load<T: Pod>(data: &[u8]) -> &T {
 }
 
 /// Interpret the bytes in `data` as a mutable value of type `T`
+#[allow(unused)]
 fn load_mut<T: Pod>(data: &mut [u8]) -> &mut T {
     from_bytes_mut(&mut data[0..size_of::<T>()])
 }

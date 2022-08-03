@@ -27,7 +27,7 @@ use crate::rust_oracle::{
 ///dispatch to the right instruction in the oracle
 pub fn process_instruction(
     program_id: &Pubkey,
-    accounts: &Vec<AccountInfo>,
+    accounts: &[AccountInfo],
     instruction_data: &[u8],
     input: *mut u8,
 ) -> OracleResult {
@@ -48,13 +48,11 @@ pub fn process_instruction(
     {
         command_t_e_cmd_upd_price
         | command_t_e_cmd_upd_price_no_fail_on_error
-        | command_t_e_cmd_agg_price => {
-            update_price(program_id, &accounts, &instruction_data, input)
-        }
+        | command_t_e_cmd_agg_price => update_price(program_id, accounts, instruction_data, input),
         command_t_e_cmd_upd_account_version => {
-            update_version(program_id, &accounts, &instruction_data)
+            update_version(program_id, accounts, instruction_data)
         }
-        command_t_e_cmd_init_mapping => init_mapping(program_id, &accounts, &instruction_data),
+        command_t_e_cmd_init_mapping => init_mapping(program_id, accounts, instruction_data),
         _ => c_entrypoint_wrapper(input),
     }
 }
