@@ -16,7 +16,7 @@ pub fn pre_log(accounts: &[AccountInfo], instruction_data: &[u8]) -> ProgramResu
     msg!("Pyth oracle contract");
 
     let instruction_header: cmd_hdr =
-        deserialize_single_field_from_buffer::<cmd_hdr>(&instruction_data, None)?;
+        deserialize_single_field_from_buffer::<cmd_hdr>(instruction_data, None)?;
     let instruction_id: u32 = instruction_header
         .cmd_
         .try_into()

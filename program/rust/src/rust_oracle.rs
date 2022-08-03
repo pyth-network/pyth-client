@@ -5,9 +5,9 @@ use solana_program::sysvar::slot_history::AccountInfo;
 
 ///Calls the c oracle update_price, and updates the Time Machine if needed
 pub fn update_price(
-    program_id: &Pubkey,
-    accounts: &Vec<AccountInfo>,
-    instruction_data: &[u8],
+    _program_id: &Pubkey,
+    _accounts: &[AccountInfo],
+    _instruction_data: &[u8],
     input: *mut u8,
 ) -> OracleResult {
     //For now, we did not change the behavior of this. this is just to show the proposed structure
@@ -18,10 +18,9 @@ pub fn update_price(
 /// with the current version
 /// updates the version number for all accounts, and resizes price accounts
 pub fn update_version(
-    program_id: &Pubkey,
-    accounts: &Vec<AccountInfo>,
-    instruction_data: &[u8],
+    _program_id: &Pubkey,
+    _accounts: &[AccountInfo],
+    _instruction_data: &[u8],
 ) -> OracleResult {
     panic!("Need to merge fix to pythd in order to implement this");
-    Ok(0) //SUCCESS
 }
