@@ -149,7 +149,7 @@ fn load_mut<T: Pod>(data: &mut [u8]) -> Result<&mut T, PodCastError> {
 }
 
 /// Get the data stored in `account` as a value of type `T`
-fn load_account_as<T: Pod>(account: &AccountInfo) -> Result<&T, ProgramError> {
+fn load_account_as<'a, T: Pod>(account: &'a AccountInfo) -> Result<&'a T, ProgramError> {
     let data = account
         .unwrap()
         .try_borrow_data()
@@ -159,7 +159,7 @@ fn load_account_as<T: Pod>(account: &AccountInfo) -> Result<&T, ProgramError> {
 
 /// Mutably borrow the data in `account` as a value of type `T`.
 /// Any mutations to the returned value will be reflected in the account data.
-fn load_account_as_mut<T: Pod>(account: &AccountInfo) -> Result<&mut T, ProgramError> {
+fn load_account_as_mut<'a, T: Pod>(account: &'a AccountInfo) -> Result<&'a mut T, ProgramError> {
     let mut data = account
         .unwrap()
         .try_borrow_mut_data()
