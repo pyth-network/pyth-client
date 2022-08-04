@@ -26,6 +26,7 @@ use crate::c_oracle_header::{
     pc_map_table_t,
     PC_ACCTYPE_MAPPING,
     PC_MAGIC,
+    PC_MAP_TABLE_SIZE,
 };
 use crate::error::OracleResult;
 
@@ -77,7 +78,7 @@ pub fn init_mapping(
     }?;
 
     // Initialize by setting to zero again (just in case) and populating the account header
-    let hdr = load::<cmd_hdr_t>(instruction_data);
+    let hdr = load::<cmd_hdr_t>(instruction_data)?;
     initialize_mapping_account(fresh_mapping_account, hdr.ver_)?;
 
     Ok(SUCCESS)
@@ -100,10 +101,10 @@ pub fn add_mapping(
         _ => Err(ProgramError::InvalidArgument),
     }?;
 
-    let hdr = load::<cmd_hdr_t>(instruction_data);
+    let hdr = load::<cmd_hdr_t>(instruction_data)?;
     let mut cur_mapping = load_mapping_account_mut(cur_mapping, hdr.ver_)?;
     pyth_assert(
-        cur_mapping.num_ == PC_MAP_TABLE_SIZE_V
+        cur_mapping.num_ == PC_MAP_TABLE_SIZE
             && unsafe { cur_mapping.next_.k8_.iter().all(|x| *x == 0) },
         ProgramError::InvalidArgument,
     )?;
@@ -183,6 +184,9 @@ fn load_account_as_mut<'a, T: Pod>(
     }))
 }
 
+/// Mutably borrow the data in `account` as a mapping account, validating that the account
+/// is properly formatted. Any mutations to the returned value will be reflected in the
+/// account data. Use this to read already-initialized accounts.
 fn load_mapping_account_mut<'a>(
     account: &'a AccountInfo,
     expected_version: u32,
@@ -191,22 +195,24 @@ fn load_mapping_account_mut<'a>(
     let mapping_account = *mapping_account_ref;
 
     pyth_assert(
-        mapping_account.magic_ == PC_MAGIC_V
+        mapping_account.magic_ == PC_MAGIC
             && mapping_account.ver_ == expected_version
-            && mapping_account.type_ == PC_ACCTYPE_MAPPING_V,
+            && mapping_account.type_ == PC_ACCTYPE_MAPPING,
         ProgramError::InvalidArgument,
     )?;
 
     Ok(mapping_account_ref)
 }
 
+/// Initialize account as a new mapping account. This function will zero out any existing data in
+/// the account.
 fn initialize_mapping_account(account: &AccountInfo, version: u32) -> Result<(), ProgramError> {
     clear_account(account)?;
 
     let mut mapping_account = load_account_as_mut::<pc_map_table_t>(account)?;
-    mapping_account.magic_ = PC_MAGIC_V;
+    mapping_account.magic_ = PC_MAGIC;
     mapping_account.ver_ = version;
-    mapping_account.type_ = PC_ACCTYPE_MAPPING_V;
+    mapping_account.type_ = PC_ACCTYPE_MAPPING;
     mapping_account.size_ =
         (size_of::<pc_map_table_t>() - size_of_val(&mapping_account.prod_)) as u32;
 

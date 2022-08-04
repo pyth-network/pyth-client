@@ -18,7 +18,6 @@ fn main() {
     let bindings = Builder::default()
         .header("./src/bindings.h")
         .parse_callbacks(Box::new(parser))
-        //.blocklist_type("pc_pub_key_t")
         .rustfmt_bindings(true)
         .generate()
         .expect("Unable to generate bindings");
