@@ -16,6 +16,13 @@ use bytemuck::{
 //things defined in bindings.h
 include!("../bindings.rs");
 
+/*
+#[derive(Copy)]
+pub struct pc_pub_key_t {
+    k1_: [u8; 32],
+}
+ */
+
 #[cfg(target_endian = "little")]
 unsafe impl Zeroable for pc_acc {
 }
