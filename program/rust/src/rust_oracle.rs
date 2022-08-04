@@ -120,7 +120,7 @@ fn clear_account(account: &AccountInfo) -> Result<(), ProgramError> {
 }
 
 /// Interpret the bytes in `data` as a value of type `T`
-fn load<T: Pod>(data: &[u8]) -> Result<&T, ProgramError> {
+pub fn load<T: Pod>(data: &[u8]) -> Result<&T, ProgramError> {
     try_from_bytes(&data[0..size_of::<T>()]).map_err(|_| ProgramError::InvalidArgument)
 }
 
