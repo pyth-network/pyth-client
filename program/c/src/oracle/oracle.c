@@ -538,6 +538,7 @@ static uint64_t dispatch( SolParameters *prm, SolAccountInfo *ka )
     case e_cmd_upd_price:
     case e_cmd_agg_price:                  return upd_price( prm, ka );
     case e_cmd_upd_price_no_fail_on_error: return upd_price_no_fail_on_error( prm, ka );
+    // init_mapping is overridden in Rust, but still implemented here to make the C unit tests pass.
     case e_cmd_init_mapping:               return init_mapping( prm, ka );
     case e_cmd_add_mapping:                return add_mapping( prm, ka );
     case e_cmd_add_product:                return add_product( prm, ka );
