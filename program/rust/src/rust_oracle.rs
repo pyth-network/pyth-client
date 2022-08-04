@@ -9,8 +9,8 @@ use std::mem::{
 };
 
 use bytemuck::{
-    from_bytes,
-    from_bytes_mut,
+    try_from_bytes,
+    try_from_bytes_mut,
     Pod,
 };
 use solana_program::entrypoint::SUCCESS;
@@ -77,15 +77,12 @@ pub fn init_mapping(
     // Initialize by setting to zero again (just in case) and populating the account header
     clear_account(fresh_mapping_account)?;
 
-    let hdr = load::<cmd_hdr_t>(instruction_data);
-    {
-        let mut mapping_account = load_account_as_mut::<pc_map_table_t>(fresh_mapping_account)?;
-        mapping_account.magic_ = PC_MAGIC;
-        mapping_account.ver_ = hdr.ver_;
-        mapping_account.type_ = PC_ACCTYPE_MAPPING;
-        mapping_account.size_ =
-            (size_of::<pc_map_table_t>() - size_of_val(&mapping_account.prod_)) as u32;
-    }
+    let hdr = load::<cmd_hdr_t>(instruction_data)?;
+    let mut mapping_data = load_account_as_mut::<pc_map_table_t>(fresh_mapping_account)?;
+    mapping_data.magic_ = PC_MAGIC;
+    mapping_data.ver_ = hdr.ver_;
+    mapping_data.type_ = PC_ACCTYPE_MAPPING;
+    mapping_data.size_ = (size_of::<pc_map_table_t>() - size_of_val(&mapping_data.prod_)) as u32;
 
     Ok(SUCCESS)
 }
@@ -123,14 +120,14 @@ fn clear_account(account: &AccountInfo) -> Result<(), ProgramError> {
 }
 
 /// Interpret the bytes in `data` as a value of type `T`
-fn load<T: Pod>(data: &[u8]) -> &T {
-    from_bytes(&data[0..size_of::<T>()])
+fn load<T: Pod>(data: &[u8]) -> Result<&T, ProgramError> {
+    try_from_bytes(&data[0..size_of::<T>()]).map_err(|_| ProgramError::InvalidArgument)
 }
 
 /// Interpret the bytes in `data` as a mutable value of type `T`
 #[allow(unused)]
-fn load_mut<T: Pod>(data: &mut [u8]) -> &mut T {
-    from_bytes_mut(&mut data[0..size_of::<T>()])
+fn load_mut<T: Pod>(data: &mut [u8]) -> Result<&mut T, ProgramError> {
+    try_from_bytes_mut(&mut data[0..size_of::<T>()]).map_err(|_| ProgramError::InvalidArgument)
 }
 
 /// Get the data stored in `account` as a value of type `T`
