@@ -11,6 +11,7 @@ use crate::deserialize::{
     load_account_as_mut,
 };
 
+use bytemuck::bytes_of;
 
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::SUCCESS;

@@ -75,6 +75,7 @@ unsafe impl Zeroable for pc_ema {
 
 #[cfg(target_endian = "little")]
 unsafe impl Pod for pc_ema {
+}
 
 unsafe impl Zeroable for cmd_add_price_t {
 }
@@ -89,5 +90,4 @@ unsafe impl Zeroable for pc_pub_key_t {
 
 #[cfg(target_endian = "little")]
 unsafe impl Pod for pc_pub_key_t {
-
 }
