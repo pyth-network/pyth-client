@@ -224,7 +224,11 @@ pub fn clear_account(account: &AccountInfo) -> Result<(), ProgramError> {
 
 /// Interpret the bytes in `data` as a value of type `T`
 fn load<T: Pod>(data: &[u8]) -> Result<&T, ProgramError> {
-    try_from_bytes(&data[0..size_of::<T>()]).map_err(|_| ProgramError::InvalidArgument)
+    try_from_bytes(
+        data.get(0..size_of::<T>())
+            .ok_or(ProgramError::InvalidArgument)?,
+    )
+    .map_err(|_| ProgramError::InvalidArgument)
 }
 
 /// Interpret the bytes in `data` as a mutable value of type `T`
