@@ -1,9 +1,32 @@
 #[cfg(test)]
 mod test {
-    use crate::c_oracle_header::{cmd_hdr_t, command_t_e_cmd_add_product, command_t_e_cmd_init_mapping, pc_map_table_t, PC_ACCTYPE_MAPPING, PC_MAGIC, PC_VERSION, pc_prod_t, PC_PROD_ACC_SIZE, PC_ACCTYPE_PRODUCT};
-    use crate::rust_oracle::{add_product, clear_account, init_mapping, load_account_as, load_mapping_account_mut};
-    use bytemuck::{bytes_of, Zeroable};
-    use solana_program::account_info::{Account, AccountInfo};
+    use crate::c_oracle_header::{
+        cmd_hdr_t,
+        command_t_e_cmd_add_product,
+        command_t_e_cmd_init_mapping,
+        pc_map_table_t,
+        pc_prod_t,
+        PC_ACCTYPE_MAPPING,
+        PC_ACCTYPE_PRODUCT,
+        PC_MAGIC,
+        PC_PROD_ACC_SIZE,
+        PC_VERSION,
+    };
+    use crate::rust_oracle::{
+        add_product,
+        clear_account,
+        init_mapping,
+        load_account_as,
+        load_mapping_account_mut,
+    };
+    use bytemuck::{
+        bytes_of,
+        Zeroable,
+    };
+    use solana_program::account_info::{
+        Account,
+        AccountInfo,
+    };
     use solana_program::clock::Epoch;
     use solana_program::native_token::LAMPORTS_PER_SOL;
     use solana_program::program_error::ProgramError;
@@ -181,7 +204,7 @@ mod test {
             &mut [],
             &system_program,
             false,
-            Epoch::default()
+            Epoch::default(),
         )
     }
 
@@ -211,15 +234,15 @@ mod test {
         let instruction_data = bytes_of::<cmd_hdr_t>(&hdr);
 
         let program_id = Pubkey::new_unique();
-        let mkey =  Pubkey::new_unique();
-        let product_key_1 =  Pubkey::new_unique();
-        let product_key_2 =  Pubkey::new_unique();
+        let mkey = Pubkey::new_unique();
+        let product_key_1 = Pubkey::new_unique();
+        let product_key_2 = Pubkey::new_unique();
 
         let mut funding_account = fresh_funding_account();
         let pkey = funding_account.key;
 
         let mut mapping_balance =
-          Rent::minimum_balance(&Rent::default(), size_of::<pc_map_table_t>());
+            Rent::minimum_balance(&Rent::default(), size_of::<pc_map_table_t>());
         let mut mapping_data: pc_map_table_t = pc_map_table_t::zeroed();
         mapping_data.magic_ = PC_MAGIC;
         mapping_data.ver_ = PC_VERSION;
@@ -260,7 +283,16 @@ mod test {
             Epoch::default(),
         );
 
-        assert!(add_product(&program_id, &[funding_account.clone(), mapping_account.clone(), product_account.clone()], instruction_data).is_ok());
+        assert!(add_product(
+            &program_id,
+            &[
+                funding_account.clone(),
+                mapping_account.clone(),
+                product_account.clone()
+            ],
+            instruction_data
+        )
+        .is_ok());
 
         {
             let product_data = load_account_as::<pc_prod_t>(&product_account).unwrap();
@@ -274,11 +306,23 @@ mod test {
             assert_eq!(mapping_data.prod_[0].k1_, product_account.key().to_bytes());
         }
 
-        assert!(add_product(&program_id, &[funding_account.clone(), mapping_account.clone(), product_account_2.clone()], instruction_data).is_ok());
+        assert!(add_product(
+            &program_id,
+            &[
+                funding_account.clone(),
+                mapping_account.clone(),
+                product_account_2.clone()
+            ],
+            instruction_data
+        )
+        .is_ok());
         {
             let mapping_data = load_mapping_account_mut(&mapping_account).unwrap();
             assert_eq!(mapping_data.num_, 2);
-            assert_eq!(mapping_data.prod_[1].k1_, product_account_2.key().to_bytes());
+            assert_eq!(
+                mapping_data.prod_[1].k1_,
+                product_account_2.key().to_bytes()
+            );
         }
 
         /*
