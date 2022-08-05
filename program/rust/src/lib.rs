@@ -10,7 +10,9 @@ mod error;
 mod log;
 mod processor;
 mod rust_oracle;
+mod test_oracle;
 mod time_machine_types;
+mod utils;
 
 use crate::c_oracle_header::SUCCESSFULLY_UPDATED_AGGREGATE;
 use crate::error::{
