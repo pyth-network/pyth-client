@@ -26,8 +26,11 @@ use crate::c_oracle_header::{
     pc_map_table_t,
     PC_ACCTYPE_MAPPING,
     PC_MAGIC,
+    PC_MAP_TABLE_SIZE,
 };
 use crate::error::OracleResult;
+
+use crate::utils::pyth_assert;
 
 use super::c_entrypoint_wrapper;
 
@@ -75,14 +78,44 @@ pub fn init_mapping(
     }?;
 
     // Initialize by setting to zero again (just in case) and populating the account header
-    clear_account(fresh_mapping_account)?;
+    let hdr = load::<cmd_hdr_t>(instruction_data)?;
+    initialize_mapping_account(fresh_mapping_account, hdr.ver_)?;
+
+    Ok(SUCCESS)
+}
+
+pub fn add_mapping(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
+    instruction_data: &[u8],
+) -> OracleResult {
+    let [_funding_account, cur_mapping, next_mapping] = match accounts {
+        [x, y, z]
+            if valid_funding_account(x)
+                && valid_signable_account(program_id, y, size_of::<pc_map_table_t>())
+                && valid_signable_account(program_id, z, size_of::<pc_map_table_t>())
+                && valid_fresh_account(z) =>
+        {
+            Ok([x, y, z])
+        }
+        _ => Err(ProgramError::InvalidArgument),
+    }?;
 
     let hdr = load::<cmd_hdr_t>(instruction_data)?;
-    let mut mapping_data = load_account_as_mut::<pc_map_table_t>(fresh_mapping_account)?;
-    mapping_data.magic_ = PC_MAGIC;
-    mapping_data.ver_ = hdr.ver_;
-    mapping_data.type_ = PC_ACCTYPE_MAPPING;
-    mapping_data.size_ = (size_of::<pc_map_table_t>() - size_of_val(&mapping_data.prod_)) as u32;
+    let mut cur_mapping = load_mapping_account_mut(cur_mapping, hdr.ver_)?;
+    pyth_assert(
+        cur_mapping.num_ == PC_MAP_TABLE_SIZE
+            && unsafe { cur_mapping.next_.k8_.iter().all(|x| *x == 0) },
+        ProgramError::InvalidArgument,
+    )?;
+
+    initialize_mapping_account(next_mapping, hdr.ver_)?;
+    unsafe {
+        cur_mapping
+            .next_
+            .k1_
+            .copy_from_slice(&next_mapping.key.to_bytes());
+    }
 
     Ok(SUCCESS)
 }
@@ -149,4 +182,39 @@ fn load_account_as_mut<'a, T: Pod>(
     Ok(RefMut::map(data, |data| {
         bytemuck::from_bytes_mut(&mut data[0..size_of::<T>()])
     }))
+}
+
+/// Mutably borrow the data in `account` as a mapping account, validating that the account
+/// is properly formatted. Any mutations to the returned value will be reflected in the
+/// account data. Use this to read already-initialized accounts.
+fn load_mapping_account_mut<'a>(
+    account: &'a AccountInfo,
+    expected_version: u32,
+) -> Result<RefMut<'a, pc_map_table_t>, ProgramError> {
+    let mapping_account_ref = load_account_as_mut::<pc_map_table_t>(account)?;
+    let mapping_account = *mapping_account_ref;
+
+    pyth_assert(
+        mapping_account.magic_ == PC_MAGIC
+            && mapping_account.ver_ == expected_version
+            && mapping_account.type_ == PC_ACCTYPE_MAPPING,
+        ProgramError::InvalidArgument,
+    )?;
+
+    Ok(mapping_account_ref)
+}
+
+/// Initialize account as a new mapping account. This function will zero out any existing data in
+/// the account.
+fn initialize_mapping_account(account: &AccountInfo, version: u32) -> Result<(), ProgramError> {
+    clear_account(account)?;
+
+    let mut mapping_account = load_account_as_mut::<pc_map_table_t>(account)?;
+    mapping_account.magic_ = PC_MAGIC;
+    mapping_account.ver_ = version;
+    mapping_account.type_ = PC_ACCTYPE_MAPPING;
+    mapping_account.size_ =
+        (size_of::<pc_map_table_t>() - size_of_val(&mapping_account.prod_)) as u32;
+
+    Ok(())
 }
