@@ -275,6 +275,9 @@ fn initialize_mapping_account(account: &AccountInfo, version: u32) -> Result<(),
     Ok(())
 }
 
+/// Mutably borrow the data in `account` as a product account, validating that the account
+/// is properly formatted. Any mutations to the returned value will be reflected in the
+/// account data. Use this to read already-initialized accounts.
 fn load_product_account_mut<'a>(
     account: &'a AccountInfo,
     expected_version: u32,
@@ -291,6 +294,7 @@ fn load_product_account_mut<'a>(
     Ok(product_data)
 }
 
+// Assign pubkey bytes from source to target, fails if source is not 32 bytes
 fn pubkey_assign(mut target: pc_pub_key_t, source: &[u8]) {
     unsafe { target.k1_.copy_from_slice(source) }
 }
