@@ -9,12 +9,11 @@ use std::mem::{
 };
 
 use bytemuck::{
-    from_bytes,
-    from_bytes_mut,
+    try_from_bytes,
+    try_from_bytes_mut,
     Pod,
 };
 use solana_program::entrypoint::SUCCESS;
-use solana_program::msg;
 use solana_program::program_error::ProgramError;
 use solana_program::program_memory::sol_memset;
 use solana_program::pubkey::Pubkey;
@@ -86,7 +85,7 @@ pub fn init_mapping(
     // Initialize by setting to zero again (just in case) and populating the account header
     clear_account(fresh_mapping_account)?;
 
-    let hdr = load::<cmd_hdr_t>(instruction_data);
+    let hdr = load::<cmd_hdr_t>(instruction_data)?;
     {
         let mut mapping_account = load_account_as_mut::<pc_map_table_t>(fresh_mapping_account)?;
         mapping_account.magic_ = PC_MAGIC;
@@ -111,9 +110,7 @@ pub fn add_price(
     if instruction_data.len() < size_of::<cmd_add_price_t>() {
         return Err(ProgramError::InvalidArgument);
     }
-    let cmd_args = load::<cmd_add_price_t>(instruction_data);
-
-    msg!("1");
+    let cmd_args = load::<cmd_add_price_t>(instruction_data)?;
 
     if cmd_args.expo_ > PC_MAX_NUM_DECIMALS as i32
         || cmd_args.expo_ < -(PC_MAX_NUM_DECIMALS as i32)
@@ -121,9 +118,6 @@ pub fn add_price(
     {
         return Err(ProgramError::InvalidArgument);
     }
-
-
-    msg!("2");
 
     let [_funding_account, product_account, price_account] = match accounts {
         [x, y, z]
@@ -135,8 +129,6 @@ pub fn add_price(
         }
         _ => Err(ProgramError::InvalidArgument),
     }?;
-
-    msg!("3");
 
     let mut product_data = load_account_as_mut::<pc_prod_t>(product_account)?;
     {
@@ -151,11 +143,8 @@ pub fn add_price(
         }
     }
 
-    msg!("4");
-
     clear_account(price_account)?;
 
-    msg!("5");
     {
         let mut price_data = load_account_as_mut::<pc_price_t>(price_account)?;
         price_data.magic_ = PC_MAGIC;
@@ -204,14 +193,14 @@ fn clear_account(account: &AccountInfo) -> Result<(), ProgramError> {
 }
 
 /// Interpret the bytes in `data` as a value of type `T`
-fn load<T: Pod>(data: &[u8]) -> &T {
-    from_bytes(&data[0..size_of::<T>()])
+fn load<T: Pod>(data: &[u8]) -> Result<&T, ProgramError> {
+    try_from_bytes(&data[0..size_of::<T>()]).map_err(|_| ProgramError::InvalidArgument)
 }
 
 /// Interpret the bytes in `data` as a mutable value of type `T`
 #[allow(unused)]
-fn load_mut<T: Pod>(data: &mut [u8]) -> &mut T {
-    from_bytes_mut(&mut data[0..size_of::<T>()])
+fn load_mut<T: Pod>(data: &mut [u8]) -> Result<&mut T, ProgramError> {
+    try_from_bytes_mut(&mut data[0..size_of::<T>()]).map_err(|_| ProgramError::InvalidArgument)
 }
 
 /// Get the data stored in `account` as a value of type `T`
