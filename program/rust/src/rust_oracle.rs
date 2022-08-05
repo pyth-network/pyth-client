@@ -112,7 +112,7 @@ pub fn add_mapping(
     }?;
 
     let hdr = load::<cmd_hdr_t>(instruction_data)?;
-    let cur_mapping = load_mapping_account_mut(cur_mapping, hdr.ver_)?;
+    let mut cur_mapping = load_mapping_account_mut(cur_mapping, hdr.ver_)?;
     pyth_assert(
         cur_mapping.num_ == PC_MAP_TABLE_SIZE
             && unsafe { cur_mapping.next_.k8_.iter().all(|x| *x == 0) },
@@ -120,7 +120,7 @@ pub fn add_mapping(
     )?;
 
     initialize_mapping_account(next_mapping, hdr.ver_)?;
-    pubkey_assign(cur_mapping.next_, &next_mapping.key.to_bytes());
+    pubkey_assign(&mut cur_mapping.next_, &next_mapping.key.to_bytes());
 
     Ok(SUCCESS)
 }
@@ -155,7 +155,7 @@ pub fn add_price(
         _ => Err(ProgramError::InvalidArgument),
     }?;
 
-    let product_data = load_product_account_mut(product_account, cmd_args.ver_)?;
+    let mut product_data = load_product_account_mut(product_account, cmd_args.ver_)?;
 
     clear_account(price_account)?;
 
@@ -166,9 +166,9 @@ pub fn add_price(
     price_data.size_ = (size_of::<pc_price_t>() - size_of_val(&price_data.comp_)) as u32;
     price_data.expo_ = cmd_args.expo_;
     price_data.ptype_ = cmd_args.ptype_;
-    pubkey_assign(price_data.prod_, &product_account.key.to_bytes());
-    pubkey_assign(price_data.next_, bytes_of(&product_data.px_acc_));
-    pubkey_assign(product_data.px_acc_, &price_account.key.to_bytes());
+    pubkey_assign(&mut price_data.prod_, &product_account.key.to_bytes());
+    pubkey_assign(&mut price_data.next_, bytes_of(&product_data.px_acc_));
+    pubkey_assign(&mut product_data.px_acc_, &price_account.key.to_bytes());
 
     Ok(SUCCESS)
 }
@@ -295,6 +295,6 @@ fn load_product_account_mut<'a>(
 }
 
 // Assign pubkey bytes from source to target, fails if source is not 32 bytes
-fn pubkey_assign(mut target: pc_pub_key_t, source: &[u8]) {
+fn pubkey_assign(target: &mut pc_pub_key_t, source: &[u8]) {
     unsafe { target.k1_.copy_from_slice(source) }
 }
