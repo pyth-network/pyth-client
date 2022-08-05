@@ -294,6 +294,6 @@ fn load_product_account_mut<'a>(
 }
 
 // Assign pubkey bytes from source to target, fails if source is not 32 bytes
-fn pubkey_assign(target: &mut pc_pub_key_t, source: &[u8]) {
+pub fn pubkey_assign(target: &mut pc_pub_key_t, source: &[u8]) {
     unsafe { target.k1_.copy_from_slice(source) }
 }
