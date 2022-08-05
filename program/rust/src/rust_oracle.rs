@@ -13,12 +13,12 @@ use bytemuck::{
     try_from_bytes_mut,
     Pod,
 };
+use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::SUCCESS;
 use solana_program::program_error::ProgramError;
 use solana_program::program_memory::sol_memset;
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
-use solana_program::sysvar::slot_history::AccountInfo;
 
 use crate::c_oracle_header::{
     cmd_hdr_t,
@@ -143,7 +143,7 @@ fn valid_fresh_account(account: &AccountInfo) -> bool {
 }
 
 /// Sets the data of account to all-zero
-fn clear_account(account: &AccountInfo) -> Result<(), ProgramError> {
+pub fn clear_account(account: &AccountInfo) -> Result<(), ProgramError> {
     let mut data = account
         .try_borrow_mut_data()
         .map_err(|_| ProgramError::InvalidArgument)?;
@@ -164,7 +164,7 @@ fn load_mut<T: Pod>(data: &mut [u8]) -> Result<&mut T, ProgramError> {
 }
 
 /// Get the data stored in `account` as a value of type `T`
-fn load_account_as<'a, T: Pod>(account: &'a AccountInfo) -> Result<Ref<'a, T>, ProgramError> {
+pub fn load_account_as<'a, T: Pod>(account: &'a AccountInfo) -> Result<Ref<'a, T>, ProgramError> {
     let data = account.try_borrow_data()?;
 
     Ok(Ref::map(data, |data| {
@@ -174,7 +174,7 @@ fn load_account_as<'a, T: Pod>(account: &'a AccountInfo) -> Result<Ref<'a, T>, P
 
 /// Mutably borrow the data in `account` as a value of type `T`.
 /// Any mutations to the returned value will be reflected in the account data.
-fn load_account_as_mut<'a, T: Pod>(
+pub fn load_account_as_mut<'a, T: Pod>(
     account: &'a AccountInfo,
 ) -> Result<RefMut<'a, T>, ProgramError> {
     let data = account.try_borrow_mut_data()?;
