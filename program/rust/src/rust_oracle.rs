@@ -57,7 +57,6 @@ pub fn update_version(
     // Ok(SUCCESS)
 }
 
-
 /// initialize the first mapping account in a new linked-list of mapping accounts
 /// accounts[0] funding account           [signer writable]
 /// accounts[1] new mapping account       [signer writable]
@@ -187,7 +186,7 @@ pub fn load_account_as_mut<'a, T: Pod>(
 /// Mutably borrow the data in `account` as a mapping account, validating that the account
 /// is properly formatted. Any mutations to the returned value will be reflected in the
 /// account data. Use this to read already-initialized accounts.
-fn load_mapping_account_mut<'a>(
+pub fn load_mapping_account_mut<'a>(
     account: &'a AccountInfo,
     expected_version: u32,
 ) -> Result<RefMut<'a, pc_map_table_t>, ProgramError> {
@@ -206,7 +205,7 @@ fn load_mapping_account_mut<'a>(
 
 /// Initialize account as a new mapping account. This function will zero out any existing data in
 /// the account.
-fn initialize_mapping_account(account: &AccountInfo, version: u32) -> Result<(), ProgramError> {
+pub fn initialize_mapping_account(account: &AccountInfo, version: u32) -> Result<(), ProgramError> {
     clear_account(account)?;
 
     let mut mapping_account = load_account_as_mut::<pc_map_table_t>(account)?;

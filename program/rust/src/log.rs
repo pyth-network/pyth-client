@@ -22,7 +22,6 @@ pub fn pre_log(accounts: &[AccountInfo], instruction_data: &[u8]) -> ProgramResu
         .try_into()
         .map_err(|_| OracleError::IntegerCastingError)?;
 
-
     match instruction_id {
         command_t_e_cmd_upd_price | command_t_e_cmd_agg_price => {
             let instruction: cmd_upd_price = cmd_upd_price::try_from_slice(instruction_data)?;

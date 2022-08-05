@@ -4,15 +4,17 @@
 // Allow using the solana_program::entrypoint::deserialize function
 #![allow(clippy::not_unsafe_ptr_arg_deref)]
 
-mod c_oracle_header;
+pub mod c_oracle_header;
 mod deserialize;
 mod error;
 mod log;
 mod processor;
-mod rust_oracle;
-mod test_oracle;
+pub mod rust_oracle;
 mod time_machine_types;
 mod utils;
+
+#[cfg(test)]
+mod tests;
 
 use crate::c_oracle_header::SUCCESSFULLY_UPDATED_AGGREGATE;
 use crate::error::{
