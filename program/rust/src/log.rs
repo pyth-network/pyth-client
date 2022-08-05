@@ -14,7 +14,7 @@ use solana_program::sysvar::Sysvar;
 pub fn pre_log(accounts: &[AccountInfo], instruction_data: &[u8]) -> ProgramResult {
     msg!("Pyth oracle contract");
 
-    let instruction_header: cmd_hdr = *load::<cmd_hdr>(instruction_data)?;
+    let instruction_header: &cmd_hdr = load::<cmd_hdr>(instruction_data)?;
     let instruction_id: u32 = instruction_header
         .cmd_
         .try_into()
@@ -23,7 +23,7 @@ pub fn pre_log(accounts: &[AccountInfo], instruction_data: &[u8]) -> ProgramResu
 
     match instruction_id {
         command_t_e_cmd_upd_price | command_t_e_cmd_agg_price => {
-            let instruction: cmd_upd_price = *load::<cmd_upd_price>(instruction_data)?;
+            let instruction: &cmd_upd_price = load::<cmd_upd_price>(instruction_data)?;
             // Account 1 is price_info in this instruction
             let price_account = load_account_as::<pc_price_t>(&accounts[1])?;
             msg!(
@@ -41,7 +41,7 @@ pub fn pre_log(accounts: &[AccountInfo], instruction_data: &[u8]) -> ProgramResu
             );
         }
         command_t_e_cmd_upd_price_no_fail_on_error => {
-            let instruction: cmd_upd_price = *load::<cmd_upd_price>(instruction_data)?;
+            let instruction: &cmd_upd_price = load::<cmd_upd_price>(instruction_data)?;
             // Account 1 is price_info in this instruction
             let price_account = load_account_as::<pc_price_t>(&accounts[1])?;
             msg!(
