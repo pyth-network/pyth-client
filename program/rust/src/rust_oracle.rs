@@ -24,6 +24,7 @@ use crate::c_oracle_header::{
     cmd_hdr_t,
     pc_acc,
     pc_map_table_t,
+    pc_pub_key_t,
     PC_ACCTYPE_MAPPING,
     PC_MAGIC,
     PC_MAP_TABLE_SIZE,
@@ -216,4 +217,10 @@ pub fn initialize_mapping_account(account: &AccountInfo, version: u32) -> Result
         (size_of::<pc_map_table_t>() - size_of_val(&mapping_account.prod_)) as u32;
 
     Ok(())
+}
+
+// Assign pubkey bytes from source to target, fails if source is not 32 bytes
+#[allow(unused)]
+pub fn pubkey_assign(target: &mut pc_pub_key_t, source: &[u8]) {
+    unsafe { target.k1_.copy_from_slice(source) }
 }

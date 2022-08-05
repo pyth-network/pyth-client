@@ -4,12 +4,12 @@
 // Allow using the solana_program::entrypoint::deserialize function
 #![allow(clippy::not_unsafe_ptr_arg_deref)]
 
-pub mod c_oracle_header;
+mod c_oracle_header;
 mod deserialize;
 mod error;
 mod log;
 mod processor;
-pub mod rust_oracle;
+mod rust_oracle;
 mod time_machine_types;
 mod utils;
 

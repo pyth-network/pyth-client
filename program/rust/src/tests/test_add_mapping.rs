@@ -3,18 +3,23 @@ mod test {
         cmd_hdr_t,
         command_t_e_cmd_add_mapping,
         pc_map_table_t,
+        PC_MAGIC,
         PC_MAP_TABLE_SIZE,
         PC_VERSION,
     };
     use crate::rust_oracle::{
         add_mapping,
+        clear_account,
         initialize_mapping_account,
+        load_account_as_mut,
         load_mapping_account_mut,
+        pubkey_assign,
     };
     use bytemuck::bytes_of;
     use solana_program::account_info::AccountInfo;
     use solana_program::clock::Epoch;
     use solana_program::native_token::LAMPORTS_PER_SOL;
+    use solana_program::program_error::ProgramError;
     use solana_program::pubkey::Pubkey;
     use solana_program::rent::Rent;
     use solana_program::system_program;
@@ -82,6 +87,74 @@ mod test {
             false,
             Epoch::default(),
         );
+
+        assert!(add_mapping(
+            &program_id,
+            &[
+                funding_account.clone(),
+                cur_mapping.clone(),
+                next_mapping.clone()
+            ],
+            instruction_data
+        )
+        .is_ok());
+
+        {
+            let next_mapping_data = load_mapping_account_mut(&next_mapping, PC_VERSION).unwrap();
+            let mut cur_mapping_data = load_mapping_account_mut(&cur_mapping, PC_VERSION).unwrap();
+
+            assert!(unsafe {
+                cur_mapping_data
+                    .next_
+                    .k1_
+                    .iter()
+                    .zip(&next_mapping_key.to_bytes())
+                    .all(|(x, y)| *x == *y)
+            });
+            assert!(unsafe { next_mapping_data.next_.k8_.iter().all(|x| *x == 0) });
+            pubkey_assign(&mut cur_mapping_data.next_, &Pubkey::default().to_bytes());
+            cur_mapping_data.num_ = 0;
+        }
+
+        clear_account(&next_mapping).unwrap();
+
+        assert_eq!(
+            add_mapping(
+                &program_id,
+                &[
+                    funding_account.clone(),
+                    cur_mapping.clone(),
+                    next_mapping.clone()
+                ],
+                instruction_data
+            ),
+            Err(ProgramError::InvalidArgument)
+        );
+
+        {
+            let mut cur_mapping_data = load_mapping_account_mut(&cur_mapping, PC_VERSION).unwrap();
+            assert!(unsafe { cur_mapping_data.next_.k8_.iter().all(|x| *x == 0) });
+            cur_mapping_data.num_ = PC_MAP_TABLE_SIZE;
+            cur_mapping_data.magic_ = 0;
+        }
+
+        assert_eq!(
+            add_mapping(
+                &program_id,
+                &[
+                    funding_account.clone(),
+                    cur_mapping.clone(),
+                    next_mapping.clone()
+                ],
+                instruction_data
+            ),
+            Err(ProgramError::InvalidArgument)
+        );
+
+        {
+            let mut cur_mapping_data = load_account_as_mut::<pc_map_table_t>(&cur_mapping).unwrap();
+            cur_mapping_data.magic_ = PC_MAGIC;
+        }
 
         assert!(add_mapping(
             &program_id,
