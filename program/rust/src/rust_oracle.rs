@@ -57,13 +57,24 @@ pub fn update_price(
 /// has version number/ account type dependant logic to make sure the given account is compatible
 /// with the current version
 /// updates the version number for all accounts, and resizes price accounts
+#[cfg(feature = "resize-account")]
 pub fn update_version(
     _program_id: &Pubkey,
     _accounts: &[AccountInfo],
     _instruction_data: &[u8],
 ) -> OracleResult {
-    panic!("Need to merge fix to pythd in order to implement this");
-    // Ok(SUCCESS)
+    //actual implementation to follow
+    Ok(SUCCESS)
+}
+
+/// place holder untill we are ready to resize accounts
+#[cfg(not(feature = "resize-account"))]
+pub fn update_version(
+    _program_id: &Pubkey,
+    _accounts: &[AccountInfo],
+    _instruction_data: &[u8],
+) -> OracleResult {
+    panic!("Can not update version yet!");
 }
 
 

@@ -28,7 +28,7 @@ set -x
 cd "${C_DIR}"
 export V="${V:-1}"
 make clean 
-make  "${@:2}" 
+make
 make cpyth 
 rm ./target/*-keypair.json
 
@@ -38,8 +38,14 @@ cd "${PYTH_DIR}"
 cargo clean
 cargo test
 cargo clean
-cargo build-bpf
-
+if [[ $# -ge 2 ]] && [[  $2 == "test" ]]
+then
+  echo "testing"
+  cargo build-bpf --features resize-account
+else
+  echo "production"
+  cargo build-bpf
+fi
 sha256sum ./target/**/*.so
 
 

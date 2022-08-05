@@ -66,8 +66,11 @@ RUN cp -a /usr/bin/sdk solana
 RUN ./pyth-client/scripts/patch-solana.sh
 
 # Build and test the oracle program.
-RUN cd pyth-client && ./scripts/build-bpf.sh .
+RUN cd pyth-client && ./scripts/build-bpf.sh . "test"
 RUN /bin/bash -l -c "pytest-3 --pyargs pyth"
+
+# Build for releases
+RUN cd pyth-client && ./scripts/build-bpf.sh
 
 ENTRYPOINT []
 CMD []
