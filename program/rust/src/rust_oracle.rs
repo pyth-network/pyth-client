@@ -9,6 +9,7 @@ use std::mem::{
 };
 
 use bytemuck::{
+    bytes_of,
     try_from_bytes,
     try_from_bytes_mut,
     Pod,
@@ -27,6 +28,7 @@ use crate::c_oracle_header::{
     pc_map_table_t,
     pc_price_t,
     pc_prod_t,
+    pc_pub_key_t,
     PC_ACCTYPE_MAPPING,
     PC_ACCTYPE_PRICE,
     PC_ACCTYPE_PRODUCT,
@@ -110,7 +112,7 @@ pub fn add_mapping(
     }?;
 
     let hdr = load::<cmd_hdr_t>(instruction_data)?;
-    let mut cur_mapping = load_mapping_account_mut(cur_mapping, hdr.ver_)?;
+    let cur_mapping = load_mapping_account_mut(cur_mapping, hdr.ver_)?;
     pyth_assert(
         cur_mapping.num_ == PC_MAP_TABLE_SIZE
             && unsafe { cur_mapping.next_.k8_.iter().all(|x| *x == 0) },
@@ -118,12 +120,7 @@ pub fn add_mapping(
     )?;
 
     initialize_mapping_account(next_mapping, hdr.ver_)?;
-    unsafe {
-        cur_mapping
-            .next_
-            .k1_
-            .copy_from_slice(&next_mapping.key.to_bytes());
-    }
+    pubkey_assign(cur_mapping.next_, &next_mapping.key.to_bytes());
 
     Ok(SUCCESS)
 }
@@ -158,7 +155,7 @@ pub fn add_price(
         _ => Err(ProgramError::InvalidArgument),
     }?;
 
-    let mut product_data = load_product_account_mut(product_account, cmd_args.ver_)?;
+    let product_data = load_product_account_mut(product_account, cmd_args.ver_)?;
 
     clear_account(price_account)?;
 
@@ -169,9 +166,9 @@ pub fn add_price(
     price_data.size_ = (size_of::<pc_price_t>() - size_of_val(&price_data.comp_)) as u32;
     price_data.expo_ = cmd_args.expo_;
     price_data.ptype_ = cmd_args.ptype_;
-    price_data.prod_.k1_ = product_account.key.to_bytes();
-    price_data.next_ = product_data.px_acc_;
-    product_data.px_acc_.k1_ = price_account.key.to_bytes();
+    pubkey_assign(price_data.prod_, &product_account.key.to_bytes());
+    pubkey_assign(price_data.next_, bytes_of(&product_data.px_acc_));
+    pubkey_assign(product_data.px_acc_, &price_account.key.to_bytes());
 
     Ok(SUCCESS)
 }
@@ -292,4 +289,8 @@ fn load_product_account_mut<'a>(
     )?;
 
     Ok(product_data)
+}
+
+fn pubkey_assign(mut target: pc_pub_key_t, source: &[u8]) {
+    unsafe { target.k1_.copy_from_slice(source) }
 }
