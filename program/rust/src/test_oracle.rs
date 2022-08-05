@@ -1,17 +1,33 @@
 #[cfg(test)]
 mod test {
+    use std::cell::RefCell;
+    use std::mem::size_of;
+    use std::rc::Rc;
+
+    use bytemuck::{
+        bytes_of,
+        Zeroable,
+    };
+    use solana_program::account_info::AccountInfo;
+    use solana_program::clock::Epoch;
+    use solana_program::native_token::LAMPORTS_PER_SOL;
+    use solana_program::program_error::ProgramError;
+    use solana_program::pubkey::Pubkey;
+    use solana_program::rent::Rent;
+    use solana_program::system_program;
+
     use crate::c_oracle_header::{
         cmd_hdr_t,
         command_t_e_cmd_add_product,
         command_t_e_cmd_init_mapping,
-        pc_map_table_t,
-        pc_prod_t,
         PC_ACCTYPE_MAPPING,
         PC_ACCTYPE_PRODUCT,
         PC_MAGIC,
+        pc_map_table_t,
         PC_PROD_ACC_SIZE,
+        pc_prod_t,
         PC_VERSION,
-    };
+        };
     use crate::rust_oracle::{
         add_product,
         clear_account,
@@ -19,23 +35,6 @@ mod test {
         load_account_as,
         load_mapping_account_mut,
     };
-    use bytemuck::{
-        bytes_of,
-        Zeroable,
-    };
-    use solana_program::account_info::{
-        Account,
-        AccountInfo,
-    };
-    use solana_program::clock::Epoch;
-    use solana_program::native_token::LAMPORTS_PER_SOL;
-    use solana_program::program_error::ProgramError;
-    use solana_program::pubkey::Pubkey;
-    use solana_program::rent::Rent;
-    use solana_program::system_program;
-    use std::cell::RefCell;
-    use std::mem::size_of;
-    use std::rc::Rc;
 
     #[test]
     fn test_init_mapping() {
@@ -296,14 +295,14 @@ mod test {
 
         {
             let product_data = load_account_as::<pc_prod_t>(&product_account).unwrap();
-            let mapping_data = load_mapping_account_mut(&mapping_account).unwrap();
+            let mapping_data = load_mapping_account_mut(&mapping_account, PC_VERSION).unwrap();
 
             assert_eq!(product_data.magic_, PC_MAGIC);
             assert_eq!(product_data.ver_, PC_VERSION);
             assert_eq!(product_data.type_, PC_ACCTYPE_PRODUCT);
-            assert_eq!(product_data.size_, size_of::<pc_prod_t>);
+            assert_eq!(product_data.size_, size_of::<pc_prod_t>() as u32);
             assert_eq!(mapping_data.num_, 1);
-            assert_eq!(mapping_data.prod_[0].k1_, product_account.key().to_bytes());
+            assert_eq!(mapping_data.prod_[0].k1_, product_account.key.to_bytes());
         }
 
         assert!(add_product(
@@ -317,11 +316,11 @@ mod test {
         )
         .is_ok());
         {
-            let mapping_data = load_mapping_account_mut(&mapping_account).unwrap();
+            let mapping_data = load_mapping_account_mut(&mapping_account, PC_VERSION).unwrap();
             assert_eq!(mapping_data.num_, 2);
             assert_eq!(
                 mapping_data.prod_[1].k1_,
-                product_account_2.key().to_bytes()
+                product_account_2.key.to_bytes()
             );
         }
 

@@ -200,14 +200,15 @@ pub fn add_product(
 
     initialize_product_account(new_product_account, hdr.ver_)?;
 
+    let current_index =  mapping_data.num_ as usize;
     unsafe {
-        mapping_data.prod_[mapping_data.num_]
+        mapping_data.prod_[current_index]
             .k1_
             .copy_from_slice(&new_product_account.key.to_bytes())
     }
     mapping_data.num_ += 1;
-    mapping_data.size_ = size_of::<pc_map_table_t>() - size_of_val(&mapping_data.prod_)
-        + mapping_data.num_ * size_of::<pc_pub_key_t>();
+    mapping_data.size_ = (size_of::<pc_map_table_t>() - size_of_val(&mapping_data.prod_)) as u32
+        + mapping_data.num_ * (size_of::<pc_pub_key_t>() as u32);
 
     Ok(SUCCESS)
 }
@@ -283,7 +284,7 @@ pub fn load_account_as_mut<'a, T: Pod>(
 /// Mutably borrow the data in `account` as a mapping account, validating that the account
 /// is properly formatted. Any mutations to the returned value will be reflected in the
 /// account data. Use this to read already-initialized accounts.
-fn load_mapping_account_mut<'a>(
+pub fn load_mapping_account_mut<'a>(
     account: &'a AccountInfo,
     expected_version: u32,
 ) -> Result<RefMut<'a, pc_map_table_t>, ProgramError> {
@@ -331,7 +332,7 @@ fn initialize_product_account(account: &AccountInfo, version: u32) -> Result<(),
 /// Mutably borrow the data in `account` as a product account, validating that the account
 /// is properly formatted. Any mutations to the returned value will be reflected in the
 /// account data. Use this to read already-initialized accounts.
-fn load_product_account_mut<'a>(
+pub fn load_product_account_mut<'a>(
     account: &'a AccountInfo,
     expected_version: u32,
 ) -> Result<RefMut<'a, pc_prod_t>, ProgramError> {
