@@ -20,14 +20,7 @@ use solana_program::program_memory::sol_memset;
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
 
-use crate::c_oracle_header::{
-    cmd_hdr_t,
-    pc_acc,
-    pc_map_table_t,
-    PC_ACCTYPE_MAPPING,
-    PC_MAGIC,
-    PC_MAP_TABLE_SIZE,
-};
+use crate::c_oracle_header::{cmd_hdr_t, pc_acc, pc_map_table_t, PC_ACCTYPE_MAPPING, PC_MAGIC, PC_MAP_TABLE_SIZE, PC_PROD_ACC_SIZE, pc_prod_t, PC_ACCTYPE_PRODUCT, pc_pub_key_t};
 use crate::error::OracleResult;
 
 use crate::utils::pyth_assert;
@@ -116,6 +109,42 @@ pub fn add_mapping(
             .k1_
             .copy_from_slice(&next_mapping.key.to_bytes());
     }
+
+    Ok(SUCCESS)
+}
+
+pub fn add_product(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
+    instruction_data: &[u8],
+) -> OracleResult {
+    let [_funding_account, tail_mapping_account, new_product_account] = match accounts {
+        [x, y, z]
+        if valid_funding_account(x)
+          && valid_signable_account(program_id, y, size_of::<pc_map_table_t>())
+          && valid_signable_account(program_id, z, PC_PROD_ACC_SIZE as usize)
+          && valid_fresh_account(z) =>
+            {
+                Ok([x, y, z])
+            }
+        _ => Err(ProgramError::InvalidArgument),
+    }?;
+
+    let hdr = load::<cmd_hdr_t>(instruction_data)?;
+    let mut mapping_data = load_mapping_account_mut(tail_mapping_account, hdr.ver_)?;
+    // The mapping account must have free space to add the product account
+    pyth_assert(
+        mapping_data.num_ < PC_MAP_TABLE_SIZE,
+        ProgramError::InvalidArgument,
+    )?;
+
+    initialize_product_account(new_product_account, hdr.ver_)?;
+
+    unsafe {
+        mapping_data.prod_[mapping_data.num_].k1_.copy_from_slice(&new_product_account.key.to_bytes())
+    }
+    mapping_data.num_ += 1;
+    mapping_data.size_ = size_of::<pc_map_table_t>() - size_of_val(&mapping_data.prod_) + mapping_data.num_ * size_of::<pc_pub_key_t>();
 
     Ok(SUCCESS)
 }
@@ -218,3 +247,18 @@ fn initialize_mapping_account(account: &AccountInfo, version: u32) -> Result<(),
 
     Ok(())
 }
+
+/// Initialize account as a new product account. This function will zero out any existing data in
+/// the account.
+fn initialize_product_account(account: &AccountInfo, version: u32) -> Result<(), ProgramError> {
+    clear_account(account)?;
+
+    let mut prod_account = load_account_as_mut::<pc_prod_t>(account)?;
+    prod_account.magic_ = PC_MAGIC;
+    prod_account.ver_ = version;
+    prod_account.type_ = PC_ACCTYPE_PRODUCT;
+    prod_account.size_ = size_of::<pc_prod_t>() as u32;
+
+    Ok(())
+}
+
