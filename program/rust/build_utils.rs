@@ -18,6 +18,7 @@ impl<'a> DeriveAdderParserCallback<'a> {
         Default::default()
     }
     //add pairs of types and their desired traits
+    #[allow(dead_code)]
     pub fn register_traits(&mut self, type_name: &'a str, traits: Vec<String>) {
         self.types_to_traits.insert(type_name, traits);
     }

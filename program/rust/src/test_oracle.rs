@@ -30,12 +30,12 @@ mod test {
         PC_PROD_ACC_SIZE,
         PC_VERSION,
     };
+    use crate::deserialize::load_account_as;
     use crate::rust_oracle::{
         add_product,
         clear_account,
         init_mapping,
         initialize_mapping_account,
-        load_account_as,
         load_mapping_account_mut,
     };
 
