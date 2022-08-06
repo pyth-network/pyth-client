@@ -200,7 +200,7 @@ pub fn add_product(
 
     initialize_product_account(new_product_account, hdr.ver_)?;
 
-    let current_index =  mapping_data.num_ as usize;
+    let current_index = mapping_data.num_ as usize;
     unsafe {
         mapping_data.prod_[current_index]
             .k1_
@@ -302,7 +302,7 @@ pub fn load_mapping_account_mut<'a>(
 
 /// Initialize account as a new mapping account. This function will zero out any existing data in
 /// the account.
-fn initialize_mapping_account(account: &AccountInfo, version: u32) -> Result<(), ProgramError> {
+pub fn initialize_mapping_account(account: &AccountInfo, version: u32) -> Result<(), ProgramError> {
     clear_account(account)?;
 
     let mut mapping_account = load_account_as_mut::<pc_map_table_t>(account)?;
@@ -317,7 +317,7 @@ fn initialize_mapping_account(account: &AccountInfo, version: u32) -> Result<(),
 
 /// Initialize account as a new product account. This function will zero out any existing data in
 /// the account.
-fn initialize_product_account(account: &AccountInfo, version: u32) -> Result<(), ProgramError> {
+pub fn initialize_product_account(account: &AccountInfo, version: u32) -> Result<(), ProgramError> {
     clear_account(account)?;
 
     let mut prod_account = load_account_as_mut::<pc_prod_t>(account)?;
