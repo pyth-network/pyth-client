@@ -194,23 +194,6 @@ mod test {
         .is_ok());
     }
 
-    /*
-    macro_rules! zero_account {
-        ($size:expr) => {
-            AccountInfo::new(
-                &Pubkey::new_unique(),
-                true,
-                true,
-                &mut Rent::minimum_balance(&Rent::default(), size as usize),
-                &mut [0u8; size],
-                &program_id,
-                false,
-                Epoch::default(),
-            );
-        }
-    }
-     */
-
     #[test]
     fn test_add_product() {
         let hdr = cmd_hdr_t {
