@@ -3,6 +3,7 @@ use std::mem::size_of;
 use solana_program::account_info::AccountInfo;
 use solana_program::clock::Epoch;
 use solana_program::native_token::LAMPORTS_PER_SOL;
+use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
 use solana_program::system_program;
@@ -11,12 +12,16 @@ use crate::c_oracle_header::{
     cmd_hdr_t,
     cmd_upd_product_t,
     command_t_e_cmd_upd_product,
+    pc_prod_t,
     PC_PROD_ACC_SIZE,
     PC_VERSION,
 };
 use crate::deserialize::load_mut;
 use crate::rust_oracle::{
     initialize_product_account,
+    load_product_account_mut,
+    read_pc_str_t,
+    try_convert,
     upd_product,
 };
 
@@ -56,24 +61,25 @@ fn test_upd_product() {
 
     initialize_product_account(&product_account, PC_VERSION).unwrap();
 
-    let kvs = [];
-    let size = write_cmd(&mut instruction_data, &kvs);
-    assert!(upd_product(
-        &program_id,
-        &[funding_account.clone(), product_account.clone()],
-        &instruction_data[..size]
-    )
-    .is_ok());
-
-
     let kvs = ["foo", "barz"];
-    let size = write_cmd(&mut instruction_data, &kvs);
+    let size = populate_instruction(&mut instruction_data, &kvs);
     assert!(upd_product(
         &program_id,
         &[funding_account.clone(), product_account.clone()],
         &instruction_data[..size]
     )
     .is_ok());
+    assert!(account_has_key_values(&product_account, &kvs).unwrap());
+
+    let kvs = [];
+    let size = populate_instruction(&mut instruction_data, &kvs);
+    assert!(upd_product(
+        &program_id,
+        &[funding_account.clone(), product_account.clone()],
+        &instruction_data[..size]
+    )
+    .is_ok());
+    assert!(account_has_key_values(&product_account, &kvs).unwrap());
 
     // bad size on the string
     instruction_data[0] = 7;
@@ -83,19 +89,22 @@ fn test_upd_product() {
         &instruction_data[..size]
     )
     .is_err());
+    assert!(account_has_key_values(&product_account, &kvs).unwrap());
 
     // uneven number of keys and values
-    let kvs = ["foo", "bar", "baz"];
-    let size = write_cmd(&mut instruction_data, &kvs);
+    let bad_kvs = ["foo", "bar", "baz"];
+    let size = populate_instruction(&mut instruction_data, &bad_kvs);
     assert!(upd_product(
         &program_id,
         &[funding_account.clone(), product_account.clone()],
         &instruction_data[..size]
     )
     .is_err());
+    assert!(account_has_key_values(&product_account, &kvs).unwrap());
 }
 
-fn write_cmd(instruction_data: &mut [u8], strings: &[&str]) -> usize {
+// Create an upd_product instruction that sets the product metadata to strings
+fn populate_instruction(instruction_data: &mut [u8], strings: &[&str]) -> usize {
     {
         let mut hdr = load_mut::<cmd_hdr_t>(instruction_data).unwrap();
         hdr.ver_ = PC_VERSION;
@@ -112,8 +121,43 @@ fn write_cmd(instruction_data: &mut [u8], strings: &[&str]) -> usize {
     idx
 }
 
-pub fn create_pc_str_t(s: &str) -> Vec<u8> {
+fn create_pc_str_t(s: &str) -> Vec<u8> {
     let mut v = vec![s.len() as u8];
     v.extend_from_slice(s.as_bytes());
     v
+}
+
+// Check that the key-value list in product_account equals the strings in expected
+// Returns an Err if the account data is incorrectly formatted and the comparison cannot be
+// performed.
+fn account_has_key_values(
+    product_account: &AccountInfo,
+    expected: &[&str],
+) -> Result<bool, ProgramError> {
+    let account_size: usize =
+        try_convert(load_product_account_mut(product_account, PC_VERSION)?.size_)?;
+    let mut all_account_data = product_account.try_borrow_mut_data()?;
+    let kv_data = &mut all_account_data[size_of::<pc_prod_t>()..account_size];
+    let mut kv_idx = 0;
+    let mut expected_idx = 0;
+
+    while kv_idx < kv_data.len() {
+        let key = read_pc_str_t(&kv_data[kv_idx..])?;
+        if key[0] != try_convert::<_, u8>(key.len())? - 1 {
+            return Ok(false);
+        }
+
+        if &key[1..] != expected[expected_idx].as_bytes() {
+            return Ok(false);
+        }
+
+        kv_idx += key.len();
+        expected_idx += 1;
+    }
+
+    if expected_idx != expected.len() {
+        return Ok(false);
+    }
+
+    Ok(true)
 }

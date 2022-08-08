@@ -214,6 +214,8 @@ pub fn add_product(
     Ok(SUCCESS)
 }
 
+/// Update the metadata associated with a product, overwriting any existing metadata.
+/// The metadata is provided as a list of key-value pairs at the end of the `instruction_data`.
 pub fn upd_product(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
@@ -227,9 +229,9 @@ pub fn upd_product(
     check_valid_funding_account(funding_account)?;
     check_valid_signable_account(program_id, product_account, try_convert(PC_PROD_ACC_SIZE)?)?;
 
+    let hdr = load::<cmd_hdr_t>(instruction_data)?;
     {
         // Validate that product_account contains the appropriate account header
-        let hdr = load::<cmd_hdr_t>(instruction_data)?;
         let mut _product_data = load_product_account_mut(product_account, hdr.ver_)?;
     }
 
@@ -255,12 +257,19 @@ pub fn upd_product(
     // This assertion shouldn't ever fail, but be defensive.
     pyth_assert(idx == new_data.len(), ProgramError::InvalidArgument)?;
 
-    let mut data = product_account.try_borrow_mut_data()?;
-    sol_memcpy(
-        &mut data[size_of::<pc_prod_t>()..try_convert(PC_PROD_ACC_SIZE)?],
-        new_data,
-        new_data.len(),
-    );
+    {
+        let mut data = product_account.try_borrow_mut_data()?;
+        // Note that this memcpy doesn't necessarily overwrite all existing data in the account.
+        // This case is handled by updating the .size_ field below.
+        sol_memcpy(
+            &mut data[size_of::<pc_prod_t>()..],
+            new_data,
+            new_data.len(),
+        );
+    }
+
+    let mut product_data = load_product_account_mut(product_account, hdr.ver_)?;
+    product_data.size_ = try_convert(size_of::<pc_prod_t>() + new_data.len())?;
 
     Ok(SUCCESS)
 }
@@ -393,14 +402,14 @@ pub fn pubkey_assign(target: &mut pc_pub_key_t, source: &[u8]) {
 }
 
 /// Convert `x: T` into a `U`, returning the appropriate `OracleError` if the conversion fails.
-fn try_convert<T, U: TryFrom<T>>(x: T) -> Result<U, OracleError> {
+pub fn try_convert<T, U: TryFrom<T>>(x: T) -> Result<U, OracleError> {
     // Note: the error here assumes we're only applying this function to integers right now.
     U::try_from(x).map_err(|_| OracleError::IntegerCastingError)
 }
 
 /// Read a `pc_str_t` from the beginning of `source`. Returns a slice of `source` containing
 /// the bytes of the `pc_str_t`.
-fn read_pc_str_t(source: &[u8]) -> Result<&[u8], ProgramError> {
+pub fn read_pc_str_t(source: &[u8]) -> Result<&[u8], ProgramError> {
     if source.is_empty() {
         Err(ProgramError::InvalidArgument)
     } else {
