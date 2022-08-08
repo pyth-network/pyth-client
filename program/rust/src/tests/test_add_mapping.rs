@@ -11,8 +11,8 @@ use crate::rust_oracle::{
     add_mapping,
     clear_account,
     initialize_mapping_account,
-    load_mapping_account_mut,
     pubkey_assign,
+    PythAccount,
 };
 use bytemuck::bytes_of;
 use solana_program::account_info::AccountInfo;
@@ -22,6 +22,7 @@ use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
 use solana_program::system_program;
+use std::cell::RefMut;
 use std::mem::size_of;
 
 #[test]
@@ -68,7 +69,8 @@ fn test_add_mapping() {
     initialize_mapping_account(&cur_mapping, PC_VERSION).unwrap();
 
     {
-        let mut cur_mapping_data = load_mapping_account_mut(&cur_mapping, PC_VERSION).unwrap();
+        let mut cur_mapping_data: RefMut<pc_map_table_t> =
+            PythAccount::load(&cur_mapping, PC_VERSION).unwrap();
         cur_mapping_data.num_ = PC_MAP_TABLE_SIZE;
     }
 
@@ -99,8 +101,10 @@ fn test_add_mapping() {
     .is_ok());
 
     {
-        let next_mapping_data = load_mapping_account_mut(&next_mapping, PC_VERSION).unwrap();
-        let mut cur_mapping_data = load_mapping_account_mut(&cur_mapping, PC_VERSION).unwrap();
+        let next_mapping_data: RefMut<pc_map_table_t> =
+            PythAccount::load(&next_mapping, PC_VERSION).unwrap();
+        let mut cur_mapping_data: RefMut<pc_map_table_t> =
+            PythAccount::load(&cur_mapping, PC_VERSION).unwrap();
 
         assert!(unsafe {
             cur_mapping_data
@@ -131,7 +135,8 @@ fn test_add_mapping() {
     );
 
     {
-        let mut cur_mapping_data = load_mapping_account_mut(&cur_mapping, PC_VERSION).unwrap();
+        let mut cur_mapping_data: RefMut<pc_map_table_t> =
+            PythAccount::load(&cur_mapping, PC_VERSION).unwrap();
         assert!(unsafe { cur_mapping_data.next_.k8_.iter().all(|x| *x == 0) });
         cur_mapping_data.num_ = PC_MAP_TABLE_SIZE;
         cur_mapping_data.magic_ = 0;

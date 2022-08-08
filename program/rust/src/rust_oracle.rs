@@ -114,7 +114,7 @@ pub fn add_mapping(
     check_valid_fresh_account(next_mapping)?;
 
     let hdr = load::<cmd_hdr_t>(instruction_data)?;
-    let mut cur_mapping = load_mapping_account_mut(cur_mapping, hdr.ver_)?;
+    let mut cur_mapping: RefMut<pc_map_table_t> = PythAccount::load(cur_mapping, hdr.ver_)?;
     pyth_assert(
         cur_mapping.num_ == PC_MAP_TABLE_SIZE
             && unsafe { cur_mapping.next_.k8_.iter().all(|x| *x == 0) },
@@ -153,16 +153,11 @@ pub fn add_price(
     check_valid_funding_account(funding_account)?;
     check_valid_signable_account(program_id, product_account, PC_PROD_ACC_SIZE as usize)?;
     check_valid_signable_account(program_id, price_account, size_of::<pc_price_t>())?;
-    check_valid_fresh_account(price_account)?;
 
-    let mut product_data = load_product_account_mut(product_account, cmd_args.ver_)?;
+    let mut product_data: RefMut<pc_prod_t> = PythAccount::load(product_account, cmd_args.ver_)?;
+    let mut price_data: RefMut<pc_price_t> = PythAccount::initialize(price_account, cmd_args.ver_)?;
 
-    clear_account(price_account)?;
 
-    let mut price_data = load_account_as_mut::<pc_price_t>(price_account)?;
-    price_data.magic_ = PC_MAGIC;
-    price_data.ver_ = cmd_args.ver_;
-    price_data.type_ = PC_ACCTYPE_PRICE;
     price_data.size_ = (size_of::<pc_price_t>() - size_of_val(&price_data.comp_)) as u32;
     price_data.expo_ = cmd_args.expo_;
     price_data.ptype_ = cmd_args.ptype_;
@@ -193,7 +188,8 @@ pub fn add_product(
     check_valid_fresh_account(new_product_account)?;
 
     let hdr = load::<cmd_hdr_t>(instruction_data)?;
-    let mut mapping_data = load_mapping_account_mut(tail_mapping_account, hdr.ver_)?;
+    let mut mapping_data: RefMut<pc_map_table_t> =
+        PythAccount::load(tail_mapping_account, hdr.ver_)?;
     // The mapping account must have free space to add the product account
     pyth_assert(
         mapping_data.num_ < PC_MAP_TABLE_SIZE,
@@ -273,21 +269,21 @@ pub fn clear_account(account: &AccountInfo) -> Result<(), ProgramError> {
 /// Mutably borrow the data in `account` as a mapping account, validating that the account
 /// is properly formatted. Any mutations to the returned value will be reflected in the
 /// account data. Use this to read already-initialized accounts.
-pub fn load_mapping_account_mut<'a>(
-    account: &'a AccountInfo,
-    expected_version: u32,
-) -> Result<RefMut<'a, pc_map_table_t>, ProgramError> {
-    let mapping_data = load_account_as_mut::<pc_map_table_t>(account)?;
+// pub fn load_mapping_account_mut<'a>(
+//     account: &'a AccountInfo,
+//     expected_version: u32,
+// ) -> Result<RefMut<'a, pc_map_table_t>, ProgramError> {
+//     let mapping_data = load_account_as_mut::<pc_map_table_t>(account)?;
 
-    pyth_assert(
-        mapping_data.magic_ == PC_MAGIC
-            && mapping_data.ver_ == expected_version
-            && mapping_data.type_ == PC_ACCTYPE_MAPPING,
-        ProgramError::InvalidArgument,
-    )?;
+//     pyth_assert(
+//         mapping_data.magic_ == PC_MAGIC
+//             && mapping_data.ver_ == expected_version
+//             && mapping_data.type_ == PC_ACCTYPE_MAPPING,
+//         ProgramError::InvalidArgument,
+//     )?;
 
-    Ok(mapping_data)
-}
+//     Ok(mapping_data)
+// }
 
 /// Initialize account as a new mapping account. This function will zero out any existing data in
 /// the account.
@@ -302,12 +298,7 @@ pub fn initialize_mapping_account(account: &AccountInfo, version: u32) -> Result
 /// Initialize account as a new product account. This function will zero out any existing data in
 /// the account.
 pub fn initialize_product_account(account: &AccountInfo, version: u32) -> Result<(), ProgramError> {
-    clear_account(account)?;
-
-    let mut prod_account = load_account_as_mut::<pc_prod_t>(account)?;
-    prod_account.magic_ = PC_MAGIC;
-    prod_account.ver_ = version;
-    prod_account.type_ = PC_ACCTYPE_PRODUCT;
+    let mut prod_account: RefMut<pc_prod_t> = PythAccount::initialize(account, version)?;
     prod_account.size_ = try_convert(size_of::<pc_prod_t>())?;
 
     Ok(())
@@ -316,21 +307,21 @@ pub fn initialize_product_account(account: &AccountInfo, version: u32) -> Result
 /// Mutably borrow the data in `account` as a product account, validating that the account
 /// is properly formatted. Any mutations to the returned value will be reflected in the
 /// account data. Use this to read already-initialized accounts.
-pub fn load_product_account_mut<'a>(
-    account: &'a AccountInfo,
-    expected_version: u32,
-) -> Result<RefMut<'a, pc_prod_t>, ProgramError> {
-    let product_data = load_account_as_mut::<pc_prod_t>(account)?;
+// pub fn load_product_account_mut<'a>(
+//     account: &'a AccountInfo,
+//     expected_version: u32,
+// ) -> Result<RefMut<'a, pc_prod_t>, ProgramError> {
+//     let product_data = load_account_as_mut::<pc_prod_t>(account)?;
 
-    pyth_assert(
-        product_data.magic_ == PC_MAGIC
-            && product_data.ver_ == expected_version
-            && product_data.type_ == PC_ACCTYPE_PRODUCT,
-        ProgramError::InvalidArgument,
-    )?;
+//     pyth_assert(
+//         product_data.magic_ == PC_MAGIC
+//             && product_data.ver_ == expected_version
+//             && product_data.type_ == PC_ACCTYPE_PRODUCT,
+//         ProgramError::InvalidArgument,
+//     )?;
 
-    Ok(product_data)
-}
+//     Ok(product_data)
+// }
 
 // Assign pubkey bytes from source to target, fails if source is not 32 bytes
 pub fn pubkey_assign(target: &mut pc_pub_key_t, source: &[u8]) {
@@ -352,14 +343,21 @@ where
         account: &'a AccountInfo,
         version: u32,
     ) -> Result<RefMut<'a, Self>, ProgramError> {
-        let mut account_header = load_account_as_mut::<pc_acc>(account)?;
-        pyth_assert(
-            account_header.magic_ == 0 && account_header.ver_ == 0,
-            ProgramError::InvalidArgument,
-        )?;
-
-        clear_account(account)?;
+        // Check that account hasn't been initialized
         {
+            let account_header = load_account_as::<pc_acc>(account)?;
+            pyth_assert(
+                account_header.magic_ == 0 && account_header.ver_ == 0,
+                ProgramError::InvalidArgument,
+            )?;
+        }
+
+        // Clear account just in case
+        clear_account(account)?;
+
+        // Initialize header
+        {
+            let mut account_header = load_account_as_mut::<pc_acc>(account)?;
             account_header.magic_ = PC_MAGIC;
             account_header.ver_ = version;
             account_header.type_ = Self::account_type();
@@ -368,6 +366,7 @@ where
         load_account_as_mut::<Self>(account)
     }
     fn load<'a>(account: &'a AccountInfo, version: u32) -> Result<RefMut<'a, Self>, ProgramError> {
+        // Check that the account has been initialized and is of the right type
         {
             let account_header = load_account_as::<pc_acc>(account)?;
             pyth_assert(
@@ -384,5 +383,17 @@ where
 impl PythAccount for pc_map_table_t {
     fn account_type() -> u32 {
         PC_ACCTYPE_MAPPING
+    }
+}
+
+impl PythAccount for pc_prod_t {
+    fn account_type() -> u32 {
+        PC_ACCTYPE_PRODUCT
+    }
+}
+
+impl PythAccount for pc_price_t {
+    fn account_type() -> u32 {
+        PC_ACCTYPE_PRICE
     }
 }
