@@ -11,7 +11,10 @@ use crate::deserialize::{
     load_account_as_mut,
 };
 
-use bytemuck::bytes_of;
+use bytemuck::{
+    bytes_of,
+    Pod,
+};
 
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::SUCCESS;
@@ -245,7 +248,6 @@ pub fn clear_account(account: &AccountInfo) -> Result<(), ProgramError> {
     Ok(())
 }
 
-
 /// Mutably borrow the data in `account` as a mapping account, validating that the account
 /// is properly formatted. Any mutations to the returned value will be reflected in the
 /// account data. Use this to read already-initialized accounts.
@@ -268,12 +270,7 @@ pub fn load_mapping_account_mut<'a>(
 /// Initialize account as a new mapping account. This function will zero out any existing data in
 /// the account.
 pub fn initialize_mapping_account(account: &AccountInfo, version: u32) -> Result<(), ProgramError> {
-    clear_account(account)?;
-
-    let mut mapping_account = load_account_as_mut::<pc_map_table_t>(account)?;
-    mapping_account.magic_ = PC_MAGIC;
-    mapping_account.ver_ = version;
-    mapping_account.type_ = PC_ACCTYPE_MAPPING;
+    let mut mapping_account: RefMut<pc_map_table_t> = PythAccount::initialize(account, version)?;
     mapping_account.size_ =
         (size_of::<pc_map_table_t>() - size_of_val(&mapping_account.prod_)) as u32;
 
@@ -322,4 +319,48 @@ pub fn pubkey_assign(target: &mut pc_pub_key_t, source: &[u8]) {
 fn try_convert<T, U: TryFrom<T>>(x: T) -> Result<U, OracleError> {
     // Note: the error here assumes we're only applying this function to integers right now.
     U::try_from(x).map_err(|_| OracleError::IntegerCastingError)
+}
+
+pub trait PythAccount
+where
+    Self: Pod,
+{
+    fn account_type() -> u32;
+    fn initialize<'a>(
+        account: &'a AccountInfo,
+        version: u32,
+    ) -> Result<RefMut<'a, Self>, ProgramError> {
+        let mut account_header = load_account_as_mut::<pc_acc>(account)?;
+        pyth_assert(
+            account_header.magic_ == 0 && account_header.ver_ == 0,
+            ProgramError::InvalidArgument,
+        )?;
+
+        clear_account(account)?;
+        {
+            account_header.magic_ = PC_MAGIC;
+            account_header.ver_ = version;
+            account_header.type_ = Self::account_type();
+        }
+
+        load_account_as_mut::<Self>(account)
+    }
+    fn load<'a>(account: &'a AccountInfo, version: u32) -> Result<RefMut<'a, Self>, ProgramError> {
+        {
+            let account_header = load_account_as::<pc_acc>(account)?;
+            pyth_assert(
+                account_header.magic_ == PC_MAGIC
+                    && account_header.ver_ == version
+                    && account_header.type_ == Self::account_type(),
+                ProgramError::InvalidArgument,
+            )?;
+        }
+        load_account_as_mut::<Self>(account)
+    }
+}
+
+impl PythAccount for pc_map_table_t {
+    fn account_type() -> u32 {
+        PC_ACCTYPE_MAPPING
+    }
 }

@@ -95,7 +95,6 @@ pub extern "C" fn entrypoint(input: *mut u8) -> u64 {
         return error.into();
     }
 
-
     if c_ret_val == SUCCESSFULLY_UPDATED_AGGREGATE {
         //0 is the SUCCESS value for solana
         0
