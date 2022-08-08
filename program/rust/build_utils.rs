@@ -24,7 +24,8 @@ impl<'a> DeriveAdderParserCallback<'a> {
 }
 
 //this is required to implement the callback trait
-impl UnwindSafe for DeriveAdderParserCallback<'_> {}
+impl UnwindSafe for DeriveAdderParserCallback<'_> {
+}
 
 impl ParseCallbacks for DeriveAdderParserCallback<'_> {
     fn add_derives(&self, _name: &str) -> Vec<String> {
