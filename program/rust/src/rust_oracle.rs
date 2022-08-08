@@ -175,12 +175,6 @@ pub fn add_price(
     Ok(SUCCESS)
 }
 
-
-// impl pc_price_t {
-//     add_publisher(key : &pc_pub_key_t) -> Result<(), ProgramError>{
-//         Ok(())
-//     }
-// }
 /// add a publisher to a price account
 /// accounts[0] funding account                                   [signer writable]
 /// accounts[1] price account to add the publisher to             [signer writable]
