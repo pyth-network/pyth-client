@@ -212,21 +212,20 @@ pub fn add_publisher(
         }
     }
 
-    let next_index = price_data.num_ as usize;
+    let current_index: usize = try_convert(price_data.num_)?;
     sol_memset(
-        bytes_of_mut(&mut price_data.comp_[next_index]),
+        bytes_of_mut(&mut price_data.comp_[current_index]),
         0,
         size_of::<pc_price_comp>(),
     );
     pubkey_assign(
-        &mut price_data.comp_[next_index].pub_,
+        &mut price_data.comp_[current_index].pub_,
         bytes_of(&cmd_args.pub_),
     );
     price_data.num_ += 1;
-
-
-    price_data.size_ = (size_of::<pc_price_t>() - size_of_val(&price_data.comp_)
-        + (price_data.num_ as usize) * size_of::<pc_price_comp>()) as u32;
+    price_data.size_ =
+        try_convert::<_, u32>(size_of::<pc_price_t>() - size_of_val(&price_data.comp_))?
+            + price_data.num_ * try_convert::<_, u32>(size_of::<pc_price_comp>())?;
     Ok(SUCCESS)
 }
 pub fn add_product(
@@ -259,11 +258,10 @@ pub fn add_product(
     initialize_product_account(new_product_account, hdr.ver_)?;
 
     let current_index: usize = try_convert(mapping_data.num_)?;
-    unsafe {
-        mapping_data.prod_[current_index]
-            .k1_
-            .copy_from_slice(&new_product_account.key.to_bytes())
-    }
+    pubkey_assign(
+        &mut mapping_data.prod_[current_index],
+        bytes_of(&new_product_account.key.to_bytes()),
+    );
     mapping_data.num_ += 1;
     mapping_data.size_ =
         try_convert::<_, u32>(size_of::<pc_map_table_t>() - size_of_val(&mapping_data.prod_))?
