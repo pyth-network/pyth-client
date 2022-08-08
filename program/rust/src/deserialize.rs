@@ -1,36 +1,47 @@
-use crate::c_oracle_header::size_t;
-use crate::error::OracleError;
-use borsh::BorshDeserialize;
+use std::mem::size_of;
+
+use bytemuck::{
+    try_from_bytes,
+    try_from_bytes_mut,
+    Pod,
+};
+
+use std::cell::{
+    Ref,
+    RefMut,
+};
+
 use solana_program::account_info::AccountInfo;
 use solana_program::program_error::ProgramError;
-use std::mem::size_of;
-use std::result::Result;
 
-/// Deserialize field in `source` with offset `offset`
-pub fn deserialize_single_field_from_buffer<T: BorshDeserialize>(
-    source: &[u8],
-    offset: Option<size_t>,
-) -> Result<T, ProgramError> {
-    let start: usize = offset
-        .unwrap_or(0)
-        .try_into()
-        .map_err(|_| OracleError::IntegerCastingError)?;
-
-    let res: T = T::try_from_slice(&source[start..(start + size_of::<T>())])?;
-    Ok(res)
+/// Interpret the bytes in `data` as a value of type `T`
+pub fn load<T: Pod>(data: &[u8]) -> Result<&T, ProgramError> {
+    try_from_bytes(&data[0..size_of::<T>()]).map_err(|_| ProgramError::InvalidArgument)
 }
 
-/// Deserialize field in `i` rank of `accounts` with offset `offset`
-pub fn deserialize_single_field_from_account<T: BorshDeserialize>(
-    accounts: &[AccountInfo],
-    i: usize,
-    offset: Option<size_t>,
-) -> Result<T, ProgramError> {
-    deserialize_single_field_from_buffer::<T>(
-        &accounts
-            .get(i)
-            .ok_or(ProgramError::NotEnoughAccountKeys)?
-            .try_borrow_data()?,
-        offset,
-    )
+/// Interpret the bytes in `data` as a mutable value of type `T`
+#[allow(unused)]
+pub fn load_mut<T: Pod>(data: &mut [u8]) -> Result<&mut T, ProgramError> {
+    try_from_bytes_mut(&mut data[0..size_of::<T>()]).map_err(|_| ProgramError::InvalidArgument)
+}
+
+/// Get the data stored in `account` as a value of type `T`
+pub fn load_account_as<'a, T: Pod>(account: &'a AccountInfo) -> Result<Ref<'a, T>, ProgramError> {
+    let data = account.try_borrow_data()?;
+
+    Ok(Ref::map(data, |data| {
+        bytemuck::from_bytes(&data[0..size_of::<T>()])
+    }))
+}
+
+/// Mutably borrow the data in `account` as a value of type `T`.
+/// Any mutations to the returned value will be reflected in the account data.
+pub fn load_account_as_mut<'a, T: Pod>(
+    account: &'a AccountInfo,
+) -> Result<RefMut<'a, T>, ProgramError> {
+    let data = account.try_borrow_mut_data()?;
+
+    Ok(RefMut::map(data, |data| {
+        bytemuck::from_bytes_mut(&mut data[0..size_of::<T>()])
+    }))
 }

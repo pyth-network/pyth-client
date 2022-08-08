@@ -1,6 +1,5 @@
 use std::mem::size_of;
 
-use borsh::BorshDeserialize;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use solana_program::sysvar::slot_history::AccountInfo;
@@ -10,6 +9,7 @@ use crate::c_oracle_header::{
     cmd_hdr,
     command_t_e_cmd_add_mapping,
     command_t_e_cmd_add_price,
+    command_t_e_cmd_add_product,
     command_t_e_cmd_add_publisher,
     command_t_e_cmd_agg_price,
     command_t_e_cmd_init_mapping,
@@ -25,12 +25,14 @@ use crate::error::{
 use crate::rust_oracle::{
     add_mapping,
     add_price,
+    add_product,
     add_publisher,
     init_mapping,
     update_price,
     update_version,
 };
 
+use crate::deserialize::load;
 ///dispatch to the right instruction in the oracle
 pub fn process_instruction(
     program_id: &Pubkey,
@@ -42,7 +44,7 @@ pub fn process_instruction(
     if instruction_data.len() < cmd_hdr_size {
         return Err(ProgramError::InvalidArgument);
     }
-    let cmd_data = cmd_hdr::try_from_slice(&instruction_data[..cmd_hdr_size])?;
+    let cmd_data = load::<cmd_hdr>(&instruction_data[..cmd_hdr_size])?;
 
     if cmd_data.ver_ != PC_VERSION {
         //FIXME: I am not sure what's best to do here (this is copied from C)
@@ -66,6 +68,7 @@ pub fn process_instruction(
         command_t_e_cmd_init_mapping => init_mapping(program_id, accounts, instruction_data),
         command_t_e_cmd_add_mapping => add_mapping(program_id, accounts, instruction_data),
         command_t_e_cmd_add_publisher => add_publisher(program_id, accounts, instruction_data),
+        command_t_e_cmd_add_product => add_product(program_id, accounts, instruction_data),
         _ => c_entrypoint_wrapper(input),
     }
 }

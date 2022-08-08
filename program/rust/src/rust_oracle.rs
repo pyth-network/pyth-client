@@ -1,20 +1,20 @@
 use std::borrow::BorrowMut;
-use std::cell::{
-    Ref,
-    RefMut,
-};
+use std::cell::RefMut;
 use std::mem::{
     size_of,
     size_of_val,
 };
 
+use crate::deserialize::{
+    load,
+    load_account_as,
+    load_account_as_mut,
+};
 use bytemuck::{
     bytes_of,
     bytes_of_mut,
-    try_from_bytes,
-    try_from_bytes_mut,
-    Pod,
 };
+
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::SUCCESS;
 use solana_program::program_error::ProgramError;
@@ -43,6 +43,7 @@ use crate::c_oracle_header::{
     PC_PTYPE_UNKNOWN,
 };
 use crate::error::OracleResult;
+use crate::OracleError;
 
 use crate::utils::pyth_assert;
 
@@ -79,16 +80,18 @@ pub fn init_mapping(
     accounts: &[AccountInfo],
     instruction_data: &[u8],
 ) -> OracleResult {
-    let [_funding_account, fresh_mapping_account] = match accounts {
-        [x, y]
-            if valid_funding_account(x)
-                && valid_signable_account(program_id, y, size_of::<pc_map_table_t>())
-                && valid_fresh_account(y) =>
-        {
-            Ok([x, y])
-        }
+    let [funding_account, fresh_mapping_account] = match accounts {
+        [x, y] => Ok([x, y]),
         _ => Err(ProgramError::InvalidArgument),
     }?;
+
+    check_valid_funding_account(funding_account)?;
+    check_valid_signable_account(
+        program_id,
+        fresh_mapping_account,
+        size_of::<pc_map_table_t>(),
+    )?;
+    check_valid_fresh_account(fresh_mapping_account)?;
 
     // Initialize by setting to zero again (just in case) and populating the account header
     let hdr = load::<cmd_hdr_t>(instruction_data)?;
@@ -102,17 +105,15 @@ pub fn add_mapping(
     accounts: &[AccountInfo],
     instruction_data: &[u8],
 ) -> OracleResult {
-    let [_funding_account, cur_mapping, next_mapping] = match accounts {
-        [x, y, z]
-            if valid_funding_account(x)
-                && valid_signable_account(program_id, y, size_of::<pc_map_table_t>())
-                && valid_signable_account(program_id, z, size_of::<pc_map_table_t>())
-                && valid_fresh_account(z) =>
-        {
-            Ok([x, y, z])
-        }
+    let [funding_account, cur_mapping, next_mapping] = match accounts {
+        [x, y, z] => Ok([x, y, z]),
         _ => Err(ProgramError::InvalidArgument),
     }?;
+
+    check_valid_funding_account(funding_account)?;
+    check_valid_signable_account(program_id, cur_mapping, size_of::<pc_map_table_t>())?;
+    check_valid_signable_account(program_id, next_mapping, size_of::<pc_map_table_t>())?;
+    check_valid_fresh_account(next_mapping)?;
 
     let hdr = load::<cmd_hdr_t>(instruction_data)?;
     let mut cur_mapping = load_mapping_account_mut(cur_mapping, hdr.ver_)?;
@@ -146,17 +147,15 @@ pub fn add_price(
         return Err(ProgramError::InvalidArgument);
     }
 
-    let [_funding_account, product_account, price_account] = match accounts {
-        [x, y, z]
-            if valid_funding_account(x)
-                && valid_signable_account(program_id, y, PC_PROD_ACC_SIZE as usize)
-                && valid_signable_account(program_id, z, size_of::<pc_price_t>())
-                && valid_fresh_account(z) =>
-        {
-            Ok([x, y, z])
-        }
+    let [funding_account, product_account, price_account] = match accounts {
+        [x, y, z] => Ok([x, y, z]),
         _ => Err(ProgramError::InvalidArgument),
     }?;
+
+    check_valid_funding_account(funding_account)?;
+    check_valid_signable_account(program_id, product_account, PC_PROD_ACC_SIZE as usize)?;
+    check_valid_signable_account(program_id, price_account, size_of::<pc_price_t>())?;
+    check_valid_fresh_account(price_account)?;
 
     let mut product_data = load_product_account_mut(product_account, cmd_args.ver_)?;
 
@@ -236,10 +235,58 @@ pub fn add_publisher(
         + (price_data.num_ as usize) * size_of::<pc_price_comp>()) as u32;
     Ok(SUCCESS)
 }
+pub fn add_product(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
+    instruction_data: &[u8],
+) -> OracleResult {
+    let [funding_account, tail_mapping_account, new_product_account] = match accounts {
+        [x, y, z] => Ok([x, y, z]),
+        _ => Err(ProgramError::InvalidArgument),
+    }?;
 
+    check_valid_funding_account(funding_account)?;
+    check_valid_signable_account(
+        program_id,
+        tail_mapping_account,
+        size_of::<pc_map_table_t>(),
+    )?;
+    check_valid_signable_account(program_id, new_product_account, PC_PROD_ACC_SIZE as usize)?;
+    check_valid_fresh_account(new_product_account)?;
+
+    let hdr = load::<cmd_hdr_t>(instruction_data)?;
+    let mut mapping_data = load_mapping_account_mut(tail_mapping_account, hdr.ver_)?;
+    // The mapping account must have free space to add the product account
+    pyth_assert(
+        mapping_data.num_ < PC_MAP_TABLE_SIZE,
+        ProgramError::InvalidArgument,
+    )?;
+
+    initialize_product_account(new_product_account, hdr.ver_)?;
+
+    let current_index: usize = try_convert(mapping_data.num_)?;
+    unsafe {
+        mapping_data.prod_[current_index]
+            .k1_
+            .copy_from_slice(&new_product_account.key.to_bytes())
+    }
+    mapping_data.num_ += 1;
+    mapping_data.size_ =
+        try_convert::<_, u32>(size_of::<pc_map_table_t>() - size_of_val(&mapping_data.prod_))?
+            + mapping_data.num_ * try_convert::<_, u32>(size_of::<pc_pub_key_t>())?;
+
+    Ok(SUCCESS)
+}
 
 fn valid_funding_account(account: &AccountInfo) -> bool {
     account.is_signer && account.is_writable
+}
+
+fn check_valid_funding_account(account: &AccountInfo) -> Result<(), ProgramError> {
+    pyth_assert(
+        valid_funding_account(account),
+        ProgramError::InvalidArgument,
+    )
 }
 
 fn valid_signable_account(program_id: &Pubkey, account: &AccountInfo, minimum_size: usize) -> bool {
@@ -248,6 +295,17 @@ fn valid_signable_account(program_id: &Pubkey, account: &AccountInfo, minimum_si
         && account.owner == program_id
         && account.data_len() >= minimum_size
         && Rent::default().is_exempt(account.lamports(), account.data_len())
+}
+
+fn check_valid_signable_account(
+    program_id: &Pubkey,
+    account: &AccountInfo,
+    minimum_size: usize,
+) -> Result<(), ProgramError> {
+    pyth_assert(
+        valid_signable_account(program_id, account, minimum_size),
+        ProgramError::InvalidArgument,
+    )
 }
 
 /// Returns `true` if the `account` is fresh, i.e., its data can be overwritten.
@@ -260,6 +318,10 @@ fn valid_fresh_account(account: &AccountInfo) -> bool {
     }
 }
 
+fn check_valid_fresh_account(account: &AccountInfo) -> Result<(), ProgramError> {
+    pyth_assert(valid_fresh_account(account), ProgramError::InvalidArgument)
+}
+
 /// Sets the data of account to all-zero
 pub fn clear_account(account: &AccountInfo) -> Result<(), ProgramError> {
     let mut data = account
@@ -270,42 +332,6 @@ pub fn clear_account(account: &AccountInfo) -> Result<(), ProgramError> {
     Ok(())
 }
 
-/// Interpret the bytes in `data` as a value of type `T`
-fn load<T: Pod>(data: &[u8]) -> Result<&T, ProgramError> {
-    try_from_bytes(
-        data.get(0..size_of::<T>())
-            .ok_or(ProgramError::InvalidArgument)?,
-    )
-    .map_err(|_| ProgramError::InvalidArgument)
-}
-
-/// Interpret the bytes in `data` as a mutable value of type `T`
-#[allow(unused)]
-fn load_mut<T: Pod>(data: &mut [u8]) -> Result<&mut T, ProgramError> {
-    try_from_bytes_mut(&mut data[0..size_of::<T>()]).map_err(|_| ProgramError::InvalidArgument)
-}
-
-/// Get the data stored in `account` as a value of type `T`
-pub fn load_account_as<'a, T: Pod>(account: &'a AccountInfo) -> Result<Ref<'a, T>, ProgramError> {
-    let data = account.try_borrow_data()?;
-
-    Ok(Ref::map(data, |data| {
-        bytemuck::from_bytes(&data[0..size_of::<T>()])
-    }))
-}
-
-/// Mutably borrow the data in `account` as a value of type `T`.
-/// Any mutations to the returned value will be reflected in the account data.
-
-pub fn load_account_as_mut<'a, T: Pod>(
-    account: &'a AccountInfo,
-) -> Result<RefMut<'a, T>, ProgramError> {
-    let data = account.try_borrow_mut_data()?;
-
-    Ok(RefMut::map(data, |data| {
-        bytemuck::from_bytes_mut(&mut data[0..size_of::<T>()])
-    }))
-}
 
 /// Mutably borrow the data in `account` as a mapping account, validating that the account
 /// is properly formatted. Any mutations to the returned value will be reflected in the
@@ -336,7 +362,21 @@ pub fn initialize_mapping_account(account: &AccountInfo, version: u32) -> Result
     mapping_account.ver_ = version;
     mapping_account.type_ = PC_ACCTYPE_MAPPING;
     mapping_account.size_ =
-        (size_of::<pc_map_table_t>() - size_of_val(&mapping_account.prod_)) as u32;
+        try_convert(size_of::<pc_map_table_t>() - size_of_val(&mapping_account.prod_))?;
+
+    Ok(())
+}
+
+/// Initialize account as a new product account. This function will zero out any existing data in
+/// the account.
+pub fn initialize_product_account(account: &AccountInfo, version: u32) -> Result<(), ProgramError> {
+    clear_account(account)?;
+
+    let mut prod_account = load_account_as_mut::<pc_prod_t>(account)?;
+    prod_account.magic_ = PC_MAGIC;
+    prod_account.ver_ = version;
+    prod_account.type_ = PC_ACCTYPE_PRODUCT;
+    prod_account.size_ = try_convert(size_of::<pc_prod_t>())?;
 
     Ok(())
 }
@@ -344,7 +384,7 @@ pub fn initialize_mapping_account(account: &AccountInfo, version: u32) -> Result
 /// Mutably borrow the data in `account` as a product account, validating that the account
 /// is properly formatted. Any mutations to the returned value will be reflected in the
 /// account data. Use this to read already-initialized accounts.
-fn load_product_account_mut<'a>(
+pub fn load_product_account_mut<'a>(
     account: &'a AccountInfo,
     expected_version: u32,
 ) -> Result<RefMut<'a, pc_prod_t>, ProgramError> {
@@ -381,7 +421,7 @@ fn load_price_account_mut<'a>(
 
 
 // Assign pubkey bytes from source to target, fails if source is not 32 bytes
-fn pubkey_assign(target: &mut pc_pub_key_t, source: &[u8]) {
+pub fn pubkey_assign(target: &mut pc_pub_key_t, source: &[u8]) {
     unsafe { target.k1_.copy_from_slice(source) }
 }
 
@@ -391,4 +431,9 @@ fn pubkey_is_zero(key: &pc_pub_key_t) -> bool {
 
 fn pubkey_equal(key1: &pc_pub_key_t, key2: &pc_pub_key_t) -> bool {
     return unsafe { key1.k1_.iter().zip(&key2.k1_).all(|(x, y)| *x == *y) };
+}
+/// Convert `x: T` into a `U`, returning the appropriate `OracleError` if the conversion fails.
+fn try_convert<T, U: TryFrom<T>>(x: T) -> Result<U, OracleError> {
+    // Note: the error here assumes we're only applying this function to integers right now.
+    U::try_from(x).map_err(|_| OracleError::IntegerCastingError)
 }

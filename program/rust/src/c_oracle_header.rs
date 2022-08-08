@@ -3,10 +3,6 @@
 //we do not use all the variables in oracle.h, so this helps with the warnings
 #![allow(dead_code)]
 //All the custom trait imports should go here
-use borsh::{
-    BorshDeserialize,
-    BorshSerialize,
-};
 use bytemuck::{
     Pod,
     Zeroable,
@@ -57,6 +53,30 @@ unsafe impl Pod for cmd_hdr {
 }
 
 #[cfg(target_endian = "little")]
+
+unsafe impl Zeroable for pc_price_info {
+}
+
+#[cfg(target_endian = "little")]
+unsafe impl Pod for pc_price_info {
+}
+
+#[cfg(target_endian = "little")]
+unsafe impl Zeroable for cmd_upd_price {
+}
+
+#[cfg(target_endian = "little")]
+unsafe impl Pod for cmd_upd_price {
+}
+
+#[cfg(target_endian = "little")]
+unsafe impl Zeroable for pc_ema {
+}
+
+#[cfg(target_endian = "little")]
+unsafe impl Pod for pc_ema {
+}
+
 unsafe impl Zeroable for cmd_add_price_t {
 }
 

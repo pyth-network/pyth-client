@@ -12,4 +12,3 @@ typedef signed long int int64_t;
 typedef unsigned long int uint64_t;
 
 #include "../../c/src/oracle/oracle.h"
-#include "price_t_offsets.h"
