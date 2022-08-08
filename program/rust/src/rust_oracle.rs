@@ -15,14 +15,15 @@ use bytemuck::bytes_of;
 
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::SUCCESS;
+use solana_program::msg;
 use solana_program::program_error::ProgramError;
 use solana_program::program_memory::sol_memset;
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
 
+
 #[cfg(feature = "resize-account")]
 use crate::error::OracleError;
-#[cfg(feature = "resize-account")]
 use crate::time_machine_types::PriceAccountWrapper;
 #[cfg(feature = "resize-account")]
 use solana_program::program::invoke;
@@ -48,6 +49,7 @@ use crate::c_oracle_header::{
     PC_MAX_NUM_DECIMALS,
     PC_PROD_ACC_SIZE,
     PC_PTYPE_UNKNOWN,
+    SUCCESSFULLY_UPDATED_AGGREGATE,
 };
 use crate::error::OracleResult;
 
@@ -55,22 +57,33 @@ use crate::utils::pyth_assert;
 
 use super::c_entrypoint_wrapper;
 
-#[cfg(feature = "resize-account")]
 const PRICE_T_SIZE: usize = size_of::<pc_price_t>();
-#[cfg(feature = "resize-account")]
 const PRICE_ACCOUNT_SIZE: usize = size_of::<PriceAccountWrapper>();
 
 
 ///Calls the c oracle update_price, and updates the Time Machine if needed
 pub fn update_price(
     _program_id: &Pubkey,
-    _accounts: &[AccountInfo],
+    accounts: &[AccountInfo],
     _instruction_data: &[u8],
     input: *mut u8,
 ) -> OracleResult {
-    //For now, we did not change the behavior of this. this is just to show the proposed structure
-    // of the program
-    c_entrypoint_wrapper(input)
+    let price_account_info = &accounts[1];
+    let account_len = price_account_info.try_data_len()?;
+    if account_len < PRICE_ACCOUNT_SIZE {
+        if account_len != PRICE_T_SIZE {
+            return Err(ProgramError::InvalidArgument);
+        }
+        msg!("Please resize the account to allow for SMA tracking!");
+        return c_entrypoint_wrapper(input);
+    }
+    let c_ret_value = c_entrypoint_wrapper(input)?;
+    if c_ret_value == SUCCESSFULLY_UPDATED_AGGREGATE {
+        let mut price_account = load_account_as_mut::<PriceAccountWrapper>(&price_account_info)?;
+        price_account.add_price()?;
+        msg!("updated tracker!");
+    }
+    Ok(c_ret_value)
 }
 
 ///resize price account and initialize the TimeMachineStructure

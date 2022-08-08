@@ -86,6 +86,23 @@ impl PriceAccountWrapper {
             self.price_data.agg_.conf_,
         )
     }
+
+    pub fn add_price(&mut self) -> Result<(), OracleError> {
+        self.time_machine.add_price(
+            self.price_data
+                .timestamp_
+                .try_into()
+                .map_err(|_| OracleError::IntegerCastingError)?,
+            self.price_data
+                .prev_timestamp_
+                .try_into()
+                .map_err(|_| OracleError::IntegerCastingError)?,
+            self.price_data.agg_.price_,
+            self.price_data.prev_price_,
+            self.price_data.agg_.conf_,
+            self.price_data.prev_conf_,
+        )
+    }
 }
 
 #[cfg(target_endian = "little")]
