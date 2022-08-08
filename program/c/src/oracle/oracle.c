@@ -472,7 +472,7 @@ static uint64_t dispatch( SolParameters *prm, SolAccountInfo *ka )
     // init_mapping is implemented in Rust.
     case e_cmd_init_mapping:               return ERROR_INVALID_ARGUMENT;
     case e_cmd_add_mapping:                return add_mapping( prm, ka );
-    // init_mapping is implemented in Rust.
+    // add_product is implemented in Rust.
     case e_cmd_add_product:                return ERROR_INVALID_ARGUMENT;
     case e_cmd_upd_product:                return upd_product( prm, ka );
     case e_cmd_add_price:                  return add_price( prm, ka );
