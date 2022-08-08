@@ -24,6 +24,8 @@ pub enum OracleError {
     InvalidFundingAccount   = 604,
     #[error("InvalidSignableAccount")]
     InvalidSignableAccount  = 605,
+    #[error("InvalidSystemAccount")]
+    InvalidSystemAccount    = 606,
 }
 
 impl From<OracleError> for ProgramError {

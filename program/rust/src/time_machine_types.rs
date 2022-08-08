@@ -14,7 +14,7 @@ pub trait Tracker {
     fn add_first_price(
         &mut self,
         current_time: u64,
-        current_price: u64,
+        current_price: i64,
         current_conf: u64,
     ) -> Result<(), OracleError>;
 
@@ -23,8 +23,8 @@ pub trait Tracker {
         &mut self,
         current_time: u64,
         prev_time: u64,
-        current_price: u64,
-        prev_price: u64,
+        current_price: i64,
+        prev_price: i64,
         current_conf: u64,
         prev_conf: u64,
     ) -> Result<(), OracleError>;
@@ -43,7 +43,7 @@ impl Tracker for TimeMachineWrapper {
     fn add_first_price(
         &mut self,
         _current_time: u64,
-        _current_price: u64,
+        _current_price: i64,
         _current_conf: u64,
     ) -> Result<(), OracleError> {
         msg!("implement me");
@@ -53,8 +53,8 @@ impl Tracker for TimeMachineWrapper {
         &mut self,
         _current_time: u64,
         _prev_time: u64,
-        _current_price: u64,
-        _prev_price: u64,
+        _current_price: i64,
+        _prev_price: i64,
         _current_conf: u64,
         _prev_conf: u64,
     ) -> Result<(), OracleError> {
@@ -68,11 +68,24 @@ impl Tracker for TimeMachineWrapper {
 /// wraps everything stored in a price account
 pub struct PriceAccountWrapper {
     //an instance of the c price_t type
-    price_data:            pc_price_t,
+    pub price_data:            pc_price_t,
     //space for more publishers
-    extra_publisher_space: [u8; EXTRA_PUBLISHER_SPACE as usize],
+    pub extra_publisher_space: [u8; EXTRA_PUBLISHER_SPACE as usize],
     //TimeMachine
-    time_machine:          TimeMachineWrapper,
+    pub time_machine:          TimeMachineWrapper,
+}
+impl PriceAccountWrapper {
+    #[cfg(feature = "resize-account")]
+    pub fn add_first_price(&mut self) -> Result<(), OracleError> {
+        self.time_machine.add_first_price(
+            self.price_data
+                .timestamp_
+                .try_into()
+                .map_err(|_| OracleError::IntegerCastingError)?,
+            self.price_data.agg_.price_,
+            self.price_data.agg_.conf_,
+        )
+    }
 }
 
 #[cfg(target_endian = "little")]
