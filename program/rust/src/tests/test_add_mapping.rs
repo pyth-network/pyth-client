@@ -6,11 +6,11 @@ use crate::c_oracle_header::{
     PC_MAP_TABLE_SIZE,
     PC_VERSION,
 };
+use crate::deserialize::load_account_as_mut;
 use crate::rust_oracle::{
     add_mapping,
     clear_account,
     initialize_mapping_account,
-    load_account_as_mut,
     load_mapping_account_mut,
     pubkey_assign,
 };

@@ -6,10 +6,10 @@ use crate::c_oracle_header::{
     PC_MAGIC,
     PC_VERSION,
 };
+use crate::deserialize::load_account_as;
 use crate::rust_oracle::{
     clear_account,
     init_mapping,
-    load_account_as,
 };
 use bytemuck::bytes_of;
 use solana_program::account_info::AccountInfo;

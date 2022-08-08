@@ -38,6 +38,7 @@ use crate::c_oracle_header::{
     PC_PTYPE_UNKNOWN,
 };
 use crate::error::OracleResult;
+use crate::OracleError;
 
 use crate::utils::pyth_assert;
 
@@ -171,6 +172,47 @@ pub fn add_price(
     Ok(SUCCESS)
 }
 
+pub fn add_product(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
+    instruction_data: &[u8],
+) -> OracleResult {
+    let [_funding_account, tail_mapping_account, new_product_account] = match accounts {
+        [x, y, z]
+            if valid_funding_account(x)
+                && valid_signable_account(program_id, y, size_of::<pc_map_table_t>())
+                && valid_signable_account(program_id, z, PC_PROD_ACC_SIZE as usize)
+                && valid_fresh_account(z) =>
+        {
+            Ok([x, y, z])
+        }
+        _ => Err(ProgramError::InvalidArgument),
+    }?;
+
+    let hdr = load::<cmd_hdr_t>(instruction_data)?;
+    let mut mapping_data = load_mapping_account_mut(tail_mapping_account, hdr.ver_)?;
+    // The mapping account must have free space to add the product account
+    pyth_assert(
+        mapping_data.num_ < PC_MAP_TABLE_SIZE,
+        ProgramError::InvalidArgument,
+    )?;
+
+    initialize_product_account(new_product_account, hdr.ver_)?;
+
+    let current_index: usize = try_convert(mapping_data.num_)?;
+    unsafe {
+        mapping_data.prod_[current_index]
+            .k1_
+            .copy_from_slice(&new_product_account.key.to_bytes())
+    }
+    mapping_data.num_ += 1;
+    mapping_data.size_ =
+        try_convert::<_, u32>(size_of::<pc_map_table_t>() - size_of_val(&mapping_data.prod_))?
+            + mapping_data.num_ * try_convert::<_, u32>(size_of::<pc_pub_key_t>())?;
+
+    Ok(SUCCESS)
+}
+
 fn valid_funding_account(account: &AccountInfo) -> bool {
     account.is_signer && account.is_writable
 }
@@ -238,10 +280,24 @@ pub fn initialize_mapping_account(account: &AccountInfo, version: u32) -> Result
     Ok(())
 }
 
+/// Initialize account as a new product account. This function will zero out any existing data in
+/// the account.
+pub fn initialize_product_account(account: &AccountInfo, version: u32) -> Result<(), ProgramError> {
+    clear_account(account)?;
+
+    let mut prod_account = load_account_as_mut::<pc_prod_t>(account)?;
+    prod_account.magic_ = PC_MAGIC;
+    prod_account.ver_ = version;
+    prod_account.type_ = PC_ACCTYPE_PRODUCT;
+    prod_account.size_ = try_convert(size_of::<pc_prod_t>())?;
+
+    Ok(())
+}
+
 /// Mutably borrow the data in `account` as a product account, validating that the account
 /// is properly formatted. Any mutations to the returned value will be reflected in the
 /// account data. Use this to read already-initialized accounts.
-fn load_product_account_mut<'a>(
+pub fn load_product_account_mut<'a>(
     account: &'a AccountInfo,
     expected_version: u32,
 ) -> Result<RefMut<'a, pc_prod_t>, ProgramError> {
@@ -260,4 +316,10 @@ fn load_product_account_mut<'a>(
 // Assign pubkey bytes from source to target, fails if source is not 32 bytes
 pub fn pubkey_assign(target: &mut pc_pub_key_t, source: &[u8]) {
     unsafe { target.k1_.copy_from_slice(source) }
+}
+
+/// Convert `x: T` into a `U`, returning the appropriate `OracleError` if the conversion fails.
+fn try_convert<T, U: TryFrom<T>>(x: T) -> Result<U, OracleError> {
+    // Note: the error here assumes we're only applying this function to integers right now.
+    U::try_from(x).map_err(|_| OracleError::IntegerCastingError)
 }
