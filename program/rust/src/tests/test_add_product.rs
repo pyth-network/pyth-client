@@ -16,7 +16,6 @@ use crate::c_oracle_header::{
     command_t_e_cmd_add_product,
     pc_map_table_t,
     pc_prod_t,
-    pc_pub_key_t,
     PC_ACCTYPE_MAPPING,
     PC_ACCTYPE_PRODUCT,
     PC_MAGIC,
@@ -30,6 +29,7 @@ use crate::rust_oracle::{
     clear_account,
     initialize_mapping_account,
     load_mapping_account_mut,
+    pubkey_equal,
 };
 
 #[test]
@@ -209,9 +209,4 @@ fn test_add_product() {
 
     let mapping_data = load_mapping_account_mut(&mapping_account, PC_VERSION).unwrap();
     assert_eq!(mapping_data.num_, PC_MAP_TABLE_SIZE);
-}
-
-// Assign pubkey bytes from source to target, fails if source is not 32 bytes
-fn pubkey_equal(target: &pc_pub_key_t, source: &[u8]) -> bool {
-    unsafe { target.k1_ == *source }
 }
