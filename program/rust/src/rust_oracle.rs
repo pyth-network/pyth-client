@@ -75,16 +75,18 @@ pub fn init_mapping(
     accounts: &[AccountInfo],
     instruction_data: &[u8],
 ) -> OracleResult {
-    let [_funding_account, fresh_mapping_account] = match accounts {
-        [x, y]
-            if valid_funding_account(x)
-                && valid_signable_account(program_id, y, size_of::<pc_map_table_t>())
-                && valid_fresh_account(y) =>
-        {
-            Ok([x, y])
-        }
+    let [funding_account, fresh_mapping_account] = match accounts {
+        [x, y] => Ok([x, y]),
         _ => Err(ProgramError::InvalidArgument),
     }?;
+
+    check_valid_funding_account(funding_account)?;
+    check_valid_signable_account(
+        program_id,
+        fresh_mapping_account,
+        size_of::<pc_map_table_t>(),
+    )?;
+    check_valid_fresh_account(fresh_mapping_account)?;
 
     // Initialize by setting to zero again (just in case) and populating the account header
     let hdr = load::<cmd_hdr_t>(instruction_data)?;
@@ -98,17 +100,15 @@ pub fn add_mapping(
     accounts: &[AccountInfo],
     instruction_data: &[u8],
 ) -> OracleResult {
-    let [_funding_account, cur_mapping, next_mapping] = match accounts {
-        [x, y, z]
-            if valid_funding_account(x)
-                && valid_signable_account(program_id, y, size_of::<pc_map_table_t>())
-                && valid_signable_account(program_id, z, size_of::<pc_map_table_t>())
-                && valid_fresh_account(z) =>
-        {
-            Ok([x, y, z])
-        }
+    let [funding_account, cur_mapping, next_mapping] = match accounts {
+        [x, y, z] => Ok([x, y, z]),
         _ => Err(ProgramError::InvalidArgument),
     }?;
+
+    check_valid_funding_account(funding_account)?;
+    check_valid_signable_account(program_id, cur_mapping, size_of::<pc_map_table_t>())?;
+    check_valid_signable_account(program_id, next_mapping, size_of::<pc_map_table_t>())?;
+    check_valid_fresh_account(next_mapping)?;
 
     let hdr = load::<cmd_hdr_t>(instruction_data)?;
     let mut cur_mapping = load_mapping_account_mut(cur_mapping, hdr.ver_)?;
@@ -142,17 +142,15 @@ pub fn add_price(
         return Err(ProgramError::InvalidArgument);
     }
 
-    let [_funding_account, product_account, price_account] = match accounts {
-        [x, y, z]
-            if valid_funding_account(x)
-                && valid_signable_account(program_id, y, PC_PROD_ACC_SIZE as usize)
-                && valid_signable_account(program_id, z, size_of::<pc_price_t>())
-                && valid_fresh_account(z) =>
-        {
-            Ok([x, y, z])
-        }
+    let [funding_account, product_account, price_account] = match accounts {
+        [x, y, z] => Ok([x, y, z]),
         _ => Err(ProgramError::InvalidArgument),
     }?;
+
+    check_valid_funding_account(funding_account)?;
+    check_valid_signable_account(program_id, product_account, PC_PROD_ACC_SIZE as usize)?;
+    check_valid_signable_account(program_id, price_account, size_of::<pc_price_t>())?;
+    check_valid_fresh_account(price_account)?;
 
     let mut product_data = load_product_account_mut(product_account, cmd_args.ver_)?;
 
@@ -177,17 +175,19 @@ pub fn add_product(
     accounts: &[AccountInfo],
     instruction_data: &[u8],
 ) -> OracleResult {
-    let [_funding_account, tail_mapping_account, new_product_account] = match accounts {
-        [x, y, z]
-            if valid_funding_account(x)
-                && valid_signable_account(program_id, y, size_of::<pc_map_table_t>())
-                && valid_signable_account(program_id, z, PC_PROD_ACC_SIZE as usize)
-                && valid_fresh_account(z) =>
-        {
-            Ok([x, y, z])
-        }
+    let [funding_account, tail_mapping_account, new_product_account] = match accounts {
+        [x, y, z] => Ok([x, y, z]),
         _ => Err(ProgramError::InvalidArgument),
     }?;
+
+    check_valid_funding_account(funding_account)?;
+    check_valid_signable_account(
+        program_id,
+        tail_mapping_account,
+        size_of::<pc_map_table_t>(),
+    )?;
+    check_valid_signable_account(program_id, new_product_account, PC_PROD_ACC_SIZE as usize)?;
+    check_valid_fresh_account(new_product_account)?;
 
     let hdr = load::<cmd_hdr_t>(instruction_data)?;
     let mut mapping_data = load_mapping_account_mut(tail_mapping_account, hdr.ver_)?;
@@ -217,12 +217,30 @@ fn valid_funding_account(account: &AccountInfo) -> bool {
     account.is_signer && account.is_writable
 }
 
+fn check_valid_funding_account(account: &AccountInfo) -> Result<(), ProgramError> {
+    pyth_assert(
+        valid_funding_account(account),
+        ProgramError::InvalidArgument,
+    )
+}
+
 fn valid_signable_account(program_id: &Pubkey, account: &AccountInfo, minimum_size: usize) -> bool {
     account.is_signer
         && account.is_writable
         && account.owner == program_id
         && account.data_len() >= minimum_size
         && Rent::default().is_exempt(account.lamports(), account.data_len())
+}
+
+fn check_valid_signable_account(
+    program_id: &Pubkey,
+    account: &AccountInfo,
+    minimum_size: usize,
+) -> Result<(), ProgramError> {
+    pyth_assert(
+        valid_signable_account(program_id, account, minimum_size),
+        ProgramError::InvalidArgument,
+    )
 }
 
 /// Returns `true` if the `account` is fresh, i.e., its data can be overwritten.
@@ -233,6 +251,10 @@ fn valid_fresh_account(account: &AccountInfo) -> bool {
         Ok(pyth_acc) => pyth_acc.magic_ == 0 && pyth_acc.ver_ == 0,
         Err(_) => false,
     }
+}
+
+fn check_valid_fresh_account(account: &AccountInfo) -> Result<(), ProgramError> {
+    pyth_assert(valid_fresh_account(account), ProgramError::InvalidArgument)
 }
 
 /// Sets the data of account to all-zero
@@ -275,7 +297,7 @@ pub fn initialize_mapping_account(account: &AccountInfo, version: u32) -> Result
     mapping_account.ver_ = version;
     mapping_account.type_ = PC_ACCTYPE_MAPPING;
     mapping_account.size_ =
-        (size_of::<pc_map_table_t>() - size_of_val(&mapping_account.prod_)) as u32;
+        try_convert(size_of::<pc_map_table_t>() - size_of_val(&mapping_account.prod_))?;
 
     Ok(())
 }
