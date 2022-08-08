@@ -89,11 +89,10 @@ pub fn init_mapping(
         fresh_mapping_account,
         size_of::<pc_map_table_t>(),
     )?;
-    check_valid_fresh_account(fresh_mapping_account)?;
 
     // Initialize by setting to zero again (just in case) and populating the account header
     let hdr = load::<cmd_hdr_t>(instruction_data)?;
-    initialize_mapping_account(fresh_mapping_account, hdr.ver_)?;
+    pc_map_table_t::initialize(fresh_mapping_account, hdr.ver_)?;
 
     Ok(SUCCESS)
 }
@@ -114,14 +113,14 @@ pub fn add_mapping(
     check_valid_fresh_account(next_mapping)?;
 
     let hdr = load::<cmd_hdr_t>(instruction_data)?;
-    let mut cur_mapping: RefMut<pc_map_table_t> = PythAccount::load(cur_mapping, hdr.ver_)?;
+    let mut cur_mapping = pc_map_table_t::load(cur_mapping, hdr.ver_)?;
     pyth_assert(
         cur_mapping.num_ == PC_MAP_TABLE_SIZE
             && unsafe { cur_mapping.next_.k8_.iter().all(|x| *x == 0) },
         ProgramError::InvalidArgument,
     )?;
 
-    initialize_mapping_account(next_mapping, hdr.ver_)?;
+    pc_map_table_t::initialize(next_mapping, hdr.ver_)?;
     pubkey_assign(&mut cur_mapping.next_, &next_mapping.key.to_bytes());
 
     Ok(SUCCESS)
@@ -154,11 +153,9 @@ pub fn add_price(
     check_valid_signable_account(program_id, product_account, PC_PROD_ACC_SIZE as usize)?;
     check_valid_signable_account(program_id, price_account, size_of::<pc_price_t>())?;
 
-    let mut product_data: RefMut<pc_prod_t> = PythAccount::load(product_account, cmd_args.ver_)?;
-    let mut price_data: RefMut<pc_price_t> = PythAccount::initialize(price_account, cmd_args.ver_)?;
+    let mut product_data = pc_prod_t::load(product_account, cmd_args.ver_)?;
+    let mut price_data = pc_price_t::initialize(price_account, cmd_args.ver_)?;
 
-
-    price_data.size_ = (size_of::<pc_price_t>() - size_of_val(&price_data.comp_)) as u32;
     price_data.expo_ = cmd_args.expo_;
     price_data.ptype_ = cmd_args.ptype_;
     pubkey_assign(&mut price_data.prod_, &product_account.key.to_bytes());
@@ -188,15 +185,14 @@ pub fn add_product(
     check_valid_fresh_account(new_product_account)?;
 
     let hdr = load::<cmd_hdr_t>(instruction_data)?;
-    let mut mapping_data: RefMut<pc_map_table_t> =
-        PythAccount::load(tail_mapping_account, hdr.ver_)?;
+    let mut mapping_data = pc_map_table_t::load(tail_mapping_account, hdr.ver_)?;
     // The mapping account must have free space to add the product account
     pyth_assert(
         mapping_data.num_ < PC_MAP_TABLE_SIZE,
         ProgramError::InvalidArgument,
     )?;
 
-    initialize_product_account(new_product_account, hdr.ver_)?;
+    pc_prod_t::initialize(new_product_account, hdr.ver_)?;
 
     let current_index: usize = try_convert(mapping_data.num_)?;
     unsafe {
@@ -266,63 +262,6 @@ pub fn clear_account(account: &AccountInfo) -> Result<(), ProgramError> {
     Ok(())
 }
 
-/// Mutably borrow the data in `account` as a mapping account, validating that the account
-/// is properly formatted. Any mutations to the returned value will be reflected in the
-/// account data. Use this to read already-initialized accounts.
-// pub fn load_mapping_account_mut<'a>(
-//     account: &'a AccountInfo,
-//     expected_version: u32,
-// ) -> Result<RefMut<'a, pc_map_table_t>, ProgramError> {
-//     let mapping_data = load_account_as_mut::<pc_map_table_t>(account)?;
-
-//     pyth_assert(
-//         mapping_data.magic_ == PC_MAGIC
-//             && mapping_data.ver_ == expected_version
-//             && mapping_data.type_ == PC_ACCTYPE_MAPPING,
-//         ProgramError::InvalidArgument,
-//     )?;
-
-//     Ok(mapping_data)
-// }
-
-/// Initialize account as a new mapping account. This function will zero out any existing data in
-/// the account.
-pub fn initialize_mapping_account(account: &AccountInfo, version: u32) -> Result<(), ProgramError> {
-    let mut mapping_account: RefMut<pc_map_table_t> = PythAccount::initialize(account, version)?;
-    mapping_account.size_ =
-        try_convert(size_of::<pc_map_table_t>() - size_of_val(&mapping_account.prod_))?;
-
-    Ok(())
-}
-
-/// Initialize account as a new product account. This function will zero out any existing data in
-/// the account.
-pub fn initialize_product_account(account: &AccountInfo, version: u32) -> Result<(), ProgramError> {
-    let mut prod_account: RefMut<pc_prod_t> = PythAccount::initialize(account, version)?;
-    prod_account.size_ = try_convert(size_of::<pc_prod_t>())?;
-
-    Ok(())
-}
-
-/// Mutably borrow the data in `account` as a product account, validating that the account
-/// is properly formatted. Any mutations to the returned value will be reflected in the
-/// account data. Use this to read already-initialized accounts.
-// pub fn load_product_account_mut<'a>(
-//     account: &'a AccountInfo,
-//     expected_version: u32,
-// ) -> Result<RefMut<'a, pc_prod_t>, ProgramError> {
-//     let product_data = load_account_as_mut::<pc_prod_t>(account)?;
-
-//     pyth_assert(
-//         product_data.magic_ == PC_MAGIC
-//             && product_data.ver_ == expected_version
-//             && product_data.type_ == PC_ACCTYPE_PRODUCT,
-//         ProgramError::InvalidArgument,
-//     )?;
-
-//     Ok(product_data)
-// }
-
 // Assign pubkey bytes from source to target, fails if source is not 32 bytes
 pub fn pubkey_assign(target: &mut pc_pub_key_t, source: &[u8]) {
     unsafe { target.k1_.copy_from_slice(source) }
@@ -339,6 +278,7 @@ where
     Self: Pod,
 {
     fn account_type() -> u32;
+    fn initial_size() -> u32;
     fn initialize<'a>(
         account: &'a AccountInfo,
         version: u32,
@@ -361,9 +301,11 @@ where
             account_header.magic_ = PC_MAGIC;
             account_header.ver_ = version;
             account_header.type_ = Self::account_type();
+            account_header.size_ = Self::initial_size();
         }
 
-        load_account_as_mut::<Self>(account)
+        let account_data = load_account_as_mut::<Self>(account)?;
+        Ok(account_data)
     }
     fn load<'a>(account: &'a AccountInfo, version: u32) -> Result<RefMut<'a, Self>, ProgramError> {
         // Check that the account has been initialized and is of the right type
@@ -384,16 +326,25 @@ impl PythAccount for pc_map_table_t {
     fn account_type() -> u32 {
         PC_ACCTYPE_MAPPING
     }
+    fn initial_size() -> u32 {
+        56
+    }
 }
 
 impl PythAccount for pc_prod_t {
     fn account_type() -> u32 {
         PC_ACCTYPE_PRODUCT
     }
+    fn initial_size() -> u32 {
+        size_of::<pc_prod_t>() as u32
+    }
 }
 
 impl PythAccount for pc_price_t {
     fn account_type() -> u32 {
         PC_ACCTYPE_PRICE
+    }
+    fn initial_size() -> u32 {
+        0 // FIX MEEEEE
     }
 }

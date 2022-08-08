@@ -17,7 +17,6 @@ use crate::deserialize::load_account_as;
 use crate::rust_oracle::{
     add_product,
     clear_account,
-    initialize_mapping_account,
     PythAccount,
 };
 use bytemuck::{
@@ -30,7 +29,6 @@ use solana_program::native_token::LAMPORTS_PER_SOL;
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
 use solana_program::system_program;
-use std::cell::RefMut;
 
 #[test]
 fn test_add_product() {
@@ -116,8 +114,7 @@ fn test_add_product() {
 
     {
         let product_data = load_account_as::<pc_prod_t>(&product_account).unwrap();
-        let mapping_data: RefMut<pc_map_table_t> =
-            PythAccount::load(&mapping_account, PC_VERSION).unwrap();
+        let mapping_data = pc_map_table_t::load(&mapping_account, PC_VERSION).unwrap();
 
         assert_eq!(product_data.magic_, PC_MAGIC);
         assert_eq!(product_data.ver_, PC_VERSION);
@@ -141,8 +138,7 @@ fn test_add_product() {
     )
     .is_ok());
     {
-        let mapping_data: RefMut<pc_map_table_t> =
-            PythAccount::load(&mapping_account, PC_VERSION).unwrap();
+        let mapping_data = pc_map_table_t::load(&mapping_account, PC_VERSION).unwrap();
         assert_eq!(mapping_data.num_, 2);
         assert!(pubkey_equal(
             &mapping_data.prod_[1],
@@ -177,7 +173,7 @@ fn test_add_product() {
 
     // test fill up of mapping table
     clear_account(&mapping_account).unwrap();
-    initialize_mapping_account(&mapping_account, PC_VERSION).unwrap();
+    pc_map_table_t::initialize(&mapping_account, PC_VERSION).unwrap();
 
     for i in 0..PC_MAP_TABLE_SIZE {
         clear_account(&product_account).unwrap();
@@ -192,8 +188,7 @@ fn test_add_product() {
             instruction_data
         )
         .is_ok());
-        let mapping_data: RefMut<pc_map_table_t> =
-            PythAccount::load(&mapping_account, PC_VERSION).unwrap();
+        let mapping_data = pc_map_table_t::load(&mapping_account, PC_VERSION).unwrap();
         assert_eq!(mapping_data.num_, i + 1);
     }
 
@@ -210,8 +205,7 @@ fn test_add_product() {
     )
     .is_err());
 
-    let mapping_data: RefMut<pc_map_table_t> =
-        PythAccount::load(&mapping_account, PC_VERSION).unwrap();
+    let mapping_data = pc_map_table_t::load(&mapping_account, PC_VERSION).unwrap();
     assert_eq!(mapping_data.num_, PC_MAP_TABLE_SIZE);
 }
 
