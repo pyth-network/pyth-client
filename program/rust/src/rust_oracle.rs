@@ -154,7 +154,7 @@ pub fn update_version(
     _instruction_data: &[u8],
 ) -> OracleResult {
     let funding_account_info = &accounts[0];
-    let upgraded_account = &accounts[1];
+    let upgraded_account_info = &accounts[1];
     let system_program = &accounts[2];
 
     pyth_assert(
@@ -163,7 +163,7 @@ pub fn update_version(
     )?;
 
     //read account info
-    let pyth_acc_info = load_account_as::<pc_acc>(&funding_account_info)?;
+    let pyth_acc_info = load_account_as::<pc_acc>(&upgraded_account_info)?;
 
     //Note: currently we do not seem to need to do anything with the version number,
     // but such logic can be added here, or in the per account type upgrades below
@@ -171,7 +171,7 @@ pub fn update_version(
     match pyth_acc_info.type_ {
         PC_ACCTYPE_PRICE => upgrade_price_account(
             &funding_account_info,
-            &upgraded_account,
+            &upgraded_account_info,
             &system_program,
             &program_id,
         ),
