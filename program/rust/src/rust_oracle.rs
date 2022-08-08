@@ -289,7 +289,7 @@ pub fn initialize_product_account(account: &AccountInfo, version: u32) -> Result
     prod_account.magic_ = PC_MAGIC;
     prod_account.ver_ = version;
     prod_account.type_ = PC_ACCTYPE_PRODUCT;
-    prod_account.size_ = size_of::<pc_prod_t>() as u32;
+    prod_account.size_ = try_convert(size_of::<pc_prod_t>())?;
 
     Ok(())
 }
