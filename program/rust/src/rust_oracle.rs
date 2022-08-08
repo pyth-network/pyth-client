@@ -191,14 +191,12 @@ pub fn add_publisher(
     }
 
     let [_funding_account, price_account] = match accounts {
-        [x, y]
-            if valid_funding_account(x)
-                && valid_signable_account(program_id, y, size_of::<pc_price_t>()) =>
-        {
-            Ok([x, y])
-        }
+        [x, y] => Ok([x, y]),
         _ => Err(ProgramError::InvalidArgument),
     }?;
+
+    check_valid_funding_account(_funding_account)?;
+    check_valid_signable_account(program_id, price_account, size_of::<pc_price_t>())?;
 
     let mut price_data = load_price_account_mut(price_account, cmd_args.ver_)?;
 
