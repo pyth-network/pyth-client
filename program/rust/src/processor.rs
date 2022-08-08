@@ -1,6 +1,5 @@
 use std::mem::size_of;
 
-use borsh::BorshDeserialize;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use solana_program::sysvar::slot_history::AccountInfo;
@@ -29,6 +28,7 @@ use crate::rust_oracle::{
     update_version,
 };
 
+use crate::deserialize::load;
 ///dispatch to the right instruction in the oracle
 pub fn process_instruction(
     program_id: &Pubkey,
@@ -40,7 +40,7 @@ pub fn process_instruction(
     if instruction_data.len() < cmd_hdr_size {
         return Err(ProgramError::InvalidArgument);
     }
-    let cmd_data = cmd_hdr::try_from_slice(&instruction_data[..cmd_hdr_size])?;
+    let cmd_data = load::<cmd_hdr>(&instruction_data[..cmd_hdr_size])?;
 
     if cmd_data.ver_ != PC_VERSION {
         //FIXME: I am not sure what's best to do here (this is copied from C)
