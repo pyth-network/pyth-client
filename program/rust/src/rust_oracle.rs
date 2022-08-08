@@ -5,26 +5,43 @@ use std::mem::{
     size_of_val,
 };
 
+use bytemuck::bytes_of;
+use solana_program::account_info::AccountInfo;
+use solana_program::entrypoint::SUCCESS;
+use solana_program::program_error::ProgramError;
+use solana_program::program_memory::{
+    sol_memcpy,
+    sol_memset,
+};
+use solana_program::pubkey::Pubkey;
+use solana_program::rent::Rent;
+
+use crate::c_oracle_header::{
+    cmd_add_price_t,
+    cmd_hdr_t,
+    cmd_upd_product_t,
+    pc_acc,
+    pc_map_table_t,
+    pc_price_t,
+    pc_prod_t,
+    pc_pub_key_t,
+    PC_ACCTYPE_MAPPING,
+    PC_ACCTYPE_PRICE,
+    PC_ACCTYPE_PRODUCT,
+    PC_MAGIC,
+    PC_MAP_TABLE_SIZE,
+    PC_MAX_NUM_DECIMALS,
+    PC_PROD_ACC_SIZE,
+    PC_PTYPE_UNKNOWN,
+};
 use crate::deserialize::{
     load,
     load_account_as,
     load_account_as_mut,
 };
-
-use bytemuck::bytes_of;
-
-use solana_program::account_info::AccountInfo;
-use solana_program::entrypoint::SUCCESS;
-use solana_program::program_error::ProgramError;
-use solana_program::program_memory::{sol_memcpy, sol_memset};
-use solana_program::pubkey::Pubkey;
-use solana_program::rent::Rent;
-
-use crate::c_oracle_header::{cmd_add_price_t, cmd_hdr_t, pc_acc, pc_map_table_t, pc_price_t, pc_prod_t, pc_pub_key_t, PC_ACCTYPE_MAPPING, PC_ACCTYPE_PRICE, PC_ACCTYPE_PRODUCT, PC_MAGIC, PC_MAP_TABLE_SIZE, PC_MAX_NUM_DECIMALS, PC_PROD_ACC_SIZE, PC_PTYPE_UNKNOWN, cmd_upd_product_t, pc_str_t};
 use crate::error::OracleResult;
-use crate::OracleError;
-
 use crate::utils::pyth_assert;
+use crate::OracleError;
 
 use super::c_entrypoint_wrapper;
 
@@ -216,12 +233,15 @@ pub fn upd_product(
         let mut _product_data = load_product_account_mut(product_account, hdr.ver_)?;
     }
 
-    pyth_assert(instruction_data.len() >= size_of::<cmd_upd_product_t>(), ProgramError::InvalidInstructionData)?;
+    pyth_assert(
+        instruction_data.len() >= size_of::<cmd_upd_product_t>(),
+        ProgramError::InvalidInstructionData,
+    )?;
     let new_data_len = instruction_data.len() - size_of::<cmd_upd_product_t>();
     let max_data_len = try_convert::<_, usize>(PC_PROD_ACC_SIZE)? - size_of::<pc_prod_t>();
-    pyth_assert( new_data_len <= max_data_len, ProgramError::InvalidArgument)?;
+    pyth_assert(new_data_len <= max_data_len, ProgramError::InvalidArgument)?;
 
-    let new_data = &instruction_data[size_of::<cmd_upd_product_t>() .. instruction_data.len()];
+    let new_data = &instruction_data[size_of::<cmd_upd_product_t>()..instruction_data.len()];
     let mut idx = 0;
     // new_data must be a list of key-value pairs, both of which are instances of pc_str_t.
     // Try reading the key-value pairs to validate that new_data is properly formatted.
@@ -236,7 +256,11 @@ pub fn upd_product(
     pyth_assert(idx == new_data.len(), ProgramError::InvalidArgument)?;
 
     let mut data = product_account.try_borrow_mut_data()?;
-    sol_memcpy(&mut data[size_of::<pc_prod_t>() .. try_convert(PC_PROD_ACC_SIZE)?], new_data, new_data.len());
+    sol_memcpy(
+        &mut data[size_of::<pc_prod_t>()..try_convert(PC_PROD_ACC_SIZE)?],
+        new_data,
+        new_data.len(),
+    );
 
     Ok(SUCCESS)
 }
@@ -375,14 +399,14 @@ fn try_convert<T, U: TryFrom<T>>(x: T) -> Result<U, OracleError> {
 }
 
 fn read_pc_str_t(source: &[u8]) -> Result<&[u8], ProgramError> {
-    if source.len() == 0 {
+    if source.is_empty() {
         Err(ProgramError::InvalidArgument)
     } else {
         let tag_len: usize = try_convert(source[0])?;
         if tag_len + 1 > source.len() {
             Err(ProgramError::InvalidArgument)
         } else {
-            Ok(&source[ .. (1 + tag_len)])
+            Ok(&source[..(1 + tag_len)])
         }
     }
 }

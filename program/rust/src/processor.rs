@@ -15,8 +15,10 @@ use crate::c_oracle_header::{
     command_t_e_cmd_upd_account_version,
     command_t_e_cmd_upd_price,
     command_t_e_cmd_upd_price_no_fail_on_error,
+    command_t_e_cmd_upd_product,
     PC_VERSION,
 };
+use crate::deserialize::load;
 use crate::error::{
     OracleError,
     OracleResult,
@@ -26,11 +28,11 @@ use crate::rust_oracle::{
     add_price,
     add_product,
     init_mapping,
+    upd_product,
     update_price,
     update_version,
 };
 
-use crate::deserialize::load;
 ///dispatch to the right instruction in the oracle
 pub fn process_instruction(
     program_id: &Pubkey,
@@ -66,6 +68,7 @@ pub fn process_instruction(
         command_t_e_cmd_init_mapping => init_mapping(program_id, accounts, instruction_data),
         command_t_e_cmd_add_mapping => add_mapping(program_id, accounts, instruction_data),
         command_t_e_cmd_add_product => add_product(program_id, accounts, instruction_data),
+        command_t_e_cmd_upd_product => upd_product(program_id, accounts, instruction_data),
         _ => c_entrypoint_wrapper(input),
     }
 }
