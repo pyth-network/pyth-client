@@ -80,7 +80,7 @@ pub fn update_price(
     }
     let c_ret_value = c_entrypoint_wrapper(input)?;
     if c_ret_value == SUCCESSFULLY_UPDATED_AGGREGATE {
-        let mut price_account = load_account_as_mut::<PriceAccountWrapper>(&price_account_info)?;
+        let mut price_account = load_account_as_mut::<PriceAccountWrapper>(price_account_info)?;
         price_account.add_price()?;
         msg!("updated tracker!");
     }
