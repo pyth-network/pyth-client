@@ -9,6 +9,7 @@ use crate::c_oracle_header::{
     cmd_hdr,
     command_t_e_cmd_add_mapping,
     command_t_e_cmd_add_price,
+    command_t_e_cmd_add_product,
     command_t_e_cmd_agg_price,
     command_t_e_cmd_init_mapping,
     command_t_e_cmd_upd_account_version,
@@ -23,6 +24,7 @@ use crate::error::{
 use crate::rust_oracle::{
     add_mapping,
     add_price,
+    add_product,
     init_mapping,
     update_price,
     update_version,
@@ -63,6 +65,7 @@ pub fn process_instruction(
         command_t_e_cmd_add_price => add_price(program_id, accounts, instruction_data),
         command_t_e_cmd_init_mapping => init_mapping(program_id, accounts, instruction_data),
         command_t_e_cmd_add_mapping => add_mapping(program_id, accounts, instruction_data),
+        command_t_e_cmd_add_product => add_product(program_id, accounts, instruction_data),
         _ => c_entrypoint_wrapper(input),
     }
 }

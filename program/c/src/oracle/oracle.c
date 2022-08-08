@@ -59,88 +59,6 @@ static bool valid_writable_account( SolParameters *prm,
          is_rent_exempt( *ka->lamports, ka->data_len );
 }
 
-static uint64_t add_mapping( SolParameters *prm, SolAccountInfo *ka )
-{
-  // Account (1) is the tail or last mapping account in the chain
-  // Account (2) is the new mapping account and will become the new tail
-  // Verify that these are signed, writable accounts with correct ownership
-  // and size
-  if ( prm->ka_num != 3 ||
-       !valid_funding_account( &ka[0] ) ||
-       !valid_signable_account( prm, &ka[1], sizeof( pc_map_table_t ) ) ||
-       !valid_signable_account( prm, &ka[2], sizeof( pc_map_table_t ) ) ) {
-    return ERROR_INVALID_ARGUMENT;
-  }
-  // Verify that last mapping account in chain is initialized, full
-  // and not pointing to a another account in the chain
-  // Also verify that the new account is uninitialized
-  cmd_hdr_t *hdr = (cmd_hdr_t*)prm->data;
-  pc_map_table_t *pptr = (pc_map_table_t*)ka[1].data;
-  pc_map_table_t *nptr = (pc_map_table_t*)ka[2].data;
-  if ( pptr->magic_ != PC_MAGIC ||
-       pptr->ver_   != hdr->ver_ ||
-       pptr->type_  != PC_ACCTYPE_MAPPING ||
-       nptr->magic_ != 0 ||
-       pptr->num_ < PC_MAP_TABLE_SIZE ||
-       nptr->num_   != 0 ||
-       !pc_pub_key_is_zero( &pptr->next_ ) ) {
-    return ERROR_INVALID_ARGUMENT;
-  }
-  // Initialize new account and set version number
-  sol_memset( nptr, 0, sizeof( pc_map_table_t ) );
-  nptr->magic_ = PC_MAGIC;
-  nptr->ver_   = hdr->ver_;
-  nptr->type_  = PC_ACCTYPE_MAPPING;
-  nptr->size_  = sizeof( pc_map_table_t ) - sizeof( nptr->prod_ );
-
-  // Set last mapping account to point to this mapping account
-  pc_pub_key_t *nkey = (pc_pub_key_t*)ka[2].key;
-  pc_pub_key_assign( &pptr->next_, nkey );
-  return SUCCESS;
-}
-
-static uint64_t add_product( SolParameters *prm, SolAccountInfo *ka )
-{
-  // Account (1) is the mapping account that we're going to add to and
-  // must be the tail (or last) mapping account in chain
-  // Account (2) is the new product account
-  // Verify that these are signed, writable accounts with correct ownership
-  // and size
-  if ( prm->ka_num != 3 ||
-       !valid_funding_account( &ka[0] ) ||
-       !valid_signable_account( prm, &ka[1], sizeof( pc_map_table_t ) ) ||
-       !valid_signable_account( prm, &ka[2], PC_PROD_ACC_SIZE ) ) {
-    return ERROR_INVALID_ARGUMENT;
-  }
-
-  // Verify that mapping account is a valid tail account
-  // that the new product account is uninitialized and that there is space
-  // in the mapping account
-  cmd_hdr_t *hdr = (cmd_hdr_t*)prm->data;
-  pc_map_table_t *mptr = (pc_map_table_t*)ka[1].data;
-  pc_prod_t *pptr = (pc_prod_t*)ka[2].data;
-  if ( mptr->magic_ != PC_MAGIC ||
-       mptr->ver_ != hdr->ver_ ||
-       mptr->type_ != PC_ACCTYPE_MAPPING ||
-       pptr->magic_ != 0 ||
-       mptr->num_ >= PC_MAP_TABLE_SIZE ) {
-    return ERROR_INVALID_ARGUMENT;
-  }
-
-  // Initialize product account
-  sol_memset( pptr, 0, PC_PROD_ACC_SIZE );
-  pptr->magic_ = PC_MAGIC;
-  pptr->ver_   = hdr->ver_;
-  pptr->type_  = PC_ACCTYPE_PRODUCT;
-  pptr->size_  = sizeof( pc_prod_t );
-
-  // finally add mapping account link
-  pc_pub_key_assign( &mptr->prod_[mptr->num_++], (pc_pub_key_t*)ka[2].key );
-  mptr->size_  = sizeof( pc_map_table_t ) - sizeof( mptr->prod_ ) +
-    mptr->num_ * sizeof( pc_pub_key_t );
-  return SUCCESS;
-}
-
 #define PC_ADD_STR \
   tag = (pc_str_t*)src;\
   tag_len = 1 + tag->len_;\
@@ -511,10 +429,9 @@ static uint64_t dispatch( SolParameters *prm, SolAccountInfo *ka )
     case e_cmd_upd_price:
     case e_cmd_agg_price:                  return upd_price( prm, ka );
     case e_cmd_upd_price_no_fail_on_error: return upd_price_no_fail_on_error( prm, ka );
-    // init_mapping is overridden in Rust, but still implemented here to make the C unit tests pass.
     case e_cmd_init_mapping:               return ERROR_INVALID_ARGUMENT;
-    case e_cmd_add_mapping:                return add_mapping( prm, ka );
-    case e_cmd_add_product:                return add_product( prm, ka );
+    case e_cmd_add_mapping:                return ERROR_INVALID_ARGUMENT;
+    case e_cmd_add_product:                return ERROR_INVALID_ARGUMENT;
     case e_cmd_upd_product:                return upd_product( prm, ka );
     case e_cmd_add_price:                  return add_price( prm, ka );
     case e_cmd_add_publisher:              return add_publisher( prm, ka );
