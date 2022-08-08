@@ -1,10 +1,20 @@
+from typing import Dict
+from construct import Bytes, Int32sl, Int32ul, Struct
+from solana.publickey import PublicKey
+from solana.transaction import AccountMeta, TransactionInstruction, Transaction
+from solana.keypair import Keypair
+from solana.rpc.api import Client
+import base64
+
+import asyncio
+
 import json
 import time
 from subprocess import check_call, check_output
 
 
 def test_publish(solana_test_validator, pyth_dir,
-                 pyth_init_product, pyth_init_price):
+                 pyth_init_product, pyth_init_price, solana_keygen, solana_program_deploy):
 
     def get_price_acct():
         cmd = [
@@ -19,6 +29,52 @@ def test_publish(solana_test_validator, pyth_dir,
         output = output.decode('ascii')
         output = json.loads(output)
         return output['price_accounts'][0]
+    
+    def resize_account(price_acc_address):
+        """
+        given a string with the pubkey of a price accountm it calls the resize instruction of the Oracle on it
+        """
+        #constants from oracle.h
+        PROGRAM_VERSION = 2 #TODO: update this
+        COMMAND_UPD_ACCOUNT = 14
+        SYSTEM_PROGRAM = "11111111111111111111111111111111"
+
+        #update version of price accounts to make sure they resize
+        layout = Struct("version" / Int32ul, "command" / Int32sl)
+        data = layout.build(dict(version=PROGRAM_VERSION, command=COMMAND_UPD_ACCOUNT))
+        funding_key = PublicKey(solana_keygen[0])
+        price_key = PublicKey(price_acc_address)
+        system_key = PublicKey(SYSTEM_PROGRAM)
+        print("program id is", solana_program_deploy)
+        resize_instruction = TransactionInstruction(
+            data=data,
+            keys=[
+                AccountMeta(pubkey=funding_key, is_signer=True, is_writable=True),
+                AccountMeta(pubkey=price_key, is_signer=False, is_writable=True),
+                AccountMeta(pubkey=system_key, is_signer=False, is_writable=False),
+            ],
+            program_id = PublicKey(solana_program_deploy),
+        )
+        txn = Transaction().add(resize_instruction)
+        solana_client = Client("http://localhost:8899")
+        key_file = open(solana_keygen[1])
+        key_data = json.load(key_file)
+        key_file.close()
+
+        sender = Keypair.from_secret_key(key_data)
+        txn.sign(sender)
+        solana_client.send_transaction(txn, sender)
+
+    def get_account_size(acc_address):
+        """
+        given a string with the pubkey of an account, resize it
+        """
+        PublicKey(acc_address)
+        solana_client = Client("http://localhost:8899")
+        data = solana_client.get_account_info(PublicKey(acc_address), encoding = 'base64')['result']['value']['data'][0]
+        data = base64.b64decode(data)
+        return len(data)
+        
 
     before = get_price_acct()
     assert before['publisher_accounts'][0]['price'] == 0
@@ -49,8 +105,47 @@ def test_publish(solana_test_validator, pyth_dir,
     check_call(cmd)
 
     time.sleep(20)
-
     after = get_price_acct()
     assert after['publisher_accounts'][0]['price'] == 150
     assert after['publisher_accounts'][0]['conf'] == 7
+    assert after['publisher_accounts'][0]['status'] == 'trading'
+
+    resize_account(pyth_init_price['LTC'])
+    time.sleep(20)
+    #defined in oracle.h
+    new_account_size = 6176
+    assert get_account_size(pyth_init_price['LTC']) == new_account_size
+    time.sleep(20)
+
+
+    
+    #try adding a new price to the resized accounts
+    cmd = [
+        'pyth', 'upd_price_val',
+        pyth_init_price['LTC'],
+        '100', '1', 'trading',
+        '-r', 'localhost',
+        '-k', pyth_dir,
+        '-c', 'finalized',
+        '-x',
+    ]
+    check_call(cmd)
+
+    time.sleep(20)
+
+    cmd = [
+        'pyth', 'upd_price',
+        pyth_init_price['LTC'],
+        '-r', 'localhost',
+        '-k', pyth_dir,
+        '-c', 'finalized',
+        '-x',
+    ]
+    check_call(cmd)
+
+    time.sleep(20)
+
+    after = get_price_acct()
+    assert after['publisher_accounts'][0]['price'] == 100
+    assert after['publisher_accounts'][0]['conf'] == 1
     assert after['publisher_accounts'][0]['status'] == 'trading'
