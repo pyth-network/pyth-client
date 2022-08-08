@@ -16,7 +16,6 @@ use crate::c_oracle_header::{
 };
 use crate::deserialize::load_mut;
 use crate::rust_oracle::{
-    create_pc_str_t,
     initialize_product_account,
     upd_product,
 };
@@ -24,7 +23,6 @@ use crate::rust_oracle::{
 #[test]
 fn test_upd_product() {
     let mut instruction_data = [0u8; PC_PROD_ACC_SIZE as usize];
-
 
     let program_id = Pubkey::new_unique();
     let funding_key = Pubkey::new_unique();
@@ -112,4 +110,10 @@ fn write_cmd(instruction_data: &mut [u8], strings: &[&str]) -> usize {
     }
 
     idx
+}
+
+pub fn create_pc_str_t(s: &str) -> Vec<u8> {
+    let mut v = vec![s.len() as u8];
+    v.extend_from_slice(s.as_bytes());
+    v
 }

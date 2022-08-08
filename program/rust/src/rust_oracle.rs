@@ -398,6 +398,8 @@ fn try_convert<T, U: TryFrom<T>>(x: T) -> Result<U, OracleError> {
     U::try_from(x).map_err(|_| OracleError::IntegerCastingError)
 }
 
+/// Read a `pc_str_t` from the beginning of `source`. Returns a slice of `source` containing
+/// the bytes of the `pc_str_t`.
 fn read_pc_str_t(source: &[u8]) -> Result<&[u8], ProgramError> {
     if source.is_empty() {
         Err(ProgramError::InvalidArgument)
