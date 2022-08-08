@@ -22,8 +22,6 @@ use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
 
 
-#[cfg(feature = "resize-account")]
-use crate::error::OracleError;
 use crate::time_machine_types::PriceAccountWrapper;
 #[cfg(feature = "resize-account")]
 use solana_program::program::invoke;
