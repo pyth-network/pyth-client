@@ -20,6 +20,14 @@ use solana_program::program_memory::sol_memset;
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
 
+#[cfg(feature = "resize-account")]
+use crate::error::OracleError;
+#[cfg(feature = "resize-account")]
+use solana_program::program::invoke;
+#[cfg(feature = "resize-account")]
+use solana_program::system_instruction::transfer;
+
+
 use crate::c_oracle_header::{
     cmd_add_price_t,
     cmd_hdr_t,
@@ -54,17 +62,84 @@ pub fn update_price(
     // of the program
     c_entrypoint_wrapper(input)
 }
+
+///resize price account and initialize the TimeMachineStructure
+#[cfg(feature = "resize-account")]
+pub fn upgrade_price_account(
+    funding_account_info: &AccountInfo,
+    price_account_info: &AccountInfo,
+    program_id: &Pubkey,
+) -> ProgramResult {
+    pyth_assert(
+        valid_funding_account(&funding_account_info),
+        OracleError::InvalidFundingAccount,
+    )?;
+
+    pyth_assert(
+        valid_signable_account(program_id, &upgraded_account, size_of::<pc_price_t>()),
+        OracleError::InvalidSignableAccount,
+    )?;
+
+    let account_len = price_account_info.try_data_len()?;
+    match account_len {
+        size_of::<pc_price_t>() => {
+            //compute the number of lamports needed in the price account to update it
+            let rent: Rent = Default::default();
+            let lamports_needed: u64 = rent
+                .minimum_balance(new_account_len)
+                .saturating_sub(price_account_info.lamports());
+            //transfer lamports if necessary
+            if lamports_needed > 0 {
+                let transfer_instruction = transfer(
+                    funding_account_info.key,
+                    price_account_info.key,
+                    lamports_needed,
+                );
+                invoke(
+                    &transfer_instruction,
+                    &[finding_account, price_account_info],
+                )?;
+            }
+            //resize
+            price_account_info.realloc(new_account_len, false)?;
+            //update twap_tracker
+            let mut price_account = load_account_as_mut::<PriceAccountWrapper>(price_account_info)?;
+            price_account.time_machine.add_first_price(
+                price_account.price_data.current_time,
+                price_account.price_data.current_price,
+                price_account.price_data.current_conf,
+            );
+        }
+        PRICE_ACCOUNT_SIZE => Ok(()),
+        _ => Err(ProgramError::InvalidArgument),
+    }
+}
+
 /// has version number/ account type dependant logic to make sure the given account is compatible
 /// with the current version
 /// updates the version number for all accounts, and resizes price accounts
 #[cfg(feature = "resize-account")]
 pub fn update_version(
-    _program_id: &Pubkey,
-    _accounts: &[AccountInfo],
-    _instruction_data: &[u8],
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
+    instruction_data: &[u8],
 ) -> OracleResult {
-    //actual implementation to follow
-    Ok(SUCCESS)
+    let mut funding_account_info = accounts[0];
+    let mut upgraded_account = accounts[1];
+
+    //read account info
+    let pyth_acc_info =
+        load::<pc_acc_t>(&funding_account_info.try_borrow_data()?[..size_of::<pc_acc_t>()])?;
+
+    //Note: currently we do not seem to need to do anything with the version number,
+    // but such logic can be added here, or in the per account type upgrades below
+
+    match pyth_acc_info.type_ {
+        PC_ACCTYPE_PRICE => {
+            upgrade_price_account(&funding_account_info, &upgraded_account, &program_id)
+        }
+        _ => Ok(()),
+    }
 }
 
 /// place holder untill we are ready to resize accounts
@@ -153,7 +228,7 @@ pub fn add_price(
         return Err(ProgramError::InvalidArgument);
     }
 
-    let [_funding_account, product_account, price_account] = match accounts {
+    let [_funding_account, product_account, price_account_info] = match accounts {
         [x, y, z]
             if valid_funding_account(x)
                 && valid_signable_account(program_id, y, PC_PROD_ACC_SIZE as usize)
@@ -167,9 +242,9 @@ pub fn add_price(
 
     let mut product_data = load_product_account_mut(product_account, cmd_args.ver_)?;
 
-    clear_account(price_account)?;
+    clear_account(price_account_info)?;
 
-    let mut price_data = load_account_as_mut::<pc_price_t>(price_account)?;
+    let mut price_data = load_account_as_mut::<pc_price_t>(price_account_info)?;
     price_data.magic_ = PC_MAGIC;
     price_data.ver_ = cmd_args.ver_;
     price_data.type_ = PC_ACCTYPE_PRICE;
@@ -178,7 +253,10 @@ pub fn add_price(
     price_data.ptype_ = cmd_args.ptype_;
     pubkey_assign(&mut price_data.prod_, &product_account.key.to_bytes());
     pubkey_assign(&mut price_data.next_, bytes_of(&product_data.px_acc_));
-    pubkey_assign(&mut product_data.px_acc_, &price_account.key.to_bytes());
+    pubkey_assign(
+        &mut product_data.px_acc_,
+        &price_account_info.key.to_bytes(),
+    );
 
     Ok(SUCCESS)
 }

@@ -20,6 +20,10 @@ pub enum OracleError {
     UnknownCError           = 602,
     #[error("UnrecognizedInstruction")]
     UnrecognizedInstruction = 603,
+    #[error("InvalidFundingAccount")]
+    InvalidFundingAccount   = 604,
+    #[error("InvalidSignableAccount")]
+    InvalidSignableAccount  = 605,
 }
 
 impl From<OracleError> for ProgramError {
