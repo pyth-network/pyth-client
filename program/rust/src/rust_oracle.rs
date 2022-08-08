@@ -280,9 +280,9 @@ pub fn add_price(
 
     let mut product_data = load_product_account_mut(product_account, cmd_args.ver_)?;
 
-    clear_account(price_account_info)?;
+    clear_account(price_account)?;
 
-    let mut price_data = load_account_as_mut::<pc_price_t>(price_account_info)?;
+    let mut price_data = load_account_as_mut::<pc_price_t>(price_account)?;
     price_data.magic_ = PC_MAGIC;
     price_data.ver_ = cmd_args.ver_;
     price_data.type_ = PC_ACCTYPE_PRICE;
@@ -291,10 +291,7 @@ pub fn add_price(
     price_data.ptype_ = cmd_args.ptype_;
     pubkey_assign(&mut price_data.prod_, &product_account.key.to_bytes());
     pubkey_assign(&mut price_data.next_, bytes_of(&product_data.px_acc_));
-    pubkey_assign(
-        &mut product_data.px_acc_,
-        &price_account_info.key.to_bytes(),
-    );
+    pubkey_assign(&mut product_data.px_acc_, &price_account.key.to_bytes());
 
     Ok(SUCCESS)
 }
