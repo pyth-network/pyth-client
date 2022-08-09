@@ -143,7 +143,7 @@ fn test_del_publisher() {
     .is_ok());
 
     {
-        let mut price_data = load_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
         assert_eq!(price_data.num_, 1);
         assert_eq!(price_data.comp_[0].latest_.price_, p2.price_);
         assert_eq!(price_data.comp_[0].latest_.conf_, p2.conf_);
