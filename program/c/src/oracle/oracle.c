@@ -59,55 +59,6 @@ static bool valid_writable_account( SolParameters *prm,
          is_rent_exempt( *ka->lamports, ka->data_len );
 }
 
-static uint64_t add_price( SolParameters *prm, SolAccountInfo *ka )
-{
-  // Validate command parameters
-  cmd_add_price_t *cptr = (cmd_add_price_t*)prm->data;
-  if ( prm->data_len != sizeof( cmd_add_price_t ) ||
-       cptr->expo_ > PC_MAX_NUM_DECIMALS ||
-       cptr->expo_ < -PC_MAX_NUM_DECIMALS ||
-       cptr->ptype_ == PC_PTYPE_UNKNOWN ) {
-    return ERROR_INVALID_ARGUMENT;
-  }
-
-  // Account (1) is the product account that we're going to add to
-  // Account (2) is the new price account
-  // Verify that these are signed, writable accounts with correct ownership
-  // and size
-  if ( prm->ka_num != 3 ||
-       !valid_funding_account( &ka[0] ) ||
-       !valid_signable_account( prm, &ka[1], PC_PROD_ACC_SIZE ) ||
-       !valid_signable_account( prm, &ka[2], sizeof( pc_price_t ) ) ) {
-    return ERROR_INVALID_ARGUMENT;
-  }
-
-  // Verify that the product account is valid
-  // and that the new price account is uninitialized
-  pc_prod_t  *pptr = (pc_prod_t*)ka[1].data;
-  pc_price_t *sptr = (pc_price_t*)ka[2].data;
-  if ( pptr->magic_ != PC_MAGIC ||
-       pptr->ver_ != cptr->ver_ ||
-       pptr->type_ != PC_ACCTYPE_PRODUCT ||
-       sptr->magic_ != 0 ) {
-    return ERROR_INVALID_ARGUMENT;
-  }
-
-  // Initialize symbol account
-  sol_memset( sptr, 0, sizeof( pc_price_t ) );
-  sptr->magic_ = PC_MAGIC;
-  sptr->ver_   = cptr->ver_;
-  sptr->type_  = PC_ACCTYPE_PRICE;
-  sptr->size_  = sizeof( pc_price_t ) - sizeof( sptr->comp_ );
-  sptr->expo_  = cptr->expo_;
-  sptr->ptype_ = cptr->ptype_;
-  pc_pub_key_assign( &sptr->prod_, (pc_pub_key_t*)ka[1].key );
-
-  // bind price account to product account
-  pc_pub_key_assign( &sptr->next_, &pptr->px_acc_ );
-  pc_pub_key_assign( &pptr->px_acc_, (pc_pub_key_t*)ka[2].key );
-  return SUCCESS;
-}
-
 static uint64_t init_price( SolParameters *prm, SolAccountInfo *ka )
 {
   // Validate command parameters
@@ -183,53 +134,6 @@ static uint64_t set_min_pub( SolParameters *prm, SolAccountInfo *ka )
 
   sptr->min_pub_ = cptr->min_pub_;
 
-  return SUCCESS;
-}
-
-static uint64_t add_publisher( SolParameters *prm, SolAccountInfo *ka )
-{
-  // Validate command parameters
-  cmd_add_publisher_t *cptr = (cmd_add_publisher_t*)prm->data;
-  if ( prm->data_len != sizeof( cmd_add_publisher_t ) ||
-       pc_pub_key_is_zero( &cptr->pub_ ) ) {
-    return ERROR_INVALID_ARGUMENT;
-  }
-
-  // Account (1) is the price account
-  // Verify that this is signed, writable with correct ownership
-  // and size
-  if ( prm->ka_num != 2 ||
-       !valid_funding_account( &ka[0] ) ||
-       !valid_signable_account( prm, &ka[1], sizeof( pc_price_t ) ) ) {
-    return ERROR_INVALID_ARGUMENT;
-  }
-
-  // Verify that symbol account is initialized and corresponds to the
-  // same symbol and price-type in the instruction parameters
-  pc_price_t *sptr = (pc_price_t*)ka[1].data;
-  if ( sptr->magic_ != PC_MAGIC ||
-       sptr->ver_ != cptr->ver_ ||
-       sptr->type_ != PC_ACCTYPE_PRICE ) {
-    return ERROR_INVALID_ARGUMENT;
-  }
-
-  // try to add publisher
-  for(uint32_t i=0; i != sptr->num_; ++i ) {
-    pc_price_comp_t *iptr = &sptr->comp_[i];
-    if ( pc_pub_key_equal( &iptr->pub_, &cptr->pub_ ) ) {
-      return ERROR_INVALID_ARGUMENT;
-    }
-  }
-  if ( sptr->num_ >= PC_COMP_SIZE ) {
-    return ERROR_INVALID_ARGUMENT;
-  }
-  pc_price_comp_t *iptr = &sptr->comp_[sptr->num_++];
-  sol_memset( iptr, 0, sizeof( pc_price_comp_t ) );
-  pc_pub_key_assign( &iptr->pub_, &cptr->pub_ );
-
-  // update size of account
-  sptr->size_ = sizeof( pc_price_t ) - sizeof( sptr->comp_ ) +
-    sptr->num_ * sizeof( pc_price_comp_t );
   return SUCCESS;
 }
 
@@ -383,8 +287,8 @@ static uint64_t dispatch( SolParameters *prm, SolAccountInfo *ka )
     case e_cmd_add_mapping:                return ERROR_INVALID_ARGUMENT;
     case e_cmd_add_product:                return ERROR_INVALID_ARGUMENT;
     case e_cmd_upd_product:                return ERROR_INVALID_ARGUMENT;
-    case e_cmd_add_price:                  return add_price( prm, ka );
-    case e_cmd_add_publisher:              return add_publisher( prm, ka );
+    case e_cmd_add_price:                  return ERROR_INVALID_ARGUMENT;
+    case e_cmd_add_publisher:              return ERROR_INVALID_ARGUMENT;
     case e_cmd_del_publisher:              return del_publisher( prm, ka );
     case e_cmd_init_price:                 return init_price( prm, ka );
     case e_cmd_init_test:                  return ERROR_INVALID_ARGUMENT;
