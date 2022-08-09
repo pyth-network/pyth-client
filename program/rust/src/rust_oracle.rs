@@ -136,8 +136,8 @@ pub fn upgrade_price_account<'a>(
     }
 }
 
-fn get_account_type(account: &AccountInfo) -> Result<u32, ProgramError>{
-    let account_type  = load_account_as::<pc_acc>(&account)?.type_;
+fn get_account_type(account: &AccountInfo) -> Result<u32, ProgramError> {
+    let account_type = load_account_as::<pc_acc>(&account)?.type_;
     Ok(account_type)
 }
 
@@ -177,8 +177,6 @@ pub fn update_version(
         _ => Ok(SUCCESS),
     }
 }
-
-
 
 
 /// initialize the first mapping account in a new linked-list of mapping accounts
