@@ -106,9 +106,27 @@ unsafe impl Pod for cmd_add_price_t {
 }
 
 #[cfg(target_endian = "little")]
+unsafe impl Zeroable for cmd_add_publisher_t {
+}
+
+#[cfg(target_endian = "little")]
+unsafe impl Pod for cmd_add_publisher_t {
+}
+
+
+#[cfg(target_endian = "little")]
 unsafe impl Zeroable for pc_pub_key_t {
 }
 
 #[cfg(target_endian = "little")]
 unsafe impl Pod for pc_pub_key_t {
+}
+
+
+#[cfg(target_endian = "little")]
+unsafe impl Zeroable for pc_price_comp_t {
+}
+
+#[cfg(target_endian = "little")]
+unsafe impl Pod for pc_price_comp_t {
 }
