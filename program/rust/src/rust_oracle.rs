@@ -185,17 +185,18 @@ pub fn add_publisher(
 ) -> OracleResult {
     let cmd_args = load::<cmd_add_publisher_t>(instruction_data)?;
 
-    if instruction_data.len() != size_of::<cmd_add_publisher_t>() || pubkey_is_zero(&cmd_args.pub_)
-    {
-        return Err(ProgramError::InvalidArgument);
-    }
+    pyth_assert(
+        instruction_data.len() == size_of::<cmd_add_publisher_t>()
+            && !pubkey_is_zero(&cmd_args.pub_),
+        ProgramError::InvalidArgument,
+    )?;
 
-    let [_funding_account, price_account] = match accounts {
+    let [funding_account, price_account] = match accounts {
         [x, y] => Ok([x, y]),
         _ => Err(ProgramError::InvalidArgument),
     }?;
 
-    check_valid_funding_account(_funding_account)?;
+    check_valid_funding_account(funding_account)?;
     check_valid_signable_account(program_id, price_account, size_of::<pc_price_t>())?;
 
     let mut price_data = load_price_account_mut(price_account, cmd_args.ver_)?;
