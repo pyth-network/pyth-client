@@ -8,6 +8,8 @@ use solana_program::system_program;
 
 const UPPER_BOUND_OF_ALL_ACCOUNT_SIZES: usize = 20536;
 
+/// The goal of this struct is to easily instantiate zeroed solana accounts
+/// for the Pyth program to use in tests.
 pub struct AccountSetup {
     key:     Pubkey,
     owner:   Pubkey,
