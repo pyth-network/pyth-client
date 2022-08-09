@@ -385,7 +385,7 @@ static uint64_t dispatch( SolParameters *prm, SolAccountInfo *ka )
     case e_cmd_upd_product:                return ERROR_INVALID_ARGUMENT;
     case e_cmd_add_price:                  return add_price( prm, ka );
     case e_cmd_add_publisher:              return add_publisher( prm, ka );
-    case e_cmd_del_publisher:              return del_publisher( prm, ka );
+    case e_cmd_del_publisher:              return ERROR_INVALID_ARGUMENT;
     case e_cmd_init_price:                 return init_price( prm, ka );
     case e_cmd_init_test:                  return ERROR_INVALID_ARGUMENT;
     case e_cmd_upd_test:                   return ERROR_INVALID_ARGUMENT;
