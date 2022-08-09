@@ -19,25 +19,7 @@ use solana_program::program_memory::{
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
 
-use crate::c_oracle_header::{
-    cmd_add_price_t,
-    cmd_add_publisher_t,
-    cmd_hdr_t,
-    cmd_upd_product_t,
-    pc_acc,
-    pc_map_table_t,
-    pc_price_comp,
-    pc_price_t,
-    pc_prod_t,
-    pc_pub_key_t,
-    PythAccount,
-    PC_COMP_SIZE,
-    PC_MAGIC,
-    PC_MAP_TABLE_SIZE,
-    PC_MAX_NUM_DECIMALS,
-    PC_PROD_ACC_SIZE,
-    PC_PTYPE_UNKNOWN,
-};
+use crate::c_oracle_header::{cmd_add_price_t, cmd_add_publisher_t, cmd_hdr_t, cmd_upd_product_t, pc_acc, pc_map_table_t, pc_price_comp, pc_price_t, pc_prod_t, pc_pub_key_t, PythAccount, PC_COMP_SIZE, PC_MAGIC, PC_MAP_TABLE_SIZE, PC_MAX_NUM_DECIMALS, PC_PROD_ACC_SIZE, PC_PTYPE_UNKNOWN, cmd_set_min_pub_t};
 use crate::deserialize::{
     load,
     load_account_as,
@@ -318,6 +300,29 @@ pub fn upd_product(
 
     let mut product_data = load_checked::<pc_prod_t>(product_account, hdr.ver_)?;
     product_data.size_ = try_convert(size_of::<pc_prod_t>() + new_data.len())?;
+
+    Ok(SUCCESS)
+}
+
+pub fn set_min_pub(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
+    instruction_data: &[u8],
+) -> OracleResult {
+    let cmd = load::<cmd_set_min_pub_t>(instruction_data)?;
+
+    pyth_assert(instruction_data.len() == size_of::<cmd_set_min_pub_t>(), ProgramError::InvalidArgument)?;
+
+    let [funding_account, price_account] = match accounts {
+        [x, y] => Ok([x, y]),
+        _ => Err(ProgramError::InvalidArgument),
+    }?;
+
+    check_valid_funding_account(funding_account)?;
+    check_valid_signable_account(program_id, price_account, size_of::<pc_price_t>())?;
+
+    let mut price_account_data = load_checked::<pc_price_t>(price_account, cmd.ver_)?;
+    price_account_data.min_pub_ = cmd.min_pub_;
 
     Ok(SUCCESS)
 }
