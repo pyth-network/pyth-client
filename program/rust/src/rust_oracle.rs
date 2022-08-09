@@ -10,8 +10,10 @@ use crate::deserialize::{
     load_account_as,
     load_account_as_mut,
 };
-
-use bytemuck::bytes_of;
+use bytemuck::{
+    bytes_of,
+    bytes_of_mut,
+};
 
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::SUCCESS;
@@ -22,15 +24,18 @@ use solana_program::rent::Rent;
 
 use crate::c_oracle_header::{
     cmd_add_price_t,
+    cmd_add_publisher_t,
     cmd_hdr_t,
     pc_acc,
     pc_map_table_t,
+    pc_price_comp,
     pc_price_t,
     pc_prod_t,
     pc_pub_key_t,
     PC_ACCTYPE_MAPPING,
     PC_ACCTYPE_PRICE,
     PC_ACCTYPE_PRODUCT,
+    PC_COMP_SIZE,
     PC_MAGIC,
     PC_MAP_TABLE_SIZE,
     PC_MAX_NUM_DECIMALS,
@@ -170,6 +175,58 @@ pub fn add_price(
     Ok(SUCCESS)
 }
 
+/// add a publisher to a price account
+/// accounts[0] funding account                                   [signer writable]
+/// accounts[1] price account to add the publisher to             [signer writable]
+pub fn add_publisher(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
+    instruction_data: &[u8],
+) -> OracleResult {
+    let cmd_args = load::<cmd_add_publisher_t>(instruction_data)?;
+
+    pyth_assert(
+        instruction_data.len() == size_of::<cmd_add_publisher_t>()
+            && !pubkey_is_zero(&cmd_args.pub_),
+        ProgramError::InvalidArgument,
+    )?;
+
+    let [funding_account, price_account] = match accounts {
+        [x, y] => Ok([x, y]),
+        _ => Err(ProgramError::InvalidArgument),
+    }?;
+
+    check_valid_funding_account(funding_account)?;
+    check_valid_signable_account(program_id, price_account, size_of::<pc_price_t>())?;
+
+    let mut price_data = load_price_account_mut(price_account, cmd_args.ver_)?;
+
+    if price_data.num_ >= PC_COMP_SIZE {
+        return Err(ProgramError::InvalidArgument);
+    }
+
+    for i in 0..(price_data.num_ as usize) {
+        if pubkey_equal(&cmd_args.pub_, &price_data.comp_[i].pub_) {
+            return Err(ProgramError::InvalidArgument);
+        }
+    }
+
+    let current_index: usize = try_convert(price_data.num_)?;
+    sol_memset(
+        bytes_of_mut(&mut price_data.comp_[current_index]),
+        0,
+        size_of::<pc_price_comp>(),
+    );
+    pubkey_assign(
+        &mut price_data.comp_[current_index].pub_,
+        bytes_of(&cmd_args.pub_),
+    );
+    price_data.num_ += 1;
+    price_data.size_ =
+        try_convert::<_, u32>(size_of::<pc_price_t>() - size_of_val(&price_data.comp_))?
+            + price_data.num_ * try_convert::<_, u32>(size_of::<pc_price_comp>())?;
+    Ok(SUCCESS)
+}
 pub fn add_product(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
@@ -200,11 +257,10 @@ pub fn add_product(
     initialize_product_account(new_product_account, hdr.ver_)?;
 
     let current_index: usize = try_convert(mapping_data.num_)?;
-    unsafe {
-        mapping_data.prod_[current_index]
-            .k1_
-            .copy_from_slice(&new_product_account.key.to_bytes())
-    }
+    pubkey_assign(
+        &mut mapping_data.prod_[current_index],
+        bytes_of(&new_product_account.key.to_bytes()),
+    );
     mapping_data.num_ += 1;
     mapping_data.size_ =
         try_convert::<_, u32>(size_of::<pc_map_table_t>() - size_of_val(&mapping_data.prod_))?
@@ -335,11 +391,38 @@ pub fn load_product_account_mut<'a>(
     Ok(product_data)
 }
 
+/// Mutably borrow the data in `account` as a price account, validating that the account
+/// is properly formatted. Any mutations to the returned value will be reflected in the
+/// account data. Use this to read already-initialized accounts.
+fn load_price_account_mut<'a>(
+    account: &'a AccountInfo,
+    expected_version: u32,
+) -> Result<RefMut<'a, pc_price_t>, ProgramError> {
+    let price_data = load_account_as_mut::<pc_price_t>(account)?;
+
+    pyth_assert(
+        price_data.magic_ == PC_MAGIC
+            && price_data.ver_ == expected_version
+            && price_data.type_ == PC_ACCTYPE_PRICE,
+        ProgramError::InvalidArgument,
+    )?;
+
+    Ok(price_data)
+}
+
+
 // Assign pubkey bytes from source to target, fails if source is not 32 bytes
 pub fn pubkey_assign(target: &mut pc_pub_key_t, source: &[u8]) {
     unsafe { target.k1_.copy_from_slice(source) }
 }
 
+fn pubkey_is_zero(key: &pc_pub_key_t) -> bool {
+    return unsafe { key.k8_.iter().all(|x| *x == 0) };
+}
+
+fn pubkey_equal(key1: &pc_pub_key_t, key2: &pc_pub_key_t) -> bool {
+    return unsafe { key1.k1_.iter().zip(&key2.k1_).all(|(x, y)| *x == *y) };
+}
 /// Convert `x: T` into a `U`, returning the appropriate `OracleError` if the conversion fails.
 fn try_convert<T, U: TryFrom<T>>(x: T) -> Result<U, OracleError> {
     // Note: the error here assumes we're only applying this function to integers right now.
