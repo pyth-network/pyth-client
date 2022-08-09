@@ -69,7 +69,19 @@ fn test_upd_product() {
         &instruction_data[..size]
     )
     .is_ok());
-    assert!(account_has_key_values(&product_account, &kvs).unwrap());
+    assert!(account_has_key_values(&product_account, &kvs).unwrap_or(false));
+
+    // bad size on the 1st string in the key-value pair list
+    instruction_data[size_of::<cmd_upd_product_t>()] = 2;
+    assert_eq!(
+        upd_product(
+            &program_id,
+            &[funding_account.clone(), product_account.clone()],
+            &instruction_data[..size]
+        ),
+        Err(ProgramError::InvalidArgument)
+    );
+    assert!(account_has_key_values(&product_account, &kvs).unwrap_or(false));
 
     let kvs = [];
     let size = populate_instruction(&mut instruction_data, &kvs);
@@ -79,28 +91,20 @@ fn test_upd_product() {
         &instruction_data[..size]
     )
     .is_ok());
-    assert!(account_has_key_values(&product_account, &kvs).unwrap());
-
-    // bad size on the string
-    instruction_data[0] = 7;
-    assert!(upd_product(
-        &program_id,
-        &[funding_account.clone(), product_account.clone()],
-        &instruction_data[..size]
-    )
-    .is_err());
-    assert!(account_has_key_values(&product_account, &kvs).unwrap());
+    assert!(account_has_key_values(&product_account, &kvs).unwrap_or(false));
 
     // uneven number of keys and values
     let bad_kvs = ["foo", "bar", "baz"];
     let size = populate_instruction(&mut instruction_data, &bad_kvs);
-    assert!(upd_product(
-        &program_id,
-        &[funding_account.clone(), product_account.clone()],
-        &instruction_data[..size]
-    )
-    .is_err());
-    assert!(account_has_key_values(&product_account, &kvs).unwrap());
+    assert_eq!(
+        upd_product(
+            &program_id,
+            &[funding_account.clone(), product_account.clone()],
+            &instruction_data[..size]
+        ),
+        Err(ProgramError::InvalidArgument)
+    );
+    assert!(account_has_key_values(&product_account, &kvs).unwrap_or(false));
 }
 
 // Create an upd_product instruction that sets the product metadata to strings
