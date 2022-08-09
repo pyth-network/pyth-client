@@ -25,7 +25,17 @@ use crate::error::{
     OracleError,
     OracleResult,
 };
-use crate::rust_oracle::{add_mapping, add_price, add_product, add_publisher, init_mapping, set_min_pub, upd_product, update_price, update_version};
+use crate::rust_oracle::{
+    add_mapping,
+    add_price,
+    add_product,
+    add_publisher,
+    init_mapping,
+    set_min_pub,
+    upd_product,
+    update_price,
+    update_version,
+};
 
 ///dispatch to the right instruction in the oracle
 pub fn process_instruction(
