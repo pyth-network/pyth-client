@@ -1,22 +1,17 @@
 use std::mem::size_of;
 
-use bytemuck::{
-    bytes_of,
-    Zeroable,
-};
+use crate::tests::test_utils::AccountSetup;
+use bytemuck::bytes_of;
 use solana_program::account_info::AccountInfo;
 use solana_program::clock::Epoch;
-use solana_program::native_token::LAMPORTS_PER_SOL;
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
-use solana_program::system_program;
 
 use crate::c_oracle_header::{
     cmd_hdr_t,
     command_t_e_cmd_add_product,
     pc_map_table_t,
     pc_prod_t,
-    PC_ACCTYPE_MAPPING,
     PC_ACCTYPE_PRODUCT,
     PC_MAGIC,
     PC_MAP_TABLE_SIZE,
@@ -41,67 +36,19 @@ fn test_add_product() {
     let instruction_data = bytes_of::<cmd_hdr_t>(&hdr);
 
     let program_id = Pubkey::new_unique();
-    let funding_key = Pubkey::new_unique();
-    let mkey = Pubkey::new_unique();
-    let product_key_1 = Pubkey::new_unique();
-    let product_key_2 = Pubkey::new_unique();
 
-    let system_program = system_program::id();
-    let mut funding_balance = LAMPORTS_PER_SOL.clone();
-    let funding_account = AccountInfo::new(
-        &funding_key,
-        true,
-        true,
-        &mut funding_balance,
-        &mut [],
-        &system_program,
-        false,
-        Epoch::default(),
-    );
+    let mut funding_setup = AccountSetup::new_funding();
+    let funding_account = funding_setup.to_account_info();
 
-    let mut mapping_balance = Rent::minimum_balance(&Rent::default(), size_of::<pc_map_table_t>());
-    let mut mapping_data: pc_map_table_t = pc_map_table_t::zeroed();
-    mapping_data.magic_ = PC_MAGIC;
-    mapping_data.ver_ = PC_VERSION;
-    mapping_data.type_ = PC_ACCTYPE_MAPPING;
-    let mut mapping_bytes = bytemuck::bytes_of_mut(&mut mapping_data);
+    let mut mapping_setup = AccountSetup::new::<pc_map_table_t>(&program_id);
+    let mapping_account = mapping_setup.to_account_info();
+    initialize_checked::<pc_map_table_t>(&mapping_account, PC_VERSION).unwrap();
 
-    let mapping_account = AccountInfo::new(
-        &mkey,
-        true,
-        true,
-        &mut mapping_balance,
-        &mut mapping_bytes,
-        &program_id,
-        false,
-        Epoch::default(),
-    );
+    let mut product_setup = AccountSetup::new::<pc_prod_t>(&program_id);
+    let product_account = product_setup.to_account_info();
 
-    let mut product_balance = Rent::minimum_balance(&Rent::default(), PC_PROD_ACC_SIZE as usize);
-    let mut prod_raw_data = [0u8; PC_PROD_ACC_SIZE as usize];
-    let product_account = AccountInfo::new(
-        &product_key_1,
-        true,
-        true,
-        &mut product_balance,
-        &mut prod_raw_data,
-        &program_id,
-        false,
-        Epoch::default(),
-    );
-
-    let mut product_balance_2 = Rent::minimum_balance(&Rent::default(), PC_PROD_ACC_SIZE as usize);
-    let mut prod_raw_data_2 = [0u8; PC_PROD_ACC_SIZE as usize];
-    let product_account_2 = AccountInfo::new(
-        &product_key_2,
-        true,
-        true,
-        &mut product_balance_2,
-        &mut prod_raw_data_2,
-        &program_id,
-        false,
-        Epoch::default(),
-    );
+    let mut product_setup_2 = AccountSetup::new::<pc_prod_t>(&program_id);
+    let product_account_2 = product_setup_2.to_account_info();
 
     assert!(add_product(
         &program_id,

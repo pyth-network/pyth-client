@@ -1,10 +1,3 @@
-use std::borrow::BorrowMut;
-use std::cell::RefMut;
-use std::mem::{
-    size_of,
-    size_of_val,
-};
-
 use crate::deserialize::{
     load,
     load_account_as,
@@ -13,6 +6,13 @@ use crate::deserialize::{
 use bytemuck::{
     bytes_of,
     bytes_of_mut,
+};
+use solana_program::msg;
+use std::borrow::BorrowMut;
+use std::cell::RefMut;
+use std::mem::{
+    size_of,
+    size_of_val,
 };
 
 use solana_program::account_info::AccountInfo;
@@ -223,19 +223,27 @@ pub fn add_product(
     accounts: &[AccountInfo],
     instruction_data: &[u8],
 ) -> OracleResult {
+    msg!("one");
     let [funding_account, tail_mapping_account, new_product_account] = match accounts {
         [x, y, z] => Ok([x, y, z]),
         _ => Err(ProgramError::InvalidArgument),
     }?;
 
+    msg!("two");
+
     check_valid_funding_account(funding_account)?;
+    msg!("three");
     check_valid_signable_account(
         program_id,
         tail_mapping_account,
         size_of::<pc_map_table_t>(),
     )?;
+    msg!("{:?}", new_product_account.data_len());
     check_valid_signable_account(program_id, new_product_account, PC_PROD_ACC_SIZE as usize)?;
+    msg!("three");
     check_valid_fresh_account(new_product_account)?;
+
+    msg!("three");
 
     let hdr = load::<cmd_hdr_t>(instruction_data)?;
     let mut mapping_data = load_checked::<pc_map_table_t>(tail_mapping_account, hdr.ver_)?;

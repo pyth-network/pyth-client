@@ -18,6 +18,9 @@ include!("../bindings.rs");
 pub trait PythAccount: Pod {
     const ACCOUNT_TYPE: u32;
     const INITIAL_SIZE: u32;
+    fn minimum_size() -> usize {
+        size_of::<Self>()
+    }
 }
 
 impl PythAccount for pc_map_table_t {
@@ -28,6 +31,9 @@ impl PythAccount for pc_map_table_t {
 impl PythAccount for pc_prod_t {
     const ACCOUNT_TYPE: u32 = PC_ACCTYPE_PRODUCT;
     const INITIAL_SIZE: u32 = size_of::<pc_prod_t>() as u32;
+    fn minimum_size() -> usize {
+        PC_PROD_ACC_SIZE as usize
+    }
 }
 
 impl PythAccount for pc_price_t {
