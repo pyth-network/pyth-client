@@ -7,6 +7,7 @@ use bytemuck::{
 use solana_program::account_info::AccountInfo;
 use solana_program::clock::Epoch;
 use solana_program::native_token::LAMPORTS_PER_SOL;
+use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
 use solana_program::system_program;
@@ -162,16 +163,18 @@ fn test_add_product() {
         false,
         Epoch::default(),
     );
-    assert!(add_product(
-        &program_id,
-        &[
-            funding_account.clone(),
-            mapping_account.clone(),
-            product_account_3.clone()
-        ],
-        instruction_data
-    )
-    .is_err());
+    assert_eq!(
+        add_product(
+            &program_id,
+            &[
+                funding_account.clone(),
+                mapping_account.clone(),
+                product_account_3.clone()
+            ],
+            instruction_data
+        ),
+        Err(ProgramError::InvalidArgument)
+    );
 
     // test fill up of mapping table
     clear_account(&mapping_account).unwrap();
@@ -196,16 +199,18 @@ fn test_add_product() {
 
     clear_account(&product_account).unwrap();
 
-    assert!(add_product(
-        &program_id,
-        &[
-            funding_account.clone(),
-            mapping_account.clone(),
-            product_account.clone()
-        ],
-        instruction_data
-    )
-    .is_err());
+    assert_eq!(
+        add_product(
+            &program_id,
+            &[
+                funding_account.clone(),
+                mapping_account.clone(),
+                product_account.clone()
+            ],
+            instruction_data
+        ),
+        Err(ProgramError::InvalidArgument)
+    );
 
     let mapping_data = load_checked::<pc_map_table_t>(&mapping_account, PC_VERSION).unwrap();
     assert_eq!(mapping_data.num_, PC_MAP_TABLE_SIZE);
