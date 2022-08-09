@@ -263,10 +263,10 @@ pub fn del_publisher(
             price_data.size_ =
                 try_convert::<_, u32>(size_of::<pc_price_t>() - size_of_val(&price_data.comp_))?
                     + price_data.num_ * try_convert::<_, u32>(size_of::<pc_price_comp>())?;
+            return Ok(SUCCESS);
         }
     }
-
-    Ok(SUCCESS)
+    Err(ProgramError::InvalidArgument)
 }
 
 pub fn add_product(
