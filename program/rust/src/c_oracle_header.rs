@@ -12,22 +12,25 @@ use std::mem::size_of;
 //things defined in bindings.h
 include!("../bindings.rs");
 
-pub trait PythStruct: Pod {
+/// The PythAccount trait's purpose is to attach constants to the 3 types of accounts that Pyth has
+/// (mapping, price, product). This allows less duplicated code, because now we can create generic
+/// functions to perform common checks on the accounts and to load and initialize the accounts.
+pub trait PythAccount: Pod {
     const ACCOUNT_TYPE: u32;
     const INITIAL_SIZE: u32;
 }
 
-impl PythStruct for pc_map_table_t {
+impl PythAccount for pc_map_table_t {
     const ACCOUNT_TYPE: u32 = PC_ACCTYPE_MAPPING;
     const INITIAL_SIZE: u32 = PC_MAP_TABLE_T_PROD_OFFSET as u32;
 }
 
-impl PythStruct for pc_prod_t {
+impl PythAccount for pc_prod_t {
     const ACCOUNT_TYPE: u32 = PC_ACCTYPE_PRODUCT;
     const INITIAL_SIZE: u32 = size_of::<pc_prod_t>() as u32;
 }
 
-impl PythStruct for pc_price_t {
+impl PythAccount for pc_price_t {
     const ACCOUNT_TYPE: u32 = PC_ACCTYPE_PRICE;
     const INITIAL_SIZE: u32 = PC_PRICE_T_COMP_OFFSET as u32;
 }

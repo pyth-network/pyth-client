@@ -32,7 +32,7 @@ use crate::c_oracle_header::{
     pc_price_t,
     pc_prod_t,
     pc_pub_key_t,
-    PythStruct,
+    PythAccount,
     PC_COMP_SIZE,
     PC_MAGIC,
     PC_MAP_TABLE_SIZE,
@@ -315,7 +315,7 @@ pub fn clear_account(account: &AccountInfo) -> Result<(), ProgramError> {
     Ok(())
 }
 
-pub fn load_checked<'a, T: PythStruct>(
+pub fn load_checked<'a, T: PythAccount>(
     account: &'a AccountInfo,
     version: u32,
 ) -> Result<RefMut<'a, T>, ProgramError> {
@@ -332,7 +332,7 @@ pub fn load_checked<'a, T: PythStruct>(
     load_account_as_mut::<T>(account)
 }
 
-pub fn initialize_checked<'a, T: PythStruct>(
+pub fn initialize_checked<'a, T: PythAccount>(
     account: &'a AccountInfo,
     version: u32,
 ) -> Result<RefMut<'a, T>, ProgramError> {
