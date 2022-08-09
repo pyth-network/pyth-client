@@ -18,8 +18,8 @@ use crate::c_oracle_header::{
 };
 use crate::deserialize::load_mut;
 use crate::rust_oracle::{
-    initialize_product_account,
-    load_product_account_mut,
+    initialize_checked,
+    load_checked,
     read_pc_str_t,
     try_convert,
     upd_product,
@@ -59,7 +59,7 @@ fn test_upd_product() {
         Epoch::default(),
     );
 
-    initialize_product_account(&product_account, PC_VERSION).unwrap();
+    initialize_checked::<pc_prod_t>(&product_account, PC_VERSION).unwrap();
 
     let kvs = ["foo", "barz"];
     let size = populate_instruction(&mut instruction_data, &kvs);
@@ -139,7 +139,7 @@ fn account_has_key_values(
     expected: &[&str],
 ) -> Result<bool, ProgramError> {
     let account_size: usize =
-        try_convert(load_product_account_mut(product_account, PC_VERSION)?.size_)?;
+        try_convert(load_checked::<pc_prod_t>(product_account, PC_VERSION)?.size_)?;
     let mut all_account_data = product_account.try_borrow_mut_data()?;
     let kv_data = &mut all_account_data[size_of::<pc_prod_t>()..account_size];
     let mut kv_idx = 0;

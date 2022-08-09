@@ -280,7 +280,7 @@ pub fn upd_product(
     let hdr = load::<cmd_hdr_t>(instruction_data)?;
     {
         // Validate that product_account contains the appropriate account header
-        let mut _product_data = load_product_account_mut(product_account, hdr.ver_)?;
+        let mut _product_data = load_checked::<pc_prod_t>(product_account, hdr.ver_)?;
     }
 
     pyth_assert(
@@ -316,7 +316,7 @@ pub fn upd_product(
         );
     }
 
-    let mut product_data = load_product_account_mut(product_account, hdr.ver_)?;
+    let mut product_data = load_checked::<pc_prod_t>(product_account, hdr.ver_)?;
     product_data.size_ = try_convert(size_of::<pc_prod_t>() + new_data.len())?;
 
     Ok(SUCCESS)
