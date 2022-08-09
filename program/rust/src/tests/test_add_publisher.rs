@@ -1,34 +1,21 @@
-use std::mem::size_of;
-
 use crate::tests::test_utils::AccountSetup;
 use bytemuck::bytes_of;
-use solana_program::account_info::AccountInfo;
-use solana_program::clock::Epoch;
-use solana_program::msg;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
-use std::mem::swap;
+
 
 use crate::c_oracle_header::{
     cmd_add_publisher,
-    cmd_hdr_t,
     command_t_e_cmd_add_product,
-    pc_map_table_t,
     pc_price_t,
-    pc_prod_t,
     pc_pub_key_t,
     PythAccount,
-    PC_ACCTYPE_PRODUCT,
     PC_COMP_SIZE,
-    PC_MAGIC,
-    PC_MAP_TABLE_SIZE,
-    PC_PROD_ACC_SIZE,
     PC_VERSION,
 };
-use crate::deserialize::load_account_as;
+
 use crate::rust_oracle::{
-    add_product,
     add_publisher,
     clear_account,
     initialize_checked,
