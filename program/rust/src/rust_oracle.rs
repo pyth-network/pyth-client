@@ -118,8 +118,7 @@ pub fn add_mapping(
     let hdr = load::<cmd_hdr_t>(instruction_data)?;
     let mut cur_mapping = load_mapping_account_mut(cur_mapping, hdr.ver_)?;
     pyth_assert(
-        cur_mapping.num_ == PC_MAP_TABLE_SIZE
-            && unsafe { cur_mapping.next_.k8_.iter().all(|x| *x == 0) },
+        cur_mapping.num_ == PC_MAP_TABLE_SIZE && pubkey_is_zero(&cur_mapping.next_),
         ProgramError::InvalidArgument,
     )?;
 
@@ -206,7 +205,7 @@ pub fn add_publisher(
     }
 
     for i in 0..(price_data.num_ as usize) {
-        if pubkey_equal(&cmd_args.pub_, &price_data.comp_[i].pub_) {
+        if pubkey_equal(&cmd_args.pub_, bytes_of(&price_data.comp_[i].pub_)) {
             return Err(ProgramError::InvalidArgument);
         }
     }
@@ -416,13 +415,14 @@ pub fn pubkey_assign(target: &mut pc_pub_key_t, source: &[u8]) {
     unsafe { target.k1_.copy_from_slice(source) }
 }
 
-fn pubkey_is_zero(key: &pc_pub_key_t) -> bool {
+pub fn pubkey_is_zero(key: &pc_pub_key_t) -> bool {
     return unsafe { key.k8_.iter().all(|x| *x == 0) };
 }
 
-fn pubkey_equal(key1: &pc_pub_key_t, key2: &pc_pub_key_t) -> bool {
-    return unsafe { key1.k1_.iter().zip(&key2.k1_).all(|(x, y)| *x == *y) };
+pub fn pubkey_equal(target: &pc_pub_key_t, source: &[u8]) -> bool {
+    unsafe { target.k1_ == *source }
 }
+
 /// Convert `x: T` into a `U`, returning the appropriate `OracleError` if the conversion fails.
 fn try_convert<T, U: TryFrom<T>>(x: T) -> Result<U, OracleError> {
     // Note: the error here assumes we're only applying this function to integers right now.
