@@ -10,8 +10,8 @@ use crate::deserialize::load_account_as_mut;
 use crate::rust_oracle::{
     add_mapping,
     clear_account,
-    initialize_mapping_account,
-    load_mapping_account_mut,
+    initialize_checked,
+    load_checked,
     pubkey_assign,
     pubkey_equal,
     pubkey_is_zero,
@@ -67,10 +67,11 @@ fn test_add_mapping() {
         Epoch::default(),
     );
 
-    initialize_mapping_account(&cur_mapping, PC_VERSION).unwrap();
+    initialize_checked::<pc_map_table_t>(&cur_mapping, PC_VERSION).unwrap();
 
     {
-        let mut cur_mapping_data = load_mapping_account_mut(&cur_mapping, PC_VERSION).unwrap();
+        let mut cur_mapping_data =
+            load_checked::<pc_map_table_t>(&cur_mapping, PC_VERSION).unwrap();
         cur_mapping_data.num_ = PC_MAP_TABLE_SIZE;
     }
 
@@ -101,8 +102,9 @@ fn test_add_mapping() {
     .is_ok());
 
     {
-        let next_mapping_data = load_mapping_account_mut(&next_mapping, PC_VERSION).unwrap();
-        let mut cur_mapping_data = load_mapping_account_mut(&cur_mapping, PC_VERSION).unwrap();
+        let next_mapping_data = load_checked::<pc_map_table_t>(&next_mapping, PC_VERSION).unwrap();
+        let mut cur_mapping_data =
+            load_checked::<pc_map_table_t>(&cur_mapping, PC_VERSION).unwrap();
 
         assert!(pubkey_equal(
             &cur_mapping_data.next_,
@@ -129,7 +131,8 @@ fn test_add_mapping() {
     );
 
     {
-        let mut cur_mapping_data = load_mapping_account_mut(&cur_mapping, PC_VERSION).unwrap();
+        let mut cur_mapping_data =
+            load_checked::<pc_map_table_t>(&cur_mapping, PC_VERSION).unwrap();
         assert!(pubkey_is_zero(&cur_mapping_data.next_));
         cur_mapping_data.num_ = PC_MAP_TABLE_SIZE;
         cur_mapping_data.magic_ = 0;
