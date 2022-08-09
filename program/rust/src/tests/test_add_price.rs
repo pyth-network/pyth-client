@@ -1,12 +1,7 @@
-use std::mem::size_of;
-
 use crate::tests::test_utils::AccountSetup;
 use bytemuck::bytes_of;
-use solana_program::account_info::AccountInfo;
-use solana_program::clock::Epoch;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
-use solana_program::rent::Rent;
 
 use crate::c_oracle_header::{
     cmd_add_price,
@@ -16,13 +11,8 @@ use crate::c_oracle_header::{
     pc_map_table_t,
     pc_price_t,
     pc_prod_t,
-    PC_ACCTYPE_PRODUCT,
-    PC_MAGIC,
-    PC_MAP_TABLE_SIZE,
-    PC_PROD_ACC_SIZE,
     PC_VERSION,
 };
-use crate::deserialize::load_account_as;
 use crate::rust_oracle::{
     add_price,
     add_product,
