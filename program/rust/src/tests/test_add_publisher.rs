@@ -4,16 +4,17 @@ use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
 
-
 use crate::c_oracle_header::{
     cmd_add_publisher,
     command_t_e_cmd_add_product,
+    pc_price_comp_t,
     pc_price_t,
     pc_pub_key_t,
     PythAccount,
     PC_COMP_SIZE,
     PC_VERSION,
 };
+use std::mem::size_of;
 
 use crate::rust_oracle::{
     add_publisher,
@@ -70,6 +71,10 @@ fn test_add_publisher() {
     {
         let price_data = load_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
         assert_eq!(price_data.num_, 1);
+        assert_eq!(
+            price_data.size_,
+            pc_price_t::INITIAL_SIZE + (size_of::<pc_price_comp_t>() as u32)
+        );
         assert!(pubkey_equal(
             &price_data.comp_[0].pub_,
             bytes_of(&publisher)
@@ -119,6 +124,10 @@ fn test_add_publisher() {
                 &price_data.comp_[i as usize].pub_,
                 bytes_of(&cmd.pub_)
             ));
+            assert_eq!(
+                price_data.size_,
+                pc_price_t::INITIAL_SIZE + (size_of::<pc_price_comp_t>() as u32) * (i + 1)
+            );
         }
     }
 
