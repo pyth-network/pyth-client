@@ -102,9 +102,7 @@ pub fn upgrade_price_account<'a>(
         valid_writable_account(program_id, &price_account_info, size_of::<pc_price_t>()),
         OracleError::InvalidWritableAccount.into(),
     )?;
-
     let account_len = price_account_info.try_data_len()?;
-    //const PRICE_T_SIZE: usize = size_of::<pc_price_t>();
     match account_len {
         PRICE_T_SIZE => {
             //compute the number of lamports needed in the price account to update it
@@ -141,6 +139,13 @@ pub fn upgrade_price_account<'a>(
         _ => Err(ProgramError::InvalidArgument),
     }
 }
+
+#[cfg(feature = "resize-account")]
+fn get_account_type(account: &AccountInfo) -> Result<u32, ProgramError>{
+    let account_type  = load_account_as::<pc_acc>(&account)?.type_;
+    Ok(account_type)
+}
+
 /// has version number/ account type dependant logic to make sure the given account is compatible
 /// with the current version
 /// updates the version number for all accounts, and resizes price accounts
@@ -163,12 +168,12 @@ pub fn update_version(
     )?;
 
     //read account info
-    let pyth_acc_info = load_account_as::<pc_acc>(&upgraded_account_info)?;
+    let pyth_acc_type = get_account_type(&upgraded_account_info)?;
 
     //Note: currently we do not seem to need to do anything with the version number,
     // but such logic can be added here, or in the per account type upgrades below
 
-    match pyth_acc_info.type_ {
+    match pyth_acc_type {
         PC_ACCTYPE_PRICE => upgrade_price_account(
             &funding_account_info,
             &upgraded_account_info,
