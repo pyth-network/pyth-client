@@ -99,8 +99,8 @@ pub fn upgrade_price_account<'a>(
     )?;
 
     pyth_assert(
-        valid_signable_account(program_id, &price_account_info, size_of::<pc_price_t>()),
-        OracleError::InvalidSignableAccount.into(),
+        valid_writable_account(program_id, &price_account_info, size_of::<pc_price_t>()),
+        OracleError::InvalidWritableAccount.into(),
     )?;
 
     let account_len = price_account_info.try_data_len()?;
@@ -349,8 +349,11 @@ fn check_valid_funding_account(account: &AccountInfo) -> Result<(), ProgramError
 }
 
 fn valid_signable_account(program_id: &Pubkey, account: &AccountInfo, minimum_size: usize) -> bool {
-    account.is_signer
-        && account.is_writable
+    account.is_signer && valid_writable_account(program_id, account, minimum_size)
+}
+
+fn valid_writable_account(program_id: &Pubkey, account: &AccountInfo, minimum_size: usize) -> bool {
+    account.is_writable
         && account.owner == program_id
         && account.data_len() >= minimum_size
         && Rent::default().is_exempt(account.lamports(), account.data_len())
