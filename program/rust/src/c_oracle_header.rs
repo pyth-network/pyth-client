@@ -16,8 +16,18 @@ include!("../bindings.rs");
 /// (mapping, price, product). This allows less duplicated code, because now we can create generic
 /// functions to perform common checks on the accounts and to load and initialize the accounts.
 pub trait PythAccount: Pod {
+    /// `ACCOUNT_TYPE` is just the account discriminator, it is different for mapping, product and
+    /// price
     const ACCOUNT_TYPE: u32;
+    /// `INITIAL_SIZE` is the value that the field `size_` will take when the account is first
+    /// initialized this one is slightly tricky because for mapping (resp. price) `size_` won't
+    /// include the unpopulated entries of `prod_` (resp. `comp_`). At the beginning there are 0
+    /// products (resp. 0 components) therefore `INITIAL_SIZE` will be equal to the offset of
+    /// `prod_` (resp. `comp_`)  Similarly the product account `INITIAL_SIZE` won't include any
+    /// key values.
     const INITIAL_SIZE: u32;
+    /// `minimum_size()` is the minimum size that the solana account holding the struct needs to
+    /// have. `INITIAL_SIZE` <= `minimum_size()`
     fn minimum_size() -> usize {
         size_of::<Self>()
     }
