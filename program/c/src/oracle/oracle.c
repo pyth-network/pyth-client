@@ -59,56 +59,6 @@ static bool valid_writable_account( SolParameters *prm,
          is_rent_exempt( *ka->lamports, ka->data_len );
 }
 
-#define PC_ADD_STR \
-  tag = (pc_str_t*)src;\
-  tag_len = 1 + tag->len_;\
-  if ( &src[tag_len] > end ) return ERROR_INVALID_ARGUMENT;\
-  sol_memcpy( tgt, tag, tag_len );\
-  tgt += tag_len;\
-  src += tag_len;\
-
-static uint64_t upd_product( SolParameters *prm, SolAccountInfo *ka )
-{
-  // Account (1) is the existing product account
-  // Verify that these are signed, writable accounts with correct ownership
-  // and size
-  if ( prm->ka_num != 2 ||
-       !valid_funding_account( &ka[0] ) ||
-       !valid_signable_account( prm, &ka[1], PC_PROD_ACC_SIZE ) ) {
-    return ERROR_INVALID_ARGUMENT;
-  }
-
-  // verify that product account is valid
-  cmd_hdr_t *hdr = (cmd_hdr_t*)prm->data;
-  pc_prod_t *pptr = (pc_prod_t*)ka[1].data;
-  if ( pptr->magic_ != PC_MAGIC ||
-       pptr->ver_ != hdr->ver_ ||
-       pptr->type_ != PC_ACCTYPE_PRODUCT ) {
-    return ERROR_INVALID_ARGUMENT;
-  }
-
-  // unpack and verify attribute set and ssign to product account
-  if ( prm->data_len < sizeof( cmd_upd_product_t ) ||
-       prm->data_len > PC_PROD_ACC_SIZE +
-         sizeof( cmd_upd_product_t ) - sizeof( pc_prod_t ) ) {
-    return ERROR_INVALID_ARGUMENT;
-  }
-  pptr->size_ = ( uint32_t )( sizeof( pc_prod_t ) + prm->data_len -
-    sizeof( cmd_upd_product_t ) );
-  uint8_t *tgt = (uint8_t*)pptr + sizeof( pc_prod_t );
-  const uint8_t *src = prm->data + sizeof( cmd_upd_product_t );
-  const uint8_t *end = prm->data + prm->data_len;
-  const pc_str_t *tag;
-  int tag_len;
-  while( src != end ) {
-    // check key string
-    PC_ADD_STR
-    // check value string
-    PC_ADD_STR
-  }
-  return SUCCESS;
-}
-
 static uint64_t add_price( SolParameters *prm, SolAccountInfo *ka )
 {
   // Validate command parameters
@@ -432,7 +382,7 @@ static uint64_t dispatch( SolParameters *prm, SolAccountInfo *ka )
     case e_cmd_init_mapping:               return ERROR_INVALID_ARGUMENT;
     case e_cmd_add_mapping:                return ERROR_INVALID_ARGUMENT;
     case e_cmd_add_product:                return ERROR_INVALID_ARGUMENT;
-    case e_cmd_upd_product:                return upd_product( prm, ka );
+    case e_cmd_upd_product:                return ERROR_INVALID_ARGUMENT;
     case e_cmd_add_price:                  return add_price( prm, ka );
     case e_cmd_add_publisher:              return add_publisher( prm, ka );
     case e_cmd_del_publisher:              return del_publisher( prm, ka );
