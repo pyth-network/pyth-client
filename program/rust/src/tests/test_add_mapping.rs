@@ -13,6 +13,8 @@ use crate::rust_oracle::{
     initialize_checked,
     load_checked,
     pubkey_assign,
+    pubkey_equal,
+    pubkey_is_zero,
 };
 use bytemuck::bytes_of;
 use solana_program::account_info::AccountInfo;
@@ -104,15 +106,11 @@ fn test_add_mapping() {
         let mut cur_mapping_data =
             load_checked::<pc_map_table_t>(&cur_mapping, PC_VERSION).unwrap();
 
-        assert!(unsafe {
-            cur_mapping_data
-                .next_
-                .k1_
-                .iter()
-                .zip(&next_mapping_key.to_bytes())
-                .all(|(x, y)| *x == *y)
-        });
-        assert!(unsafe { next_mapping_data.next_.k8_.iter().all(|x| *x == 0) });
+        assert!(pubkey_equal(
+            &cur_mapping_data.next_,
+            &next_mapping_key.to_bytes()
+        ));
+        assert!(pubkey_is_zero(&next_mapping_data.next_));
         pubkey_assign(&mut cur_mapping_data.next_, &Pubkey::default().to_bytes());
         cur_mapping_data.num_ = 0;
     }
@@ -135,7 +133,7 @@ fn test_add_mapping() {
     {
         let mut cur_mapping_data =
             load_checked::<pc_map_table_t>(&cur_mapping, PC_VERSION).unwrap();
-        assert!(unsafe { cur_mapping_data.next_.k8_.iter().all(|x| *x == 0) });
+        assert!(pubkey_is_zero(&cur_mapping_data.next_));
         cur_mapping_data.num_ = PC_MAP_TABLE_SIZE;
         cur_mapping_data.magic_ = 0;
     }
