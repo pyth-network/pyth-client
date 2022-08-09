@@ -1,12 +1,9 @@
 use std::mem::size_of;
 
+use crate::tests::test_utils::AccountSetup;
 use solana_program::account_info::AccountInfo;
-use solana_program::clock::Epoch;
-use solana_program::native_token::LAMPORTS_PER_SOL;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
-use solana_program::rent::Rent;
-use solana_program::system_program;
 
 use crate::c_oracle_header::{
     cmd_hdr_t,
@@ -30,34 +27,12 @@ fn test_upd_product() {
     let mut instruction_data = [0u8; PC_PROD_ACC_SIZE as usize];
 
     let program_id = Pubkey::new_unique();
-    let funding_key = Pubkey::new_unique();
-    let product_key = Pubkey::new_unique();
 
-    let system_program = system_program::id();
-    let mut funding_balance = LAMPORTS_PER_SOL.clone();
-    let funding_account = AccountInfo::new(
-        &funding_key,
-        true,
-        true,
-        &mut funding_balance,
-        &mut [],
-        &system_program,
-        false,
-        Epoch::default(),
-    );
+    let mut funding_setup = AccountSetup::new_funding();
+    let funding_account = funding_setup.to_account_info();
 
-    let mut product_balance = Rent::minimum_balance(&Rent::default(), PC_PROD_ACC_SIZE as usize);
-    let mut prod_raw_data = [0u8; PC_PROD_ACC_SIZE as usize];
-    let product_account = AccountInfo::new(
-        &product_key,
-        true,
-        true,
-        &mut product_balance,
-        &mut prod_raw_data,
-        &program_id,
-        false,
-        Epoch::default(),
-    );
+    let mut product_setup = AccountSetup::new::<pc_prod_t>(&program_id);
+    let product_account = product_setup.to_account_info();
 
     initialize_checked::<pc_prod_t>(&product_account, PC_VERSION).unwrap();
 

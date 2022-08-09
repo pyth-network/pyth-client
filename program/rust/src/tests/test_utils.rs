@@ -8,8 +8,14 @@ use solana_program::system_program;
 
 const UPPER_BOUND_OF_ALL_ACCOUNT_SIZES: usize = 20536;
 
-/// The goal of this struct is to easily instantiate zeroed solana accounts
+/// The goal of this struct is to easily instantiate fresh solana accounts
 /// for the Pyth program to use in tests.
+/// The reason why we can't just create an `AccountInfo` object
+/// is that we need to give ownership of `key`, `owner` and `data` to the outside scope
+/// otherwise AccountInfo will become a dangling pointer.
+/// After instantiating the setup `AccountSetup` with `new` (that line will transfer the fields to
+/// the outer scope),  `to_account_info` gives the user an `AccountInfo` pointing to the fields of
+/// the AccountSetup.
 pub struct AccountSetup {
     key:     Pubkey,
     owner:   Pubkey,
