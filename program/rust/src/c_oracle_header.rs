@@ -132,6 +132,14 @@ unsafe impl Zeroable for cmd_add_publisher_t {
 unsafe impl Pod for cmd_add_publisher_t {
 }
 
+#[cfg(target_endian = "little")]
+unsafe impl Zeroable for cmd_del_publisher_t {
+}
+
+#[cfg(target_endian = "little")]
+unsafe impl Pod for cmd_del_publisher_t {
+}
+
 
 #[cfg(target_endian = "little")]
 unsafe impl Zeroable for pc_pub_key_t {
