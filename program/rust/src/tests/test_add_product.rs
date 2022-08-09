@@ -28,8 +28,8 @@ use crate::deserialize::load_account_as;
 use crate::rust_oracle::{
     add_product,
     clear_account,
-    initialize_mapping_account,
-    load_mapping_account_mut,
+    initialize_checked,
+    load_checked,
     pubkey_equal,
 };
 
@@ -117,7 +117,7 @@ fn test_add_product() {
 
     {
         let product_data = load_account_as::<pc_prod_t>(&product_account).unwrap();
-        let mapping_data = load_mapping_account_mut(&mapping_account, PC_VERSION).unwrap();
+        let mapping_data = load_checked::<pc_map_table_t>(&mapping_account, PC_VERSION).unwrap();
 
         assert_eq!(product_data.magic_, PC_MAGIC);
         assert_eq!(product_data.ver_, PC_VERSION);
@@ -141,7 +141,7 @@ fn test_add_product() {
     )
     .is_ok());
     {
-        let mapping_data = load_mapping_account_mut(&mapping_account, PC_VERSION).unwrap();
+        let mapping_data = load_checked::<pc_map_table_t>(&mapping_account, PC_VERSION).unwrap();
         assert_eq!(mapping_data.num_, 2);
         assert!(pubkey_equal(
             &mapping_data.prod_[1],
@@ -178,7 +178,7 @@ fn test_add_product() {
 
     // test fill up of mapping table
     clear_account(&mapping_account).unwrap();
-    initialize_mapping_account(&mapping_account, PC_VERSION).unwrap();
+    initialize_checked::<pc_map_table_t>(&mapping_account, PC_VERSION).unwrap();
 
     for i in 0..PC_MAP_TABLE_SIZE {
         clear_account(&product_account).unwrap();
@@ -193,7 +193,7 @@ fn test_add_product() {
             instruction_data
         )
         .is_ok());
-        let mapping_data = load_mapping_account_mut(&mapping_account, PC_VERSION).unwrap();
+        let mapping_data = load_checked::<pc_map_table_t>(&mapping_account, PC_VERSION).unwrap();
         assert_eq!(mapping_data.num_, i + 1);
     }
 
@@ -212,6 +212,6 @@ fn test_add_product() {
         Err(ProgramError::InvalidArgument)
     );
 
-    let mapping_data = load_mapping_account_mut(&mapping_account, PC_VERSION).unwrap();
+    let mapping_data = load_checked::<pc_map_table_t>(&mapping_account, PC_VERSION).unwrap();
     assert_eq!(mapping_data.num_, PC_MAP_TABLE_SIZE);
 }
