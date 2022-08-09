@@ -7,6 +7,7 @@ use crate::c_oracle_header::{
     PC_VERSION,
 };
 use crate::deserialize::load_account_as;
+use crate::error::OracleError;
 use crate::rust_oracle::{
     clear_account,
     init_mapping,
@@ -103,7 +104,7 @@ fn test_init_mapping() {
             &[funding_account.clone(), mapping_account.clone()],
             instruction_data
         ),
-        Err(ProgramError::InvalidArgument)
+        Err(OracleError::InvalidFundingAccount.into())
     );
 
     funding_account.is_signer = true;
@@ -115,7 +116,7 @@ fn test_init_mapping() {
             &[funding_account.clone(), mapping_account.clone()],
             instruction_data
         ),
-        Err(ProgramError::InvalidArgument)
+        Err(OracleError::InvalidSignableAccount.into())
     );
 
     mapping_account.is_signer = true;
@@ -127,7 +128,7 @@ fn test_init_mapping() {
             &[funding_account.clone(), mapping_account.clone()],
             instruction_data
         ),
-        Err(ProgramError::InvalidArgument)
+        Err(OracleError::InvalidFundingAccount.into())
     );
 
     funding_account.is_writable = true;
@@ -139,7 +140,7 @@ fn test_init_mapping() {
             &[funding_account.clone(), mapping_account.clone()],
             instruction_data
         ),
-        Err(ProgramError::InvalidArgument)
+        Err(OracleError::InvalidSignableAccount.into())
     );
 
     mapping_account.is_writable = true;
@@ -151,7 +152,7 @@ fn test_init_mapping() {
             &[funding_account.clone(), mapping_account.clone()],
             instruction_data
         ),
-        Err(ProgramError::InvalidArgument)
+        Err(OracleError::InvalidSignableAccount.into())
     );
 
     mapping_account.owner = &program_id;
@@ -164,7 +165,7 @@ fn test_init_mapping() {
             &[funding_account.clone(), mapping_account.clone()],
             instruction_data
         ),
-        Err(ProgramError::InvalidArgument)
+        Err(OracleError::InvalidSignableAccount.into())
     );
 
     mapping_account.data = prev_data;
