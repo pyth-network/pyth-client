@@ -75,7 +75,6 @@ pub struct PriceAccountWrapper {
     pub time_machine:          TimeMachineWrapper,
 }
 impl PriceAccountWrapper {
-    #[cfg(feature = "resize-account")]
     pub fn add_first_price(&mut self) -> Result<(), OracleError> {
         self.time_machine.add_first_price(
             self.price_data

@@ -23,11 +23,8 @@ use solana_program::rent::Rent;
 
 
 use crate::time_machine_types::PriceAccountWrapper;
-#[cfg(feature = "resize-account")]
 use solana_program::program::invoke;
-#[cfg(feature = "resize-account")]
 use solana_program::system_instruction::transfer;
-#[cfg(feature = "resize-account")]
 use solana_program::system_program::check_id;
 
 
@@ -86,7 +83,6 @@ pub fn update_price(
 }
 
 ///resize price account and initialize the TimeMachineStructure
-#[cfg(feature = "resize-account")]
 pub fn upgrade_price_account<'a>(
     funding_account_info: &AccountInfo<'a>,
     price_account_info: &AccountInfo<'a>,
@@ -140,7 +136,6 @@ pub fn upgrade_price_account<'a>(
     }
 }
 
-#[cfg(feature = "resize-account")]
 fn get_account_type(account: &AccountInfo) -> Result<u32, ProgramError>{
     let account_type  = load_account_as::<pc_acc>(&account)?.type_;
     Ok(account_type)
@@ -152,7 +147,6 @@ fn get_account_type(account: &AccountInfo) -> Result<u32, ProgramError>{
 /// accounts[0] funding account           [signer writable]
 /// accounts[1] upgradded acount       [signer writable]
 /// accounts [2] system program
-#[cfg(feature = "resize-account")]
 pub fn update_version(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
@@ -185,15 +179,7 @@ pub fn update_version(
 }
 
 
-/// place holder untill we are ready to resize accounts
-#[cfg(not(feature = "resize-account"))]
-pub fn update_version(
-    _program_id: &Pubkey,
-    _accounts: &[AccountInfo],
-    _instruction_data: &[u8],
-) -> OracleResult {
-    panic!("Can not update version yet!");
-}
+
 
 /// initialize the first mapping account in a new linked-list of mapping accounts
 /// accounts[0] funding account           [signer writable]

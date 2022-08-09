@@ -27,8 +27,7 @@ RUN apt-get install -qq \
   qt5-qmake \
   qtbase5-dev-tools \
   libqt5websockets5-dev\
-  libclang-dev\
-  python3-pip 
+  libclang-dev
   
 # Install jcon-cpp library
 RUN git clone https://github.com/joncol/jcon-cpp.git /jcon-cpp && cd /jcon-cpp && git checkout 2235654e39c7af505d7158bf996e47e37a23d6e3 && mkdir build && cd build && cmake .. && make -j4 && make install
@@ -57,9 +56,6 @@ export PYTHONPATH=\"\${PYTHONPATH:+\$PYTHONPATH:}\${HOME}/pyth-client\"\n\
 
 COPY --chown=pyth:pyth . pyth-client/
 
-# Install python packages needed for testing
-RUN pip3 install solana
-
 # Build off-chain binaries.
 RUN cd pyth-client && ./scripts/build.sh
 
@@ -70,11 +66,8 @@ RUN cp -a /usr/bin/sdk solana
 RUN ./pyth-client/scripts/patch-solana.sh
 
 # Build and test the oracle program.
-RUN cd pyth-client && ./scripts/build-bpf.sh . "test"
+RUN cd pyth-client && ./scripts/build-bpf.sh .
 RUN /bin/bash -l -c "pytest-3 --pyargs pyth"
-
-# Build for releases
-RUN cd pyth-client && ./scripts/build-bpf.sh
 
 ENTRYPOINT []
 CMD []
