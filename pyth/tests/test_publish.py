@@ -42,7 +42,7 @@ def test_publish(solana_test_validator, pyth_dir,
 
 
     
-    def resize_account(price_acc_address):
+    def resize_account(price_account_address):
         """
         given a string with the pubkey of a price accountm it calls the resize instruction of the Oracle on it
         """
@@ -55,7 +55,7 @@ def test_publish(solana_test_validator, pyth_dir,
         layout = Struct("version" / Int32ul, "command" / Int32sl)
         data = layout.build(dict(version=PROGRAM_VERSION, command=COMMAND_UPD_ACCOUNT))
         funding_key = PublicKey(solana_keygen[0])
-        price_key = PublicKey(price_acc_address)
+        price_key = PublicKey(price_account_address)
         system_key = PublicKey(SYSTEM_PROGRAM)
         print("program id is", solana_program_deploy)
         resize_instruction = TransactionInstruction(
