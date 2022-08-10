@@ -1,3 +1,4 @@
+use crate::error::OracleError;
 use crate::tests::test_utils::AccountSetup;
 use bytemuck::bytes_of;
 use solana_program::program_error::ProgramError;
@@ -195,7 +196,7 @@ fn test_add_price() {
             ],
             instruction_data_add_price
         ),
-        Err(ProgramError::InvalidArgument)
+        Err(OracleError::InvalidSignableAccount.into())
     );
 
     // Fresh product account

@@ -1,6 +1,7 @@
 use std::mem::size_of;
 
 use crate::tests::test_utils::AccountSetup;
+use crate::utils::try_convert;
 use solana_program::account_info::AccountInfo;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
@@ -19,7 +20,6 @@ use crate::rust_oracle::{
     initialize_checked,
     load_checked,
     read_pc_str_t,
-    try_convert,
     upd_product,
 };
 
