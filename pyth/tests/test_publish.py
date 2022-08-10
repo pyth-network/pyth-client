@@ -5,7 +5,7 @@ from solana.transaction import AccountMeta, TransactionInstruction, Transaction
 from solana.keypair import Keypair
 from solana.rpc.api import Client
 import base64
-
+import os
 import asyncio
 
 import json
@@ -30,6 +30,18 @@ def test_publish(solana_test_validator, pyth_dir,
         output = json.loads(output)
         return output['price_accounts'][0]
     
+    def get_key_pair(path_to_file):
+        key_file = open(path_to_file)
+        key_data = json.load(key_file)
+        key_file.close()
+
+        return Keypair.from_secret_key(key_data)
+    
+    def get_path_to_pythdir_pair(account_addr):
+        return os.path.join(pyth_dir, "account_" + account_addr + ".json")
+
+
+    
     def resize_account(price_acc_address):
         """
         given a string with the pubkey of a price accountm it calls the resize instruction of the Oracle on it
@@ -50,20 +62,18 @@ def test_publish(solana_test_validator, pyth_dir,
             data=data,
             keys=[
                 AccountMeta(pubkey=funding_key, is_signer=True, is_writable=True),
-                AccountMeta(pubkey=price_key, is_signer=False, is_writable=True),
+                AccountMeta(pubkey=price_key, is_signer=True, is_writable=True),
                 AccountMeta(pubkey=system_key, is_signer=False, is_writable=False),
             ],
             program_id = PublicKey(solana_program_deploy),
         )
         txn = Transaction().add(resize_instruction)
         solana_client = Client("http://localhost:8899")
-        key_file = open(solana_keygen[1])
-        key_data = json.load(key_file)
-        key_file.close()
 
-        sender = Keypair.from_secret_key(key_data)
-        txn.sign(sender)
-        solana_client.send_transaction(txn, sender)
+        sender = get_key_pair(solana_keygen[1])
+        path_to_price =  get_path_to_pythdir_pair(price_key)
+        price_key_pair = get_key_pair(path_to_price)
+        solana_client.send_transaction(txn, sender, price_key_pair)
 
     def get_account_size(acc_address):
         """
