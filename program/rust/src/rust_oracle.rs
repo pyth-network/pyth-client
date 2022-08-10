@@ -49,7 +49,10 @@ use crate::c_oracle_header::{
 use crate::error::OracleResult;
 use crate::OracleError;
 
-use crate::utils::pyth_assert;
+use crate::utils::{
+    pyth_assert,
+    try_convert,
+};
 
 use super::c_entrypoint_wrapper;
 
@@ -449,10 +452,4 @@ pub fn load_product_account_mut<'a>(
 // Assign pubkey bytes from source to target, fails if source is not 32 bytes
 pub fn pubkey_assign(target: &mut pc_pub_key_t, source: &[u8]) {
     unsafe { target.k1_.copy_from_slice(source) }
-}
-
-/// Convert `x: T` into a `U`, returning the appropriate `OracleError` if the conversion fails.
-fn try_convert<T, U: TryFrom<T>>(x: T) -> Result<U, OracleError> {
-    // Note: the error here assumes we're only applying this function to integers right now.
-    U::try_from(x).map_err(|_| OracleError::IntegerCastingError)
 }
