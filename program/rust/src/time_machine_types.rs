@@ -3,6 +3,7 @@ use crate::c_oracle_header::{
     EXTRA_PUBLISHER_SPACE,
 };
 use crate::error::OracleError;
+use crate::utils::try_convert;
 use bytemuck::{
     Pod,
     Zeroable,
@@ -77,10 +78,7 @@ pub struct PriceAccountWrapper {
 impl PriceAccountWrapper {
     pub fn add_first_price(&mut self) -> Result<(), OracleError> {
         self.time_machine.add_first_price(
-            self.price_data
-                .timestamp_
-                .try_into()
-                .map_err(|_| OracleError::IntegerCastingError)?,
+            try_convert(self.price_data.timestamp_)?,
             self.price_data.agg_.price_,
             self.price_data.agg_.conf_,
         )
@@ -88,14 +86,8 @@ impl PriceAccountWrapper {
 
     pub fn add_price(&mut self) -> Result<(), OracleError> {
         self.time_machine.add_price(
-            self.price_data
-                .timestamp_
-                .try_into()
-                .map_err(|_| OracleError::IntegerCastingError)?,
-            self.price_data
-                .prev_timestamp_
-                .try_into()
-                .map_err(|_| OracleError::IntegerCastingError)?,
+            try_convert(self.price_data.timestamp_)?,
+            try_convert(self.price_data.prev_timestamp_)?,
             self.price_data.agg_.price_,
             self.price_data.prev_price_,
             self.price_data.agg_.conf_,
