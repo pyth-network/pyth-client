@@ -107,12 +107,11 @@ pub fn upgrade_price_account<'a>(
     let account_len = price_account_info.try_data_len()?;
     match account_len {
         PRICE_T_SIZE => {
-            //compute the number of lamports needed in the price account to update it
+            //ensure account is still rent exempt after resizing
             let rent: Rent = Default::default();
             let lamports_needed: u64 = rent
                 .minimum_balance(size_of::<PriceAccountWrapper>())
                 .saturating_sub(price_account_info.lamports());
-            //transfer lamports if necessary
             if lamports_needed > 0 {
                 send_lamports(
                     funding_account_info,
