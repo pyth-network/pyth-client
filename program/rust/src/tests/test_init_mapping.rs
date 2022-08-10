@@ -38,7 +38,7 @@ fn test_init_mapping() {
     let mapping_key = Pubkey::new_unique();
     let system_program = system_program::id();
 
-    let mut funding_balance = LAMPORTS_PER_SOL.clone();
+    let mut funding_balance = LAMPORTS_PER_SOL;
     let mut funding_account = AccountInfo::new(
         &funding_key,
         true,

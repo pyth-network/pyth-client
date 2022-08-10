@@ -47,7 +47,7 @@ fn test_add_product() {
     let product_key_2 = Pubkey::new_unique();
 
     let system_program = system_program::id();
-    let mut funding_balance = LAMPORTS_PER_SOL.clone();
+    let mut funding_balance = LAMPORTS_PER_SOL;
     let funding_account = AccountInfo::new(
         &funding_key,
         true,
@@ -71,7 +71,7 @@ fn test_add_product() {
         true,
         true,
         &mut mapping_balance,
-        &mut mapping_bytes,
+        mapping_bytes,
         &program_id,
         false,
         Epoch::default(),
