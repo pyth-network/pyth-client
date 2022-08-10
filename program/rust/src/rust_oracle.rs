@@ -40,6 +40,7 @@ use crate::c_oracle_header::{
     pc_prod_t,
     pc_pub_key_t,
     PythAccount,
+    PC_ACCTYPE_PRICE,
     PC_COMP_SIZE,
     PC_MAGIC,
     PC_MAP_TABLE_SIZE,
@@ -564,4 +565,17 @@ pub fn pubkey_is_zero(key: &pc_pub_key_t) -> bool {
 pub fn pubkey_equal(target: &pc_pub_key_t, source: &[u8]) -> bool {
     unsafe { target.k1_ == *source }
 }
-
+/// Read a `pc_str_t` from the beginning of `source`. Returns a slice of `source` containing
+/// the bytes of the `pc_str_t`.
+pub fn read_pc_str_t(source: &[u8]) -> Result<&[u8], ProgramError> {
+    if source.is_empty() {
+        Err(ProgramError::InvalidArgument)
+    } else {
+        let tag_len: usize = try_convert(source[0])?;
+        if tag_len + 1 > source.len() {
+            Err(ProgramError::InvalidArgument)
+        } else {
+            Ok(&source[..(1 + tag_len)])
+        }
+    }
+}
