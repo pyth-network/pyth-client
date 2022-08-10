@@ -11,16 +11,11 @@ use crate::rust_oracle::{
     clear_account,
     init_mapping,
 };
+use crate::tests::test_utils::AccountSetup;
 use bytemuck::bytes_of;
-use solana_program::account_info::AccountInfo;
-use solana_program::clock::Epoch;
-use solana_program::native_token::LAMPORTS_PER_SOL;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
-use solana_program::rent::Rent;
-use solana_program::system_program;
 use std::cell::RefCell;
-use std::mem::size_of;
 use std::rc::Rc;
 
 #[test]
@@ -33,35 +28,12 @@ fn test_init_mapping() {
 
     let program_id = Pubkey::new_unique();
     let program_id_2 = Pubkey::new_unique();
-    let funding_key = Pubkey::new_unique();
-    let mapping_key = Pubkey::new_unique();
-    let system_program = system_program::id();
 
-    let mut funding_balance = LAMPORTS_PER_SOL.clone();
-    let mut funding_account = AccountInfo::new(
-        &funding_key,
-        true,
-        true,
-        &mut funding_balance,
-        &mut [],
-        &system_program,
-        false,
-        Epoch::default(),
-    );
+    let mut funding_setup = AccountSetup::new_funding();
+    let mut funding_account = funding_setup.to_account_info();
 
-    let mut mapping_balance = Rent::minimum_balance(&Rent::default(), size_of::<pc_map_table_t>());
-    let mut mapping_raw_data = [0u8; size_of::<pc_map_table_t>()];
-
-    let mut mapping_account = AccountInfo::new(
-        &mapping_key,
-        true,
-        true,
-        &mut mapping_balance,
-        &mut mapping_raw_data,
-        &program_id,
-        false,
-        Epoch::default(),
-    );
+    let mut mapping_setup = AccountSetup::new::<pc_map_table_t>(&program_id);
+    let mut mapping_account = mapping_setup.to_account_info();
 
     assert!(init_mapping(
         &program_id,
