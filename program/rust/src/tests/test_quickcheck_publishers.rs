@@ -3,46 +3,28 @@ use std::mem::size_of;
 
 use crate::c_oracle_header::{
     cmd_del_publisher,
-    cmd_hdr_t,
-    command_t_e_cmd_add_product,
     command_t_e_cmd_del_publisher,
-    pc_map_table_t,
     pc_price_t,
-    pc_prod_t,
     pc_pub_key_t,
-    PC_ACCTYPE_PRODUCT,
     PC_COMP_SIZE,
-    PC_MAGIC,
-    PC_MAP_TABLE_SIZE,
-    PC_PROD_ACC_SIZE,
     PC_VERSION,
 };
-use crate::deserialize::{
-    load_account_as,
-    load_mut,
-};
+use crate::deserialize::load_mut;
 use crate::rust_oracle::{
-    add_product,
     add_publisher,
-    clear_account,
     del_publisher,
     initialize_checked,
     load_checked,
-    pubkey_equal,
 };
 use crate::tests::test_utils::AccountSetup;
-use bytemuck::bytes_of;
 use quickcheck::{
     Arbitrary,
     Gen,
 };
 use quickcheck_macros::quickcheck;
 use rand::Rng;
-use solana_program::account_info::AccountInfo;
-use solana_program::clock::Epoch;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
-use solana_program::rent::Rent;
 use std::fmt::{
     Debug,
     Formatter,
@@ -128,21 +110,20 @@ fn prop(input: Vec<Operation>) -> bool {
             Operation::Add(pub_) => {
                 populate_data(&mut instruction_data, pub_);
 
-                if let Err(err) = add_publisher(
+                match add_publisher(
                     &program_id,
                     &[funding_account.clone(), price_account.clone()],
                     &instruction_data,
                 ) {
-                    {
+                    Ok(_) => {
+                        unsafe { set.insert(pub_.k8_) };
+                    }
+                    Err(err) => {
                         assert_eq!(err, ProgramError::InvalidArgument);
                         let price_data =
                             load_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
-                        if price_data.num_ != PC_COMP_SIZE {
-                            return false;
-                        }
+                        assert_eq!(price_data.num_, PC_COMP_SIZE);
                     }
-                } else {
-                    unsafe { set.insert(pub_.k8_) };
                 }
             }
             Operation::Delete => {
@@ -159,30 +140,30 @@ fn prop(input: Vec<Operation>) -> bool {
                     populate_data(&mut instruction_data, pubkey_to_delete);
                 }
 
-                if let Err(err) = del_publisher(
+                match del_publisher(
                     &program_id,
                     &[funding_account.clone(), price_account.clone()],
                     &instruction_data,
                 ) {
-                    {
+                    Ok(_) => {
+                        unsafe { set.remove(&pubkey_to_delete.k8_) };
+                    }
+                    Err(err) => {
                         assert_eq!(err, ProgramError::InvalidArgument);
                         let price_data =
                             load_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
-                        if price_data.num_ != 0 {
-                            return false;
-                        }
+                        assert_eq!(price_data.num_, 0);
                     }
-                } else {
-                    unsafe { set.remove(&pubkey_to_delete.k8_) };
                 }
             }
         }
-    }
-    {
-        let price_data = load_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
-        if price_data.to_set() != set {
-            return false;
+        {
+            let price_data = load_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
+            if price_data.to_set() != set {
+                return false;
+            }
         }
     }
+
     return true;
 }
