@@ -22,12 +22,12 @@ pub trait Tracker {
     ///add a new price to a tracker
     fn add_price(
         &mut self,
-        current_time: u64,
         prev_time: u64,
-        current_price: i64,
         prev_price: i64,
-        current_conf: u64,
         prev_conf: u64,
+        current_time: u64,
+        current_price: i64,
+        current_conf: u64,
     ) -> Result<(), OracleError>;
 }
 
@@ -52,12 +52,12 @@ impl Tracker for TimeMachineWrapper {
     }
     fn add_price(
         &mut self,
-        _current_time: u64,
         _prev_time: u64,
-        _current_price: i64,
         _prev_price: i64,
-        _current_conf: u64,
         _prev_conf: u64,
+        _current_time: u64,
+        _current_price: i64,
+        _current_conf: u64,
     ) -> Result<(), OracleError> {
         msg!("implement me");
         Ok(())
@@ -86,12 +86,12 @@ impl PriceAccountWrapper {
 
     pub fn add_price(&mut self) -> Result<(), OracleError> {
         self.time_machine.add_price(
-            try_convert(self.price_data.timestamp_)?,
             try_convert(self.price_data.prev_timestamp_)?,
-            self.price_data.agg_.price_,
             self.price_data.prev_price_,
-            self.price_data.agg_.conf_,
             self.price_data.prev_conf_,
+            try_convert(self.price_data.timestamp_)?,
+            self.price_data.agg_.price_,
+            self.price_data.agg_.conf_,
         )
     }
 }
