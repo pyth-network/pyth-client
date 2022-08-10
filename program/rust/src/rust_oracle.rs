@@ -81,6 +81,19 @@ pub fn update_price(
     }
     Ok(c_ret_value)
 }
+fn send_lamports<'a>(
+    from: &AccountInfo<'a>,
+    to: &AccountInfo<'a>,
+    system_program: &AccountInfo<'a>,
+    ammount: u64,
+) -> Result<(), ProgramError> {
+    let transfer_instruction = transfer(from.key, to.key, ammount);
+    invoke(
+        &transfer_instruction,
+        &[from.clone(), to.clone(), system_program.clone()],
+    )?;
+    Ok(())
+}
 
 ///resize price account and initialize the TimeMachineStructure
 pub fn upgrade_price_account<'a>(
@@ -101,18 +114,11 @@ pub fn upgrade_price_account<'a>(
                 .saturating_sub(price_account_info.lamports());
             //transfer lamports if necessary
             if lamports_needed > 0 {
-                let transfer_instruction = transfer(
-                    funding_account_info.key,
-                    price_account_info.key,
+                send_lamports(
+                    funding_account_info,
+                    price_account_info,
+                    system_program,
                     lamports_needed,
-                );
-                invoke(
-                    &transfer_instruction,
-                    &[
-                        funding_account_info.clone(),
-                        price_account_info.clone(),
-                        system_program.clone(),
-                    ],
                 )?;
             }
             //resize
