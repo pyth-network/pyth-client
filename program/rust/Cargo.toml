@@ -13,5 +13,10 @@ solana-program = "=1.10.29"
 bytemuck = "1.11.0"
 thiserror = "1.0"
 
+[dev-dependencies]
+quickcheck = "1"
+quickcheck_macros = "1"
+rand = "0.8.5"
+
 [lib]
 crate-type = ["cdylib", "lib"]

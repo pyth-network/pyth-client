@@ -4,9 +4,8 @@ use bindgen::Builder;
 fn main() {
     println!("cargo:rustc-link-search=./program/c/target");
 
-    //make a parser and to it type, traits pairs
-    let parser = build_utils::DeriveAdderParserCallback::new();
 
+    let parser = build_utils::DeriveAdderParserCallback::new();
     //generate and write bindings
     let bindings = Builder::default()
         .header("./src/bindings.h")
