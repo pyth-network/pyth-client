@@ -79,7 +79,7 @@ pub fn update_price(
     let c_ret_value = c_entrypoint_wrapper(input)?;
     if c_ret_value == SUCCESSFULLY_UPDATED_AGGREGATE {
         let mut price_account = load_account_as_mut::<PriceAccountWrapper>(price_account_info)?;
-        price_account.add_price()?;
+        price_account.add_price_to_time_machine()?;
         msg!("updated tracker!");
     }
     Ok(c_ret_value)
@@ -129,7 +129,7 @@ pub fn upgrade_price_account<'a>(
             price_account_info.realloc(size_of::<PriceAccountWrapper>(), false)?;
             //update twap_tracker
             let mut price_account = load_account_as_mut::<PriceAccountWrapper>(price_account_info)?;
-            price_account.add_first_price()?;
+            price_account.initialize_time_machine()?;
             Ok(SUCCESS)
         }
         PRICE_ACCOUNT_SIZE => Ok(SUCCESS),

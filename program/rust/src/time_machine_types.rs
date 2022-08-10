@@ -1,6 +1,7 @@
 use crate::c_oracle_header::{
     pc_price_t,
     EXTRA_PUBLISHER_SPACE,
+    PC_STATUS_TRADING,
 };
 use crate::error::OracleError;
 use crate::utils::try_convert;
@@ -11,13 +12,11 @@ use bytemuck::{
 use solana_program::msg;
 
 pub trait Tracker {
-    /// add the first price to a zero initialized tracker
-    fn add_first_price(
-        &mut self,
-        current_time: u64,
-        current_price: i64,
-        current_conf: u64,
-    ) -> Result<(), OracleError>;
+    /// sets a tracker to stract tracking
+    /// from the given price time
+    /// Assumes that all entries in it
+    /// are currently invalid
+    fn initialize(&mut self, last_valid_price_time: u64) -> Result<(), OracleError>;
 
     ///add a new price to a tracker
     fn add_price(
@@ -41,12 +40,12 @@ pub struct TimeMachineWrapper {
 }
 
 impl Tracker for TimeMachineWrapper {
-    fn add_first_price(
-        &mut self,
-        _current_time: u64,
-        _current_price: i64,
-        _current_conf: u64,
-    ) -> Result<(), OracleError> {
+    /// sets a tracker to stract tracking
+    /// from the given price time
+    /// Assumes that all entries in it
+    /// are currently invalid
+    /// Can be called multiple times as long as these conditions are valid
+    fn initialize(&mut self, _last_valid_price_time: u64) -> Result<(), OracleError> {
         msg!("implement me");
         Ok(())
     }
@@ -76,15 +75,29 @@ pub struct PriceAccountWrapper {
     pub time_machine:          TimeMachineWrapper,
 }
 impl PriceAccountWrapper {
-    pub fn add_first_price(&mut self) -> Result<(), OracleError> {
-        self.time_machine.add_first_price(
-            try_convert(self.price_data.timestamp_)?,
-            self.price_data.agg_.price_,
-            self.price_data.agg_.conf_,
-        )
+    ///Set the time_machine to start tracking from the time of the most recent trade
+    pub fn initialize_time_machine(&mut self) -> Result<(), OracleError> {
+        let last_valid_price_time = if self.price_data.agg_.status_ == PC_STATUS_TRADING {
+            self.price_data.timestamp_
+        } else {
+            self.price_data.prev_timestamp_
+        };
+        self.time_machine
+            .initialize(try_convert(last_valid_price_time)?)
     }
 
-    pub fn add_price(&mut self) -> Result<(), OracleError> {
+    pub fn add_price_to_time_machine(&mut self) -> Result<(), OracleError> {
+        //If the current price is not certain, ignore it
+        if self.price_data.agg_.status_ != PC_STATUS_TRADING {
+            return Ok(());
+        }
+        //If this is the first price, initialize again instead
+        if self.price_data.prev_timestamp_ == 0 {
+            return self.initialize_time_machine();
+        }
+        // Otherwise, we know that both current and previous price are valid
+        //and that the time_machine must have been initialized either while adding
+        //the previous price or while resizing, so we can go ahead and start tracking
         self.time_machine.add_price(
             try_convert(self.price_data.prev_timestamp_)?,
             self.price_data.prev_price_,
