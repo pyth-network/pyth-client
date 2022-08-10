@@ -34,7 +34,7 @@ fn test_add_price() {
         ver_:   PC_VERSION,
         cmd_:   command_t_e_cmd_add_price as i32,
         expo_:  1,
-        ptype_: 69,
+        ptype_: 1,
     };
     let instruction_data_add_product = bytes_of::<cmd_hdr_t>(&hdr_add_product);
     let mut instruction_data_add_price = bytes_of::<cmd_add_price>(&hdr_add_price);
@@ -83,7 +83,7 @@ fn test_add_price() {
         let price_data = load_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
         let product_data = load_checked::<pc_prod_t>(&product_account, PC_VERSION).unwrap();
         assert_eq!(price_data.expo_, 1);
-        assert_eq!(price_data.ptype_, 69);
+        assert_eq!(price_data.ptype_, 1);
         assert!(pubkey_equal(
             &price_data.prod_,
             &product_account.key.to_bytes()
@@ -110,7 +110,7 @@ fn test_add_price() {
         let price_data_2 = load_checked::<pc_price_t>(&price_account_2, PC_VERSION).unwrap();
         let product_data = load_checked::<pc_prod_t>(&product_account, PC_VERSION).unwrap();
         assert_eq!(price_data_2.expo_, 1);
-        assert_eq!(price_data_2.ptype_, 69);
+        assert_eq!(price_data_2.ptype_, 1);
         assert!(pubkey_equal(
             &price_data_2.prod_,
             &product_account.key.to_bytes()

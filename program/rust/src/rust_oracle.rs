@@ -23,6 +23,7 @@ use crate::c_oracle_header::{
     cmd_add_price_t,
     cmd_add_publisher_t,
     cmd_hdr_t,
+    cmd_set_min_pub_t,
     cmd_upd_product_t,
     pc_acc,
     pc_map_table_t,
@@ -318,6 +319,32 @@ pub fn upd_product(
 
     let mut product_data = load_checked::<pc_prod_t>(product_account, hdr.ver_)?;
     product_data.size_ = try_convert(size_of::<pc_prod_t>() + new_data.len())?;
+
+    Ok(SUCCESS)
+}
+
+pub fn set_min_pub(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
+    instruction_data: &[u8],
+) -> OracleResult {
+    let cmd = load::<cmd_set_min_pub_t>(instruction_data)?;
+
+    pyth_assert(
+        instruction_data.len() == size_of::<cmd_set_min_pub_t>(),
+        ProgramError::InvalidArgument,
+    )?;
+
+    let [funding_account, price_account] = match accounts {
+        [x, y] => Ok([x, y]),
+        _ => Err(ProgramError::InvalidArgument),
+    }?;
+
+    check_valid_funding_account(funding_account)?;
+    check_valid_signable_account(program_id, price_account, size_of::<pc_price_t>())?;
+
+    let mut price_account_data = load_checked::<pc_price_t>(price_account, cmd.ver_)?;
+    price_account_data.min_pub_ = cmd.min_pub_;
 
     Ok(SUCCESS)
 }
