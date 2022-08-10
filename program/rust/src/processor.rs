@@ -1,5 +1,3 @@
-use std::mem::size_of;
-
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use solana_program::sysvar::slot_history::AccountInfo;
@@ -42,11 +40,7 @@ pub fn process_instruction(
     instruction_data: &[u8],
     input: *mut u8,
 ) -> OracleResult {
-    let cmd_hdr_size = size_of::<cmd_hdr>();
-    if instruction_data.len() < cmd_hdr_size {
-        return Err(ProgramError::InvalidArgument);
-    }
-    let cmd_data = load::<cmd_hdr>(&instruction_data[..cmd_hdr_size])?;
+    let cmd_data = load::<cmd_hdr>(instruction_data)?;
 
     if cmd_data.ver_ != PC_VERSION {
         //FIXME: I am not sure what's best to do here (this is copied from C)
