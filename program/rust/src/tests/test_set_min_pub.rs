@@ -3,7 +3,6 @@ use std::mem::size_of;
 use solana_program::account_info::AccountInfo;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
-use solana_program::system_program;
 
 use crate::c_oracle_header::{
     cmd_set_min_pub_t,
