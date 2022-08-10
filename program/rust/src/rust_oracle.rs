@@ -89,8 +89,8 @@ pub fn upgrade_price_account<'a>(
     system_program: &AccountInfo<'a>,
     program_id: &Pubkey,
 ) -> OracleResult {
-    check_valid_funding_account(&funding_account_info)?;
-    check_valid_signable_account(program_id, &price_account_info, size_of::<pc_price_t>())?;
+    check_valid_funding_account(funding_account_info)?;
+    check_valid_signable_account(program_id, price_account_info, size_of::<pc_price_t>())?;
     let account_len = price_account_info.try_data_len()?;
     match account_len {
         PRICE_T_SIZE => {
@@ -130,7 +130,7 @@ pub fn upgrade_price_account<'a>(
 }
 
 fn get_account_type(account: &AccountInfo) -> Result<u32, ProgramError> {
-    let account_type = load_account_as::<pc_acc>(&account)?.type_;
+    let account_type = load_account_as::<pc_acc>(account)?.type_;
     Ok(account_type)
 }
 
@@ -155,17 +155,17 @@ pub fn update_version(
     )?;
 
     //read account info
-    let pyth_acc_type = get_account_type(&upgraded_account_info)?;
+    let pyth_acc_type = get_account_type(upgraded_account_info)?;
 
     //Note: currently we do not seem to need to do anything with the version number,
     // but such logic can be added here, or in the per account type upgrades below
 
     match pyth_acc_type {
         PC_ACCTYPE_PRICE => upgrade_price_account(
-            &funding_account_info,
-            &upgraded_account_info,
-            &system_program,
-            &program_id,
+            funding_account_info,
+            upgraded_account_info,
+            system_program,
+            program_id,
         ),
         _ => Ok(SUCCESS),
     }
