@@ -77,7 +77,7 @@ def test_publish(solana_test_validator, pyth_dir,
 
     def get_account_size(acc_address):
         """
-        given a string with the pubkey of an account, resize it
+        given a string with the pubkey of an account, return its size
         """
         PublicKey(acc_address)
         solana_client = Client("http://localhost:8899")
