@@ -16,13 +16,21 @@ use solana_program::program_error::ProgramError;
 
 /// Interpret the bytes in `data` as a value of type `T`
 pub fn load<T: Pod>(data: &[u8]) -> Result<&T, ProgramError> {
-    try_from_bytes(&data[0..size_of::<T>()]).map_err(|_| ProgramError::InvalidArgument)
+    try_from_bytes(
+        data.get(0..size_of::<T>())
+            .ok_or(ProgramError::InvalidArgument)?,
+    )
+    .map_err(|_| ProgramError::InvalidArgument)
 }
 
 /// Interpret the bytes in `data` as a mutable value of type `T`
 #[allow(unused)]
 pub fn load_mut<T: Pod>(data: &mut [u8]) -> Result<&mut T, ProgramError> {
-    try_from_bytes_mut(&mut data[0..size_of::<T>()]).map_err(|_| ProgramError::InvalidArgument)
+    try_from_bytes_mut(
+        data.get_mut(0..size_of::<T>())
+            .ok_or(ProgramError::InvalidArgument)?,
+    )
+    .map_err(|_| ProgramError::InvalidArgument)
 }
 
 /// Get the data stored in `account` as a value of type `T`
