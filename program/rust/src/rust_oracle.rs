@@ -129,7 +129,7 @@ pub fn upgrade_price_account<'a>(
             price_account_info.realloc(size_of::<PriceAccountWrapper>(), false)?;
             //update twap_tracker
             let mut price_account = load_account_as_mut::<PriceAccountWrapper>(price_account_info)?;
-            price_account.initialize_time_machine()?;
+            price_account.invalidate_current_time_machine_entries()?;
             Ok(SUCCESS)
         }
         PRICE_ACCOUNT_SIZE => Ok(SUCCESS),

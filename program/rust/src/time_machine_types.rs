@@ -12,11 +12,10 @@ use bytemuck::{
 use solana_program::msg;
 
 pub trait Tracker {
-    /// sets a tracker to stract tracking
-    /// from the given price time
-    /// Assumes that all entries in it
-    /// are currently invalid
-    fn initialize(&mut self, last_valid_price_time: u64) -> Result<(), OracleError>;
+    /// Makes the tracker invalidate the entry it's currentrly at
+    /// Must be used when we start tracking so that we do not give a "valid"
+    /// entry that is not completely covered by our prices
+    fn invalidate_current_entry(&mut self, last_valid_price_time: u64) -> Result<(), OracleError>;
 
     ///add a new price to a tracker
     fn add_price(
@@ -45,7 +44,7 @@ impl Tracker for TimeMachineWrapper {
     /// Assumes that all entries in it
     /// are currently invalid
     /// Can be called multiple times as long as these conditions are valid
-    fn initialize(&mut self, _last_valid_price_time: u64) -> Result<(), OracleError> {
+    fn invalidate_current_entry(&mut self, _last_valid_price_time: u64) -> Result<(), OracleError> {
         msg!("implement me");
         Ok(())
     }
@@ -75,15 +74,14 @@ pub struct PriceAccountWrapper {
     pub time_machine:          TimeMachineWrapper,
 }
 impl PriceAccountWrapper {
-    ///Set the time_machine to start tracking from the time of the most recent trade
-    pub fn initialize_time_machine(&mut self) -> Result<(), OracleError> {
+    pub fn invalidate_current_time_machine_entries(&mut self) -> Result<(), OracleError> {
         let last_valid_price_time = if self.price_data.agg_.status_ == PC_STATUS_TRADING {
             self.price_data.timestamp_
         } else {
             self.price_data.prev_timestamp_
         };
         self.time_machine
-            .initialize(try_convert(last_valid_price_time)?)
+            .invalidate_current_entry(try_convert(last_valid_price_time)?)
     }
 
     pub fn add_price_to_time_machine(&mut self) -> Result<(), OracleError> {
@@ -91,13 +89,14 @@ impl PriceAccountWrapper {
         if self.price_data.agg_.status_ != PC_STATUS_TRADING {
             return Ok(());
         }
-        //If this is the first price, initialize again instead
+        //If this is the first price, make sure to invalidate the current entry
+        //(as we will start tracking with the next price)
         if self.price_data.prev_timestamp_ == 0 {
-            return self.initialize_time_machine();
+            return self.invalidate_current_time_machine_entries();
         }
         // Otherwise, we know that both current and previous price are valid
-        //and that the time_machine must have been initialized either while adding
-        //the previous price or while resizing, so we can go ahead and start tracking
+        //and that we have invalidated the current entrym either while resizing
+        //or while adding the previous price.
         self.time_machine.add_price(
             try_convert(self.price_data.prev_timestamp_)?,
             self.price_data.prev_price_,
