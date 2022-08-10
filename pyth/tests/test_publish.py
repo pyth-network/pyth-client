@@ -38,7 +38,7 @@ def test_publish(solana_test_validator, pyth_dir,
         return Keypair.from_secret_key(key_data)
     
     def get_path_to_pythdir_pair(account_addr):
-        return os.path.join(pyth_dir, "account_" + account_addr + ".json")
+        return os.path.join(pyth_dir, "account_" + str(account_addr) + ".json")
 
 
     
