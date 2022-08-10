@@ -1,12 +1,8 @@
 use std::mem::size_of;
 
 use solana_program::account_info::AccountInfo;
-use solana_program::clock::Epoch;
-use solana_program::native_token::LAMPORTS_PER_SOL;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
-use solana_program::rent::Rent;
-use solana_program::system_program;
 
 use crate::c_oracle_header::{
     cmd_set_min_pub_t,
@@ -20,42 +16,21 @@ use crate::rust_oracle::{
     load_checked,
     set_min_pub,
 };
+use crate::tests::test_utils::AccountSetup;
 
 #[test]
 fn test_set_min_pub() {
     let mut instruction_data = [0u8; size_of::<cmd_set_min_pub_t>()];
 
     let program_id = Pubkey::new_unique();
-    let funding_key = Pubkey::new_unique();
-    let price_key = Pubkey::new_unique();
 
-    let system_program = system_program::id();
-    let mut funding_balance = LAMPORTS_PER_SOL.clone();
-    let funding_account = AccountInfo::new(
-        &funding_key,
-        true,
-        true,
-        &mut funding_balance,
-        &mut [],
-        &system_program,
-        false,
-        Epoch::default(),
-    );
+    let mut funding_setup = AccountSetup::new_funding();
+    let funding_account = funding_setup.to_account_info();
 
-    let mut price_balance = Rent::minimum_balance(&Rent::default(), size_of::<pc_price_t>());
-    let mut price_raw_data = [0u8; size_of::<pc_price_t>()];
-    let price_account = AccountInfo::new(
-        &price_key,
-        true,
-        true,
-        &mut price_balance,
-        &mut price_raw_data,
-        &program_id,
-        false,
-        Epoch::default(),
-    );
-
+    let mut price_setup = AccountSetup::new::<pc_price_t>(&program_id);
+    let price_account = price_setup.to_account_info();
     initialize_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
+
     assert_eq!(get_min_pub(&price_account), Ok(0));
 
     populate_instruction(&mut instruction_data, 10);

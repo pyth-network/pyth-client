@@ -13,6 +13,7 @@ use crate::c_oracle_header::{
     command_t_e_cmd_add_product,
     pc_map_table_t,
     pc_prod_t,
+    PythAccount,
     PC_ACCTYPE_PRODUCT,
     PC_MAGIC,
     PC_MAP_TABLE_SIZE,
@@ -71,6 +72,7 @@ fn test_add_product() {
         assert_eq!(product_data.type_, PC_ACCTYPE_PRODUCT);
         assert_eq!(product_data.size_, size_of::<pc_prod_t>() as u32);
         assert_eq!(mapping_data.num_, 1);
+        assert_eq!(mapping_data.size_, (pc_map_table_t::INITIAL_SIZE + 32));
         assert!(pubkey_equal(
             &mapping_data.prod_[0],
             &product_account.key.to_bytes()
@@ -90,6 +92,7 @@ fn test_add_product() {
     {
         let mapping_data = load_checked::<pc_map_table_t>(&mapping_account, PC_VERSION).unwrap();
         assert_eq!(mapping_data.num_, 2);
+        assert_eq!(mapping_data.size_, (pc_map_table_t::INITIAL_SIZE + 2 * 32));
         assert!(pubkey_equal(
             &mapping_data.prod_[1],
             &product_account_2.key.to_bytes()
@@ -141,6 +144,10 @@ fn test_add_product() {
         )
         .is_ok());
         let mapping_data = load_checked::<pc_map_table_t>(&mapping_account, PC_VERSION).unwrap();
+        assert_eq!(
+            mapping_data.size_,
+            pc_map_table_t::INITIAL_SIZE + (i + 1) * 32
+        );
         assert_eq!(mapping_data.num_, i + 1);
     }
 
