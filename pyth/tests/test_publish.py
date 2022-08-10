@@ -125,7 +125,6 @@ def test_publish(solana_test_validator, pyth_dir,
     #defined in oracle.h
     new_account_size = 6176
     assert get_account_size(pyth_init_price['LTC']) == new_account_size
-    time.sleep(20)
 
 
     
