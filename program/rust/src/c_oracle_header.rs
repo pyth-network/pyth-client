@@ -52,7 +52,6 @@ impl PythAccount for pc_price_t {
     const INITIAL_SIZE: u32 = PC_PRICE_T_COMP_OFFSET as u32;
 }
 
-
 #[cfg(target_endian = "little")]
 unsafe impl Zeroable for pc_acc {
 }
@@ -141,6 +140,12 @@ unsafe impl Zeroable for cmd_del_publisher_t {
 unsafe impl Pod for cmd_del_publisher_t {
 }
 
+unsafe impl Zeroable for cmd_set_min_pub_t {
+}
+
+#[cfg(target_endian = "little")]
+unsafe impl Pod for cmd_set_min_pub_t {
+}
 
 #[cfg(target_endian = "little")]
 unsafe impl Zeroable for pc_pub_key_t {

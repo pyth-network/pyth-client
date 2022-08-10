@@ -10,6 +10,7 @@ use crate::c_oracle_header::{
     cmd_upd_product_t,
     command_t_e_cmd_upd_product,
     pc_prod_t,
+    PythAccount,
     PC_PROD_ACC_SIZE,
     PC_VERSION,
 };
@@ -46,6 +47,11 @@ fn test_upd_product() {
     .is_ok());
     assert!(account_has_key_values(&product_account, &kvs).unwrap_or(false));
 
+    {
+        let product_data = load_checked::<pc_prod_t>(&product_account, PC_VERSION).unwrap();
+        assert_eq!(product_data.size_, pc_prod_t::INITIAL_SIZE + 9);
+    }
+
     // bad size on the 1st string in the key-value pair list
     instruction_data[size_of::<cmd_upd_product_t>()] = 2;
     assert_eq!(
@@ -67,6 +73,10 @@ fn test_upd_product() {
     )
     .is_ok());
     assert!(account_has_key_values(&product_account, &kvs).unwrap_or(false));
+    {
+        let product_data = load_checked::<pc_prod_t>(&product_account, PC_VERSION).unwrap();
+        assert_eq!(product_data.size_, pc_prod_t::INITIAL_SIZE);
+    }
 
     // uneven number of keys and values
     let bad_kvs = ["foo", "bar", "baz"];
