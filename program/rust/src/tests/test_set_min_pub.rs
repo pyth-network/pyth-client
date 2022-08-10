@@ -56,6 +56,7 @@ fn test_set_min_pub() {
     );
 
     initialize_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
+    assert_eq!(get_min_pub(&price_account), Ok(0));
 
     populate_instruction(&mut instruction_data, 10);
     assert!(set_min_pub(
