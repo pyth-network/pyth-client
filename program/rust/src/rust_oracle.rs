@@ -259,7 +259,7 @@ pub fn del_publisher(
             sol_memset(
                 bytes_of_mut(&mut price_data.comp_[current_index]),
                 0,
-                size_of::<pc_price_t>(),
+                size_of::<pc_price_comp>(),
             );
             price_data.size_ =
                 try_convert::<_, u32>(size_of::<pc_price_t>() - size_of_val(&price_data.comp_))?
