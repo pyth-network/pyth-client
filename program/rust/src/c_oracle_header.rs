@@ -103,7 +103,6 @@ unsafe impl Pod for cmd_hdr {
 }
 
 #[cfg(target_endian = "little")]
-
 unsafe impl Zeroable for pc_price_info {
 }
 
@@ -127,11 +126,20 @@ unsafe impl Zeroable for pc_ema {
 unsafe impl Pod for pc_ema {
 }
 
+#[cfg(target_endian = "little")]
 unsafe impl Zeroable for cmd_add_price_t {
 }
 
 #[cfg(target_endian = "little")]
 unsafe impl Pod for cmd_add_price_t {
+}
+
+#[cfg(target_endian = "little")]
+unsafe impl Zeroable for cmd_init_price_t {
+}
+
+#[cfg(target_endian = "little")]
+unsafe impl Pod for cmd_init_price_t {
 }
 
 #[cfg(target_endian = "little")]
