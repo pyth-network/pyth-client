@@ -139,13 +139,13 @@ fn get_account_type(account: &AccountInfo) -> Result<u32, ProgramError> {
     Ok(account_type)
 }
 
-/// has version number/ account type dependant logic to make sure the given account is compatible
-/// with the current version
+/// We should call this instruction on any account that needs to be
+/// upgraded after an Oracle update
 /// updates the version number for all accounts, and resizes price accounts
 /// accounts[0] funding account           [signer writable]
 /// accounts[1] upgradded acount       [signer writable]
 /// accounts [2] system program
-pub fn update_version(
+pub fn upgrade_account(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
     _instruction_data: &[u8],
