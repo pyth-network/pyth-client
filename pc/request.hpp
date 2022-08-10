@@ -359,6 +359,7 @@ namespace pc
     rpc::upd_price         preq_[1];
     pc_price_t            *pptr_;
     txid_vec_t             tvec_;
+    int64_t                latest_pending_upd_time_;
   };
 
   template<class T>

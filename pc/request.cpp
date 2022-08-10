@@ -8,6 +8,9 @@
 
 using namespace pc;
 
+// Treat pending price updates as stale if not sent within 5s.
+#define PC_STALENESS_THRESHOLD  (5L*PC_NSECS_IN_SEC)
+
 ///////////////////////////////////////////////////////////////////////////
 // request_sub
 
@@ -723,6 +726,7 @@ void price::update_no_send(
 )
 {
   preq_->set_price( price, conf, st, is_agg );
+  latest_pending_upd_time_ = get_now();
 }
 
 bool price::send( price *prices[], const unsigned n )
@@ -734,6 +738,7 @@ bool price::send( price *prices[], const unsigned n )
   manager *mgr1 = nullptr;
 
   // Build an upd_price rpc request for every price
+  int64_t curr_time = get_now();
   for ( unsigned i = 0, j = 0; i < n; ++i ) {
     price *const p = prices[ i ];
     manager *const mgr = p->get_manager();
@@ -757,6 +762,15 @@ bool price::send( price *prices[], const unsigned n )
     }
     if ( PC_UNLIKELY( ! p->get_is_ready_publish() ) ) {
       PC_LOG_ERR( "not ready to publish - check rpc / pyth_tx connection" )
+        .add( "secondary", mgr->get_is_secondary() )
+        .add( "price_account", *p->get_account() )
+        .add( "product_account", *p->prod_->get_account() )
+        .add( "symbol", p->get_symbol() )
+        .add( "price_type", price_type_to_str( p->get_price_type() ) ).end();
+      continue;
+    }
+    if ( PC_UNLIKELY( ( curr_time - p->latest_pending_upd_time_ ) > PC_STALENESS_THRESHOLD ) ) {
+      PC_LOG_ERR( "skipping price as pending update is stale" )
         .add( "secondary", mgr->get_is_secondary() )
         .add( "price_account", *p->get_account() )
         .add( "product_account", *p->prod_->get_account() )
