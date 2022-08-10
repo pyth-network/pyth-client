@@ -356,7 +356,7 @@ fn valid_funding_account(account: &AccountInfo) -> bool {
 fn check_valid_funding_account(account: &AccountInfo) -> Result<(), ProgramError> {
     pyth_assert(
         valid_funding_account(account),
-        ProgramError::InvalidArgument,
+        OracleError::InvalidFundingAccount.into(),
     )
 }
 
@@ -375,7 +375,7 @@ fn check_valid_signable_account(
 ) -> Result<(), ProgramError> {
     pyth_assert(
         valid_signable_account(program_id, account, minimum_size),
-        ProgramError::InvalidArgument,
+        OracleError::InvalidSignableAccount.into(),
     )
 }
 
@@ -390,7 +390,10 @@ fn valid_fresh_account(account: &AccountInfo) -> bool {
 }
 
 fn check_valid_fresh_account(account: &AccountInfo) -> Result<(), ProgramError> {
-    pyth_assert(valid_fresh_account(account), ProgramError::InvalidArgument)
+    pyth_assert(
+        valid_fresh_account(account),
+        OracleError::InvalidFreshAccount.into(),
+    )
 }
 
 /// Sets the data of account to all-zero
