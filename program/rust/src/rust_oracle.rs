@@ -72,6 +72,7 @@ pub fn update_price(
 ) -> OracleResult {
     let [_funding_account_info, price_account_info, _sysvar_clock] = match accounts {
         [x, y, z] => Ok([x, y, z]),
+        [x, y, _, z] => Ok([x, y, z]),
         _ => Err(ProgramError::InvalidArgument),
     }?;
     //accounts checks happen in c_entrypoint
