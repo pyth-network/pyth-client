@@ -1021,6 +1021,11 @@ price *manager::get_price( const pub_key& acc )
 
 void manager::add_dirty_price(price* sptr)
 {
+  // Skip this update if we have already attempted to update this price in the current slot.
+  if ( sptr->get_last_attempted_update_slot() == get_slot() ) {
+    return;
+  }
+
   if( std::find(pending_upds_.begin(), pending_upds_.end(), sptr) == pending_upds_.end() ) {
     pending_upds_.emplace_back( sptr );
   }
