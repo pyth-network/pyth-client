@@ -111,9 +111,10 @@ pub fn resize_price_account(
     accounts: &[AccountInfo],
     _instruction_data: &[u8],
 ) -> OracleResult {
-    let funding_account_info = &accounts[0];
-    let price_account_info = &accounts[1];
-    let system_program = &accounts[2];
+    let [funding_account_info, price_account_info, system_program] = match accounts {
+        [x, y, z] => Ok([x, y, z]),
+        _ => Err(ProgramError::InvalidArgument),
+    }?;
 
     check_valid_funding_account(funding_account_info)?;
     check_valid_signable_account(program_id, price_account_info, size_of::<pc_price_t>())?;
