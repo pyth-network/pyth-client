@@ -11,7 +11,6 @@ use bytemuck::{
 };
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::SUCCESS;
-use solana_program::msg;
 use solana_program::program_error::ProgramError;
 use solana_program::program_memory::{
     sol_memcpy,
@@ -73,19 +72,19 @@ pub fn update_price(
 ) -> OracleResult {
     let price_account_info = &accounts[1];
     let account_len = price_account_info.try_data_len()?;
-    if account_len < PRICE_ACCOUNT_SIZE {
-        if account_len != PRICE_T_SIZE {
-            return Err(ProgramError::InvalidArgument);
+    match account_len {
+        PRICE_T_SIZE => c_entrypoint_wrapper(input),
+        PRICE_ACCOUNT_SIZE => {
+            let c_ret_value = c_entrypoint_wrapper(input)?;
+            if c_ret_value == SUCCESSFULLY_UPDATED_AGGREGATE {
+                let mut price_account =
+                    load_account_as_mut::<PriceAccountWrapper>(price_account_info)?;
+                price_account.add_price_to_time_machine()?;
+            }
+            Ok(c_ret_value)
         }
-        return c_entrypoint_wrapper(input);
+        _ => Err(ProgramError::InvalidArgument),
     }
-    let c_ret_value = c_entrypoint_wrapper(input)?;
-    if c_ret_value == SUCCESSFULLY_UPDATED_AGGREGATE {
-        let mut price_account = load_account_as_mut::<PriceAccountWrapper>(price_account_info)?;
-        price_account.add_price_to_time_machine()?;
-        msg!("updated tracker!");
-    }
-    Ok(c_ret_value)
 }
 fn send_lamports<'a>(
     from: &AccountInfo<'a>,
