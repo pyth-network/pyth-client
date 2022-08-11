@@ -68,6 +68,8 @@ def test_publish(solana_test_validator, pyth_dir,
             program_id = PublicKey(solana_program_deploy),
         )
         txn = Transaction().add(resize_instruction)
+        txn.fee_payer = funding_key
+
         solana_client = Client("http://localhost:8899")
 
         sender = get_key_pair(solana_keygen[1])
