@@ -104,7 +104,7 @@ fn send_lamports<'a>(
     Ok(())
 }
 
-/// resizes a price accpunt so that it fits the Time Machine
+/// resizes a price account so that it fits the Time Machine
 /// key[0] funding account       [signer writable]
 /// key[1] price account         [Signer writable]
 /// key[2] system program        [readable]

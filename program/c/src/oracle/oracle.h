@@ -270,7 +270,7 @@ typedef enum {
   // key[2] sysvar_clock account  [readable]
   e_cmd_upd_price_no_fail_on_error,
 
-  // resizes a price accpunt so that it fits the Time Machine
+  // resizes a price account so that it fits the Time Machine
   // key[0] funding account       [signer writable]
   // key[1] price account         [Signer writable]
   // key[2] system program        [readable]
