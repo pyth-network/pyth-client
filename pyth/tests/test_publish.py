@@ -66,11 +66,11 @@ def test_publish(solana_test_validator, pyth_dir,
         )
         txn = Transaction().add(resize_instruction)
         txn.fee_payer = funding_key
-        sender = get_key_pair(solana_keygen[1])
+        funding_key_pair = get_key_pair(solana_keygen[1])
         path_to_price =  get_path_to_pythdir_pair(price_key)
         price_key_pair = get_key_pair(path_to_price)
         solana_client = Client("http://localhost:8899")
-        solana_client.send_transaction(txn, sender, price_key_pair)
+        solana_client.send_transaction(txn, funding_key_pair, price_key_pair)
 
     def get_account_size(acc_address):
         """
