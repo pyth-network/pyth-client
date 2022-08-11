@@ -69,8 +69,8 @@ def test_publish(solana_test_validator, pyth_dir,
         sender = get_key_pair(solana_keygen[1])
         path_to_price =  get_path_to_pythdir_pair(price_key)
         price_key_pair = get_key_pair(path_to_price)
-        with  Client("http://localhost:8899") as solana_client:
-            solana_client.send_transaction(txn, sender, price_key_pair)
+        solana_client = Client("http://localhost:8899")
+        solana_client.send_transaction(txn, sender, price_key_pair)
 
     def get_account_size(acc_address):
         """
