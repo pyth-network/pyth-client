@@ -2,7 +2,6 @@ use std::mem::size_of;
 
 use crate::rust_oracle::try_convert;
 use crate::tests::test_utils::AccountSetup;
-use crate::utils::try_convert;
 use solana_program::account_info::AccountInfo;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;

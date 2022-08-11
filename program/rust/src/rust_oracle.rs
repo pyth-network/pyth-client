@@ -60,7 +60,6 @@ use crate::OracleError;
 use crate::utils::pyth_assert;
 
 use super::c_entrypoint_wrapper;
-use crate::utils::try_convert;
 const PRICE_T_SIZE: usize = size_of::<pc_price_t>();
 const PRICE_ACCOUNT_SIZE: usize = size_of::<PriceAccountWrapper>();
 
@@ -565,6 +564,13 @@ pub fn pubkey_is_zero(key: &pc_pub_key_t) -> bool {
 pub fn pubkey_equal(target: &pc_pub_key_t, source: &[u8]) -> bool {
     unsafe { target.k1_ == *source }
 }
+
+/// Convert `x: T` into a `U`, returning the appropriate `OracleError` if the conversion fails.
+pub fn try_convert<T, U: TryFrom<T>>(x: T) -> Result<U, OracleError> {
+    // Note: the error here assumes we're only applying this function to integers right now.
+    U::try_from(x).map_err(|_| OracleError::IntegerCastingError)
+}
+
 /// Read a `pc_str_t` from the beginning of `source`. Returns a slice of `source` containing
 /// the bytes of the `pc_str_t`.
 pub fn read_pc_str_t(source: &[u8]) -> Result<&[u8], ProgramError> {
