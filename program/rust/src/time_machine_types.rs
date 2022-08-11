@@ -3,6 +3,7 @@ use crate::c_oracle_header::{
     PythAccount,
     EXTRA_PUBLISHER_SPACE,
     PC_ACCTYPE_PRICE,
+    PC_PRICE_T_COMP_OFFSET,
 };
 use crate::error::OracleError;
 use bytemuck::{
@@ -10,7 +11,6 @@ use bytemuck::{
     Zeroable,
 };
 use solana_program::msg;
-use std::mem::size_of;
 
 
 #[derive(Debug, Clone, Copy)]
@@ -55,7 +55,7 @@ unsafe impl Pod for PriceAccountWrapper {
 
 impl PythAccount for PriceAccountWrapper {
     const ACCOUNT_TYPE: u32 = PC_ACCTYPE_PRICE;
-    const INITIAL_SIZE: u32 = size_of::<pc_price_t>() as u32;
+    const INITIAL_SIZE: u32 = PC_PRICE_T_COMP_OFFSET as u32;
 }
 
 #[cfg(test)]
