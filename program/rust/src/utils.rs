@@ -1,4 +1,4 @@
-use crate::error::OracleError;
+use crate::OracleError;
 use solana_program::program_error::ProgramError;
 
 pub fn pyth_assert(condition: bool, error_code: ProgramError) -> Result<(), ProgramError> {

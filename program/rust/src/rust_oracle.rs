@@ -57,13 +57,10 @@ use crate::deserialize::{
 use crate::error::OracleResult;
 use crate::OracleError;
 
-use crate::utils::{
-    pyth_assert,
-    try_convert,
-};
+use crate::utils::pyth_assert;
 
 use super::c_entrypoint_wrapper;
-
+use crate::utils::try_convert;
 const PRICE_T_SIZE: usize = size_of::<pc_price_t>();
 const PRICE_ACCOUNT_SIZE: usize = size_of::<PriceAccountWrapper>();
 
@@ -137,7 +134,7 @@ pub fn upgrade_price_account<'a>(
             price_account_info.realloc(size_of::<PriceAccountWrapper>(), false)?;
             //update twap_tracker
             let mut price_account = load_account_as_mut::<PriceAccountWrapper>(price_account_info)?;
-            price_account.invalidate_current_time_machine_entries()?;
+            price_account.initialize_time_machine()?;
             Ok(SUCCESS)
         }
         PRICE_ACCOUNT_SIZE => Ok(SUCCESS),
