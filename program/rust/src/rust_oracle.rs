@@ -125,6 +125,11 @@ pub fn resize_price_account(
         check_id(system_program.key),
         OracleError::InvalidSystemAccount.into(),
     )?;
+    //panick if not a price account
+    //need to makre sure it goes out of scope immediatly to avoid mutable borrow errors
+    {
+        load_checked::<pc_price_t>(price_account_info, PC_VERSION)?;
+    }
     let account_len = price_account_info.try_data_len()?;
     match account_len {
         PRICE_T_SIZE => {
