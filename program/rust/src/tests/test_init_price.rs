@@ -6,6 +6,7 @@ use crate::c_oracle_header::{
     cmd_init_price_t,
     command_t_e_cmd_init_price,
     pc_price_t,
+    pc_pub_key_t,
     PC_MAX_NUM_DECIMALS,
     PC_VERSION,
 };
@@ -13,6 +14,8 @@ use crate::rust_oracle::{
     init_price,
     initialize_checked,
     load_checked,
+    pubkey_assign,
+    pubkey_equal,
 };
 use crate::tests::test_utils::AccountSetup;
 
@@ -30,6 +33,10 @@ fn test_init_price() {
     let instruction_data = bytes_of::<cmd_init_price_t>(&cmd);
 
     let program_id = Pubkey::new_unique();
+    let publisher = pc_pub_key_t::new_unique();
+    let publisher2 = pc_pub_key_t::new_unique();
+    let product = pc_pub_key_t::new_unique();
+    let next_price = pc_pub_key_t::new_unique();
 
     let mut funding_setup = AccountSetup::new_funding();
     let funding_account = funding_setup.to_account_info();
@@ -52,6 +59,12 @@ fn test_init_price() {
         let mut price_data = load_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
         price_data.ptype_ = ptype;
         price_data.expo_ = 0;
+        price_data.min_pub_ = 7;
+        price_data.num_ = 4;
+        pubkey_assign(&mut price_data.comp_[0].pub_, bytes_of(&publisher));
+        pubkey_assign(&mut price_data.comp_[3].pub_, bytes_of(&publisher2));
+        pubkey_assign(&mut price_data.prod_, bytes_of(&product));
+        pubkey_assign(&mut price_data.next_, bytes_of(&next_price));
 
         price_data.last_slot_ = 100;
         price_data.valid_slot_ = 100;
@@ -87,6 +100,19 @@ fn test_init_price() {
         let price_data = load_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
 
         assert_eq!(price_data.expo_, -2);
+        assert_eq!(price_data.ptype_, ptype);
+        assert_eq!(price_data.min_pub_, 7);
+        assert_eq!(price_data.num_, 4);
+        assert!(pubkey_equal(
+            &price_data.comp_[0].pub_,
+            bytes_of(&publisher)
+        ));
+        assert!(pubkey_equal(
+            &price_data.comp_[3].pub_,
+            bytes_of(&publisher2)
+        ));
+        assert!(pubkey_equal(&price_data.prod_, bytes_of(&product)));
+        assert!(pubkey_equal(&price_data.next_, bytes_of(&next_price)));
 
         assert_eq!(price_data.last_slot_, 0);
         assert_eq!(price_data.valid_slot_, 0);
@@ -121,7 +147,7 @@ fn test_init_price() {
         Err(ProgramError::InvalidArgument)
     );
 
-    price_account.is_signer = false;
+    price_account.is_signer = true;
     let cmd: cmd_init_price_t = cmd_init_price_t {
         ver_:   PC_VERSION,
         cmd_:   command_t_e_cmd_init_price as i32,
