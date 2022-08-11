@@ -40,13 +40,13 @@ use crate::c_oracle_header::{
     pc_prod_t,
     pc_pub_key_t,
     PythAccount,
-    PC_ACCTYPE_PRICE,
     PC_COMP_SIZE,
     PC_MAGIC,
     PC_MAP_TABLE_SIZE,
     PC_MAX_NUM_DECIMALS,
     PC_PROD_ACC_SIZE,
     PC_PTYPE_UNKNOWN,
+    PC_VERSION,
     SUCCESSFULLY_UPDATED_AGGREGATE,
 };
 use crate::deserialize::{
@@ -102,15 +102,25 @@ fn send_lamports<'a>(
     Ok(())
 }
 
-///resize price account and initialize the TimeMachineStructure
-pub fn upgrade_price_account<'a>(
-    funding_account_info: &AccountInfo<'a>,
-    price_account_info: &AccountInfo<'a>,
-    system_program: &AccountInfo<'a>,
+/// resizes a price accpunt so that it fits the Time Machine
+/// key[0] funding account       [signer writable]
+/// key[1] price account         [Signer writable]
+/// key[2] system program        [readable]
+pub fn resize_price_account(
     program_id: &Pubkey,
+    accounts: &[AccountInfo],
+    _instruction_data: &[u8],
 ) -> OracleResult {
+    let funding_account_info = &accounts[0];
+    let price_account_info = &accounts[1];
+    let system_program = &accounts[2];
+
     check_valid_funding_account(funding_account_info)?;
     check_valid_signable_account(program_id, price_account_info, size_of::<pc_price_t>())?;
+    pyth_assert(
+        check_id(system_program.key),
+        OracleError::InvalidSystemAccount.into(),
+    )?;
     let account_len = price_account_info.try_data_len()?;
     match account_len {
         PRICE_T_SIZE => {
@@ -131,55 +141,16 @@ pub fn upgrade_price_account<'a>(
             //we do not need to zero initialize since this is the first time this memory
             //is allocated
             price_account_info.realloc(size_of::<PriceAccountWrapper>(), false)?;
-            //update twap_tracker
-            let mut price_account = load_account_as_mut::<PriceAccountWrapper>(price_account_info)?;
+            //The load below would fail if the account was not a price account, reverting the whole
+            // transaction
+            let mut price_account =
+                load_checked::<PriceAccountWrapper>(price_account_info, PC_VERSION)?;
+            //Initialize Time Machine
             price_account.initialize_time_machine()?;
             Ok(SUCCESS)
         }
         PRICE_ACCOUNT_SIZE => Ok(SUCCESS),
         _ => Err(ProgramError::InvalidArgument),
-    }
-}
-
-fn get_account_type(account: &AccountInfo) -> Result<u32, ProgramError> {
-    let account_type = load_account_as::<pc_acc>(account)?.type_;
-    Ok(account_type)
-}
-
-/// We should call this instruction on any account that needs to be
-/// upgraded after an Oracle update
-/// updates the version number for all accounts, and resizes price accounts
-/// accounts[0] funding account           [signer writable]
-/// accounts[1] upgradded acount       [signer writable]
-/// accounts [2] system program
-pub fn upgrade_account(
-    program_id: &Pubkey,
-    accounts: &[AccountInfo],
-    _instruction_data: &[u8],
-) -> OracleResult {
-    let funding_account_info = &accounts[0];
-    let upgraded_account_info = &accounts[1];
-    let system_program = &accounts[2];
-
-    pyth_assert(
-        check_id(system_program.key),
-        OracleError::InvalidSystemAccount.into(),
-    )?;
-
-    //read account info
-    let pyth_acc_type = get_account_type(upgraded_account_info)?;
-
-    //Note: currently we do not seem to need to do anything with the version number,
-    // but such logic can be added here, or in the per account type upgrades below
-
-    match pyth_acc_type {
-        PC_ACCTYPE_PRICE => upgrade_price_account(
-            funding_account_info,
-            upgraded_account_info,
-            system_program,
-            program_id,
-        ),
-        _ => Ok(SUCCESS),
     }
 }
 

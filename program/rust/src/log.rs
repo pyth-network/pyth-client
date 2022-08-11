@@ -86,9 +86,9 @@ pub fn pre_log(accounts: &[AccountInfo], instruction_data: &[u8]) -> ProgramResu
             msg!("UpdateProduct");
         }
 
-        command_t_e_cmd_upd_account_version => {
+        command_t_e_cmd_resize_price_account => {
             //accounts[1] is the updated account
-            msg!("UpdateAccount: {}", accounts[1].key);
+            msg!("ResizePriceAccount: {}", accounts[1].key);
         }
         _ => {
             msg!("UnrecognizedInstruction");
