@@ -77,7 +77,6 @@ pub fn update_price(
         if account_len != PRICE_T_SIZE {
             return Err(ProgramError::InvalidArgument);
         }
-        msg!("Please resize the account to allow for SMA tracking!");
         return c_entrypoint_wrapper(input);
     }
     let c_ret_value = c_entrypoint_wrapper(input)?;
