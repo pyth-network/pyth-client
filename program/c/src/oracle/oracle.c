@@ -107,54 +107,6 @@ static uint64_t init_price( SolParameters *prm, SolAccountInfo *ka )
   return SUCCESS;
 }
 
-// remove publisher from price node
-static uint64_t del_publisher( SolParameters *prm, SolAccountInfo *ka )
-{
-  // Validate command parameters
-  cmd_del_publisher_t *cptr = (cmd_del_publisher_t*)prm->data;
-  if ( prm->data_len != sizeof( cmd_del_publisher_t ) ||
-       pc_pub_key_is_zero( &cptr->pub_ ) ) {
-    return ERROR_INVALID_ARGUMENT;
-  }
-
-  // Account (1) is the price account
-  // Verify that this is signed, writable with correct ownership
-  // and size
-  if ( prm->ka_num != 2 ||
-       !valid_funding_account( &ka[0] ) ||
-       !valid_signable_account( prm, &ka[1], sizeof( pc_price_t ) ) ) {
-    return ERROR_INVALID_ARGUMENT;
-  }
-
-  // Verify that symbol account is initialized and corresponds to the
-  // same symbol and price-type in the instruction parameters
-  pc_price_t *sptr = (pc_price_t*)ka[1].data;
-  if ( sptr->magic_ != PC_MAGIC ||
-       sptr->ver_ != cptr->ver_ ||
-       sptr->type_ != PC_ACCTYPE_PRICE ) {
-    return ERROR_INVALID_ARGUMENT;
-  }
-
-  // try to remove publisher
-  for(uint32_t i=0; i != sptr->num_; ++i ) {
-    pc_price_comp_t *iptr = &sptr->comp_[i];
-    if ( pc_pub_key_equal( &iptr->pub_, &cptr->pub_ ) ) {
-      for( unsigned j=i+1; j != sptr->num_; ++j ) {
-        pc_price_comp_t *jptr = &sptr->comp_[j];
-        iptr[0] = jptr[0];
-        iptr = jptr;
-      }
-      --sptr->num_;
-      sol_memset( iptr, 0, sizeof( pc_price_comp_t ) );
-      // update size of account
-      sptr->size_ = sizeof( pc_price_t ) - sizeof( sptr->comp_ ) +
-        sptr->num_ * sizeof( pc_price_comp_t );
-      return SUCCESS;
-    }
-  }
-  return ERROR_INVALID_ARGUMENT;
-}
-
 static uint64_t upd_price( SolParameters *prm, SolAccountInfo *ka )
 {
   // Validate command parameters
@@ -259,7 +211,7 @@ static uint64_t dispatch( SolParameters *prm, SolAccountInfo *ka )
     case e_cmd_upd_product:                return ERROR_INVALID_ARGUMENT;
     case e_cmd_add_price:                  return ERROR_INVALID_ARGUMENT;
     case e_cmd_add_publisher:              return ERROR_INVALID_ARGUMENT;
-    case e_cmd_del_publisher:              return del_publisher( prm, ka );
+    case e_cmd_del_publisher:              return ERROR_INVALID_ARGUMENT;
     case e_cmd_init_price:                 return init_price( prm, ka );
     case e_cmd_init_test:                  return ERROR_INVALID_ARGUMENT;
     case e_cmd_upd_test:                   return ERROR_INVALID_ARGUMENT;
