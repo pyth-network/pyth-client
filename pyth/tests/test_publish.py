@@ -42,7 +42,7 @@ def test_publish(solana_test_validator, pyth_dir,
     
     def resize_account(price_account_address):
         """
-        given a string with the pubkey of a price accountm it calls the resize instruction of the Oracle on it
+        given a string with the pubkey of a price account it calls the resize instruction of the Oracle on it
         """
         #constants from oracle.h
         PROGRAM_VERSION = 2 #TODO: update this
