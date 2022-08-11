@@ -31,10 +31,8 @@ def test_publish(solana_test_validator, pyth_dir,
         return output['price_accounts'][0]
     
     def get_key_pair(path_to_file):
-        key_file = open(path_to_file)
-        key_data = json.load(key_file)
-        key_file.close()
-
+        with  open(path_to_file) as key_file:
+            key_data = json.load(key_file)
         return Keypair.from_secret_key(key_data)
     
     def get_path_to_pythdir_pair(account_addr):
@@ -57,7 +55,6 @@ def test_publish(solana_test_validator, pyth_dir,
         funding_key = PublicKey(solana_keygen[0])
         price_key = PublicKey(price_account_address)
         system_key = PublicKey(SYSTEM_PROGRAM)
-        print("program id is", solana_program_deploy)
         resize_instruction = TransactionInstruction(
             data=data,
             keys=[
@@ -69,13 +66,11 @@ def test_publish(solana_test_validator, pyth_dir,
         )
         txn = Transaction().add(resize_instruction)
         txn.fee_payer = funding_key
-
-        solana_client = Client("http://localhost:8899")
-
         sender = get_key_pair(solana_keygen[1])
         path_to_price =  get_path_to_pythdir_pair(price_key)
         price_key_pair = get_key_pair(path_to_price)
-        solana_client.send_transaction(txn, sender, price_key_pair)
+        with  Client("http://localhost:8899") as solana_client:
+            solana_client.send_transaction(txn, sender, price_key_pair)
 
     def get_account_size(acc_address):
         """
