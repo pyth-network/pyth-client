@@ -29,12 +29,16 @@ use solana_program::system_program::check_id;
 use crate::c_oracle_header::{
     cmd_add_price_t,
     cmd_add_publisher_t,
+    cmd_del_publisher_t,
     cmd_hdr_t,
+    cmd_init_price_t,
     cmd_set_min_pub_t,
     cmd_upd_product_t,
     pc_acc,
+    pc_ema_t,
     pc_map_table_t,
     pc_price_comp,
+    pc_price_info_t,
     pc_price_t,
     pc_prod_t,
     pc_pub_key_t,
@@ -227,12 +231,11 @@ pub fn add_price(
 ) -> OracleResult {
     let cmd_args = load::<cmd_add_price_t>(instruction_data)?;
 
-    if cmd_args.expo_ > PC_MAX_NUM_DECIMALS as i32
-        || cmd_args.expo_ < -(PC_MAX_NUM_DECIMALS as i32)
-        || cmd_args.ptype_ == PC_PTYPE_UNKNOWN
-    {
-        return Err(ProgramError::InvalidArgument);
-    }
+    check_exponent_range(cmd_args.expo_)?;
+    pyth_assert(
+        cmd_args.ptype_ != PC_PTYPE_UNKNOWN,
+        ProgramError::InvalidArgument,
+    )?;
 
 
     let [funding_account, product_account, price_account] = match accounts {
@@ -253,6 +256,69 @@ pub fn add_price(
     pubkey_assign(&mut price_data.prod_, &product_account.key.to_bytes());
     pubkey_assign(&mut price_data.next_, bytes_of(&product_data.px_acc_));
     pubkey_assign(&mut product_data.px_acc_, &price_account.key.to_bytes());
+
+    Ok(SUCCESS)
+}
+
+pub fn init_price(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
+    instruction_data: &[u8],
+) -> OracleResult {
+    let cmd_args = load::<cmd_init_price_t>(instruction_data)?;
+
+    check_exponent_range(cmd_args.expo_)?;
+
+    let [funding_account, price_account] = match accounts {
+        [x, y] => Ok([x, y]),
+        _ => Err(ProgramError::InvalidArgument),
+    }?;
+
+    check_valid_funding_account(funding_account)?;
+    check_valid_signable_account(program_id, price_account, size_of::<pc_price_t>())?;
+
+    let mut price_data = load_checked::<pc_price_t>(price_account, cmd_args.ver_)?;
+    pyth_assert(
+        price_data.ptype_ == cmd_args.ptype_,
+        ProgramError::InvalidArgument,
+    )?;
+
+    price_data.expo_ = cmd_args.expo_;
+
+    price_data.last_slot_ = 0;
+    price_data.valid_slot_ = 0;
+    price_data.agg_.pub_slot_ = 0;
+    price_data.prev_slot_ = 0;
+    price_data.prev_price_ = 0;
+    price_data.prev_conf_ = 0;
+    price_data.prev_timestamp_ = 0;
+    sol_memset(
+        bytes_of_mut(&mut price_data.twap_),
+        0,
+        size_of::<pc_ema_t>(),
+    );
+    sol_memset(
+        bytes_of_mut(&mut price_data.twac_),
+        0,
+        size_of::<pc_ema_t>(),
+    );
+    sol_memset(
+        bytes_of_mut(&mut price_data.agg_),
+        0,
+        size_of::<pc_price_info_t>(),
+    );
+    for i in 0..(price_data.comp_.len() as usize) {
+        sol_memset(
+            bytes_of_mut(&mut price_data.comp_[i].agg_),
+            0,
+            size_of::<pc_price_info_t>(),
+        );
+        sol_memset(
+            bytes_of_mut(&mut price_data.comp_[i].latest_),
+            0,
+            size_of::<pc_price_info_t>(),
+        );
+    }
 
     Ok(SUCCESS)
 }
@@ -309,6 +375,54 @@ pub fn add_publisher(
             + price_data.num_ * try_convert::<_, u32>(size_of::<pc_price_comp>())?;
     Ok(SUCCESS)
 }
+
+/// add a publisher to a price account
+/// accounts[0] funding account                                   [signer writable]
+/// accounts[1] price account to delete the publisher from        [signer writable]
+pub fn del_publisher(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
+    instruction_data: &[u8],
+) -> OracleResult {
+    let cmd_args = load::<cmd_del_publisher_t>(instruction_data)?;
+
+    pyth_assert(
+        instruction_data.len() == size_of::<cmd_del_publisher_t>()
+            && !pubkey_is_zero(&cmd_args.pub_),
+        ProgramError::InvalidArgument,
+    )?;
+
+    let [funding_account, price_account] = match accounts {
+        [x, y] => Ok([x, y]),
+        _ => Err(ProgramError::InvalidArgument),
+    }?;
+
+    check_valid_funding_account(funding_account)?;
+    check_valid_signable_account(program_id, price_account, size_of::<pc_price_t>())?;
+
+    let mut price_data = load_checked::<pc_price_t>(price_account, cmd_args.ver_)?;
+
+    for i in 0..(price_data.num_ as usize) {
+        if pubkey_equal(&cmd_args.pub_, bytes_of(&price_data.comp_[i].pub_)) {
+            for j in i + 1..(price_data.num_ as usize) {
+                price_data.comp_[j - 1] = price_data.comp_[j];
+            }
+            price_data.num_ -= 1;
+            let current_index: usize = try_convert(price_data.num_)?;
+            sol_memset(
+                bytes_of_mut(&mut price_data.comp_[current_index]),
+                0,
+                size_of::<pc_price_comp>(),
+            );
+            price_data.size_ =
+                try_convert::<_, u32>(size_of::<pc_price_t>() - size_of_val(&price_data.comp_))?
+                    + price_data.num_ * try_convert::<_, u32>(size_of::<pc_price_comp>())?;
+            return Ok(SUCCESS);
+        }
+    }
+    Err(ProgramError::InvalidArgument)
+}
+
 pub fn add_product(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
@@ -481,6 +595,14 @@ fn check_valid_fresh_account(account: &AccountInfo) -> Result<(), ProgramError> 
     pyth_assert(
         valid_fresh_account(account),
         OracleError::InvalidFreshAccount.into(),
+    )
+}
+
+// Check that an exponent is within the range of permitted exponents for price accounts.
+fn check_exponent_range(expo: i32) -> Result<(), ProgramError> {
+    pyth_assert(
+        expo >= -(PC_MAX_NUM_DECIMALS as i32) && expo <= PC_MAX_NUM_DECIMALS as i32,
+        ProgramError::InvalidArgument,
     )
 }
 
