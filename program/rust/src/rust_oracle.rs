@@ -70,6 +70,7 @@ pub fn update_price(
     _instruction_data: &[u8],
     input: *mut u8,
 ) -> OracleResult {
+    let c_ret_value = c_entrypoint_wrapper(input)?;
     let [_funding_account_info, price_account_info, _sysvar_clock] = match accounts {
         [x, y, z] => Ok([x, y, z]),
         [x, y, _, z] => Ok([x, y, z]),
@@ -78,9 +79,8 @@ pub fn update_price(
     //accounts checks happen in c_entrypoint
     let account_len = price_account_info.try_data_len()?;
     match account_len {
-        PRICE_T_SIZE => c_entrypoint_wrapper(input),
+        PRICE_T_SIZE => Ok(c_ret_value),
         PRICE_ACCOUNT_SIZE => {
-            let c_ret_value = c_entrypoint_wrapper(input)?;
             if c_ret_value == SUCCESSFULLY_UPDATED_AGGREGATE {
                 let mut price_account =
                     load_account_as_mut::<PriceAccountWrapper>(price_account_info)?;
