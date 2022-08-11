@@ -41,6 +41,7 @@ int usage()
             << std::endl;
   std::cerr << "     Host name or IP address of running pyth_tx server\n"
             << std::endl;
+  std::cerr << "  -i <interval with which to send notify_price_sched notifications, in milliseconds (default 1000) >" << std::endl;
   std::cerr << "  -k <key_store_directory (default " << get_key_store()
             << ")>]" << std::endl;
   std::cerr << "     Directory name housing publishing, mapping and program"
@@ -102,14 +103,16 @@ int main(int argc, char **argv)
   std::string tx_host  = get_tx_host();
   int pyth_port = get_port();
   int opt = 0;
+  int pub_int = 1000;
   unsigned max_batch_size = 0;
   bool do_wait = true, do_tx = true, do_ws = true, do_debug = false;
-  while( (opt = ::getopt(argc,argv, "r:s:t:p:k:w:c:l:m:b:dnxhz" )) != -1 ) {
+  while( (opt = ::getopt(argc,argv, "r:s:t:p:i:k:w:c:l:m:b:dnxhz" )) != -1 ) {
     switch(opt) {
       case 'r': rpc_host = optarg; break;
       case 's': secondary_rpc_host = optarg; break;
       case 't': tx_host = optarg; break;
       case 'p': pyth_port = ::atoi(optarg); break;
+      case 'i': pub_int = ::atoi(optarg); break;
       case 'k': key_dir = optarg; break;
       case 'c': cap_file = optarg; break;
       case 'w': cnt_dir = optarg; break;
@@ -149,6 +152,7 @@ int main(int argc, char **argv)
   mgr.set_do_ws( do_ws );
   mgr.set_do_capture( !cap_file.empty() );
   mgr.set_commitment( cmt );
+  mgr.set_publish_interval( pub_int );
 
   bool do_secondary = !secondary_rpc_host.empty();
   if ( do_secondary ) {
