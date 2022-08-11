@@ -70,7 +70,11 @@ pub fn update_price(
     _instruction_data: &[u8],
     input: *mut u8,
 ) -> OracleResult {
-    let price_account_info = &accounts[1];
+    let [_funding_account_info, price_account_info] = match accounts {
+        [x, y] => Ok([x, y]),
+        _ => Err(ProgramError::InvalidArgument),
+    }?;
+    //accounts checks happen in c_entrypoint
     let account_len = price_account_info.try_data_len()?;
     match account_len {
         PRICE_T_SIZE => c_entrypoint_wrapper(input),
