@@ -38,17 +38,6 @@ static bool valid_funding_account( SolAccountInfo *ka )
          ka->is_writable;
 }
 
-static bool valid_signable_account( SolParameters *prm,
-                                    SolAccountInfo *ka,
-                                    uint64_t min_dlen )
-{
-  return ka->is_signer &&
-         ka->is_writable &&
-         SolPubkey_same( ka->owner, prm->program_id ) &&
-         ka->data_len >= min_dlen &&
-         is_rent_exempt( *ka->lamports, ka->data_len );
-}
-
 static bool valid_writable_account( SolParameters *prm,
                                     SolAccountInfo *ka,
                                     uint64_t min_dlen )
@@ -57,54 +46,6 @@ static bool valid_writable_account( SolParameters *prm,
          SolPubkey_same( ka->owner, prm->program_id ) &&
          ka->data_len >= min_dlen &&
          is_rent_exempt( *ka->lamports, ka->data_len );
-}
-
-static uint64_t init_price( SolParameters *prm, SolAccountInfo *ka )
-{
-  // Validate command parameters
-  cmd_init_price_t *cptr = (cmd_init_price_t*)prm->data;
-  if ( prm->data_len != sizeof( cmd_init_price_t ) ||
-       cptr->expo_ > PC_MAX_NUM_DECIMALS ||
-       cptr->expo_ < -PC_MAX_NUM_DECIMALS ) {
-    return ERROR_INVALID_ARGUMENT;
-  }
-
-  // Account (1) is the price account to (re)initialize
-  // Verify that these are signed, writable accounts with correct ownership
-  // and size
-  if ( prm->ka_num != 2 ||
-       !valid_funding_account( &ka[0] ) ||
-       !valid_signable_account( prm, &ka[1], sizeof( pc_price_t ) )) {
-    return ERROR_INVALID_ARGUMENT;
-  }
-
-  // Verify that the price account is initialized
-  pc_price_t *sptr = (pc_price_t*)ka[1].data;
-  if ( sptr->magic_ != PC_MAGIC ||
-       sptr->ver_ != cptr->ver_ ||
-       sptr->type_ != PC_ACCTYPE_PRICE ||
-       sptr->ptype_ != cptr->ptype_ ) {
-    return ERROR_INVALID_ARGUMENT;
-  }
-
-  // (re)initialize price exponent and clear-down all quotes
-  sptr->expo_  = cptr->expo_;
-  sptr->last_slot_  = 0UL;
-  sptr->valid_slot_ = 0UL;
-  sptr->agg_.pub_slot_ = 0UL;
-  sptr->prev_slot_  = 0UL;
-  sptr->prev_price_ = 0L;
-  sptr->prev_conf_  = 0L;
-  sptr->prev_timestamp_ = 0L;
-  sol_memset( &sptr->twap_, 0, sizeof( pc_ema_t ) );
-  sol_memset( &sptr->twac_, 0, sizeof( pc_ema_t ) );
-  sol_memset( &sptr->agg_, 0, sizeof( pc_price_info_t ) );
-  for(unsigned i=0; i != sptr->num_; ++i ) {
-    pc_price_comp_t *iptr = &sptr->comp_[i];
-    sol_memset( &iptr->agg_, 0, sizeof( pc_price_info_t ) );
-    sol_memset( &iptr->latest_, 0, sizeof( pc_price_info_t ) );
-  }
-  return SUCCESS;
 }
 
 static uint64_t upd_price( SolParameters *prm, SolAccountInfo *ka )
@@ -212,7 +153,7 @@ static uint64_t dispatch( SolParameters *prm, SolAccountInfo *ka )
     case e_cmd_add_price:                  return ERROR_INVALID_ARGUMENT;
     case e_cmd_add_publisher:              return ERROR_INVALID_ARGUMENT;
     case e_cmd_del_publisher:              return ERROR_INVALID_ARGUMENT;
-    case e_cmd_init_price:                 return init_price( prm, ka );
+    case e_cmd_init_price:                 return ERROR_INVALID_ARGUMENT;
     case e_cmd_init_test:                  return ERROR_INVALID_ARGUMENT;
     case e_cmd_upd_test:                   return ERROR_INVALID_ARGUMENT;
     case e_cmd_set_min_pub:                return ERROR_INVALID_ARGUMENT;
