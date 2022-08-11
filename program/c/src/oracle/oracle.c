@@ -38,17 +38,6 @@ static bool valid_funding_account( SolAccountInfo *ka )
          ka->is_writable;
 }
 
-static bool valid_signable_account( SolParameters *prm,
-                                    SolAccountInfo *ka,
-                                    uint64_t min_dlen )
-{
-  return ka->is_signer &&
-         ka->is_writable &&
-         SolPubkey_same( ka->owner, prm->program_id ) &&
-         ka->data_len >= min_dlen &&
-         is_rent_exempt( *ka->lamports, ka->data_len );
-}
-
 static bool valid_writable_account( SolParameters *prm,
                                     SolAccountInfo *ka,
                                     uint64_t min_dlen )
