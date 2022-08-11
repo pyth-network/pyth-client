@@ -70,8 +70,8 @@ pub fn update_price(
     _instruction_data: &[u8],
     input: *mut u8,
 ) -> OracleResult {
-    let [_funding_account_info, price_account_info] = match accounts {
-        [x, y] => Ok([x, y]),
+    let [_funding_account_info, price_account_info, _sysvar_clock] = match accounts {
+        [x, y, z] => Ok([x, y, z]),
         _ => Err(ProgramError::InvalidArgument),
     }?;
     //accounts checks happen in c_entrypoint
