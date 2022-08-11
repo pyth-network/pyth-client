@@ -55,7 +55,7 @@ unsafe impl Pod for PriceAccountWrapper {
 
 impl PythAccount for PriceAccountWrapper {
     const ACCOUNT_TYPE: u32 = PC_ACCTYPE_PRICE;
-    const INITIAL_SIZE: u32 = size_of::<PriceAccountWrapper>() as u32;
+    const INITIAL_SIZE: u32 = size_of::<pc_price_t>() as u32;
 }
 
 #[cfg(test)]
