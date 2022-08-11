@@ -23,6 +23,7 @@ use crate::rust_oracle::{
     load_checked,
     pubkey_equal,
 };
+use crate::OracleError;
 
 #[test]
 fn test_add_publisher() {
@@ -53,7 +54,7 @@ fn test_add_publisher() {
             &[funding_account.clone(), price_account.clone(),],
             instruction_data
         ),
-        Err(ProgramError::InvalidArgument)
+        Err(OracleError::InvalidSignableAccount.into())
     );
 
     // Now give the price account enough lamports to be rent exempt

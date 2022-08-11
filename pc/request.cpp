@@ -458,7 +458,8 @@ price::price( const pub_key& acc, product *prod )
   prod_( prod ),
   sched_( this ),
   pinit_( this ),
-  pptr_(nullptr)
+  pptr_(nullptr),
+  last_attempted_update_slot_( 0UL )
 {
   areq_->set_account( &apub_ );
   preq_->set_account( &apub_ );
@@ -556,6 +557,16 @@ uint64_t price::get_twac() const
 {
   assert( pptr_->twac_.val_ >= 0 );
   return static_cast< uint64_t >( pptr_->twac_.val_ );
+}
+
+uint64_t price::get_last_attempted_update_slot() const
+{
+  return last_attempted_update_slot_;
+}
+
+void price::set_last_attempted_update_slot( uint64_t slot )
+{
+  last_attempted_update_slot_ = slot;
 }
 
 uint64_t price::get_prev_slot() const
@@ -738,6 +749,7 @@ bool price::send( price *prices[], const unsigned n )
   for ( unsigned i = 0, j = 0; i < n; ++i ) {
     price *const p = prices[ i ];
     manager *const mgr = p->get_manager();
+    p->set_last_attempted_update_slot( mgr->get_slot() );
     if ( PC_UNLIKELY( ! p->init_ && ! p->init_publish() ) ) {
       PC_LOG_ERR( "failed to initialize publisher" )
         .add( "secondary", mgr->get_is_secondary() )

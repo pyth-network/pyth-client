@@ -265,6 +265,10 @@ namespace pc
     // ready to publish (i.e. not waiting for confirmation)
     bool get_is_ready_publish() const;
 
+    // the slot when a price update was last attempted
+    uint64_t get_last_attempted_update_slot() const;
+    void set_last_attempted_update_slot( uint64_t );
+
     // submit new price update and update aggregate
     // will fail with false if in error (check get_is_err() )
     // or because symbol is not ready to publish (get_is_ready_publish())
@@ -359,6 +363,7 @@ namespace pc
     rpc::upd_price         preq_[1];
     pc_price_t            *pptr_;
     txid_vec_t             tvec_;
+    uint64_t               last_attempted_update_slot_;
   };
 
   template<class T>

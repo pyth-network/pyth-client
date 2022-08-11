@@ -9,7 +9,7 @@ using namespace pc;
 #define PC_RPC_HTTP_PORT      8899
 #define PC_RECONNECT_TIMEOUT  (120L*1000000000L)
 #define PC_BLOCKHASH_TIMEOUT  3
-#define PC_PUB_INTERVAL       (400L*PC_NSECS_IN_MSEC)
+#define PC_PUB_INTERVAL       PC_NSECS_IN_SEC
 #define PC_RPC_HOST           "localhost"
 #define PC_MAX_BATCH          8
 // Flush partial batches if not completed within 400 ms.
@@ -1021,6 +1021,11 @@ price *manager::get_price( const pub_key& acc )
 
 void manager::add_dirty_price(price* sptr)
 {
+  // Skip this update if we have already attempted to update this price in the current slot.
+  if ( sptr->get_last_attempted_update_slot() == get_slot() ) {
+    return;
+  }
+
   if( std::find(pending_upds_.begin(), pending_upds_.end(), sptr) == pending_upds_.end() ) {
     pending_upds_.emplace_back( sptr );
   }

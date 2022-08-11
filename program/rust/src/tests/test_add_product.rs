@@ -1,5 +1,6 @@
 use std::mem::size_of;
 
+use crate::error::OracleError;
 use crate::tests::test_utils::AccountSetup;
 use bytemuck::bytes_of;
 use solana_program::account_info::AccountInfo;
@@ -123,7 +124,7 @@ fn test_add_product() {
             ],
             instruction_data
         ),
-        Err(ProgramError::InvalidArgument)
+        Err(OracleError::InvalidSignableAccount.into())
     );
 
     // test fill up of mapping table

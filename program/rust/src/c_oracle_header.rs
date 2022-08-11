@@ -52,16 +52,6 @@ impl PythAccount for pc_price_t {
     const INITIAL_SIZE: u32 = PC_PRICE_T_COMP_OFFSET as u32;
 }
 
-impl pc_pub_key_t {
-    pub fn new_unique() -> pc_pub_key_t {
-        let solana_unique = Pubkey::new_unique();
-        pc_pub_key_t {
-            k1_: solana_unique.to_bytes(),
-        }
-    }
-}
-
-
 #[cfg(target_endian = "little")]
 unsafe impl Zeroable for pc_acc {
 }
@@ -151,6 +141,13 @@ unsafe impl Pod for cmd_add_publisher_t {
 }
 
 #[cfg(target_endian = "little")]
+unsafe impl Zeroable for cmd_del_publisher_t {
+}
+
+#[cfg(target_endian = "little")]
+unsafe impl Pod for cmd_del_publisher_t {
+}
+
 unsafe impl Zeroable for cmd_set_min_pub_t {
 }
 
@@ -173,4 +170,13 @@ unsafe impl Zeroable for pc_price_comp_t {
 
 #[cfg(target_endian = "little")]
 unsafe impl Pod for pc_price_comp_t {
+}
+
+impl pc_pub_key_t {
+    pub fn new_unique() -> pc_pub_key_t {
+        let solana_unique = Pubkey::new_unique();
+        pc_pub_key_t {
+            k1_: solana_unique.to_bytes(),
+        }
+    }
 }
