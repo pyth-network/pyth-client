@@ -18,6 +18,7 @@ use crate::rust_oracle::{
     pubkey_equal,
 };
 use crate::tests::test_utils::AccountSetup;
+use crate::OracleError;
 
 #[test]
 fn test_init_price() {
@@ -144,7 +145,7 @@ fn test_init_price() {
             &[funding_account.clone(), price_account.clone()],
             instruction_data
         ),
-        Err(ProgramError::InvalidArgument)
+        Err(OracleError::InvalidSignableAccount.into())
     );
 
     price_account.is_signer = true;
