@@ -91,9 +91,9 @@ fn send_lamports<'a>(
     from: &AccountInfo<'a>,
     to: &AccountInfo<'a>,
     system_program: &AccountInfo<'a>,
-    ammount: u64,
+    amount: u64,
 ) -> Result<(), ProgramError> {
-    let transfer_instruction = transfer(from.key, to.key, ammount);
+    let transfer_instruction = transfer(from.key, to.key, amount);
     invoke(
         &transfer_instruction,
         &[from.clone(), to.clone(), system_program.clone()],
