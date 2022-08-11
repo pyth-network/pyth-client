@@ -28,6 +28,8 @@ pub enum OracleError {
     InvalidSystemAccount    = 606,
     #[error("InvalidWritableAccount")]
     InvalidWritableAccount  = 607,
+    #[error("InvalidWritableAccount")]
+    InvalidFreshAccount     = 608,
 }
 
 impl From<OracleError> for ProgramError {

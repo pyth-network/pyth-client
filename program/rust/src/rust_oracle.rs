@@ -503,7 +503,10 @@ fn valid_fresh_account(account: &AccountInfo) -> bool {
 }
 
 fn check_valid_fresh_account(account: &AccountInfo) -> Result<(), ProgramError> {
-    pyth_assert(valid_fresh_account(account), ProgramError::InvalidArgument)
+    pyth_assert(
+        valid_fresh_account(account),
+        OracleError::InvalidFreshAccount.into(),
+    )
 }
 
 /// Sets the data of account to all-zero

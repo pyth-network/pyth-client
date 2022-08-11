@@ -147,7 +147,7 @@ fn test_add_price() {
             ],
             instruction_data_add_price
         ),
-        Err(ProgramError::InvalidArgument)
+        Err(OracleError::InvalidFreshAccount.into())
     );
 
     clear_account(&price_account).unwrap();

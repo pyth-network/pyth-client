@@ -58,7 +58,7 @@ fn test_init_mapping() {
             &[funding_account.clone(), mapping_account.clone()],
             instruction_data
         ),
-        Err(ProgramError::InvalidArgument)
+        Err(OracleError::InvalidFreshAccount.into())
     );
 
     clear_account(&mapping_account).unwrap();
