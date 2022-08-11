@@ -163,13 +163,9 @@ static uint64_t dispatch( SolParameters *prm, SolAccountInfo *ka )
     case e_cmd_upd_product:                return ERROR_INVALID_ARGUMENT;
     case e_cmd_add_price:                  return ERROR_INVALID_ARGUMENT;
     case e_cmd_add_publisher:              return ERROR_INVALID_ARGUMENT;
-<<<<<<< HEAD
-    case e_cmd_del_publisher:              return del_publisher( prm, ka );
-    case e_cmd_init_price:                 return ERROR_INVALID_ARGUMENT;
-=======
     case e_cmd_del_publisher:              return ERROR_INVALID_ARGUMENT;
+    case e_cmd_init_price:                 return ERROR_INVALID_ARGUMENT;
     case e_cmd_init_price:                 return init_price( prm, ka );
->>>>>>> main
     case e_cmd_init_test:                  return ERROR_INVALID_ARGUMENT;
     case e_cmd_upd_test:                   return ERROR_INVALID_ARGUMENT;
     case e_cmd_set_min_pub:                return ERROR_INVALID_ARGUMENT;
