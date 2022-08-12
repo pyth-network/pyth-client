@@ -6,17 +6,20 @@ use crate::c_oracle_header::{
     PC_MAP_TABLE_SIZE,
     PC_VERSION,
 };
-use crate::deserialize::load_account_as_mut;
-use crate::rust_oracle::{
-    add_mapping,
-    clear_account,
-    initialize_checked,
+use crate::deserialize::{
+    initialize_pyth_account_checked,
+    load_account_as_mut,
     load_checked,
+};
+
+use crate::rust_oracle::add_mapping;
+use crate::tests::test_utils::AccountSetup;
+use crate::utils::{
+    clear_account,
     pubkey_assign,
     pubkey_equal,
     pubkey_is_zero,
 };
-use crate::tests::test_utils::AccountSetup;
 use bytemuck::bytes_of;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
@@ -36,7 +39,7 @@ fn test_add_mapping() {
 
     let mut curr_mapping_setup = AccountSetup::new::<pc_map_table_t>(&program_id);
     let cur_mapping = curr_mapping_setup.to_account_info();
-    initialize_checked::<pc_map_table_t>(&cur_mapping, PC_VERSION).unwrap();
+    initialize_pyth_account_checked::<pc_map_table_t>(&cur_mapping, PC_VERSION).unwrap();
 
     let mut next_mapping_setup = AccountSetup::new::<pc_map_table_t>(&program_id);
     let next_mapping = next_mapping_setup.to_account_info();

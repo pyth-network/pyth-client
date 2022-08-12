@@ -6,13 +6,21 @@ use bytemuck::{
     Pod,
 };
 
+use crate::c_oracle_header::{
+    pc_acc,
+    PythAccount,
+    PC_MAGIC,
+};
+use crate::utils::{
+    clear_account,
+    pyth_assert,
+};
+use solana_program::account_info::AccountInfo;
+use solana_program::program_error::ProgramError;
 use std::cell::{
     Ref,
     RefMut,
 };
-
-use solana_program::account_info::AccountInfo;
-use solana_program::program_error::ProgramError;
 
 /// Interpret the bytes in `data` as a value of type `T`
 pub fn load<T: Pod>(data: &[u8]) -> Result<&T, ProgramError> {
@@ -52,4 +60,38 @@ pub fn load_account_as_mut<'a, T: Pod>(
     Ok(RefMut::map(data, |data| {
         bytemuck::from_bytes_mut(&mut data[0..size_of::<T>()])
     }))
+}
+
+pub fn load_checked<'a, T: PythAccount>(
+    account: &'a AccountInfo,
+    version: u32,
+) -> Result<RefMut<'a, T>, ProgramError> {
+    {
+        let account_header = load_account_as::<pc_acc>(account)?;
+        pyth_assert(
+            account_header.magic_ == PC_MAGIC
+                && account_header.ver_ == version
+                && account_header.type_ == T::ACCOUNT_TYPE,
+            ProgramError::InvalidArgument,
+        )?;
+    }
+
+    load_account_as_mut::<T>(account)
+}
+
+pub fn initialize_pyth_account_checked<'a, T: PythAccount>(
+    account: &'a AccountInfo,
+    version: u32,
+) -> Result<RefMut<'a, T>, ProgramError> {
+    clear_account(account)?;
+
+    {
+        let mut account_header = load_account_as_mut::<pc_acc>(account)?;
+        account_header.magic_ = PC_MAGIC;
+        account_header.ver_ = version;
+        account_header.type_ = T::ACCOUNT_TYPE;
+        account_header.size_ = T::INITIAL_SIZE;
+    }
+
+    load_account_as_mut::<T>(account)
 }

@@ -10,14 +10,16 @@ use crate::c_oracle_header::{
     PC_MAX_NUM_DECIMALS,
     PC_VERSION,
 };
-use crate::rust_oracle::{
-    init_price,
-    initialize_checked,
+use crate::deserialize::{
+    initialize_pyth_account_checked,
     load_checked,
+};
+use crate::rust_oracle::init_price;
+use crate::tests::test_utils::AccountSetup;
+use crate::utils::{
     pubkey_assign,
     pubkey_equal,
 };
-use crate::tests::test_utils::AccountSetup;
 use crate::OracleError;
 
 #[test]
@@ -55,7 +57,7 @@ fn test_init_price() {
         Err(ProgramError::InvalidArgument)
     );
 
-    initialize_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
+    initialize_pyth_account_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
     {
         let mut price_data = load_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
         price_data.ptype_ = ptype;
