@@ -16,11 +16,13 @@ use crate::c_oracle_header::{
 };
 use std::mem::size_of;
 
-use crate::rust_oracle::{
-    add_publisher,
-    clear_account,
+use crate::deserialize::{
     initialize_checked,
     load_checked,
+};
+use crate::rust_oracle::add_publisher;
+use crate::utils::{
+    clear_account,
     pubkey_equal,
 };
 use crate::OracleError;

@@ -14,12 +14,16 @@ use crate::c_oracle_header::{
     pc_prod_t,
     PC_VERSION,
 };
+use crate::deserialize::{
+    initialize_checked,
+    load_checked,
+};
 use crate::rust_oracle::{
     add_price,
     add_product,
+};
+use crate::utils::{
     clear_account,
-    initialize_checked,
-    load_checked,
     pubkey_equal,
     pubkey_is_zero,
 };

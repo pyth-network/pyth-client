@@ -10,14 +10,16 @@ use crate::c_oracle_header::{
     PC_MAX_NUM_DECIMALS,
     PC_VERSION,
 };
-use crate::rust_oracle::{
-    init_price,
+use crate::deserialize::{
     initialize_checked,
     load_checked,
+};
+use crate::rust_oracle::init_price;
+use crate::tests::test_utils::AccountSetup;
+use crate::utils::{
     pubkey_assign,
     pubkey_equal,
 };
-use crate::tests::test_utils::AccountSetup;
 use crate::OracleError;
 
 #[test]

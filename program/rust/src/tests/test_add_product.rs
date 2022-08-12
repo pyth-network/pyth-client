@@ -21,14 +21,17 @@ use crate::c_oracle_header::{
     PC_PROD_ACC_SIZE,
     PC_VERSION,
 };
-use crate::deserialize::load_account_as;
-use crate::rust_oracle::{
-    add_product,
-    clear_account,
+use crate::deserialize::{
     initialize_checked,
+    load_account_as,
     load_checked,
+};
+use crate::utils::{
+    clear_account,
     pubkey_equal,
 };
+
+use crate::rust_oracle::add_product;
 
 #[test]
 fn test_add_product() {

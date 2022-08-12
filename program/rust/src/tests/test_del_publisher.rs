@@ -1,9 +1,9 @@
-use crate::deserialize::load_mut;
-use crate::rust_oracle::{
-    del_publisher,
-    pubkey_assign,
-    pubkey_is_zero,
+use crate::deserialize::{
+    initialize_checked,
+    load_checked,
+    load_mut,
 };
+use crate::rust_oracle::del_publisher;
 use crate::tests::test_utils::AccountSetup;
 use bytemuck::bytes_of;
 use solana_program::pubkey::Pubkey;
@@ -19,13 +19,12 @@ use crate::c_oracle_header::{
     PC_STATUS_TRADING,
     PC_VERSION,
 };
-use std::mem::size_of;
-
-use crate::rust_oracle::{
-    initialize_checked,
-    load_checked,
+use crate::utils::{
+    pubkey_assign,
     pubkey_equal,
+    pubkey_is_zero,
 };
+use std::mem::size_of;
 
 #[test]
 fn test_del_publisher() {

@@ -8,11 +8,9 @@ use crate::c_oracle_header::{
 };
 use crate::deserialize::load_account_as;
 use crate::error::OracleError;
-use crate::rust_oracle::{
-    clear_account,
-    init_mapping,
-};
+use crate::rust_oracle::init_mapping;
 use crate::tests::test_utils::AccountSetup;
+use crate::utils::clear_account;
 use bytemuck::bytes_of;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;

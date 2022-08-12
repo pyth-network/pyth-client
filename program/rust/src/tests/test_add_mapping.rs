@@ -6,17 +6,20 @@ use crate::c_oracle_header::{
     PC_MAP_TABLE_SIZE,
     PC_VERSION,
 };
-use crate::deserialize::load_account_as_mut;
-use crate::rust_oracle::{
-    add_mapping,
-    clear_account,
+use crate::deserialize::{
     initialize_checked,
+    load_account_as_mut,
     load_checked,
+};
+
+use crate::rust_oracle::add_mapping;
+use crate::tests::test_utils::AccountSetup;
+use crate::utils::{
+    clear_account,
     pubkey_assign,
     pubkey_equal,
     pubkey_is_zero,
 };
-use crate::tests::test_utils::AccountSetup;
 use bytemuck::bytes_of;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;

@@ -10,12 +10,12 @@ use crate::c_oracle_header::{
     pc_price_t,
     PC_VERSION,
 };
-use crate::deserialize::load_mut;
-use crate::rust_oracle::{
+use crate::deserialize::{
     initialize_checked,
     load_checked,
-    set_min_pub,
+    load_mut,
 };
+use crate::rust_oracle::set_min_pub;
 use crate::tests::test_utils::AccountSetup;
 
 #[test]
