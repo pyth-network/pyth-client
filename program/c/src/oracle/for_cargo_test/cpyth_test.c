@@ -1,7 +1,7 @@
 /// The goal of this file is to provide the upd_aggregate function to local rust tests
 
-/// The heap address is different on solana runtime and locally, so here we need to allocate some heap space
-/// In compilation to bpf, PC_HEAP_START is provided by <solana.h>
+/// The heap address PC_HEAP_START is different on solana runtime and locally, so here we need to allocate some heap space
+/// When compiling to bpf, PC_HEAP_START is provided by <solana.h>
 char heap_start[8192];
 #define PC_HEAP_START (heap_start)
 #define static_assert _Static_assert
@@ -15,7 +15,6 @@ typedef unsigned int uint32_t;
 typedef signed long int int64_t;
 typedef unsigned long int uint64_t;
 
-#include <stdlib.h>
 #include "../upd_aggregate.h"
 
 extern bool c_upd_aggregate( pc_price_t *ptr, uint64_t slot, int64_t timestamp ){
