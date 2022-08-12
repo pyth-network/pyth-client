@@ -1,5 +1,6 @@
+char heap_start[8192];
+#define PC_HEAP_START (heap_start)
 #define static_assert _Static_assert
-#define rust_tests
 
 typedef signed char int8_t;
 typedef unsigned char uint8_t;

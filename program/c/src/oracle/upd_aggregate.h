@@ -10,8 +10,6 @@
 extern "C" {
 #endif
 
-
-
 typedef struct pc_qset
 {
   pd_t      iprice_[PC_COMP_SIZE];
@@ -26,12 +24,8 @@ typedef struct pc_qset
 // initialize quote-set temporary data in heap area
 static pc_qset_t *qset_new( int expo )
 {
-  // allocate off heap, this one is tricky because heap allocation happens differently in solana world and in local testing world
-  #ifdef rust_tests
-  pc_qset_t *qs = (pc_qset_t*)malloc(sizeof(pc_qset_t)); // allocate in normal heap
-  #else
-  pc_qset_t *qs = (pc_qset_t*)PC_HEAP_START; // allocate at the solana heap address
-  #endif
+  // allocate off heap
+  pc_qset_t *qs = (pc_qset_t*)PC_HEAP_START;
 
   // sqrt of numbers 1 to 25 for decaying conf. interval based on slot delay
   qs->decay_[0]  = 1000000000L;
