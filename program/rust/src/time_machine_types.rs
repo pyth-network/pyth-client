@@ -21,7 +21,7 @@ use {
 };
 
 
-pub trait Tracker {
+pub trait Tracker<const GRANUALITY: u64, const NUM_ENTRIES: usize, const THRESHOLD: u64> {
     ///initializes a zero initialized tracker
     fn initialize(&mut self) -> Result<(), OracleError>;
 
