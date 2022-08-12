@@ -10,6 +10,8 @@
 extern "C" {
 #endif
 
+
+
 typedef struct pc_qset
 {
   pd_t      iprice_[PC_COMP_SIZE];
@@ -25,7 +27,11 @@ typedef struct pc_qset
 static pc_qset_t *qset_new( int expo )
 {
   // allocate off heap
+  #ifdef rust_tests
+  pc_qset_t *qs = (pc_qset_t*)malloc(sizeof(pc_qset_t));
+  #else
   pc_qset_t *qs = (pc_qset_t*)PC_HEAP_START;
+  #endif
 
   // sqrt of numbers 1 to 25 for decaying conf. interval based on slot delay
   qs->decay_[0]  = 1000000000L;

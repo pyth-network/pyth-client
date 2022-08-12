@@ -4,7 +4,15 @@ use solana_program::clock::Epoch;
 use solana_program::native_token::LAMPORTS_PER_SOL;
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
-use solana_program::system_program;
+use solana_program::sysvar::{
+    Sysvar,
+    SysvarId,
+};
+use solana_program::{
+    clock,
+    system_program,
+    sysvar,
+};
 
 const UPPER_BOUND_OF_ALL_ACCOUNT_SIZES: usize = 20536;
 
@@ -46,6 +54,21 @@ impl AccountSetup {
         let balance = LAMPORTS_PER_SOL;
         let size = 0;
         let data = [0; UPPER_BOUND_OF_ALL_ACCOUNT_SIZES];
+        return AccountSetup {
+            key,
+            owner,
+            balance,
+            size,
+            data,
+        };
+    }
+
+    pub fn new_clock() -> Self {
+        let key = clock::Clock::id();
+        let owner = sysvar::id();
+        let balance = Rent::minimum_balance(&Rent::default(), clock::Clock::size_of());
+        let size = clock::Clock::size_of();
+        let data = [0u8; UPPER_BOUND_OF_ALL_ACCOUNT_SIZES];
         return AccountSetup {
             key,
             owner,

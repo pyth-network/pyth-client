@@ -10,6 +10,7 @@ use bytemuck::{
     bytes_of_mut,
 };
 use solana_program::account_info::AccountInfo;
+use solana_program::clock::Clock;
 use solana_program::entrypoint::SUCCESS;
 use solana_program::program_error::ProgramError;
 use solana_program::program_memory::{
@@ -18,16 +19,21 @@ use solana_program::program_memory::{
 };
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
+use solana_program::sysvar::Sysvar;
 
 use crate::c_oracle_header::{
     cmd_add_price_t,
     cmd_add_publisher_t,
     cmd_hdr_t,
     cmd_set_min_pub_t,
+    cmd_upd_price_t,
     cmd_upd_product_t,
+    command_t_e_cmd_upd_price,
+    command_t_e_cmd_upd_price_no_fail_on_error,
     pc_acc,
     pc_map_table_t,
     pc_price_comp,
+    pc_price_info_t,
     pc_price_t,
     pc_prod_t,
     pc_pub_key_t,
@@ -35,9 +41,12 @@ use crate::c_oracle_header::{
     PC_COMP_SIZE,
     PC_MAGIC,
     PC_MAP_TABLE_SIZE,
+    PC_MAX_CI_DIVISOR,
     PC_MAX_NUM_DECIMALS,
     PC_PROD_ACC_SIZE,
     PC_PTYPE_UNKNOWN,
+    PC_STATUS_UNKNOWN,
+    SUCCESSFULLY_UPDATED_AGGREGATE,
 };
 use crate::deserialize::{
     load,
@@ -48,9 +57,24 @@ use crate::error::OracleResult;
 use crate::utils::pyth_assert;
 use crate::OracleError;
 
+
 use super::c_entrypoint_wrapper;
 
+#[cfg(target_arch = "bpf")]
+#[link(name = "cpyth")]
+extern "C" {
+    fn c_upd_aggregate(_input: *mut u8, clock_slot: u64, clock_timestamp: i64) -> bool;
+}
+
+#[cfg(not(target_arch = "bpf"))]
+#[link(name = "cpythtest")]
+extern "C" {
+    fn c_upd_aggregate(_input: *mut u8, clock_slot: u64, clock_timestamp: i64) -> bool;
+}
+
+
 ///Calls the c oracle update_price, and updates the Time Machine if needed
+#[allow(dead_code)]
 pub fn update_price(
     _program_id: &Pubkey,
     _accounts: &[AccountInfo],
@@ -128,6 +152,116 @@ pub fn add_mapping(
 
     Ok(SUCCESS)
 }
+
+/// a publisher updates a price
+/// accounts[0] publisher account                                   [signer writable]
+/// accounts[1] price account to update                             [writable]
+/// accounts[2] sysvar clock                                        []
+pub fn upd_price(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
+    instruction_data: &[u8],
+) -> OracleResult {
+    let cmd_args = load::<cmd_upd_price_t>(instruction_data)?;
+
+    let [funding_account, price_account, clock_account] = match accounts {
+        [x, y, z] => Ok([x, y, z]),
+        [x, y, _, z] => Ok([x, y, z]),
+        _ => Err(ProgramError::InvalidArgument),
+    }?;
+
+    check_valid_funding_account(funding_account)?;
+    check_valid_writable_account(program_id, price_account, size_of::<pc_price_t>())?;
+    // Check clock
+    let clock = Clock::from_account_info(clock_account)?;
+
+    let mut publisher_index: usize = 0;
+    let latest_aggregate_price: pc_price_info_t;
+    let latest_publisher_price: pc_price_info_t;
+    {
+        // Verify that symbol account is initialized
+        let price_data = load_checked::<pc_price_t>(price_account, cmd_args.ver_)?;
+
+        // Verify that publisher is valid
+        while publisher_index < price_data.num_ as usize {
+            if pubkey_equal(
+                &price_data.comp_[publisher_index].pub_,
+                &funding_account.key.to_bytes(),
+            ) {
+                break;
+            }
+            publisher_index += 1;
+        }
+        pyth_assert(
+            publisher_index < price_data.num_ as usize,
+            ProgramError::InvalidArgument,
+        )?;
+
+
+        latest_publisher_price = price_data.comp_[publisher_index].latest_;
+        latest_aggregate_price = price_data.agg_;
+
+        // Check that publisher is publishing a more recent price
+        pyth_assert(
+            !is_component_update(cmd_args)?
+                || cmd_args.pub_slot_ > latest_publisher_price.pub_slot_,
+            ProgramError::InvalidArgument,
+        )?;
+    }
+
+    // Try to update the aggregate
+    let mut aggregate_updated = false;
+    if clock.slot > latest_aggregate_price.pub_slot_ {
+        unsafe {
+            aggregate_updated = c_upd_aggregate(
+                price_account.try_borrow_mut_data()?.as_mut_ptr(),
+                clock.slot,
+                clock.unix_timestamp,
+            );
+        }
+    }
+
+    // Try to update the publisher's price
+    if is_component_update(cmd_args)? {
+        let mut status: u32 = cmd_args.status_;
+        let mut threshold_conf = cmd_args.price_ / PC_MAX_CI_DIVISOR as i64;
+
+        if threshold_conf < 0 {
+            threshold_conf = -threshold_conf;
+        }
+
+        if cmd_args.conf_ > try_convert::<_, u64>(threshold_conf)? {
+            status = PC_STATUS_UNKNOWN
+        }
+
+        {
+            let mut price_data = load_checked::<pc_price_t>(price_account, cmd_args.ver_)?;
+            let publisher_price = &mut price_data.comp_[publisher_index].latest_;
+            publisher_price.price_ = cmd_args.price_;
+            publisher_price.conf_ = cmd_args.conf_;
+            publisher_price.status_ = status;
+            publisher_price.pub_slot_ = cmd_args.pub_slot_;
+        }
+    }
+
+    if aggregate_updated {
+        return Ok(SUCCESSFULLY_UPDATED_AGGREGATE);
+    }
+
+    Ok(SUCCESS)
+}
+
+pub fn upd_price_no_fail(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
+    instruction_data: &[u8],
+) -> OracleResult {
+    match upd_price(program_id, accounts, instruction_data) {
+        Err(_) => Ok(SUCCESS),
+        Ok(value) => Ok(value),
+    }
+}
+
 
 /// add a price account to a product account
 /// accounts[0] funding account                                   [signer writable]
@@ -360,6 +494,24 @@ fn check_valid_funding_account(account: &AccountInfo) -> Result<(), ProgramError
     )
 }
 
+fn valid_writable_account(program_id: &Pubkey, account: &AccountInfo, minimum_size: usize) -> bool {
+    account.is_writable
+        && account.owner == program_id
+        && account.data_len() >= minimum_size
+        && Rent::default().is_exempt(account.lamports(), account.data_len())
+}
+
+fn check_valid_writable_account(
+    program_id: &Pubkey,
+    account: &AccountInfo,
+    minimum_size: usize,
+) -> Result<(), ProgramError> {
+    pyth_assert(
+        valid_writable_account(program_id, account, minimum_size),
+        OracleError::InvalidSignableAccount.into(),
+    )
+}
+
 fn valid_signable_account(program_id: &Pubkey, account: &AccountInfo, minimum_size: usize) -> bool {
     account.is_signer
         && account.is_writable
@@ -457,6 +609,13 @@ pub fn pubkey_equal(target: &pc_pub_key_t, source: &[u8]) -> bool {
 pub fn try_convert<T, U: TryFrom<T>>(x: T) -> Result<U, OracleError> {
     // Note: the error here assumes we're only applying this function to integers right now.
     U::try_from(x).map_err(|_| OracleError::IntegerCastingError)
+}
+
+pub fn is_component_update(cmd_args: &cmd_upd_price_t) -> Result<bool, ProgramError> {
+    Ok(
+        try_convert::<_, u32>(cmd_args.cmd_)? == command_t_e_cmd_upd_price
+            || try_convert::<_, u32>(cmd_args.cmd_)? == command_t_e_cmd_upd_price_no_fail_on_error,
+    )
 }
 
 /// Read a `pc_str_t` from the beginning of `source`. Returns a slice of `source` containing

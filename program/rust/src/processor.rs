@@ -30,8 +30,9 @@ use crate::rust_oracle::{
     add_publisher,
     init_mapping,
     set_min_pub,
+    upd_price,
+    upd_price_no_fail,
     upd_product,
-    update_price,
     update_version,
 };
 
@@ -56,9 +57,12 @@ pub fn process_instruction(
         .try_into()
         .map_err(|_| OracleError::IntegerCastingError)?
     {
-        command_t_e_cmd_upd_price
-        | command_t_e_cmd_upd_price_no_fail_on_error
-        | command_t_e_cmd_agg_price => update_price(program_id, accounts, instruction_data, input),
+        command_t_e_cmd_upd_price | command_t_e_cmd_agg_price => {
+            upd_price(program_id, accounts, instruction_data)
+        }
+        command_t_e_cmd_upd_price_no_fail_on_error => {
+            upd_price_no_fail(program_id, accounts, instruction_data)
+        }
         command_t_e_cmd_upd_account_version => {
             update_version(program_id, accounts, instruction_data)
         }
