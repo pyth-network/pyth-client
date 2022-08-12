@@ -51,6 +51,8 @@ pub trait Tracker<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHO
             (prev_time % GRANUALITY) + current_time - prev_time;
         let mut num_skiped_entries: usize =
             try_convert(time_since_begining_of_current_entry / GRANUALITY)?;
+        //if num_skipped is greater than NUM_ENTRIES, cap it at the smallest
+        //number greater than NUM_ENTRIES that has the same residue class
         if num_skiped_entries >= NUM_ENTRIES {
             num_skiped_entries %= NUM_ENTRIES;
             num_skiped_entries += NUM_ENTRIES;
