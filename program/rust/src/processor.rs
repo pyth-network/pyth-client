@@ -13,8 +13,8 @@ use crate::c_oracle_header::{
     command_t_e_cmd_del_publisher,
     command_t_e_cmd_init_mapping,
     command_t_e_cmd_init_price,
+    command_t_e_cmd_resize_price_account,
     command_t_e_cmd_set_min_pub,
-    command_t_e_cmd_upd_account_version,
     command_t_e_cmd_upd_price,
     command_t_e_cmd_upd_price_no_fail_on_error,
     command_t_e_cmd_upd_product,
@@ -33,10 +33,10 @@ use crate::rust_oracle::{
     del_publisher,
     init_mapping,
     init_price,
+    resize_price_account,
     set_min_pub,
     upd_product,
     update_price,
-    update_version,
 };
 
 ///dispatch to the right instruction in the oracle
@@ -63,8 +63,8 @@ pub fn process_instruction(
         command_t_e_cmd_upd_price
         | command_t_e_cmd_upd_price_no_fail_on_error
         | command_t_e_cmd_agg_price => update_price(program_id, accounts, instruction_data, input),
-        command_t_e_cmd_upd_account_version => {
-            update_version(program_id, accounts, instruction_data)
+        command_t_e_cmd_resize_price_account => {
+            resize_price_account(program_id, accounts, instruction_data)
         }
         command_t_e_cmd_add_price => add_price(program_id, accounts, instruction_data),
         command_t_e_cmd_init_mapping => init_mapping(program_id, accounts, instruction_data),

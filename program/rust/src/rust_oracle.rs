@@ -19,6 +19,13 @@ use solana_program::program_memory::{
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
 
+
+use crate::time_machine_types::PriceAccountWrapper;
+use solana_program::program::invoke;
+use solana_program::system_instruction::transfer;
+use solana_program::system_program::check_id;
+
+
 use crate::c_oracle_header::{
     cmd_add_price_t,
     cmd_add_publisher_t,
@@ -42,6 +49,8 @@ use crate::c_oracle_header::{
     PC_MAX_NUM_DECIMALS,
     PC_PROD_ACC_SIZE,
     PC_PTYPE_UNKNOWN,
+    PC_VERSION,
+    SUCCESSFULLY_UPDATED_AGGREGATE,
 };
 use crate::deserialize::{
     load,
@@ -49,33 +58,111 @@ use crate::deserialize::{
     load_account_as_mut,
 };
 use crate::error::OracleResult;
-use crate::utils::pyth_assert;
 use crate::OracleError;
 
+use crate::utils::pyth_assert;
+
 use super::c_entrypoint_wrapper;
+const PRICE_T_SIZE: usize = size_of::<pc_price_t>();
+const PRICE_ACCOUNT_SIZE: usize = size_of::<PriceAccountWrapper>();
+
 
 ///Calls the c oracle update_price, and updates the Time Machine if needed
 pub fn update_price(
     _program_id: &Pubkey,
-    _accounts: &[AccountInfo],
+    accounts: &[AccountInfo],
     _instruction_data: &[u8],
     input: *mut u8,
 ) -> OracleResult {
-    //For now, we did not change the behavior of this. this is just to show the proposed structure
-    // of the program
-    c_entrypoint_wrapper(input)
+    let c_ret_value = c_entrypoint_wrapper(input)?;
+    let price_account_info = &accounts[1];
+    //accounts checks happen in c_entrypoint
+    let account_len = price_account_info.try_data_len()?;
+    match account_len {
+        PRICE_T_SIZE => Ok(c_ret_value),
+        PRICE_ACCOUNT_SIZE => {
+            if c_ret_value == SUCCESSFULLY_UPDATED_AGGREGATE {
+                let mut price_account =
+                    load_account_as_mut::<PriceAccountWrapper>(price_account_info)?;
+                price_account.add_price_to_time_machine()?;
+            }
+            Ok(c_ret_value)
+        }
+        _ => Err(ProgramError::InvalidArgument),
+    }
 }
-/// has version number/ account type dependant logic to make sure the given account is compatible
-/// with the current version
-/// updates the version number for all accounts, and resizes price accounts
-pub fn update_version(
-    _program_id: &Pubkey,
-    _accounts: &[AccountInfo],
+fn send_lamports<'a>(
+    from: &AccountInfo<'a>,
+    to: &AccountInfo<'a>,
+    system_program: &AccountInfo<'a>,
+    amount: u64,
+) -> Result<(), ProgramError> {
+    let transfer_instruction = transfer(from.key, to.key, amount);
+    invoke(
+        &transfer_instruction,
+        &[from.clone(), to.clone(), system_program.clone()],
+    )?;
+    Ok(())
+}
+
+/// resizes a price account so that it fits the Time Machine
+/// key[0] funding account       [signer writable]
+/// key[1] price account         [Signer writable]
+/// key[2] system program        [readable]
+pub fn resize_price_account(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
     _instruction_data: &[u8],
 ) -> OracleResult {
-    panic!("Need to merge fix to pythd in order to implement this");
-    // Ok(SUCCESS)
+    let [funding_account_info, price_account_info, system_program] = match accounts {
+        [x, y, z] => Ok([x, y, z]),
+        _ => Err(ProgramError::InvalidArgument),
+    }?;
+
+    check_valid_funding_account(funding_account_info)?;
+    check_valid_signable_account(program_id, price_account_info, size_of::<pc_price_t>())?;
+    pyth_assert(
+        check_id(system_program.key),
+        OracleError::InvalidSystemAccount.into(),
+    )?;
+    //throw an error if not a price account
+    //need to makre sure it goes out of scope immediatly to avoid mutable borrow errors
+    {
+        load_checked::<pc_price_t>(price_account_info, PC_VERSION)?;
+    }
+    let account_len = price_account_info.try_data_len()?;
+    match account_len {
+        PRICE_T_SIZE => {
+            //ensure account is still rent exempt after resizing
+            let rent: Rent = Default::default();
+            let lamports_needed: u64 = rent
+                .minimum_balance(size_of::<PriceAccountWrapper>())
+                .saturating_sub(price_account_info.lamports());
+            if lamports_needed > 0 {
+                send_lamports(
+                    funding_account_info,
+                    price_account_info,
+                    system_program,
+                    lamports_needed,
+                )?;
+            }
+            //resize
+            //we do not need to zero initialize since this is the first time this memory
+            //is allocated
+            price_account_info.realloc(size_of::<PriceAccountWrapper>(), false)?;
+            //The load below would fail if the account was not a price account, reverting the whole
+            // transaction
+            let mut price_account =
+                load_checked::<PriceAccountWrapper>(price_account_info, PC_VERSION)?;
+            //Initialize Time Machine
+            price_account.initialize_time_machine()?;
+            Ok(SUCCESS)
+        }
+        PRICE_ACCOUNT_SIZE => Ok(SUCCESS),
+        _ => Err(ProgramError::InvalidArgument),
+    }
 }
+
 
 /// initialize the first mapping account in a new linked-list of mapping accounts
 /// accounts[0] funding account           [signer writable]
@@ -149,6 +236,7 @@ pub fn add_price(
         cmd_args.ptype_ != PC_PTYPE_UNKNOWN,
         ProgramError::InvalidArgument,
     )?;
+
 
     let [funding_account, product_account, price_account] = match accounts {
         [x, y, z] => Ok([x, y, z]),

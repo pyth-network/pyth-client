@@ -85,6 +85,11 @@ pub fn pre_log(accounts: &[AccountInfo], instruction_data: &[u8]) -> ProgramResu
         command_t_e_cmd_upd_product => {
             msg!("UpdateProduct");
         }
+
+        command_t_e_cmd_resize_price_account => {
+            //accounts[1] is the updated account
+            msg!("ResizePriceAccount: {}", accounts[1].key);
+        }
         _ => {
             msg!("UnrecognizedInstruction");
             return Err(OracleError::UnrecognizedInstruction.into());
