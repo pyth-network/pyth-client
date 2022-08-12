@@ -21,16 +21,26 @@ use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
 use solana_program::sysvar::Sysvar;
 
+
+use crate::time_machine_types::PriceAccountWrapper;
+use solana_program::program::invoke;
+use solana_program::system_instruction::transfer;
+use solana_program::system_program::check_id;
+
+
 use crate::c_oracle_header::{
     cmd_add_price_t,
     cmd_add_publisher_t,
+    cmd_del_publisher_t,
     cmd_hdr_t,
+    cmd_init_price_t,
     cmd_set_min_pub_t,
     cmd_upd_price_t,
     cmd_upd_product_t,
     command_t_e_cmd_upd_price,
     command_t_e_cmd_upd_price_no_fail_on_error,
     pc_acc,
+    pc_ema_t,
     pc_map_table_t,
     pc_price_comp,
     pc_price_info_t,
@@ -46,7 +56,7 @@ use crate::c_oracle_header::{
     PC_PROD_ACC_SIZE,
     PC_PTYPE_UNKNOWN,
     PC_STATUS_UNKNOWN,
-    SUCCESSFULLY_UPDATED_AGGREGATE,
+    PC_VERSION,
 };
 use crate::deserialize::{
     load,
@@ -54,11 +64,13 @@ use crate::deserialize::{
     load_account_as_mut,
 };
 use crate::error::OracleResult;
-use crate::utils::pyth_assert;
 use crate::OracleError;
 
+use crate::utils::pyth_assert;
 
-use super::c_entrypoint_wrapper;
+const PRICE_T_SIZE: usize = size_of::<pc_price_t>();
+const PRICE_ACCOUNT_SIZE: usize = size_of::<PriceAccountWrapper>();
+
 
 #[cfg(target_arch = "bpf")]
 #[link(name = "cpyth")]
@@ -72,30 +84,78 @@ extern "C" {
     fn c_upd_aggregate(_input: *mut u8, clock_slot: u64, clock_timestamp: i64) -> bool;
 }
 
+fn send_lamports<'a>(
+    from: &AccountInfo<'a>,
+    to: &AccountInfo<'a>,
+    system_program: &AccountInfo<'a>,
+    amount: u64,
+) -> Result<(), ProgramError> {
+    let transfer_instruction = transfer(from.key, to.key, amount);
+    invoke(
+        &transfer_instruction,
+        &[from.clone(), to.clone(), system_program.clone()],
+    )?;
+    Ok(())
+}
 
-///Calls the c oracle update_price, and updates the Time Machine if needed
-#[allow(dead_code)]
-pub fn update_price(
-    _program_id: &Pubkey,
-    _accounts: &[AccountInfo],
-    _instruction_data: &[u8],
-    input: *mut u8,
-) -> OracleResult {
-    //For now, we did not change the behavior of this. this is just to show the proposed structure
-    // of the program
-    c_entrypoint_wrapper(input)
-}
-/// has version number/ account type dependant logic to make sure the given account is compatible
-/// with the current version
-/// updates the version number for all accounts, and resizes price accounts
-pub fn update_version(
-    _program_id: &Pubkey,
-    _accounts: &[AccountInfo],
+/// resizes a price account so that it fits the Time Machine
+/// key[0] funding account       [signer writable]
+/// key[1] price account         [Signer writable]
+/// key[2] system program        [readable]
+pub fn resize_price_account(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
     _instruction_data: &[u8],
 ) -> OracleResult {
-    panic!("Need to merge fix to pythd in order to implement this");
-    // Ok(SUCCESS)
+    let [funding_account_info, price_account_info, system_program] = match accounts {
+        [x, y, z] => Ok([x, y, z]),
+        _ => Err(ProgramError::InvalidArgument),
+    }?;
+
+    check_valid_funding_account(funding_account_info)?;
+    check_valid_signable_account(program_id, price_account_info, size_of::<pc_price_t>())?;
+    pyth_assert(
+        check_id(system_program.key),
+        OracleError::InvalidSystemAccount.into(),
+    )?;
+    //throw an error if not a price account
+    //need to makre sure it goes out of scope immediatly to avoid mutable borrow errors
+    {
+        load_checked::<pc_price_t>(price_account_info, PC_VERSION)?;
+    }
+    let account_len = price_account_info.try_data_len()?;
+    match account_len {
+        PRICE_T_SIZE => {
+            //ensure account is still rent exempt after resizing
+            let rent: Rent = Default::default();
+            let lamports_needed: u64 = rent
+                .minimum_balance(size_of::<PriceAccountWrapper>())
+                .saturating_sub(price_account_info.lamports());
+            if lamports_needed > 0 {
+                send_lamports(
+                    funding_account_info,
+                    price_account_info,
+                    system_program,
+                    lamports_needed,
+                )?;
+            }
+            //resize
+            //we do not need to zero initialize since this is the first time this memory
+            //is allocated
+            price_account_info.realloc(size_of::<PriceAccountWrapper>(), false)?;
+            //The load below would fail if the account was not a price account, reverting the whole
+            // transaction
+            let mut price_account =
+                load_checked::<PriceAccountWrapper>(price_account_info, PC_VERSION)?;
+            //Initialize Time Machine
+            price_account.initialize_time_machine()?;
+            Ok(SUCCESS)
+        }
+        PRICE_ACCOUNT_SIZE => Ok(SUCCESS),
+        _ => Err(ProgramError::InvalidArgument),
+    }
 }
+
 
 /// initialize the first mapping account in a new linked-list of mapping accounts
 /// accounts[0] funding account           [signer writable]
@@ -244,8 +304,10 @@ pub fn upd_price(
         }
     }
 
-    if aggregate_updated {
-        return Ok(SUCCESSFULLY_UPDATED_AGGREGATE);
+    let account_len = price_account.try_data_len()?;
+    if aggregate_updated && account_len == PRICE_ACCOUNT_SIZE {
+        let mut price_account = load_account_as_mut::<PriceAccountWrapper>(price_account)?;
+        price_account.add_price_to_time_machine()?;
     }
 
     Ok(SUCCESS)
@@ -274,12 +336,12 @@ pub fn add_price(
 ) -> OracleResult {
     let cmd_args = load::<cmd_add_price_t>(instruction_data)?;
 
-    if cmd_args.expo_ > PC_MAX_NUM_DECIMALS as i32
-        || cmd_args.expo_ < -(PC_MAX_NUM_DECIMALS as i32)
-        || cmd_args.ptype_ == PC_PTYPE_UNKNOWN
-    {
-        return Err(ProgramError::InvalidArgument);
-    }
+    check_exponent_range(cmd_args.expo_)?;
+    pyth_assert(
+        cmd_args.ptype_ != PC_PTYPE_UNKNOWN,
+        ProgramError::InvalidArgument,
+    )?;
+
 
     let [funding_account, product_account, price_account] = match accounts {
         [x, y, z] => Ok([x, y, z]),
@@ -299,6 +361,69 @@ pub fn add_price(
     pubkey_assign(&mut price_data.prod_, &product_account.key.to_bytes());
     pubkey_assign(&mut price_data.next_, bytes_of(&product_data.px_acc_));
     pubkey_assign(&mut product_data.px_acc_, &price_account.key.to_bytes());
+
+    Ok(SUCCESS)
+}
+
+pub fn init_price(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
+    instruction_data: &[u8],
+) -> OracleResult {
+    let cmd_args = load::<cmd_init_price_t>(instruction_data)?;
+
+    check_exponent_range(cmd_args.expo_)?;
+
+    let [funding_account, price_account] = match accounts {
+        [x, y] => Ok([x, y]),
+        _ => Err(ProgramError::InvalidArgument),
+    }?;
+
+    check_valid_funding_account(funding_account)?;
+    check_valid_signable_account(program_id, price_account, size_of::<pc_price_t>())?;
+
+    let mut price_data = load_checked::<pc_price_t>(price_account, cmd_args.ver_)?;
+    pyth_assert(
+        price_data.ptype_ == cmd_args.ptype_,
+        ProgramError::InvalidArgument,
+    )?;
+
+    price_data.expo_ = cmd_args.expo_;
+
+    price_data.last_slot_ = 0;
+    price_data.valid_slot_ = 0;
+    price_data.agg_.pub_slot_ = 0;
+    price_data.prev_slot_ = 0;
+    price_data.prev_price_ = 0;
+    price_data.prev_conf_ = 0;
+    price_data.prev_timestamp_ = 0;
+    sol_memset(
+        bytes_of_mut(&mut price_data.twap_),
+        0,
+        size_of::<pc_ema_t>(),
+    );
+    sol_memset(
+        bytes_of_mut(&mut price_data.twac_),
+        0,
+        size_of::<pc_ema_t>(),
+    );
+    sol_memset(
+        bytes_of_mut(&mut price_data.agg_),
+        0,
+        size_of::<pc_price_info_t>(),
+    );
+    for i in 0..(price_data.comp_.len() as usize) {
+        sol_memset(
+            bytes_of_mut(&mut price_data.comp_[i].agg_),
+            0,
+            size_of::<pc_price_info_t>(),
+        );
+        sol_memset(
+            bytes_of_mut(&mut price_data.comp_[i].latest_),
+            0,
+            size_of::<pc_price_info_t>(),
+        );
+    }
 
     Ok(SUCCESS)
 }
@@ -355,6 +480,54 @@ pub fn add_publisher(
             + price_data.num_ * try_convert::<_, u32>(size_of::<pc_price_comp>())?;
     Ok(SUCCESS)
 }
+
+/// add a publisher to a price account
+/// accounts[0] funding account                                   [signer writable]
+/// accounts[1] price account to delete the publisher from        [signer writable]
+pub fn del_publisher(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
+    instruction_data: &[u8],
+) -> OracleResult {
+    let cmd_args = load::<cmd_del_publisher_t>(instruction_data)?;
+
+    pyth_assert(
+        instruction_data.len() == size_of::<cmd_del_publisher_t>()
+            && !pubkey_is_zero(&cmd_args.pub_),
+        ProgramError::InvalidArgument,
+    )?;
+
+    let [funding_account, price_account] = match accounts {
+        [x, y] => Ok([x, y]),
+        _ => Err(ProgramError::InvalidArgument),
+    }?;
+
+    check_valid_funding_account(funding_account)?;
+    check_valid_signable_account(program_id, price_account, size_of::<pc_price_t>())?;
+
+    let mut price_data = load_checked::<pc_price_t>(price_account, cmd_args.ver_)?;
+
+    for i in 0..(price_data.num_ as usize) {
+        if pubkey_equal(&cmd_args.pub_, bytes_of(&price_data.comp_[i].pub_)) {
+            for j in i + 1..(price_data.num_ as usize) {
+                price_data.comp_[j - 1] = price_data.comp_[j];
+            }
+            price_data.num_ -= 1;
+            let current_index: usize = try_convert(price_data.num_)?;
+            sol_memset(
+                bytes_of_mut(&mut price_data.comp_[current_index]),
+                0,
+                size_of::<pc_price_comp>(),
+            );
+            price_data.size_ =
+                try_convert::<_, u32>(size_of::<pc_price_t>() - size_of_val(&price_data.comp_))?
+                    + price_data.num_ * try_convert::<_, u32>(size_of::<pc_price_comp>())?;
+            return Ok(SUCCESS);
+        }
+    }
+    Err(ProgramError::InvalidArgument)
+}
+
 pub fn add_product(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
@@ -545,6 +718,14 @@ fn check_valid_fresh_account(account: &AccountInfo) -> Result<(), ProgramError> 
     pyth_assert(
         valid_fresh_account(account),
         OracleError::InvalidFreshAccount.into(),
+    )
+}
+
+// Check that an exponent is within the range of permitted exponents for price accounts.
+fn check_exponent_range(expo: i32) -> Result<(), ProgramError> {
+    pyth_assert(
+        expo >= -(PC_MAX_NUM_DECIMALS as i32) && expo <= PC_MAX_NUM_DECIMALS as i32,
+        ProgramError::InvalidArgument,
     )
 }
 

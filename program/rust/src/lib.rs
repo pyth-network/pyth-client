@@ -17,10 +17,7 @@ mod utils;
 mod tests;
 
 use crate::c_oracle_header::SUCCESSFULLY_UPDATED_AGGREGATE;
-use crate::error::{
-    OracleError,
-    OracleResult,
-};
+use crate::error::OracleError;
 
 use crate::log::{
     post_log,
@@ -29,7 +26,6 @@ use crate::log::{
 use processor::process_instruction;
 
 use solana_program::entrypoint::deserialize;
-use solana_program::program_error::ProgramError;
 use solana_program::{
     custom_heap_default,
     custom_panic_default,
@@ -52,31 +48,6 @@ use solana_program::{
 //the only limitation of our set up is that we can not unit test in rust, anything that calls
 //a c function. Though we can test functions that use constants/types defined in oracle.h
 
-//do not link with C during unit tests (which are built in native architecture, unlike libpyth.o)
-#[cfg(target_arch = "bpf")]
-#[link(name = "cpyth")]
-extern "C" {
-    fn c_entrypoint(input: *mut u8) -> u64;
-}
-
-//make the C entrypoint a no-op when running cargo test
-// Missing safety doc OK because this is just a no-op
-#[cfg(not(target_arch = "bpf"))]
-#[allow(clippy::missing_safety_doc)]
-pub unsafe extern "C" fn c_entrypoint(_input: *mut u8) -> u64 {
-    0 //SUCCESS value
-}
-
-pub fn c_entrypoint_wrapper(input: *mut u8) -> OracleResult {
-    //Throwing an exception from C into Rust is undefined behavior
-    //This seems to be the best we can do
-    match unsafe { c_entrypoint(input) } {
-        0 => Ok(0), // Success
-        SUCCESSFULLY_UPDATED_AGGREGATE => Ok(SUCCESSFULLY_UPDATED_AGGREGATE),
-        2 => Err(ProgramError::InvalidArgument), //2 is ERROR_INVALID_ARGUMENT in solana_sdk.h
-        _ => Err(OracleError::UnknownCError.into()),
-    }
-}
 
 #[no_mangle]
 pub extern "C" fn entrypoint(input: *mut u8) -> u64 {
@@ -86,7 +57,7 @@ pub extern "C" fn entrypoint(input: *mut u8) -> u64 {
         return error.into();
     }
 
-    let c_ret_val = match process_instruction(program_id, &accounts, instruction_data, input) {
+    let c_ret_val = match process_instruction(program_id, &accounts, instruction_data) {
         Err(error) => error.into(),
         Ok(success_status) => success_status,
     };
