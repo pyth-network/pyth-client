@@ -36,6 +36,13 @@ pub trait Tracker<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHO
         current_time: i64,
         current_conf: u64,
     ) -> Result<(), ProgramError>;
+    /// returns the minimum number of entries that needs to be added
+    /// to the current entry of the time_machine so that the following two
+    /// conditions are satisfied
+    /// 1. after adding the output, the new current entry has the same offset as if
+    ///     the price was constantly updating
+    /// 2. any entry that would have been passed through during this time interval, would be
+    ///     passed through if we skip one entry at a time the number that this outputs
     fn get_num_skipped_entries_capped(
         prev_time: i64,
         current_time: i64,
@@ -50,6 +57,7 @@ pub trait Tracker<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHO
         }
         Ok(num_skiped_entries)
     }
+    ///gets the index of the next entry
     fn get_next_entr(current_entry: usize) -> usize {
         (current_entry + 1) % NUM_ENTRIES
     }
