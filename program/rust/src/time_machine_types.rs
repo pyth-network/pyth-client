@@ -12,7 +12,7 @@ use bytemuck::{
     Zeroable,
 };
 use solana_program::msg;
-use solana_program::program_error::ProgramError;
+use std::cmp;
 
 //To make it easy to change the types to allow for more usefull
 //running sums if needed
@@ -20,11 +20,13 @@ use {
     i64 as SignedTrackerRunningSum,
     u64 as UnsignedTrackerRunningSum,
 };
+//multiply by this to make up for errors that result when dividing integers
+pub const SMA_TRACKER_PRECISION_MULTIPLIER: i64 = 10;
 
 
 pub trait Tracker<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64> {
     ///initializes a zero initialized tracker
-    fn initialize(&mut self) -> Result<(), ProgramError>;
+    fn initialize(&mut self) -> Result<(), OracleError>;
 
     ///add a new price to the tracker
     fn add_price(
@@ -32,10 +34,10 @@ pub trait Tracker<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHO
         prev_time: i64,
         prev_price: i64,
         prev_conf: u64,
-        current_price: i64,
         current_time: i64,
+        current_price: i64,
         current_conf: u64,
-    ) -> Result<(), ProgramError>;
+    ) -> Result<(), OracleError>;
     /// returns the minimum number of entries that needs to be added
     /// to the current entry of the time_machine so that the following two
     /// conditions are satisfied
@@ -60,7 +62,7 @@ pub trait Tracker<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHO
         Ok(num_skiped_entries)
     }
     ///gets the index of the next entry
-    fn get_next_entr(current_entry: usize) -> usize {
+    fn get_next_entry(current_entry: usize) -> usize {
         (current_entry + 1) % NUM_ENTRIES
     }
 }
@@ -71,6 +73,7 @@ pub trait Tracker<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHO
 /// each tracking time weighted for GRANUALITY seconds periods.
 ///The prices are assumed to be provided under some fixed point representation, and the computation
 /// gurantees accuracy up to the last decimal digit in the fixed point representation.
+/// Assumes THRESHOLD < GRANUALITY
 pub struct SmaTracker<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64> {
     valid_entry_counter:        u64, // is incremented everytime we add a valid entry
     max_update_time:            i64, // maximum time between two updates in the current entry.
@@ -83,6 +86,155 @@ pub struct SmaTracker<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THR
     max_observed_entry_abs_val: u64,   /* used to ensure that there are no overflows when
                                         * looking at running sum diffs */
     entry_validity:             [u8; NUM_ENTRIES], //entry validity
+}
+
+impl<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
+    SmaTracker<GRANUALITY, NUM_ENTRIES, THRESHOLD>
+{
+    ///invalidates current_entry, and increments self.current_entry num_entries times
+    fn invaldate_following_entries(&mut self, num_entries: usize) {
+        for _ in 0..num_entries {
+            self.entry_validity[self.current_entry] = 0;
+            self.current_entry = Self::get_next_entry(self.current_entry);
+        }
+    }
+    ///assumes that prev_time and current_time have one multiple of granualitty between them, and
+    /// that prev_time != current_time finds the weighted average of value on that multiple
+    /// based on prev_value and current_value, returns that and the time before the boarder
+    fn interpolate_around_entry_endpoint(
+        prev_time: i64,
+        prev_value: i64,
+        current_time: i64,
+        current_value: i64,
+    ) -> (i64, i64) {
+        let pre_border_time = (GRANUALITY - prev_time) % GRANUALITY;
+        let post_border_time = current_time % GRANUALITY;
+        (
+            (prev_value * post_border_time + current_value * pre_border_time)
+                / (current_time + current_value),
+            pre_border_time,
+        )
+    }
+}
+
+impl<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
+    Tracker<GRANUALITY, NUM_ENTRIES, THRESHOLD> for SmaTracker<GRANUALITY, NUM_ENTRIES, THRESHOLD>
+{
+    fn initialize(&mut self) -> Result<(), OracleError> {
+        //ensure that the first entry is invalid
+        self.max_update_time = THRESHOLD;
+        Ok(())
+    }
+
+    ///add a new price to the tracker
+    fn add_price(
+        &mut self,
+        prev_time: i64,
+        prev_price: i64,
+        prev_conf: u64,
+        current_time: i64,
+        current_price: i64,
+        current_conf: u64,
+    ) -> Result<(), OracleError> {
+        //multiply by precision multiplier so that our entry aggregated can be rounded to have
+        //the same accuracy as user input
+        let inflated_new_price = current_price * SMA_TRACKER_PRECISION_MULTIPLIER;
+        let inflated_old_price = prev_price * SMA_TRACKER_PRECISION_MULTIPLIER;
+        let inflated_new_conf =
+            current_conf * try_convert::<i64, u64>(SMA_TRACKER_PRECISION_MULTIPLIER)?;
+        let inflated_old_conf =
+            prev_conf * try_convert::<i64, u64>(SMA_TRACKER_PRECISION_MULTIPLIER)?;
+        let avg_conf = (inflated_old_conf + inflated_new_conf) / 2;
+        let avg_price = (inflated_old_price + inflated_new_price) / 2;
+        let update_time = current_time - prev_time;
+        self.max_update_time = cmp::max(self.max_update_time, update_time);
+        let num_skipped_entries = Self::get_num_skipped_entries_capped(prev_time, current_time)?;
+
+        match num_skipped_entries {
+            0 => {
+                //same entry
+                self.running_price[self.current_entry] +=
+                    try_convert::<i64, SignedTrackerRunningSum>(update_time * avg_price)?;
+                self.running_confidence[self.current_entry] +=
+                    try_convert::<u64, UnsignedTrackerRunningSum>(
+                        try_convert::<i64, u64>(update_time)? * avg_conf,
+                    )?;
+                //since price is always greater than confidence, it is sufficient to look at the
+                // price we also look at the average because it is the value that
+                // gets multiplied with the number of seconds
+                self.max_observed_entry_abs_val =
+                    cmp::max(try_convert(avg_price)?, self.max_observed_entry_abs_val);
+            }
+            1 => {
+                let next_entry = Self::get_next_entry(self.current_entry);
+                self.running_price[next_entry] = self.running_price[self.current_entry];
+                self.running_confidence[next_entry] = self.running_confidence[self.current_entry];
+
+                //update prince
+                let (border_price, pre_border_time) = Self::interpolate_around_entry_endpoint(
+                    prev_time,
+                    inflated_old_price,
+                    current_time,
+                    inflated_new_price,
+                );
+                self.running_price[self.current_entry] +=
+                    try_convert::<i64, SignedTrackerRunningSum>(
+                        pre_border_time * (border_price + current_price) / 2,
+                    )?;
+
+                self.max_observed_entry_abs_val = cmp::max(
+                    try_convert((border_price + current_price) / 2)?,
+                    self.max_observed_entry_abs_val,
+                );
+
+                //update confidence
+                let (border_conf, pre_border_time) = Self::interpolate_around_entry_endpoint(
+                    prev_time,
+                    try_convert(inflated_old_conf)?,
+                    current_time,
+                    try_convert(inflated_new_conf)?,
+                );
+                self.running_confidence[self.current_entry] +=
+                    try_convert::<i64, UnsignedTrackerRunningSum>(
+                        pre_border_time * (border_conf + try_convert::<u64, i64>(prev_conf)?) / 2,
+                    )?;
+
+                //update current entry validity
+                self.entry_validity[self.current_entry] = if self.max_update_time >= THRESHOLD {
+                    0
+                } else {
+                    1
+                };
+
+                //update max_update_time
+                self.max_update_time = update_time;
+
+
+                //move to next entry
+                self.current_entry = next_entry;
+
+                //update next entry price and cofidence
+
+                self.running_price[self.current_entry] +=
+                    try_convert::<i64, SignedTrackerRunningSum>(update_time * avg_price)?;
+                self.running_confidence[self.current_entry] +=
+                    try_convert::<u64, UnsignedTrackerRunningSum>(
+                        try_convert::<i64, u64>(update_time)? * avg_conf,
+                    )?;
+                //since price is always greater than confidence, it is sufficient to look at the
+                // price we also look at the average because it is the value that
+                // gets multiplied with the number of seconds
+                self.max_observed_entry_abs_val =
+                    cmp::max(try_convert(avg_price)?, self.max_observed_entry_abs_val);
+            }
+            _ => {
+                //invalidate all the entries in your way and head
+                //this is ok because THRESHOLD < Granuality
+                self.invaldate_following_entries(num_skipped_entries);
+            }
+        }
+        Ok(())
+    }
 }
 
 
