@@ -26,11 +26,11 @@ typedef struct pc_qset
 // initialize quote-set temporary data in heap area
 static pc_qset_t *qset_new( int expo )
 {
-  // allocate off heap
+  // allocate off heap, this one is tricky because heap allocation happens differently in solana world and in local testing world
   #ifdef rust_tests
-  pc_qset_t *qs = (pc_qset_t*)malloc(sizeof(pc_qset_t));
+  pc_qset_t *qs = (pc_qset_t*)malloc(sizeof(pc_qset_t)); // allocate in normal heap
   #else
-  pc_qset_t *qs = (pc_qset_t*)PC_HEAP_START;
+  pc_qset_t *qs = (pc_qset_t*)PC_HEAP_START; // allocate at the solana heap address
   #endif
 
   // sqrt of numbers 1 to 25 for decaying conf. interval based on slot delay
