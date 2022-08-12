@@ -1,7 +1,7 @@
 /// The goal of this file is to provide the upd_aggregate function to local rust tests
 
-/// The heap address PC_HEAP_START is different on solana runtime and locally, so here we need to allocate some heap space
-/// When compiling to bpf, PC_HEAP_START is provided by <solana.h>
+/// We need to allocate some heap space for upd_aggregate
+/// When compiling for the solana runtime, the heap space is preallocated and PC_HEAP_START is provided by <solana.h>
 char heap_start[8192];
 #define PC_HEAP_START (heap_start)
 #define static_assert _Static_assert
