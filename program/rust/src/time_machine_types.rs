@@ -6,6 +6,7 @@ use crate::c_oracle_header::{
     PC_PRICE_T_COMP_OFFSET,
 };
 use crate::error::OracleError;
+use crate::utils::try_convert;
 use bytemuck::{
     Pod,
     Zeroable,
@@ -35,10 +36,19 @@ pub trait Tracker<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHO
         current_time: i64,
         current_conf: u64,
     ) -> Result<(), ProgramError>;
-    fn get_num_skipped_entries(prev_time: i64, current_time: i64) -> i64 {
+    fn get_num_skipped_entries_capped(
+        prev_time: i64,
+        current_time: i64,
+    ) -> Result<usize, OracleError> {
         let time_since_begining_of_current_entry =
             (prev_time % GRANUALITY) + current_time - prev_time;
-        time_since_begining_of_current_entry / GRANUALITY
+        let mut num_skiped_entries: usize =
+            try_convert(time_since_begining_of_current_entry / GRANUALITY)?;
+        if num_skiped_entries >= NUM_ENTRIES {
+            num_skiped_entries %= NUM_ENTRIES;
+            num_skiped_entries += NUM_ENTRIES;
+        }
+        Ok(num_skiped_entries)
     }
     fn get_next_entr(current_entry: usize) -> usize {
         (current_entry + 1) % NUM_ENTRIES
