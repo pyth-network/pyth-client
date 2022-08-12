@@ -91,3 +91,9 @@ impl AccountSetup {
         );
     }
 }
+
+pub fn update_clock_slot(clock_account: &mut AccountInfo, slot: u64) {
+    let mut clock_data = clock::Clock::from_account_info(clock_account).unwrap();
+    clock_data.slot = slot;
+    clock_data.to_account_info(clock_account);
+}

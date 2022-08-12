@@ -82,13 +82,13 @@ const PRICE_ACCOUNT_SIZE: usize = size_of::<PriceAccountWrapper>();
 #[cfg(target_arch = "bpf")]
 #[link(name = "cpyth")]
 extern "C" {
-    fn c_upd_aggregate(_input: *mut u8, clock_slot: u64, clock_timestamp: i64) -> bool;
+    pub fn c_upd_aggregate(_input: *mut u8, clock_slot: u64, clock_timestamp: i64) -> bool;
 }
 
 #[cfg(not(target_arch = "bpf"))]
 #[link(name = "cpythtest")]
 extern "C" {
-    fn c_upd_aggregate(_input: *mut u8, clock_slot: u64, clock_timestamp: i64) -> bool;
+    pub fn c_upd_aggregate(_input: *mut u8, clock_slot: u64, clock_timestamp: i64) -> bool;
 }
 
 fn send_lamports<'a>(
@@ -320,7 +320,7 @@ pub fn upd_price(
     Ok(SUCCESS)
 }
 
-pub fn upd_price_no_fail(
+pub fn upd_price_no_fail_on_error(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
     instruction_data: &[u8],

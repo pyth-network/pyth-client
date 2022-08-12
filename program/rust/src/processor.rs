@@ -35,7 +35,7 @@ use crate::rust_oracle::{
     resize_price_account,
     set_min_pub,
     upd_price,
-    upd_price_no_fail,
+    upd_price_no_fail_on_error,
     upd_product,
 };
 
@@ -63,7 +63,7 @@ pub fn process_instruction(
             upd_price(program_id, accounts, instruction_data)
         }
         command_t_e_cmd_upd_price_no_fail_on_error => {
-            upd_price_no_fail(program_id, accounts, instruction_data)
+            upd_price_no_fail_on_error(program_id, accounts, instruction_data)
         }
         command_t_e_cmd_resize_price_account => {
             resize_price_account(program_id, accounts, instruction_data)

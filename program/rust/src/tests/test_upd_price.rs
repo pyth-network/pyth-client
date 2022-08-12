@@ -1,8 +1,5 @@
-use solana_program::account_info::AccountInfo;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
-use solana_program::sysvar::clock::Clock;
-use solana_program::sysvar::Sysvar;
 use std::mem::size_of;
 
 use crate::c_oracle_header::{
@@ -20,7 +17,10 @@ use crate::deserialize::{
     load_mut,
 };
 use crate::rust_oracle::upd_price;
-use crate::tests::test_utils::AccountSetup;
+use crate::tests::test_utils::{
+    update_clock_slot,
+    AccountSetup,
+};
 use crate::utils::pubkey_assign;
 #[test]
 fn test_upd_price() {
@@ -266,12 +266,6 @@ fn test_upd_price() {
         assert_eq!(price_data.agg_.price_, 81);
         assert_eq!(price_data.agg_.status_, PC_STATUS_UNKNOWN);
     }
-}
-
-fn update_clock_slot(clock_account: &mut AccountInfo, slot: u64) {
-    let mut clock_data = Clock::from_account_info(clock_account).unwrap();
-    clock_data.slot = slot;
-    clock_data.to_account_info(clock_account);
 }
 
 // Create an upd_price instruction that sets the product metadata to strings
