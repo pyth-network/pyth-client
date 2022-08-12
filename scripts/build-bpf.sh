@@ -30,13 +30,14 @@ export V="${V:-1}"
 make clean 
 make  "${@:2}" 
 make cpyth 
+make cpythtest
 rm ./target/*-keypair.json
 
 
 #build Rust and link it with C
 cd "${PYTH_DIR}"
 cargo clean
-cargo test
+cargo test-bpf
 cargo clean
 cargo build-bpf
 
