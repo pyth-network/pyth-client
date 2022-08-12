@@ -11,7 +11,7 @@ use crate::c_oracle_header::{
     PC_VERSION,
 };
 use crate::deserialize::{
-    initialize_checked,
+    initialize_pyth_account_checked,
     load_checked,
     load_mut,
 };
@@ -29,7 +29,7 @@ fn test_set_min_pub() {
 
     let mut price_setup = AccountSetup::new::<pc_price_t>(&program_id);
     let price_account = price_setup.to_account_info();
-    initialize_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
+    initialize_pyth_account_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
 
     assert_eq!(get_min_pub(&price_account), Ok(0));
 

@@ -11,7 +11,7 @@ use crate::c_oracle_header::{
     PC_VERSION,
 };
 use crate::deserialize::{
-    initialize_checked,
+    initialize_pyth_account_checked,
     load_checked,
 };
 use crate::rust_oracle::init_price;
@@ -57,7 +57,7 @@ fn test_init_price() {
         Err(ProgramError::InvalidArgument)
     );
 
-    initialize_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
+    initialize_pyth_account_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
     {
         let mut price_data = load_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
         price_data.ptype_ = ptype;

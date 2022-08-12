@@ -47,7 +47,8 @@ use crate::c_oracle_header::{
     SUCCESSFULLY_UPDATED_AGGREGATE,
 };
 use crate::deserialize::{
-    initialize_checked, //TODO: This has a confusingly similar name to a Solana sdk function
+    initialize_pyth_account_checked, /* TODO: This has a confusingly similar name to a Solana
+                                      * sdk function */
     load,
     load_account_as_mut,
     load_checked,
@@ -193,7 +194,7 @@ pub fn init_mapping(
 
     // Initialize by setting to zero again (just in case) and populating the account header
     let hdr = load::<cmd_hdr_t>(instruction_data)?;
-    initialize_checked::<pc_map_table_t>(fresh_mapping_account, hdr.ver_)?;
+    initialize_pyth_account_checked::<pc_map_table_t>(fresh_mapping_account, hdr.ver_)?;
 
     Ok(SUCCESS)
 }
@@ -220,7 +221,7 @@ pub fn add_mapping(
         ProgramError::InvalidArgument,
     )?;
 
-    initialize_checked::<pc_map_table_t>(next_mapping, hdr.ver_)?;
+    initialize_pyth_account_checked::<pc_map_table_t>(next_mapping, hdr.ver_)?;
     pubkey_assign(&mut cur_mapping.next_, &next_mapping.key.to_bytes());
 
     Ok(SUCCESS)
@@ -256,7 +257,8 @@ pub fn add_price(
 
     let mut product_data = load_checked::<pc_prod_t>(product_account, cmd_args.ver_)?;
 
-    let mut price_data = initialize_checked::<pc_price_t>(price_account, cmd_args.ver_)?;
+    let mut price_data =
+        initialize_pyth_account_checked::<pc_price_t>(price_account, cmd_args.ver_)?;
     price_data.expo_ = cmd_args.expo_;
     price_data.ptype_ = cmd_args.ptype_;
     pubkey_assign(&mut price_data.prod_, &product_account.key.to_bytes());
@@ -456,7 +458,7 @@ pub fn add_product(
         ProgramError::InvalidArgument,
     )?;
 
-    initialize_checked::<pc_prod_t>(new_product_account, hdr.ver_)?;
+    initialize_pyth_account_checked::<pc_prod_t>(new_product_account, hdr.ver_)?;
 
     let current_index: usize = try_convert(mapping_data.num_)?;
     pubkey_assign(

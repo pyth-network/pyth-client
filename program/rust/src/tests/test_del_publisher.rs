@@ -1,5 +1,5 @@
 use crate::deserialize::{
-    initialize_checked,
+    initialize_pyth_account_checked,
     load_checked,
     load_mut,
 };
@@ -59,7 +59,7 @@ fn test_del_publisher() {
 
     let mut price_setup = AccountSetup::new::<pc_price_t>(&program_id);
     let price_account = price_setup.to_account_info();
-    initialize_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
+    initialize_pyth_account_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
     {
         let mut price_data = load_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
         price_data.num_ = 1;

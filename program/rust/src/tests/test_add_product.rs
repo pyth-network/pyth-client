@@ -22,7 +22,7 @@ use crate::c_oracle_header::{
     PC_VERSION,
 };
 use crate::deserialize::{
-    initialize_checked,
+    initialize_pyth_account_checked,
     load_account_as,
     load_checked,
 };
@@ -48,7 +48,7 @@ fn test_add_product() {
 
     let mut mapping_setup = AccountSetup::new::<pc_map_table_t>(&program_id);
     let mapping_account = mapping_setup.to_account_info();
-    initialize_checked::<pc_map_table_t>(&mapping_account, PC_VERSION).unwrap();
+    initialize_pyth_account_checked::<pc_map_table_t>(&mapping_account, PC_VERSION).unwrap();
 
     let mut product_setup = AccountSetup::new::<pc_prod_t>(&program_id);
     let product_account = product_setup.to_account_info();
@@ -132,7 +132,7 @@ fn test_add_product() {
 
     // test fill up of mapping table
     clear_account(&mapping_account).unwrap();
-    initialize_checked::<pc_map_table_t>(&mapping_account, PC_VERSION).unwrap();
+    initialize_pyth_account_checked::<pc_map_table_t>(&mapping_account, PC_VERSION).unwrap();
 
     for i in 0..PC_MAP_TABLE_SIZE {
         clear_account(&product_account).unwrap();

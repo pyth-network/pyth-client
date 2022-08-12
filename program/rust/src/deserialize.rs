@@ -79,7 +79,7 @@ pub fn load_checked<'a, T: PythAccount>(
     load_account_as_mut::<T>(account)
 }
 
-pub fn initialize_checked<'a, T: PythAccount>(
+pub fn initialize_pyth_account_checked<'a, T: PythAccount>(
     account: &'a AccountInfo,
     version: u32,
 ) -> Result<RefMut<'a, T>, ProgramError> {

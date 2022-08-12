@@ -15,7 +15,7 @@ use crate::c_oracle_header::{
     PC_VERSION,
 };
 use crate::deserialize::{
-    initialize_checked,
+    initialize_pyth_account_checked,
     load_checked,
 };
 use crate::rust_oracle::{
@@ -51,7 +51,7 @@ fn test_add_price() {
 
     let mut mapping_setup = AccountSetup::new::<pc_map_table_t>(&program_id);
     let mapping_account = mapping_setup.to_account_info();
-    initialize_checked::<pc_map_table_t>(&mapping_account, PC_VERSION).unwrap();
+    initialize_pyth_account_checked::<pc_map_table_t>(&mapping_account, PC_VERSION).unwrap();
 
     let mut product_setup = AccountSetup::new::<pc_prod_t>(&program_id);
     let product_account = product_setup.to_account_info();

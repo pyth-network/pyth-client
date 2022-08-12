@@ -17,7 +17,7 @@ use crate::c_oracle_header::{
 use std::mem::size_of;
 
 use crate::deserialize::{
-    initialize_checked,
+    initialize_pyth_account_checked,
     load_checked,
 };
 use crate::rust_oracle::add_publisher;
@@ -44,7 +44,7 @@ fn test_add_publisher() {
 
     let mut price_setup = AccountSetup::new::<pc_price_t>(&program_id);
     let price_account = price_setup.to_account_info();
-    initialize_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
+    initialize_pyth_account_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
 
 
     **price_account.try_borrow_mut_lamports().unwrap() = 100;
@@ -106,7 +106,7 @@ fn test_add_publisher() {
         Err(ProgramError::InvalidArgument)
     );
 
-    initialize_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
+    initialize_pyth_account_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
 
     //Fill up price node
     for i in 0..PC_COMP_SIZE {

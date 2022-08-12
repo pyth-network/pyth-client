@@ -7,7 +7,7 @@ use crate::c_oracle_header::{
     PC_VERSION,
 };
 use crate::deserialize::{
-    initialize_checked,
+    initialize_pyth_account_checked,
     load_account_as_mut,
     load_checked,
 };
@@ -39,7 +39,7 @@ fn test_add_mapping() {
 
     let mut curr_mapping_setup = AccountSetup::new::<pc_map_table_t>(&program_id);
     let cur_mapping = curr_mapping_setup.to_account_info();
-    initialize_checked::<pc_map_table_t>(&cur_mapping, PC_VERSION).unwrap();
+    initialize_pyth_account_checked::<pc_map_table_t>(&cur_mapping, PC_VERSION).unwrap();
 
     let mut next_mapping_setup = AccountSetup::new::<pc_map_table_t>(&program_id);
     let next_mapping = next_mapping_setup.to_account_info();

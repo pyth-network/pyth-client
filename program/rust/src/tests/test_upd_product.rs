@@ -19,7 +19,7 @@ use crate::c_oracle_header::{
     PC_VERSION,
 };
 use crate::deserialize::{
-    initialize_checked,
+    initialize_pyth_account_checked,
     load_checked,
     load_mut,
 };
@@ -37,7 +37,7 @@ fn test_upd_product() {
     let mut product_setup = AccountSetup::new::<pc_prod_t>(&program_id);
     let product_account = product_setup.to_account_info();
 
-    initialize_checked::<pc_prod_t>(&product_account, PC_VERSION).unwrap();
+    initialize_pyth_account_checked::<pc_prod_t>(&product_account, PC_VERSION).unwrap();
 
     let kvs = ["foo", "barz"];
     let size = populate_instruction(&mut instruction_data, &kvs);
