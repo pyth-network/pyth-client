@@ -1,5 +1,3 @@
-use std::borrow::BorrowMut;
-use std::cell::RefMut;
 use std::mem::{
     size_of,
     size_of_val,
@@ -37,9 +35,6 @@ use crate::c_oracle_header::{
     cmd_set_min_pub_t,
     cmd_upd_price_t,
     cmd_upd_product_t,
-    command_t_e_cmd_upd_price,
-    command_t_e_cmd_upd_price_no_fail_on_error,
-    pc_acc,
     pc_ema_t,
     pc_map_table_t,
     pc_price_comp,
@@ -47,26 +42,38 @@ use crate::c_oracle_header::{
     pc_price_t,
     pc_prod_t,
     pc_pub_key_t,
-    PythAccount,
     PC_COMP_SIZE,
-    PC_MAGIC,
     PC_MAP_TABLE_SIZE,
     PC_MAX_CI_DIVISOR,
-    PC_MAX_NUM_DECIMALS,
     PC_PROD_ACC_SIZE,
     PC_PTYPE_UNKNOWN,
     PC_STATUS_UNKNOWN,
     PC_VERSION,
 };
 use crate::deserialize::{
+    initialize_pyth_account_checked, /* TODO: This has a confusingly similar name to a Solana
+                                      * sdk function */
     load,
-    load_account_as,
     load_account_as_mut,
+    load_checked,
 };
 use crate::error::OracleResult;
 use crate::OracleError;
 
-use crate::utils::pyth_assert;
+use crate::utils::{
+    check_exponent_range,
+    check_valid_fresh_account,
+    check_valid_funding_account,
+    check_valid_signable_account,
+    check_valid_writable_account,
+    is_component_update,
+    pubkey_assign,
+    pubkey_equal,
+    pubkey_is_zero,
+    pyth_assert,
+    read_pc_str_t,
+    try_convert,
+};
 
 const PRICE_T_SIZE: usize = size_of::<pc_price_t>();
 const PRICE_ACCOUNT_SIZE: usize = size_of::<PriceAccountWrapper>();
@@ -180,7 +187,7 @@ pub fn init_mapping(
 
     // Initialize by setting to zero again (just in case) and populating the account header
     let hdr = load::<cmd_hdr_t>(instruction_data)?;
-    initialize_checked::<pc_map_table_t>(fresh_mapping_account, hdr.ver_)?;
+    initialize_pyth_account_checked::<pc_map_table_t>(fresh_mapping_account, hdr.ver_)?;
 
     Ok(SUCCESS)
 }
@@ -207,7 +214,7 @@ pub fn add_mapping(
         ProgramError::InvalidArgument,
     )?;
 
-    initialize_checked::<pc_map_table_t>(next_mapping, hdr.ver_)?;
+    initialize_pyth_account_checked::<pc_map_table_t>(next_mapping, hdr.ver_)?;
     pubkey_assign(&mut cur_mapping.next_, &next_mapping.key.to_bytes());
 
     Ok(SUCCESS)
@@ -355,7 +362,8 @@ pub fn add_price(
 
     let mut product_data = load_checked::<pc_prod_t>(product_account, cmd_args.ver_)?;
 
-    let mut price_data = initialize_checked::<pc_price_t>(price_account, cmd_args.ver_)?;
+    let mut price_data =
+        initialize_pyth_account_checked::<pc_price_t>(price_account, cmd_args.ver_)?;
     price_data.expo_ = cmd_args.expo_;
     price_data.ptype_ = cmd_args.ptype_;
     pubkey_assign(&mut price_data.prod_, &product_account.key.to_bytes());
@@ -555,7 +563,7 @@ pub fn add_product(
         ProgramError::InvalidArgument,
     )?;
 
-    initialize_checked::<pc_prod_t>(new_product_account, hdr.ver_)?;
+    initialize_pyth_account_checked::<pc_prod_t>(new_product_account, hdr.ver_)?;
 
     let current_index: usize = try_convert(mapping_data.num_)?;
     pubkey_assign(
@@ -654,162 +662,4 @@ pub fn set_min_pub(
     price_account_data.min_pub_ = cmd.min_pub_;
 
     Ok(SUCCESS)
-}
-
-fn valid_funding_account(account: &AccountInfo) -> bool {
-    account.is_signer && account.is_writable
-}
-
-fn check_valid_funding_account(account: &AccountInfo) -> Result<(), ProgramError> {
-    pyth_assert(
-        valid_funding_account(account),
-        OracleError::InvalidFundingAccount.into(),
-    )
-}
-
-fn valid_writable_account(program_id: &Pubkey, account: &AccountInfo, minimum_size: usize) -> bool {
-    account.is_writable
-        && account.owner == program_id
-        && account.data_len() >= minimum_size
-        && Rent::default().is_exempt(account.lamports(), account.data_len())
-}
-
-fn check_valid_writable_account(
-    program_id: &Pubkey,
-    account: &AccountInfo,
-    minimum_size: usize,
-) -> Result<(), ProgramError> {
-    pyth_assert(
-        valid_writable_account(program_id, account, minimum_size),
-        OracleError::InvalidSignableAccount.into(),
-    )
-}
-
-fn valid_signable_account(program_id: &Pubkey, account: &AccountInfo, minimum_size: usize) -> bool {
-    account.is_signer
-        && account.is_writable
-        && account.owner == program_id
-        && account.data_len() >= minimum_size
-        && Rent::default().is_exempt(account.lamports(), account.data_len())
-}
-
-fn check_valid_signable_account(
-    program_id: &Pubkey,
-    account: &AccountInfo,
-    minimum_size: usize,
-) -> Result<(), ProgramError> {
-    pyth_assert(
-        valid_signable_account(program_id, account, minimum_size),
-        OracleError::InvalidSignableAccount.into(),
-    )
-}
-
-/// Returns `true` if the `account` is fresh, i.e., its data can be overwritten.
-/// Use this check to prevent accidentally overwriting accounts whose data is already populated.
-fn valid_fresh_account(account: &AccountInfo) -> bool {
-    let pyth_acc = load_account_as::<pc_acc>(account);
-    match pyth_acc {
-        Ok(pyth_acc) => pyth_acc.magic_ == 0 && pyth_acc.ver_ == 0,
-        Err(_) => false,
-    }
-}
-
-fn check_valid_fresh_account(account: &AccountInfo) -> Result<(), ProgramError> {
-    pyth_assert(
-        valid_fresh_account(account),
-        OracleError::InvalidFreshAccount.into(),
-    )
-}
-
-// Check that an exponent is within the range of permitted exponents for price accounts.
-fn check_exponent_range(expo: i32) -> Result<(), ProgramError> {
-    pyth_assert(
-        expo >= -(PC_MAX_NUM_DECIMALS as i32) && expo <= PC_MAX_NUM_DECIMALS as i32,
-        ProgramError::InvalidArgument,
-    )
-}
-
-/// Sets the data of account to all-zero
-pub fn clear_account(account: &AccountInfo) -> Result<(), ProgramError> {
-    let mut data = account
-        .try_borrow_mut_data()
-        .map_err(|_| ProgramError::InvalidArgument)?;
-    let length = data.len();
-    sol_memset(data.borrow_mut(), 0, length);
-    Ok(())
-}
-
-pub fn load_checked<'a, T: PythAccount>(
-    account: &'a AccountInfo,
-    version: u32,
-) -> Result<RefMut<'a, T>, ProgramError> {
-    {
-        let account_header = load_account_as::<pc_acc>(account)?;
-        pyth_assert(
-            account_header.magic_ == PC_MAGIC
-                && account_header.ver_ == version
-                && account_header.type_ == T::ACCOUNT_TYPE,
-            ProgramError::InvalidArgument,
-        )?;
-    }
-
-    load_account_as_mut::<T>(account)
-}
-
-pub fn initialize_checked<'a, T: PythAccount>(
-    account: &'a AccountInfo,
-    version: u32,
-) -> Result<RefMut<'a, T>, ProgramError> {
-    clear_account(account)?;
-
-    {
-        let mut account_header = load_account_as_mut::<pc_acc>(account)?;
-        account_header.magic_ = PC_MAGIC;
-        account_header.ver_ = version;
-        account_header.type_ = T::ACCOUNT_TYPE;
-        account_header.size_ = T::INITIAL_SIZE;
-    }
-
-    load_account_as_mut::<T>(account)
-}
-
-// Assign pubkey bytes from source to target, fails if source is not 32 bytes
-pub fn pubkey_assign(target: &mut pc_pub_key_t, source: &[u8]) {
-    unsafe { target.k1_.copy_from_slice(source) }
-}
-
-pub fn pubkey_is_zero(key: &pc_pub_key_t) -> bool {
-    return unsafe { key.k8_.iter().all(|x| *x == 0) };
-}
-
-pub fn pubkey_equal(target: &pc_pub_key_t, source: &[u8]) -> bool {
-    unsafe { target.k1_ == *source }
-}
-
-/// Convert `x: T` into a `U`, returning the appropriate `OracleError` if the conversion fails.
-pub fn try_convert<T, U: TryFrom<T>>(x: T) -> Result<U, OracleError> {
-    // Note: the error here assumes we're only applying this function to integers right now.
-    U::try_from(x).map_err(|_| OracleError::IntegerCastingError)
-}
-
-pub fn is_component_update(cmd_args: &cmd_upd_price_t) -> Result<bool, ProgramError> {
-    Ok(
-        try_convert::<_, u32>(cmd_args.cmd_)? == command_t_e_cmd_upd_price
-            || try_convert::<_, u32>(cmd_args.cmd_)? == command_t_e_cmd_upd_price_no_fail_on_error,
-    )
-}
-
-/// Read a `pc_str_t` from the beginning of `source`. Returns a slice of `source` containing
-/// the bytes of the `pc_str_t`.
-pub fn read_pc_str_t(source: &[u8]) -> Result<&[u8], ProgramError> {
-    if source.is_empty() {
-        Err(ProgramError::InvalidArgument)
-    } else {
-        let tag_len: usize = try_convert(source[0])?;
-        if tag_len + 1 > source.len() {
-            Err(ProgramError::InvalidArgument)
-        } else {
-            Ok(&source[..(1 + tag_len)])
-        }
-    }
 }

@@ -1,9 +1,9 @@
-use crate::deserialize::load_mut;
-use crate::rust_oracle::{
-    del_publisher,
-    pubkey_assign,
-    pubkey_is_zero,
+use crate::deserialize::{
+    initialize_pyth_account_checked,
+    load_checked,
+    load_mut,
 };
+use crate::rust_oracle::del_publisher;
 use crate::tests::test_utils::AccountSetup;
 use bytemuck::bytes_of;
 use solana_program::pubkey::Pubkey;
@@ -19,13 +19,12 @@ use crate::c_oracle_header::{
     PC_STATUS_TRADING,
     PC_VERSION,
 };
-use std::mem::size_of;
-
-use crate::rust_oracle::{
-    initialize_checked,
-    load_checked,
+use crate::utils::{
+    pubkey_assign,
     pubkey_equal,
+    pubkey_is_zero,
 };
+use std::mem::size_of;
 
 #[test]
 fn test_del_publisher() {
@@ -60,7 +59,7 @@ fn test_del_publisher() {
 
     let mut price_setup = AccountSetup::new::<pc_price_t>(&program_id);
     let price_account = price_setup.to_account_info();
-    initialize_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
+    initialize_pyth_account_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
     {
         let mut price_data = load_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
         price_data.num_ = 1;

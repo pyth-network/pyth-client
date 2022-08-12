@@ -12,13 +12,13 @@ use crate::c_oracle_header::{
     PC_VERSION,
 };
 
-use crate::rust_oracle::{
-    initialize_checked,
+use crate::deserialize::{
+    initialize_pyth_account_checked,
     load_checked,
-    pubkey_assign,
-    upd_price,
 };
+use crate::rust_oracle::upd_price;
 use crate::tests::test_utils::AccountSetup;
+use crate::utils::pubkey_assign;
 #[test]
 fn test_upd_price() {
     let cmd: cmd_upd_price_t = cmd_upd_price_t {
@@ -41,7 +41,7 @@ fn test_upd_price() {
     let mut price_setup = AccountSetup::new::<pc_price_t>(&program_id);
     let mut price_account = price_setup.to_account_info();
     price_account.is_signer = false;
-    initialize_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
+    initialize_pyth_account_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
 
     {
         let mut price_data = load_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();

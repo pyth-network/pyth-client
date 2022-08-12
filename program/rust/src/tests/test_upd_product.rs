@@ -1,7 +1,10 @@
 use std::mem::size_of;
 
-use crate::rust_oracle::try_convert;
 use crate::tests::test_utils::AccountSetup;
+use crate::utils::{
+    read_pc_str_t,
+    try_convert,
+};
 use solana_program::account_info::AccountInfo;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
@@ -15,13 +18,12 @@ use crate::c_oracle_header::{
     PC_PROD_ACC_SIZE,
     PC_VERSION,
 };
-use crate::deserialize::load_mut;
-use crate::rust_oracle::{
-    initialize_checked,
+use crate::deserialize::{
+    initialize_pyth_account_checked,
     load_checked,
-    read_pc_str_t,
-    upd_product,
+    load_mut,
 };
+use crate::rust_oracle::upd_product;
 
 #[test]
 fn test_upd_product() {
@@ -35,7 +37,7 @@ fn test_upd_product() {
     let mut product_setup = AccountSetup::new::<pc_prod_t>(&program_id);
     let product_account = product_setup.to_account_info();
 
-    initialize_checked::<pc_prod_t>(&product_account, PC_VERSION).unwrap();
+    initialize_pyth_account_checked::<pc_prod_t>(&product_account, PC_VERSION).unwrap();
 
     let kvs = ["foo", "barz"];
     let size = populate_instruction(&mut instruction_data, &kvs);
