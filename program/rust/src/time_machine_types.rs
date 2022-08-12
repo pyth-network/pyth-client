@@ -13,6 +13,65 @@ use bytemuck::{
 use solana_program::msg;
 
 
+//To make it easy to change the types to allow for more usefull
+//running sums if needed
+use {
+    i64 as SignedTrackerRunningSum,
+    u64 as UnsignedTrackerRunningSum,
+};
+
+
+pub trait Tracker {
+    ///initializes a zero initialized tracker
+    fn initialize(&mut self) -> Result<(), OracleError>;
+
+    ///add a new price to the tracker
+    fn add_price(
+        &mut self,
+        prev_time: i64,
+        prev_price: i64,
+        prev_conf: u64,
+        current_price: i64,
+        current_time: i64,
+        current_conf: u64,
+    ) -> Result<(), OracleError>;
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+/// Represents an SMA Tracker that has NUM_ENTRIES entries
+/// each tracking time weighted for GRANUALITY seconds periods.
+///The prices are assumed to be provided under some fixed point representation, and the computation
+/// gurantees accuracy up to the last decimal digit in the fixed point representation.
+pub struct SmaTracker<const GRANUALITY: u64, const NUM_ENTRIES: usize, const THRESHOLD: u64> {
+    valid_entry_counter:        u64, // is incremented everytime we add a valid entry
+    max_update_time:            i64, // maximum time between two updates in the current entry.
+    running_price:              [SignedTrackerRunningSum; NUM_ENTRIES], /* price running time
+                                      * weighted sums */
+    running_confidence:         [UnsignedTrackerRunningSum; NUM_ENTRIES], /* confidence running
+                                                                           * time
+                                                                           * weighted sums */
+    current_entry:              usize, //the current entry
+    max_observed_entry_abs_val: u64,   /* used to ensure that there are no overflows when
+                                        * looking at running sum diffs */
+    entry_validity:             [u8; NUM_ENTRIES], //entry validity
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+/// Represents an Tick Tracker that has NUM_ENTRIES entries
+/// each tracking the last tick before every GRANUALITY seconds.
+pub struct TickTracker<const GRANUALITY: u64, const NUM_ENTRIES: usize, const THRESHOLD: u64> {
+    running_price:      [SignedTrackerRunningSum; NUM_ENTRIES], /* price running time
+                                                                 * weighted sums */
+    running_confidence: [UnsignedTrackerRunningSum; NUM_ENTRIES], /* confidence running
+                                                                   * time
+                                                                   * weighted sums */
+    current_entry:      usize,             //the current entry
+    entry_validity:     [u8; NUM_ENTRIES], //entry validity
+}
+
+
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
 /// this wraps multiple SMA and tick trackers, and includes all the state
