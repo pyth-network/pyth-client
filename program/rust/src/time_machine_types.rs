@@ -11,7 +11,7 @@ use bytemuck::{
     Zeroable,
 };
 use solana_program::msg;
-
+use solana_program::program_error::ProgramError;
 
 //To make it easy to change the types to allow for more usefull
 //running sums if needed
@@ -21,9 +21,9 @@ use {
 };
 
 
-pub trait Tracker<const GRANUALITY: u64, const NUM_ENTRIES: usize, const THRESHOLD: u64> {
+pub trait Tracker<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64> {
     ///initializes a zero initialized tracker
-    fn initialize(&mut self) -> Result<(), OracleError>;
+    fn initialize(&mut self) -> Result<(), ProgramError>;
 
     ///add a new price to the tracker
     fn add_price(
@@ -34,7 +34,15 @@ pub trait Tracker<const GRANUALITY: u64, const NUM_ENTRIES: usize, const THRESHO
         current_price: i64,
         current_time: i64,
         current_conf: u64,
-    ) -> Result<(), OracleError>;
+    ) -> Result<(), ProgramError>;
+    fn get_num_skipped_entries(prev_time: i64, current_time: i64) -> i64 {
+        let time_since_begining_of_current_entry =
+            (prev_time % GRANUALITY) + current_time - prev_time;
+        time_since_begining_of_current_entry / GRANUALITY
+    }
+    fn get_next_entr(current_entry: usize) -> usize {
+        (current_entry + 1) % NUM_ENTRIES
+    }
 }
 
 #[derive(Copy, Clone)]
@@ -43,7 +51,7 @@ pub trait Tracker<const GRANUALITY: u64, const NUM_ENTRIES: usize, const THRESHO
 /// each tracking time weighted for GRANUALITY seconds periods.
 ///The prices are assumed to be provided under some fixed point representation, and the computation
 /// gurantees accuracy up to the last decimal digit in the fixed point representation.
-pub struct SmaTracker<const GRANUALITY: u64, const NUM_ENTRIES: usize, const THRESHOLD: u64> {
+pub struct SmaTracker<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64> {
     valid_entry_counter:        u64, // is incremented everytime we add a valid entry
     max_update_time:            i64, // maximum time between two updates in the current entry.
     running_price:              [SignedTrackerRunningSum; NUM_ENTRIES], /* price running time
@@ -57,11 +65,12 @@ pub struct SmaTracker<const GRANUALITY: u64, const NUM_ENTRIES: usize, const THR
     entry_validity:             [u8; NUM_ENTRIES], //entry validity
 }
 
+
 #[derive(Copy, Clone)]
 #[repr(C)]
 /// Represents an Tick Tracker that has NUM_ENTRIES entries
 /// each tracking the last tick before every GRANUALITY seconds.
-pub struct TickTracker<const GRANUALITY: u64, const NUM_ENTRIES: usize, const THRESHOLD: u64> {
+pub struct TickTracker<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64> {
     running_price:      [SignedTrackerRunningSum; NUM_ENTRIES], /* price running time
                                                                  * weighted sums */
     running_confidence: [UnsignedTrackerRunningSum; NUM_ENTRIES], /* confidence running
