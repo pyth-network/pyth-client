@@ -41,7 +41,7 @@ fn test_upd_price_no_fail_on_error_no_fail_on_error() {
     clock_account.is_writable = false;
 
     update_clock_slot(&mut clock_account, 1);
-    populate_instruction(&mut instruction_data, Some(42), Some(9), Some(1));
+    populate_instruction(&mut instruction_data, 42, 9, 1);
 
     // We haven't permissioned the publish account for the price account
     // yet, so any update should fail silently and have no effect. The
@@ -103,7 +103,7 @@ fn test_upd_price_no_fail_on_error_no_fail_on_error() {
 
     // Invalid updates, such as publishing an update for the current slot,
     // should still fail silently and have no effect.
-    populate_instruction(&mut instruction_data, Some(55), Some(22), None);
+    populate_instruction(&mut instruction_data, 55, 22, 1);
 
     assert!(upd_price_no_fail_on_error(
         &program_id,
@@ -130,25 +130,14 @@ fn test_upd_price_no_fail_on_error_no_fail_on_error() {
 }
 
 
-// Create an upd_price_no_fail_on_error instruction that sets the product metadata to strings
-fn populate_instruction(
-    instruction_data: &mut [u8],
-    price: Option<i64>,
-    conf: Option<u64>,
-    pub_slot: Option<u64>,
-) -> () {
+// Create an upd_price_no_fail_on_error instruction with the provided parameters
+fn populate_instruction(instruction_data: &mut [u8], price: i64, conf: u64, pub_slot: u64) -> () {
     let mut cmd = load_mut::<cmd_upd_price_t>(instruction_data).unwrap();
     cmd.ver_ = PC_VERSION;
     cmd.cmd_ = command_t_e_cmd_upd_price_no_fail_on_error as i32;
     cmd.status_ = PC_STATUS_TRADING;
-    if let Some(price_) = price {
-        cmd.price_ = price_;
-    }
-    if let Some(conf_) = conf {
-        cmd.conf_ = conf_;
-    }
-    if let Some(pub_slot_) = pub_slot {
-        cmd.pub_slot_ = pub_slot_;
-    }
+    cmd.price_ = price;
+    cmd.conf_ = conf;
+    cmd.pub_slot_ = pub_slot;
     cmd.unused_ = 0;
 }

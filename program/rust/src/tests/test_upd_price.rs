@@ -25,7 +25,7 @@ use crate::utils::pubkey_assign;
 #[test]
 fn test_upd_price() {
     let mut instruction_data = [0u8; size_of::<cmd_upd_price_t>()];
-    populate_instruction(&mut instruction_data, Some(42), Some(2), Some(1));
+    populate_instruction(&mut instruction_data, 42, 2, 1);
 
     let program_id = Pubkey::new_unique();
 
@@ -77,7 +77,7 @@ fn test_upd_price() {
     }
 
     // add some prices for current slot - get rejected
-    populate_instruction(&mut instruction_data, Some(43), None, None);
+    populate_instruction(&mut instruction_data, 43, 2, 1);
 
     assert_eq!(
         upd_price(
@@ -105,7 +105,7 @@ fn test_upd_price() {
     }
 
     // add next price in new slot triggering snapshot and aggregate calc
-    populate_instruction(&mut instruction_data, Some(81), None, Some(2));
+    populate_instruction(&mut instruction_data, 81, 2, 2);
     update_clock_slot(&mut clock_account, 3);
 
     assert!(upd_price(
@@ -132,7 +132,7 @@ fn test_upd_price() {
     }
 
     // next price doesnt change but slot does
-    populate_instruction(&mut instruction_data, None, None, Some(3));
+    populate_instruction(&mut instruction_data, 81, 2, 3);
     update_clock_slot(&mut clock_account, 4);
     assert!(upd_price(
         &program_id,
@@ -158,7 +158,7 @@ fn test_upd_price() {
     }
 
     // next price doesnt change and neither does aggregate but slot does
-    populate_instruction(&mut instruction_data, None, None, Some(4));
+    populate_instruction(&mut instruction_data, 81, 2, 4);
     update_clock_slot(&mut clock_account, 5);
     assert!(upd_price(
         &program_id,
@@ -184,7 +184,7 @@ fn test_upd_price() {
     }
 
     // try to publish back-in-time
-    populate_instruction(&mut instruction_data, None, None, Some(1));
+    populate_instruction(&mut instruction_data, 81, 2, 1);
     update_clock_slot(&mut clock_account, 5);
     assert_eq!(
         upd_price(
@@ -211,7 +211,7 @@ fn test_upd_price() {
         assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
     }
 
-    populate_instruction(&mut instruction_data, Some(50), Some(6), Some(5));
+    populate_instruction(&mut instruction_data, 50, 6, 5);
     update_clock_slot(&mut clock_account, 6);
 
     // Publishing a wide CI results in a status of unknown.
@@ -241,7 +241,7 @@ fn test_upd_price() {
     }
 
     // Crank one more time and aggregate should be unknown
-    populate_instruction(&mut instruction_data, None, None, Some(6));
+    populate_instruction(&mut instruction_data, 50, 6, 6);
     update_clock_slot(&mut clock_account, 7);
 
     assert!(upd_price(
@@ -268,25 +268,14 @@ fn test_upd_price() {
     }
 }
 
-// Create an upd_price instruction that sets the product metadata to strings
-fn populate_instruction(
-    instruction_data: &mut [u8],
-    price: Option<i64>,
-    conf: Option<u64>,
-    pub_slot: Option<u64>,
-) -> () {
+// Create an upd_price instruction with the provided parameters
+fn populate_instruction(instruction_data: &mut [u8], price: i64, conf: u64, pub_slot: u64) -> () {
     let mut cmd = load_mut::<cmd_upd_price_t>(instruction_data).unwrap();
     cmd.ver_ = PC_VERSION;
     cmd.cmd_ = command_t_e_cmd_upd_price as i32;
     cmd.status_ = PC_STATUS_TRADING;
-    if let Some(price_) = price {
-        cmd.price_ = price_;
-    }
-    if let Some(conf_) = conf {
-        cmd.conf_ = conf_;
-    }
-    if let Some(pub_slot_) = pub_slot {
-        cmd.pub_slot_ = pub_slot_;
-    }
+    cmd.price_ = price;
+    cmd.conf_ = conf;
+    cmd.pub_slot_ = pub_slot;
     cmd.unused_ = 0;
 }

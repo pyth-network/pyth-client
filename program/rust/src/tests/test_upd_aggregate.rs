@@ -53,7 +53,7 @@ fn test_upd_aggregate() {
     };
 
     let mut instruction_data = [0u8; size_of::<cmd_upd_price_t>()];
-    populate_instruction(&mut instruction_data, Some(42), Some(2), Some(1));
+    populate_instruction(&mut instruction_data, 42, 2, 1);
 
     let program_id = Pubkey::new_unique();
 
@@ -264,25 +264,14 @@ fn test_upd_aggregate() {
     }
 }
 
-// Create an upd_price instruction that sets the product metadata to strings
-fn populate_instruction(
-    instruction_data: &mut [u8],
-    price: Option<i64>,
-    conf: Option<u64>,
-    pub_slot: Option<u64>,
-) -> () {
+// Create an upd_price instruction with the provided parameters
+fn populate_instruction(instruction_data: &mut [u8], price: i64, conf: u64, pub_slot: u64) -> () {
     let mut cmd = load_mut::<cmd_upd_price_t>(instruction_data).unwrap();
     cmd.ver_ = PC_VERSION;
     cmd.cmd_ = command_t_e_cmd_upd_price as i32;
     cmd.status_ = PC_STATUS_TRADING;
-    if let Some(price_) = price {
-        cmd.price_ = price_;
-    }
-    if let Some(conf_) = conf {
-        cmd.conf_ = conf_;
-    }
-    if let Some(pub_slot_) = pub_slot {
-        cmd.pub_slot_ = pub_slot_;
-    }
+    cmd.price_ = price;
+    cmd.conf_ = conf;
+    cmd.pub_slot_ = pub_slot;
     cmd.unused_ = 0;
 }
