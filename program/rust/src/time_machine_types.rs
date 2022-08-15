@@ -65,6 +65,11 @@ pub trait Tracker<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHO
     fn get_next_entry(current_entry: usize) -> usize {
         (current_entry + 1) % NUM_ENTRIES
     }
+
+    ///returns the remining time before the next multiple of GRANUALITY
+    fn get_time_to_entry_end(time: i64) -> i64 {
+        (GRANUALITY - (time % GRANUALITY)) % GRANUALITY
+    }
 }
 
 #[derive(Copy, Clone)]
@@ -97,10 +102,6 @@ impl<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
             self.entry_validity[self.current_entry] = 0;
             self.current_entry = Self::get_next_entry(self.current_entry);
         }
-    }
-    ///returns the remining time before the next multiple of GRANUALITY
-    fn get_time_to_entry_end(time: i64) -> i64 {
-        (GRANUALITY - (time % GRANUALITY)) % GRANUALITY
     }
     /// returns a weighted average of v with weights w
     fn weighted_average<
@@ -238,7 +239,7 @@ impl<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
                 )?;
             }
             _ => {
-                //invalidate all the entries in your way and head
+                //invalidate all the entries in your way
                 //this is ok because THRESHOLD < Granuality
                 self.invaldate_following_entries(num_skipped_entries);
                 self.max_update_time = update_time;
@@ -254,13 +255,73 @@ impl<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
 /// Represents an Tick Tracker that has NUM_ENTRIES entries
 /// each tracking the last tick before every GRANUALITY seconds.
 pub struct TickTracker<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64> {
-    running_price:      [SignedTrackerRunningSum; NUM_ENTRIES], /* price running time
-                                                                 * weighted sums */
-    running_confidence: [UnsignedTrackerRunningSum; NUM_ENTRIES], /* confidence running
-                                                                   * time
-                                                                   * weighted sums */
-    current_entry:      usize,             //the current entry
-    entry_validity:     [u8; NUM_ENTRIES], //entry validity
+    prices:         [SignedTrackerRunningSum; NUM_ENTRIES], /* price running time
+                                                             * weighted sums */
+    confidences:    [UnsignedTrackerRunningSum; NUM_ENTRIES], /* confidence running
+                                                               * time
+                                                               * weighted sums */
+    current_entry:  usize,             //the current entry
+    entry_validity: [u8; NUM_ENTRIES], //entry validity
+}
+
+
+impl<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
+    TickTracker<GRANUALITY, NUM_ENTRIES, THRESHOLD>
+{
+    ///invalidates current_entry, and increments self.current_entry num_entries times
+    fn invaldate_following_entries(&mut self, num_entries: usize) {
+        for _ in 0..num_entries {
+            self.entry_validity[self.current_entry] = 0;
+            self.current_entry = Self::get_next_entry(self.current_entry);
+        }
+    }
+}
+
+
+impl<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
+    Tracker<GRANUALITY, NUM_ENTRIES, THRESHOLD>
+    for TickTracker<GRANUALITY, NUM_ENTRIES, THRESHOLD>
+{
+    fn initialize(&mut self) -> Result<(), OracleError> {
+        Ok(())
+    }
+
+    ///add a new price to the tracker
+    fn add_price(
+        &mut self,
+        prev_time: i64,
+        _prev_price: i64,
+        _prev_conf: u64,
+        current_time: i64,
+        current_price: i64,
+        current_conf: u64,
+    ) -> Result<(), OracleError> {
+        let num_skipped_entries = Self::get_num_skipped_entries_capped(prev_time, current_time)?;
+        match num_skipped_entries {
+            0 => {
+                self.prices[self.current_entry] = current_price;
+                self.confidences[self.current_entry] = current_conf;
+            }
+            1 => {
+                self.entry_validity[self.current_entry] =
+                    if Self::get_time_to_entry_end(prev_time) >= THRESHOLD {
+                        0
+                    } else {
+                        1
+                    };
+                self.current_entry += 1;
+                self.prices[self.current_entry] = current_price;
+                self.confidences[self.current_entry] = current_conf;
+            }
+            _ => {
+                //invalidate all the entries in your way
+                //this is ok because THRESHOLD < Granuality
+                self.invaldate_following_entries(num_skipped_entries);
+            }
+        }
+
+        Ok(())
+    }
 }
 
 
