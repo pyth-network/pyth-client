@@ -80,7 +80,7 @@ pub trait Tracker<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHO
 /// Assumes THRESHOLD < GRANUALITY
 pub struct SmaTracker<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64> {
     valid_entry_counter:        u64, // is incremented everytime we add a valid entry
-    max_update_time:            i64, // maximum time between two updates in the current entry.
+    max_update_time_gap:        i64, // maximum time between two updates in the current entry.
     running_price:              [SignedTrackerRunningSum; NUM_ENTRIES], /* price running time
                                       * weighted sums */
     running_confidence:         [UnsignedTrackerRunningSum; NUM_ENTRIES], /* confidence running
@@ -147,7 +147,7 @@ impl<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
 {
     fn initialize(&mut self) -> Result<(), OracleError> {
         //ensure that the first entry is invalid
-        self.max_update_time = THRESHOLD;
+        self.max_update_time_gap = THRESHOLD;
         Ok(())
     }
 
@@ -171,7 +171,7 @@ impl<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
             current_conf * try_convert::<i64, u64>(SMA_TRACKER_PRECISION_MULTIPLIER)?;
 
         let update_time = current_time - prev_time;
-        self.max_update_time = cmp::max(self.max_update_time, update_time);
+        self.max_update_time_gap = cmp::max(self.max_update_time_gap, update_time);
         let num_skipped_entries = Self::get_num_skipped_entries_capped(prev_time, current_time)?;
 
         match num_skipped_entries {
@@ -213,7 +213,7 @@ impl<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
                 )?;
 
                 //update current entry validity
-                self.entry_validity[self.current_entry] = if self.max_update_time >= THRESHOLD {
+                self.entry_validity[self.current_entry] = if self.max_update_time_gap >= THRESHOLD {
                     0
                 } else {
                     self.valid_entry_counter += 1;
@@ -221,7 +221,7 @@ impl<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
                 };
 
                 //update max_update_time
-                self.max_update_time = update_time;
+                self.max_update_time_gap = update_time;
 
 
                 //move to next entry
@@ -241,7 +241,7 @@ impl<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
                 //invalidate all the entries in your way
                 //this is ok because THRESHOLD < Granuality
                 self.invaldate_following_entries(num_skipped_entries);
-                self.max_update_time = update_time;
+                self.max_update_time_gap = update_time;
             }
         }
         Ok(())
