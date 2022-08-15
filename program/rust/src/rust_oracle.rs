@@ -114,13 +114,13 @@ pub fn resize_price_account(
     accounts: &[AccountInfo],
     _instruction_data: &[u8],
 ) -> OracleResult {
-    let [funding_account_info, price_account_info, system_program] = match accounts {
+    let [funding_account, price_account, system_program] = match accounts {
         [x, y, z] => Ok([x, y, z]),
         _ => Err(ProgramError::InvalidArgument),
     }?;
 
-    check_valid_funding_account(funding_account_info)?;
-    check_valid_signable_account(program_id, price_account_info, size_of::<pc_price_t>())?;
+    check_valid_funding_account(funding_account)?;
+    check_valid_signable_account(program_id, price_account, size_of::<pc_price_t>())?;
     pyth_assert(
         check_id(system_program.key),
         OracleError::InvalidSystemAccount.into(),
@@ -128,20 +128,20 @@ pub fn resize_price_account(
     //throw an error if not a price account
     //need to makre sure it goes out of scope immediatly to avoid mutable borrow errors
     {
-        load_checked::<pc_price_t>(price_account_info, PC_VERSION)?;
+        load_checked::<pc_price_t>(price_account, PC_VERSION)?;
     }
-    let account_len = price_account_info.try_data_len()?;
+    let account_len = price_account.try_data_len()?;
     match account_len {
         PRICE_T_SIZE => {
             //ensure account is still rent exempt after resizing
             let rent: Rent = Default::default();
             let lamports_needed: u64 = rent
                 .minimum_balance(size_of::<PriceAccountWrapper>())
-                .saturating_sub(price_account_info.lamports());
+                .saturating_sub(price_account.lamports());
             if lamports_needed > 0 {
                 send_lamports(
-                    funding_account_info,
-                    price_account_info,
+                    funding_account,
+                    price_account,
                     system_program,
                     lamports_needed,
                 )?;
@@ -149,11 +149,10 @@ pub fn resize_price_account(
             //resize
             //we do not need to zero initialize since this is the first time this memory
             //is allocated
-            price_account_info.realloc(size_of::<PriceAccountWrapper>(), false)?;
+            price_account.realloc(size_of::<PriceAccountWrapper>(), false)?;
             //The load below would fail if the account was not a price account, reverting the whole
             // transaction
-            let mut price_account =
-                load_checked::<PriceAccountWrapper>(price_account_info, PC_VERSION)?;
+            let mut price_account = load_checked::<PriceAccountWrapper>(price_account, PC_VERSION)?;
             //Initialize Time Machine
             price_account.initialize_time_machine()?;
             Ok(SUCCESS)
