@@ -305,9 +305,18 @@ impl<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
             _ => {
                 //invalidate all the entries in your way
                 //this is ok because THRESHOLD < Granuality
+                self.prices[prev_entry] = prev_price;
+                self.confidences[prev_entry] = prev_conf;
+                self.entry_validity[prev_entry] =
+                    if Self::get_time_to_entry_end(prev_time) >= THRESHOLD {
+                        0
+                    } else {
+                        1
+                    };
+
                 self.invaldate_following_entries(
-                    cmp::min(num_skipped_entries, NUM_ENTRIES),
-                    prev_entry,
+                    cmp::min(num_skipped_entries - 1, NUM_ENTRIES),
+                    Self::get_next_entry(prev_entry),
                 );
                 self.prices[current_entry] = current_price;
                 self.confidences[current_entry] = current_conf;
