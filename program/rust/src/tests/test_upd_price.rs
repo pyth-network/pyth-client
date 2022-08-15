@@ -217,6 +217,11 @@ fn test_upd_price() {
     // Publishing a wide CI results in a status of unknown.
 
     // check that someone doesn't accidentally break the test.
+    {
+        let price_data = load_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
+        assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_TRADING);
+    }
+
     assert!(upd_price(
         &program_id,
         &[

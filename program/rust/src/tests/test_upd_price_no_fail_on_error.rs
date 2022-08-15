@@ -1,3 +1,4 @@
+use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use std::mem::size_of;
 
@@ -15,7 +16,10 @@ use crate::deserialize::{
     load_checked,
     load_mut,
 };
-use crate::rust_oracle::upd_price_no_fail_on_error;
+use crate::rust_oracle::{
+    upd_price,
+    upd_price_no_fail_on_error,
+};
 use crate::tests::test_utils::{
     update_clock_slot,
     AccountSetup,
@@ -42,6 +46,22 @@ fn test_upd_price_no_fail_on_error_no_fail_on_error() {
 
     update_clock_slot(&mut clock_account, 1);
     populate_instruction(&mut instruction_data, 42, 9, 1);
+
+
+    // Check that the normal upd_price fails
+    assert_eq!(
+        upd_price(
+            &program_id,
+            &[
+                funding_account.clone(),
+                price_account.clone(),
+                clock_account.clone()
+            ],
+            &instruction_data
+        ),
+        Err(ProgramError::InvalidArgument)
+    );
+
 
     // We haven't permissioned the publish account for the price account
     // yet, so any update should fail silently and have no effect. The
@@ -104,6 +124,20 @@ fn test_upd_price_no_fail_on_error_no_fail_on_error() {
     // Invalid updates, such as publishing an update for the current slot,
     // should still fail silently and have no effect.
     populate_instruction(&mut instruction_data, 55, 22, 1);
+
+    // Check that the normal upd_price fails
+    assert_eq!(
+        upd_price(
+            &program_id,
+            &[
+                funding_account.clone(),
+                price_account.clone(),
+                clock_account.clone()
+            ],
+            &instruction_data
+        ),
+        Err(ProgramError::InvalidArgument)
+    );
 
     assert!(upd_price_no_fail_on_error(
         &program_id,
