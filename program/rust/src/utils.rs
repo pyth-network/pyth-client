@@ -141,7 +141,7 @@ pub fn check_valid_writable_account(
 ) -> Result<(), ProgramError> {
     pyth_assert(
         valid_writable_account(program_id, account, minimum_size),
-        OracleError::InvalidSignableAccount.into(),
+        OracleError::InvalidWritableAccount.into(),
     )
 }
 

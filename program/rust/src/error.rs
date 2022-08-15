@@ -28,7 +28,7 @@ pub enum OracleError {
     InvalidSystemAccount    = 606,
     #[error("InvalidWritableAccount")]
     InvalidWritableAccount  = 607,
-    #[error("InvalidWritableAccount")]
+    #[error("InvalidFreshAccount")]
     InvalidFreshAccount     = 608,
 }
 

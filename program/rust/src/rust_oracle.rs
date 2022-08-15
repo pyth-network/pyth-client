@@ -249,7 +249,7 @@ pub fn upd_price(
         // Verify that symbol account is initialized
         let price_data = load_checked::<pc_price_t>(price_account, cmd_args.ver_)?;
 
-        // Verify that publisher is valid
+        // Verify that publisher is authorized
         while publisher_index < price_data.num_ as usize {
             if pubkey_equal(
                 &price_data.comp_[publisher_index].pub_,
