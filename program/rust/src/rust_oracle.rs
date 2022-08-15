@@ -244,7 +244,6 @@ pub fn upd_price(
 
     let mut publisher_index: usize = 0;
     let latest_aggregate_price: pc_price_info_t;
-    let latest_publisher_price: pc_price_info_t;
     {
         // Verify that symbol account is initialized
         let price_data = load_checked::<pc_price_t>(price_account, cmd_args.ver_)?;
@@ -265,8 +264,8 @@ pub fn upd_price(
         )?;
 
 
-        latest_publisher_price = price_data.comp_[publisher_index].latest_;
         latest_aggregate_price = price_data.agg_;
+        let latest_publisher_price = price_data.comp_[publisher_index].latest_;
 
         // Check that publisher is publishing a more recent price
         pyth_assert(
