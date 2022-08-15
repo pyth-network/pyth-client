@@ -98,22 +98,21 @@ impl<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
             self.current_entry = Self::get_next_entry(self.current_entry);
         }
     }
-    ///assumes that prev_time and current_time have one multiple of granualitty between them, and
-    /// that prev_time != current_time finds the weighted average of value on that multiple
-    /// based on prev_value and current_value, returns that and the time before the boarder
-    fn interpolate_around_entry_endpoint(
-        prev_time: i64,
-        prev_value: i64,
-        current_time: i64,
-        current_value: i64,
-    ) -> (i64, i64) {
-        let pre_border_time = (GRANUALITY - prev_time) % GRANUALITY;
-        let post_border_time = current_time % GRANUALITY;
-        (
-            (prev_value * post_border_time + current_value * pre_border_time)
-                / (current_time + current_value),
-            pre_border_time,
-        )
+    fn get_time_to_entry_end(time: i64) -> i64 {
+        (GRANUALITY - (time % GRANUALITY)) % GRANUALITY
+    }
+    fn weighted_average<
+        T: std::ops::Mul<Output = T>
+            + std::ops::Add<Output = T>
+            + std::ops::Div<Output = T>
+            + std::marker::Copy,
+    >(
+        w1: T,
+        v1: T,
+        w2: T,
+        v2: T,
+    ) -> Result<T, OracleError> {
+        Ok((w1 * v1 + w2 * v2) / (w1 + w2))
     }
     fn add_price_to_current_entry(
         &mut self,
@@ -186,25 +185,27 @@ impl<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
                 self.running_confidence[next_entry] = self.running_confidence[self.current_entry];
 
                 //update price
-                let (border_price, pre_border_time) = Self::interpolate_around_entry_endpoint(
-                    prev_time,
+                let time_to_entry_end = Self::get_time_to_entry_end(prev_time);
+                let time_after_entry_end = update_time - time_to_entry_end;
+                let entry_end_price = Self::weighted_average(
+                    time_after_entry_end,
                     inflated_prev_price,
-                    current_time,
+                    time_to_entry_end,
                     inflated_current_price,
-                );
-                let (border_conf, _) = Self::interpolate_around_entry_endpoint(
-                    prev_time,
-                    try_convert(inflated_prev_conf)?,
-                    current_time,
-                    try_convert(inflated_current_conf)?,
-                );
+                )?;
+                let entry_end_conf = Self::weighted_average::<u64>(
+                    try_convert::<i64, u64>(time_after_entry_end)?,
+                    inflated_prev_conf,
+                    try_convert::<i64, u64>(time_to_entry_end)?,
+                    inflated_current_conf,
+                )?;
 
                 self.add_price_to_current_entry(
                     inflated_prev_price,
                     inflated_prev_conf,
-                    border_price,
-                    try_convert(border_conf)?,
-                    pre_border_time,
+                    entry_end_price,
+                    entry_end_conf,
+                    time_to_entry_end,
                 )?;
 
                 //update current entry validity
