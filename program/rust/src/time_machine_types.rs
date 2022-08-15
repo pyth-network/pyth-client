@@ -11,7 +11,6 @@ use bytemuck::{
     Pod,
     Zeroable,
 };
-use solana_program::msg;
 use std::cmp;
 
 //To make it easy to change the types to allow for more usefull
@@ -72,7 +71,7 @@ pub trait Tracker<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHO
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 #[repr(C)]
 /// Represents an SMA Tracker that has NUM_ENTRIES entries
 /// each tracking time weighted sums for GRANUALITY seconds periods.
@@ -250,7 +249,7 @@ impl<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
 }
 
 
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 #[repr(C)]
 /// Represents an Tick Tracker that has NUM_ENTRIES entries
 /// each tracking the last tick before every GRANUALITY seconds.
@@ -324,14 +323,54 @@ impl<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
     }
 }
 
-
+const THIRTY_MINUTES: i64 = 30 * 60;
+const TEN_HOURS: usize = 10 * 60 * 60;
+const TWENTY_SECONDS: i64 = 20;
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
 /// this wraps multiple SMA and tick trackers, and includes all the state
 /// used by the time machine
 pub struct TimeMachineWrapper {
-    //Place holder with the size of the fields I am planning to add
-    place_holder: [u8; 1864],
+    sma_tracker:
+        SmaTracker<THIRTY_MINUTES, { TEN_HOURS / (THIRTY_MINUTES as usize) }, TWENTY_SECONDS>,
+    tick_tracker:
+        TickTracker<THIRTY_MINUTES, { TEN_HOURS / (THIRTY_MINUTES as usize) }, TWENTY_SECONDS>,
+}
+
+impl TimeMachineWrapper {
+    pub fn initialize(&mut self) -> Result<(), OracleError> {
+        self.sma_tracker.initialize()?;
+        self.tick_tracker.initialize()?;
+        Ok(())
+    }
+
+    pub fn add_price(
+        &mut self,
+        prev_time: i64,
+        prev_price: i64,
+        prev_conf: u64,
+        current_time: i64,
+        current_price: i64,
+        current_conf: u64,
+    ) -> Result<(), OracleError> {
+        self.sma_tracker.add_price(
+            prev_time,
+            prev_price,
+            prev_conf,
+            current_time,
+            current_price,
+            current_conf,
+        )?;
+        self.tick_tracker.add_price(
+            prev_time,
+            prev_price,
+            prev_conf,
+            current_time,
+            current_price,
+            current_conf,
+        )?;
+        Ok(())
+    }
 }
 
 #[derive(Copy, Clone)]
@@ -347,13 +386,18 @@ pub struct PriceAccountWrapper {
 }
 impl PriceAccountWrapper {
     pub fn initialize_time_machine(&mut self) -> Result<(), OracleError> {
-        msg!("implement me");
-        Ok(())
+        self.time_machine.initialize()
     }
 
     pub fn add_price_to_time_machine(&mut self) -> Result<(), OracleError> {
-        msg!("implement me");
-        Ok(())
+        self.time_machine.add_price(
+            self.price_data.prev_timestamp_,
+            self.price_data.prev_price_,
+            self.price_data.prev_conf_,
+            self.price_data.timestamp_,
+            self.price_data.agg_.price_,
+            self.price_data.agg_.conf_,
+        )
     }
 }
 
