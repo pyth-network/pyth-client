@@ -37,34 +37,14 @@ pub trait Tracker<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHO
         current_price: i64,
         current_conf: u64,
     ) -> Result<(), OracleError>;
-    /// returns the minimum number of entries that needs to be added
-    /// to the current entry of the time_machine so that the following two
-    /// conditions are satisfied
-    /// 1. after adding the output, the new current entry has the same offset as if
-    ///     the price was constantly updating
-    /// 2. any entry that would have been passed through during this time interval, would be
-    ///     passed through if we skip one entry at a time the number that this outputs
-    fn get_num_skipped_entries_capped(
-        prev_time: i64,
-        current_time: i64,
-    ) -> Result<usize, OracleError> {
-        let time_since_begining_of_current_entry =
-            (prev_time % GRANUALITY) + current_time - prev_time;
-        let mut num_skiped_entries: usize =
-            try_convert(time_since_begining_of_current_entry / GRANUALITY)?;
-        //if num_skipped is greater than NUM_ENTRIES, cap it at the smallest
-        //number greater than NUM_ENTRIES that has the same residue class
-        if num_skiped_entries >= NUM_ENTRIES {
-            num_skiped_entries %= NUM_ENTRIES;
-            num_skiped_entries += NUM_ENTRIES;
-        }
-        Ok(num_skiped_entries)
-    }
     ///gets the index of the next entry
     fn get_next_entry(current_entry: usize) -> usize {
         (current_entry + 1) % NUM_ENTRIES
     }
-
+    ///Given a time, return the entry of that time
+    fn time_to_entry(time: i64) -> Result<usize, OracleError> {
+        Ok(try_convert::<i64, usize>(time / GRANUALITY)? % NUM_ENTRIES)
+    }
     ///returns the remining time before the next multiple of GRANUALITY
     fn get_time_to_entry_end(time: i64) -> i64 {
         (GRANUALITY - (time % GRANUALITY)) % GRANUALITY
@@ -86,9 +66,8 @@ pub struct SmaTracker<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THR
     running_confidence:         [UnsignedTrackerRunningSum; NUM_ENTRIES], /* confidence running
                                                                            * time
                                                                            * weighted sums */
-    current_entry:              usize, //the current entry
-    max_observed_entry_abs_val: u64,   /* used to ensure that there are no overflows when
-                                        * looking at running sum diffs */
+    max_observed_entry_abs_val: u64, /* used to ensure that there are no overflows when
+                                      * looking at running sum diffs */
     entry_validity:             [u8; NUM_ENTRIES], //entry validity
 }
 
@@ -96,10 +75,11 @@ impl<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
     SmaTracker<GRANUALITY, NUM_ENTRIES, THRESHOLD>
 {
     ///invalidates current_entry, and increments self.current_entry num_entries times
-    fn invaldate_following_entries(&mut self, num_entries: usize) {
+    fn invaldate_following_entries(&mut self, num_entries: usize, current_entry: usize) {
+        let mut entry = current_entry;
         for _ in 0..num_entries {
-            self.entry_validity[self.current_entry] = 0;
-            self.current_entry = Self::get_next_entry(self.current_entry);
+            self.entry_validity[entry] = 0;
+            entry = Self::get_next_entry(entry);
         }
     }
     /// returns a weighted average of v with weights w
@@ -117,20 +97,21 @@ impl<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
         Ok((w1 * v1 + w2 * v2) / (w1 + w2))
     }
     ///Adds price and confidence each multiplied by update_time
-    /// to the current entry
-    fn add_price_to_current_entry(
+    /// to the entry
+    fn add_price_to_entry(
         &mut self,
         prev_price: i64,
         prev_conf: u64,
         current_price: i64,
         current_conf: u64,
         update_time: i64,
+        entry: usize,
     ) -> Result<(), OracleError> {
         let avg_price = (prev_price + current_price) / 2;
         let avg_conf = (prev_conf + current_conf) / 2;
-        self.running_price[self.current_entry] +=
+        self.running_price[entry] +=
             try_convert::<i64, SignedTrackerRunningSum>(update_time * avg_price)?;
-        self.running_confidence[self.current_entry] += try_convert::<u64, UnsignedTrackerRunningSum>(
+        self.running_confidence[entry] += try_convert::<u64, UnsignedTrackerRunningSum>(
             try_convert::<i64, u64>(update_time)? * avg_conf,
         )?;
         //since price is always greater than confidence, it is sufficient to look at the
@@ -172,21 +153,27 @@ impl<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
 
         let update_time = current_time - prev_time;
         self.max_update_time_gap = cmp::max(self.max_update_time_gap, update_time);
-        let num_skipped_entries = Self::get_num_skipped_entries_capped(prev_time, current_time)?;
 
-        match num_skipped_entries {
-            0 => self.add_price_to_current_entry(
-                inflated_prev_price,
-                inflated_prev_conf,
-                inflated_current_price,
-                inflated_current_conf,
-                update_time,
-            )?,
+        let prev_entry = Self::time_to_entry(prev_time)?;
+        let current_entry = Self::time_to_entry(current_time)?;
+        let num_skipped_entries = current_entry - prev_entry;
+        //update entries as needed
+        match current_entry - prev_entry {
+            0 => {
+                self.add_price_to_entry(
+                    inflated_prev_price,
+                    inflated_prev_conf,
+                    inflated_current_price,
+                    inflated_current_conf,
+                    update_time,
+                    prev_entry,
+                )?;
+            }
             1 => {
-                //make get border time and get ks helpers
-                let next_entry = Self::get_next_entry(self.current_entry);
-                self.running_price[next_entry] = self.running_price[self.current_entry];
-                self.running_confidence[next_entry] = self.running_confidence[self.current_entry];
+                //initialize next entry to be the same as the current one
+
+                self.running_price[current_entry] = self.running_price[prev_entry];
+                self.running_confidence[current_entry] = self.running_confidence[prev_entry];
 
                 //update price
                 let time_to_entry_end = Self::get_time_to_entry_end(prev_time);
@@ -204,16 +191,17 @@ impl<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
                     inflated_current_conf,
                 )?;
 
-                self.add_price_to_current_entry(
+                self.add_price_to_entry(
                     inflated_prev_price,
                     inflated_prev_conf,
                     entry_end_price,
                     entry_end_conf,
                     time_to_entry_end,
+                    prev_entry,
                 )?;
 
                 //update current entry validity
-                self.entry_validity[self.current_entry] = if self.max_update_time_gap >= THRESHOLD {
+                self.entry_validity[prev_entry] = if self.max_update_time_gap >= THRESHOLD {
                     0
                 } else {
                     self.valid_entry_counter += 1;
@@ -224,23 +212,22 @@ impl<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
                 self.max_update_time_gap = update_time;
 
 
-                //move to next entry
-                self.current_entry = next_entry;
-
-                //update next entry price and cofidence
-
-                self.add_price_to_current_entry(
+                self.add_price_to_entry(
                     inflated_prev_price,
                     inflated_prev_conf,
                     inflated_current_price,
                     inflated_current_conf,
                     update_time,
+                    current_entry,
                 )?;
             }
             _ => {
                 //invalidate all the entries in your way
                 //this is ok because THRESHOLD < Granuality
-                self.invaldate_following_entries(num_skipped_entries);
+                self.invaldate_following_entries(
+                    cmp::min(num_skipped_entries, NUM_ENTRIES),
+                    prev_entry,
+                );
                 self.max_update_time_gap = update_time;
             }
         }
@@ -259,7 +246,6 @@ pub struct TickTracker<const GRANUALITY: i64, const NUM_ENTRIES: usize, const TH
     confidences:    [UnsignedTrackerRunningSum; NUM_ENTRIES], /* confidence running
                                                                * time
                                                                * weighted sums */
-    current_entry:  usize,             //the current entry
     entry_validity: [u8; NUM_ENTRIES], //entry validity
 }
 
@@ -268,10 +254,11 @@ impl<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
     TickTracker<GRANUALITY, NUM_ENTRIES, THRESHOLD>
 {
     ///invalidates current_entry, and increments self.current_entry num_entries times
-    fn invaldate_following_entries(&mut self, num_entries: usize) {
+    fn invaldate_following_entries(&mut self, num_entries: usize, current_entry: usize) {
+        let mut entry = current_entry;
         for _ in 0..num_entries {
-            self.entry_validity[self.current_entry] = 0;
-            self.current_entry = Self::get_next_entry(self.current_entry);
+            self.entry_validity[entry] = 0;
+            entry = Self::get_next_entry(entry);
         }
     }
 }
@@ -289,33 +276,38 @@ impl<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
     fn add_price(
         &mut self,
         prev_time: i64,
-        _prev_price: i64,
-        _prev_conf: u64,
+        prev_price: i64,
+        prev_conf: u64,
         current_time: i64,
         current_price: i64,
         current_conf: u64,
     ) -> Result<(), OracleError> {
-        let num_skipped_entries = Self::get_num_skipped_entries_capped(prev_time, current_time)?;
+        let prev_entry = Self::time_to_entry(prev_time)?;
+        let current_entry = Self::time_to_entry(current_time)?;
+        let num_skipped_entries = current_entry - prev_entry;
         match num_skipped_entries {
             0 => {
-                self.prices[self.current_entry] = current_price;
-                self.confidences[self.current_entry] = current_conf;
+                self.prices[current_entry] = current_price;
+                self.confidences[current_entry] = current_conf;
             }
             1 => {
-                self.entry_validity[self.current_entry] =
+                self.prices[prev_entry] = prev_price;
+                self.confidences[prev_entry] = prev_conf;
+                self.entry_validity[prev_entry] =
                     if Self::get_time_to_entry_end(prev_time) >= THRESHOLD {
                         0
                     } else {
                         1
                     };
-                self.current_entry += 1;
-                self.prices[self.current_entry] = current_price;
-                self.confidences[self.current_entry] = current_conf;
+                self.prices[current_entry] = current_price;
+                self.confidences[current_entry] = current_conf;
             }
             _ => {
                 //invalidate all the entries in your way
                 //this is ok because THRESHOLD < Granuality
-                self.invaldate_following_entries(num_skipped_entries);
+                self.invaldate_following_entries(num_skipped_entries, prev_entry);
+                self.prices[current_entry] = current_price;
+                self.confidences[current_entry] = current_conf;
             }
         }
 
