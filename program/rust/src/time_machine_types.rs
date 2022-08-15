@@ -98,9 +98,11 @@ impl<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
             self.current_entry = Self::get_next_entry(self.current_entry);
         }
     }
+    ///returns the remining time before the next multiple of GRANUALITY
     fn get_time_to_entry_end(time: i64) -> i64 {
         (GRANUALITY - (time % GRANUALITY)) % GRANUALITY
     }
+    /// returns a weighted average of v with weights w
     fn weighted_average<
         T: std::ops::Mul<Output = T>
             + std::ops::Add<Output = T>
@@ -114,6 +116,8 @@ impl<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
     ) -> Result<T, OracleError> {
         Ok((w1 * v1 + w2 * v2) / (w1 + w2))
     }
+    ///Adds price and confidence each multiplied by update_time
+    /// to the current entry
     fn add_price_to_current_entry(
         &mut self,
         prev_price: i64,
@@ -212,6 +216,7 @@ impl<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
                 self.entry_validity[self.current_entry] = if self.max_update_time >= THRESHOLD {
                     0
                 } else {
+                    self.valid_entry_counter += 1;
                     1
                 };
 
