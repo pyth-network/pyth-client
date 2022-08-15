@@ -21,7 +21,8 @@ static uint64_t rent_exempt_amount( uint64_t dlen )
   case sizeof( pc_price_t ):
     return 23942400;
   case PRICE_ACCOUNT_SIZE:
-    return 36915840;
+    //TODO: fixme
+    return 23942400;
   default:
     return UINT64_MAX;
   }
