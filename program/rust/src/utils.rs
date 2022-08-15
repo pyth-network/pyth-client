@@ -145,6 +145,8 @@ pub fn check_valid_writable_account(
     )
 }
 
+/// Checks whether this instruction is trying to update an individual publisher's price (`true`) or
+/// is only trying to refresh the aggregate (`false`)
 pub fn is_component_update(cmd_args: &cmd_upd_price_t) -> Result<bool, ProgramError> {
     Ok(
         try_convert::<_, u32>(cmd_args.cmd_)? == command_t_e_cmd_upd_price
