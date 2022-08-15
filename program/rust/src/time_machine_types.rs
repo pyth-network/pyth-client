@@ -70,7 +70,7 @@ pub trait Tracker<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHO
 #[derive(Copy, Clone)]
 #[repr(C)]
 /// Represents an SMA Tracker that has NUM_ENTRIES entries
-/// each tracking time weighted for GRANUALITY seconds periods.
+/// each tracking time weighted sums for GRANUALITY seconds periods.
 ///The prices are assumed to be provided under some fixed point representation, and the computation
 /// gurantees accuracy up to the last decimal digit in the fixed point representation.
 /// Assumes THRESHOLD < GRANUALITY
@@ -115,6 +115,28 @@ impl<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
             pre_border_time,
         )
     }
+    fn add_price_to_current_entry(
+        &mut self,
+        prev_price: i64,
+        prev_conf: u64,
+        current_price: i64,
+        current_conf: u64,
+        update_time: i64,
+    ) -> Result<(), OracleError> {
+        let avg_price = (prev_price + current_price) / 2;
+        let avg_conf = (prev_conf + current_conf) / 2;
+        self.running_price[self.current_entry] +=
+            try_convert::<i64, SignedTrackerRunningSum>(update_time * avg_price)?;
+        self.running_confidence[self.current_entry] += try_convert::<u64, UnsignedTrackerRunningSum>(
+            try_convert::<i64, u64>(update_time)? * avg_conf,
+        )?;
+        //since price is always greater than confidence, it is sufficient to look at the
+        // price we also look at the average because it is the value that
+        // gets multiplied with the number of seconds
+        self.max_observed_entry_abs_val =
+            cmp::max(try_convert(avg_price)?, self.max_observed_entry_abs_val);
+        Ok(())
+    }
 }
 
 impl<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
@@ -138,66 +160,52 @@ impl<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
     ) -> Result<(), OracleError> {
         //multiply by precision multiplier so that our entry aggregated can be rounded to have
         //the same accuracy as user input
-        let inflated_new_price = current_price * SMA_TRACKER_PRECISION_MULTIPLIER;
-        let inflated_old_price = prev_price * SMA_TRACKER_PRECISION_MULTIPLIER;
-        let inflated_new_conf =
-            current_conf * try_convert::<i64, u64>(SMA_TRACKER_PRECISION_MULTIPLIER)?;
-        let inflated_old_conf =
+        let inflated_prev_price = prev_price * SMA_TRACKER_PRECISION_MULTIPLIER;
+        let inflated_current_price = current_price * SMA_TRACKER_PRECISION_MULTIPLIER;
+        let inflated_prev_conf =
             prev_conf * try_convert::<i64, u64>(SMA_TRACKER_PRECISION_MULTIPLIER)?;
-        let avg_conf = (inflated_old_conf + inflated_new_conf) / 2;
-        let avg_price = (inflated_old_price + inflated_new_price) / 2;
+        let inflated_current_conf =
+            current_conf * try_convert::<i64, u64>(SMA_TRACKER_PRECISION_MULTIPLIER)?;
+
         let update_time = current_time - prev_time;
         self.max_update_time = cmp::max(self.max_update_time, update_time);
         let num_skipped_entries = Self::get_num_skipped_entries_capped(prev_time, current_time)?;
 
         match num_skipped_entries {
-            0 => {
-                //same entry
-                self.running_price[self.current_entry] +=
-                    try_convert::<i64, SignedTrackerRunningSum>(update_time * avg_price)?;
-                self.running_confidence[self.current_entry] +=
-                    try_convert::<u64, UnsignedTrackerRunningSum>(
-                        try_convert::<i64, u64>(update_time)? * avg_conf,
-                    )?;
-                //since price is always greater than confidence, it is sufficient to look at the
-                // price we also look at the average because it is the value that
-                // gets multiplied with the number of seconds
-                self.max_observed_entry_abs_val =
-                    cmp::max(try_convert(avg_price)?, self.max_observed_entry_abs_val);
-            }
+            0 => self.add_price_to_current_entry(
+                inflated_prev_price,
+                inflated_prev_conf,
+                inflated_current_price,
+                inflated_current_conf,
+                update_time,
+            )?,
             1 => {
+                //make get border time and get ks helpers
                 let next_entry = Self::get_next_entry(self.current_entry);
                 self.running_price[next_entry] = self.running_price[self.current_entry];
                 self.running_confidence[next_entry] = self.running_confidence[self.current_entry];
 
-                //update prince
+                //update price
                 let (border_price, pre_border_time) = Self::interpolate_around_entry_endpoint(
                     prev_time,
-                    inflated_old_price,
+                    inflated_prev_price,
                     current_time,
-                    inflated_new_price,
+                    inflated_current_price,
                 );
-                self.running_price[self.current_entry] +=
-                    try_convert::<i64, SignedTrackerRunningSum>(
-                        pre_border_time * (border_price + current_price) / 2,
-                    )?;
-
-                self.max_observed_entry_abs_val = cmp::max(
-                    try_convert((border_price + current_price) / 2)?,
-                    self.max_observed_entry_abs_val,
-                );
-
-                //update confidence
-                let (border_conf, pre_border_time) = Self::interpolate_around_entry_endpoint(
+                let (border_conf, _) = Self::interpolate_around_entry_endpoint(
                     prev_time,
-                    try_convert(inflated_old_conf)?,
+                    try_convert(inflated_prev_conf)?,
                     current_time,
-                    try_convert(inflated_new_conf)?,
+                    try_convert(inflated_current_conf)?,
                 );
-                self.running_confidence[self.current_entry] +=
-                    try_convert::<i64, UnsignedTrackerRunningSum>(
-                        pre_border_time * (border_conf + try_convert::<u64, i64>(prev_conf)?) / 2,
-                    )?;
+
+                self.add_price_to_current_entry(
+                    inflated_prev_price,
+                    inflated_prev_conf,
+                    border_price,
+                    try_convert(border_conf)?,
+                    pre_border_time,
+                )?;
 
                 //update current entry validity
                 self.entry_validity[self.current_entry] = if self.max_update_time >= THRESHOLD {
@@ -215,22 +223,19 @@ impl<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
 
                 //update next entry price and cofidence
 
-                self.running_price[self.current_entry] +=
-                    try_convert::<i64, SignedTrackerRunningSum>(update_time * avg_price)?;
-                self.running_confidence[self.current_entry] +=
-                    try_convert::<u64, UnsignedTrackerRunningSum>(
-                        try_convert::<i64, u64>(update_time)? * avg_conf,
-                    )?;
-                //since price is always greater than confidence, it is sufficient to look at the
-                // price we also look at the average because it is the value that
-                // gets multiplied with the number of seconds
-                self.max_observed_entry_abs_val =
-                    cmp::max(try_convert(avg_price)?, self.max_observed_entry_abs_val);
+                self.add_price_to_current_entry(
+                    inflated_prev_price,
+                    inflated_prev_conf,
+                    inflated_current_price,
+                    inflated_current_conf,
+                    update_time,
+                )?;
             }
             _ => {
                 //invalidate all the entries in your way and head
                 //this is ok because THRESHOLD < Granuality
                 self.invaldate_following_entries(num_skipped_entries);
+                self.max_update_time = update_time;
             }
         }
         Ok(())
