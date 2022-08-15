@@ -287,6 +287,12 @@ pub fn upd_price(
         }
     }
 
+    let account_len = price_account.try_data_len()?;
+    if aggregate_updated && account_len == PRICE_ACCOUNT_SIZE {
+        let mut price_account = load_account_as_mut::<PriceAccountWrapper>(price_account)?;
+        price_account.add_price_to_time_machine()?;
+    }
+
     // Try to update the publisher's price
     if is_component_update(cmd_args)? {
         let mut status: u32 = cmd_args.status_;
@@ -308,12 +314,6 @@ pub fn upd_price(
             publisher_price.status_ = status;
             publisher_price.pub_slot_ = cmd_args.pub_slot_;
         }
-    }
-
-    let account_len = price_account.try_data_len()?;
-    if aggregate_updated && account_len == PRICE_ACCOUNT_SIZE {
-        let mut price_account = load_account_as_mut::<PriceAccountWrapper>(price_account)?;
-        price_account.add_price_to_time_machine()?;
     }
 
     Ok(SUCCESS)
