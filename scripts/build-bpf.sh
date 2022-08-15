@@ -29,8 +29,8 @@ cd "${C_DIR}"
 export V="${V:-1}"
 make clean 
 make  "${@:2}" 
-make cpyth 
-make cpythtest
+make cpyth-bpf 
+make cpyth-native
 rm ./target/*-keypair.json
 
 

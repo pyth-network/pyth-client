@@ -36,8 +36,8 @@ use solana_program::{
 //As we migrate from C to Rust, our Rust code needs to be able to interact with C
 //build-bpf.sh is set up to compile the C code into a two archive files
 //contained in `./program/c/target/`
-// - `libcpyth.a` contains the bpf version for production code
-// - `libcpythtest.a` contains the systems architecture version for tests
+// - `libcpyth-bpf.a` contains the bpf version for production code
+// - `libcpyth-native.a` contains the systems architecture version for tests
 
 //We also generate bindings for the types and constants in oracle.h (as well as other things
 //included in bindings.h), these bindings can be accessed through c_oracle_header.rs

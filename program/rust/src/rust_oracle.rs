@@ -80,13 +80,13 @@ const PRICE_ACCOUNT_SIZE: usize = size_of::<PriceAccountWrapper>();
 
 
 #[cfg(target_arch = "bpf")]
-#[link(name = "cpyth")]
+#[link(name = "cpyth-bpf")]
 extern "C" {
     pub fn c_upd_aggregate(_input: *mut u8, clock_slot: u64, clock_timestamp: i64) -> bool;
 }
 
 #[cfg(not(target_arch = "bpf"))]
-#[link(name = "cpythtest")]
+#[link(name = "cpyth-native")]
 extern "C" {
     pub fn c_upd_aggregate(_input: *mut u8, clock_slot: u64, clock_timestamp: i64) -> bool;
 }
