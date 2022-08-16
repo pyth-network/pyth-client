@@ -15,10 +15,8 @@ use std::cmp;
 
 //To make it easy to change the types to allow for more usefull
 //running sums if needed
-use {
-    i64 as SignedTrackerRunningSum,
-    u64 as UnsignedTrackerRunningSum,
-};
+type SignedTrackerRunningSum = i64;
+type UnsignedTrackerRunningSum = u64;
 //multiply by this to make up for errors that result when dividing integers
 pub const SMA_TRACKER_PRECISION_MULTIPLIER: i64 = 10;
 
