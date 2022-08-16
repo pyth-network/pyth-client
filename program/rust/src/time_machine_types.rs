@@ -394,10 +394,9 @@ impl PriceAccountWrapper {
     }
 
     pub fn add_price_to_time_machine(&mut self) -> Result<(), OracleError> {
-        //skip if there are not two valid prices in the price account
-        if self.price_data.prev_timestamp_ == 0 {
-            return Ok(());
-        }
+        //this would work on the first add_price as well, as the first entry is always invalid, so
+        // even though we would probabpy end up overflowing the first number that should not corrupt
+        // any valid data
         self.time_machine.add_price(
             self.price_data.prev_timestamp_,
             self.price_data.prev_price_,
