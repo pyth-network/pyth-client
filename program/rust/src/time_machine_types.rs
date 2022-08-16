@@ -75,7 +75,7 @@ impl<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
     SmaTracker<GRANUALITY, NUM_ENTRIES, THRESHOLD>
 {
     ///invalidates current_entry, and increments self.current_entry num_entries times
-    fn invaldate_following_entries(&mut self, num_entries: usize, current_entry: usize) {
+    fn invalidate_following_entries(&mut self, num_entries: usize, current_entry: usize) {
         let mut entry = current_entry;
         for _ in 0..num_entries {
             self.entry_validity[entry] = 0;
@@ -224,7 +224,7 @@ impl<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
             _ => {
                 //invalidate all the entries in your way
                 //this is ok because THRESHOLD < Granuality
-                self.invaldate_following_entries(
+                self.invalidate_following_entries(
                     cmp::min(num_skipped_entries, NUM_ENTRIES),
                     prev_entry,
                 );
@@ -254,7 +254,7 @@ impl<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
     TickTracker<GRANUALITY, NUM_ENTRIES, THRESHOLD>
 {
     ///invalidates current_entry, and increments self.current_entry num_entries times
-    fn invaldate_following_entries(&mut self, num_entries: usize, current_entry: usize) {
+    fn invalidate_following_entries(&mut self, num_entries: usize, current_entry: usize) {
         let mut entry = current_entry;
         for _ in 0..num_entries {
             self.entry_validity[entry] = 0;
@@ -314,7 +314,7 @@ impl<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
                         1
                     };
 
-                self.invaldate_following_entries(
+                self.invalidate_following_entries(
                     cmp::min(num_skipped_entries - 1, NUM_ENTRIES),
                     Self::get_next_entry(prev_entry),
                 );
