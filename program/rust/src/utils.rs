@@ -1,4 +1,7 @@
 use crate::c_oracle_header::{
+    cmd_upd_price_t,
+    command_t_e_cmd_upd_price,
+    command_t_e_cmd_upd_price_no_fail_on_error,
     pc_acc,
     pc_pub_key_t,
     PC_MAX_NUM_DECIMALS,
@@ -122,4 +125,31 @@ pub fn read_pc_str_t(source: &[u8]) -> Result<&[u8], ProgramError> {
             Ok(&source[..(1 + tag_len)])
         }
     }
+}
+
+fn valid_writable_account(program_id: &Pubkey, account: &AccountInfo, minimum_size: usize) -> bool {
+    account.is_writable
+        && account.owner == program_id
+        && account.data_len() >= minimum_size
+        && Rent::default().is_exempt(account.lamports(), account.data_len())
+}
+
+pub fn check_valid_writable_account(
+    program_id: &Pubkey,
+    account: &AccountInfo,
+    minimum_size: usize,
+) -> Result<(), ProgramError> {
+    pyth_assert(
+        valid_writable_account(program_id, account, minimum_size),
+        OracleError::InvalidWritableAccount.into(),
+    )
+}
+
+/// Checks whether this instruction is trying to update an individual publisher's price (`true`) or
+/// is only trying to refresh the aggregate (`false`)
+pub fn is_component_update(cmd_args: &cmd_upd_price_t) -> Result<bool, ProgramError> {
+    Ok(
+        try_convert::<_, u32>(cmd_args.cmd_)? == command_t_e_cmd_upd_price
+            || try_convert::<_, u32>(cmd_args.cmd_)? == command_t_e_cmd_upd_price_no_fail_on_error,
+    )
 }
