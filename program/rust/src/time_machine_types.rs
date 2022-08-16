@@ -288,50 +288,32 @@ impl<const GRANULARITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
         prev_price: i64,
         prev_conf: u64,
         current_time: i64,
-        current_price: i64,
-        current_conf: u64,
+        _current_price: i64,
+        _current_conf: u64,
     ) -> Result<(), OracleError> {
         let prev_entry = Self::time_to_entry(prev_time)?;
         let current_entry = Self::time_to_entry(current_time)?;
         let num_skipped_entries = current_entry - prev_entry;
-        match num_skipped_entries {
-            0 => {
-                self.prices[current_entry] = current_price;
-                self.confidences[current_entry] = current_conf;
-            }
-            1 => {
-                self.prices[prev_entry] = prev_price;
-                self.confidences[prev_entry] = prev_conf;
-                self.entry_validity[prev_entry] =
-                    if Self::get_time_to_entry_end(prev_time) >= THRESHOLD {
-                        Status::Invalid
-                    } else {
-                        Status::Valid
-                    };
-                self.prices[current_entry] = current_price;
-                self.confidences[current_entry] = current_conf;
-            }
-            _ => {
-                //invalidate all the entries in your way
-                //this is ok because THRESHOLD < GranulARity
-                self.prices[prev_entry] = prev_price;
-                self.confidences[prev_entry] = prev_conf;
-                self.entry_validity[prev_entry] =
-                    if Self::get_time_to_entry_end(prev_time) >= THRESHOLD {
-                        Status::Invalid
-                    } else {
-                        Status::Valid
-                    };
 
-                self.invalidate_following_entries(
-                    cmp::min(num_skipped_entries - 1, NUM_ENTRIES),
-                    Self::get_next_entry(prev_entry),
-                );
-                self.prices[current_entry] = current_price;
-                self.confidences[current_entry] = current_conf;
-            }
-        }
+        // unlike SMAs, first entry here can be valid
+        self.prices[prev_entry] = prev_price;
+        self.confidences[prev_entry] = prev_conf;
 
+        //update validity if it is time to do so
+        self.entry_validity[prev_entry] =
+            if Self::get_time_to_entry_end(prev_time) >= THRESHOLD || num_skipped_entries == 0 {
+                Status::Invalid
+            } else {
+                Status::Valid
+            };
+
+        //invalidate skipped entries if any
+        self.invalidate_following_entries(
+            cmp::min(num_skipped_entries, NUM_ENTRIES),
+            Self::get_next_entry(prev_entry),
+        );
+        //We do not need to store thre current_price or conf, they will be stored on the next
+        //price send. However, we can use to interpolate the border price if we wish to do so.
         Ok(())
     }
 }
