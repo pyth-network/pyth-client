@@ -53,7 +53,7 @@ pub trait Tracker<const GRANULARITY: i64, const NUM_ENTRIES: usize, const THRESH
 
 #[derive(Debug, Copy, Clone)]
 #[repr(C)]
-/// Represents an SMA Tracker that has NUM_ENTRIES entries
+/// Represents a Simple Moving Average Tracker Tracker that has NUM_ENTRIES entries
 /// each tracking time weighted sums for GRANULARITY seconds periods.
 ///The prices are assumed to be provided under some fixed point representation, and the computation
 /// gurantees accuracy up to the last decimal digit in the fixed point representation.
@@ -239,8 +239,8 @@ impl<const GRANULARITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
 
 #[derive(Debug, Copy, Clone)]
 #[repr(C)]
-/// Represents an Tick Tracker that has NUM_ENTRIES entries
-/// each tracking the last tick before every GRANULARITY seconds.
+/// A Tracker that has NUM_ENTRIES entries
+/// each tracking the last tick (price and confidence) before every GRANULARITY seconds.
 pub struct TickTracker<const GRANULARITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64> {
     prices:         [SignedTrackerRunningSum; NUM_ENTRIES], /* price running time
                                                              * weighted sums */
