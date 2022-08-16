@@ -23,7 +23,7 @@ use {
 pub const SMA_TRACKER_PRECISION_MULTIPLIER: i64 = 10;
 
 
-pub trait Tracker<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64> {
+pub trait Tracker<const GRANULARITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64> {
     ///initializes a zero initialized tracker
     fn initialize(&mut self) -> Result<(), OracleError>;
 
@@ -43,22 +43,22 @@ pub trait Tracker<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHO
     }
     ///Given a time, return the entry of that time
     fn time_to_entry(time: i64) -> Result<usize, OracleError> {
-        Ok(try_convert::<i64, usize>(time / GRANUALITY)? % NUM_ENTRIES)
+        Ok(try_convert::<i64, usize>(time / GRANULARITY)? % NUM_ENTRIES)
     }
-    ///returns the remining time before the next multiple of GRANUALITY
+    ///returns the remining time before the next multiple of GRANULARITY
     fn get_time_to_entry_end(time: i64) -> i64 {
-        (GRANUALITY - (time % GRANUALITY)) % GRANUALITY
+        (GRANULARITY - (time % GRANULARITY)) % GRANULARITY
     }
 }
 
 #[derive(Debug, Copy, Clone)]
 #[repr(C)]
 /// Represents an SMA Tracker that has NUM_ENTRIES entries
-/// each tracking time weighted sums for GRANUALITY seconds periods.
+/// each tracking time weighted sums for GRANULARITY seconds periods.
 ///The prices are assumed to be provided under some fixed point representation, and the computation
 /// gurantees accuracy up to the last decimal digit in the fixed point representation.
-/// Assumes THRESHOLD < GRANUALITY
-pub struct SmaTracker<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64> {
+/// Assumes THRESHOLD < GRANULARITY
+pub struct SmaTracker<const GRANULARITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64> {
     valid_entry_counter:        u64, // is incremented everytime we add a valid entry
     max_update_time_gap:        i64, // maximum time between two updates in the current entry.
     running_price:              [SignedTrackerRunningSum; NUM_ENTRIES], /* price running time
@@ -71,8 +71,8 @@ pub struct SmaTracker<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THR
     entry_validity:             [u8; NUM_ENTRIES], //entry validity
 }
 
-impl<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
-    SmaTracker<GRANUALITY, NUM_ENTRIES, THRESHOLD>
+impl<const GRANULARITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
+    SmaTracker<GRANULARITY, NUM_ENTRIES, THRESHOLD>
 {
     ///invalidates current_entry, and increments self.current_entry num_entries times
     fn invalidate_following_entries(&mut self, num_entries: usize, current_entry: usize) {
@@ -123,8 +123,9 @@ impl<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
     }
 }
 
-impl<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
-    Tracker<GRANUALITY, NUM_ENTRIES, THRESHOLD> for SmaTracker<GRANUALITY, NUM_ENTRIES, THRESHOLD>
+impl<const GRANULARITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
+    Tracker<GRANULARITY, NUM_ENTRIES, THRESHOLD>
+    for SmaTracker<GRANULARITY, NUM_ENTRIES, THRESHOLD>
 {
     fn initialize(&mut self) -> Result<(), OracleError> {
         //ensure that the first entry is invalid
@@ -223,7 +224,7 @@ impl<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
             }
             _ => {
                 //invalidate all the entries in your way
-                //this is ok because THRESHOLD < Granuality
+                //this is ok because THRESHOLD < GranulARity
                 self.invalidate_following_entries(
                     cmp::min(num_skipped_entries, NUM_ENTRIES),
                     prev_entry,
@@ -239,8 +240,8 @@ impl<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
 #[derive(Debug, Copy, Clone)]
 #[repr(C)]
 /// Represents an Tick Tracker that has NUM_ENTRIES entries
-/// each tracking the last tick before every GRANUALITY seconds.
-pub struct TickTracker<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64> {
+/// each tracking the last tick before every GRANULARITY seconds.
+pub struct TickTracker<const GRANULARITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64> {
     prices:         [SignedTrackerRunningSum; NUM_ENTRIES], /* price running time
                                                              * weighted sums */
     confidences:    [UnsignedTrackerRunningSum; NUM_ENTRIES], /* confidence running
@@ -250,8 +251,8 @@ pub struct TickTracker<const GRANUALITY: i64, const NUM_ENTRIES: usize, const TH
 }
 
 
-impl<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
-    TickTracker<GRANUALITY, NUM_ENTRIES, THRESHOLD>
+impl<const GRANULARITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
+    TickTracker<GRANULARITY, NUM_ENTRIES, THRESHOLD>
 {
     ///invalidates current_entry, and increments self.current_entry num_entries times
     fn invalidate_following_entries(&mut self, num_entries: usize, current_entry: usize) {
@@ -264,9 +265,9 @@ impl<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
 }
 
 
-impl<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
-    Tracker<GRANUALITY, NUM_ENTRIES, THRESHOLD>
-    for TickTracker<GRANUALITY, NUM_ENTRIES, THRESHOLD>
+impl<const GRANULARITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
+    Tracker<GRANULARITY, NUM_ENTRIES, THRESHOLD>
+    for TickTracker<GRANULARITY, NUM_ENTRIES, THRESHOLD>
 {
     fn initialize(&mut self) -> Result<(), OracleError> {
         Ok(())
@@ -304,7 +305,7 @@ impl<const GRANUALITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
             }
             _ => {
                 //invalidate all the entries in your way
-                //this is ok because THRESHOLD < Granuality
+                //this is ok because THRESHOLD < GranulARity
                 self.prices[prev_entry] = prev_price;
                 self.confidences[prev_entry] = prev_conf;
                 self.entry_validity[prev_entry] =
