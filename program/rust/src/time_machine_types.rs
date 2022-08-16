@@ -17,6 +17,14 @@ use std::cmp;
 //running sums if needed
 type SignedTrackerRunningSum = i64;
 type UnsignedTrackerRunningSum = u64;
+
+
+#[repr(u8)]
+#[derive(Debug, Copy, Clone)]
+enum Status {
+    Invalid = 0,
+    Valid   = 1,
+}
 //multiply by this to make up for errors that result when dividing integers
 pub const SMA_TRACKER_PRECISION_MULTIPLIER: i64 = 10;
 
@@ -68,7 +76,7 @@ pub struct SmaTracker<const GRANULARITY: i64, const NUM_ENTRIES: usize, const TH
                                       * either price or confidence), used to ensure that we do
                                       * not compute an average using runsums on an internval
                                       * longer than MAX_INT / max_observed_entry_abs_val */
-    entry_validity:             [u8; NUM_ENTRIES], //entry validity
+    entry_validity:             [Status; NUM_ENTRIES], //entry validity
 }
 
 impl<const GRANULARITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
@@ -78,7 +86,7 @@ impl<const GRANULARITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
     fn invalidate_following_entries(&mut self, num_entries: usize, current_entry: usize) {
         let mut entry = current_entry;
         for _ in 0..num_entries {
-            self.entry_validity[entry] = 0;
+            self.entry_validity[entry] = Status::Invalid;
             entry = Self::get_next_entry(entry);
         }
     }
@@ -203,10 +211,10 @@ impl<const GRANULARITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
 
                 //update current entry validity
                 self.entry_validity[prev_entry] = if self.max_update_time_gap >= THRESHOLD {
-                    0
+                    Status::Invalid
                 } else {
                     self.valid_entry_counter += 1;
-                    1
+                    Status::Valid
                 };
 
                 //update max_update_time
@@ -247,7 +255,7 @@ pub struct TickTracker<const GRANULARITY: i64, const NUM_ENTRIES: usize, const T
     confidences:    [UnsignedTrackerRunningSum; NUM_ENTRIES], /* confidence running
                                                                * time
                                                                * weighted sums */
-    entry_validity: [u8; NUM_ENTRIES], //entry validity
+    entry_validity: [Status; NUM_ENTRIES], //entry validity
 }
 
 
@@ -258,7 +266,7 @@ impl<const GRANULARITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
     fn invalidate_following_entries(&mut self, num_entries: usize, current_entry: usize) {
         let mut entry = current_entry;
         for _ in 0..num_entries {
-            self.entry_validity[entry] = 0;
+            self.entry_validity[entry] = Status::Invalid;
             entry = Self::get_next_entry(entry);
         }
     }
@@ -296,9 +304,9 @@ impl<const GRANULARITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
                 self.confidences[prev_entry] = prev_conf;
                 self.entry_validity[prev_entry] =
                     if Self::get_time_to_entry_end(prev_time) >= THRESHOLD {
-                        0
+                        Status::Invalid
                     } else {
-                        1
+                        Status::Valid
                     };
                 self.prices[current_entry] = current_price;
                 self.confidences[current_entry] = current_conf;
@@ -310,9 +318,9 @@ impl<const GRANULARITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
                 self.confidences[prev_entry] = prev_conf;
                 self.entry_validity[prev_entry] =
                     if Self::get_time_to_entry_end(prev_time) >= THRESHOLD {
-                        0
+                        Status::Invalid
                     } else {
-                        1
+                        Status::Valid
                     };
 
                 self.invalidate_following_entries(
