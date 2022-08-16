@@ -66,8 +66,10 @@ pub struct SmaTracker<const GRANULARITY: i64, const NUM_ENTRIES: usize, const TH
     running_confidence:         [UnsignedTrackerRunningSum; NUM_ENTRIES], /* confidence running
                                                                            * time
                                                                            * weighted sums */
-    max_observed_entry_abs_val: u64, /* used to ensure that there are no overflows when
-                                      * looking at running sum diffs */
+    max_observed_entry_abs_val: u64, /* The maximum value of a term in the time weighted sum (of
+                                      * either price or confidence), used to ensure that we do
+                                      * not compute an average using runsums on an internval
+                                      * longer than MAX_INT / max_observed_entry_abs_val */
     entry_validity:             [u8; NUM_ENTRIES], //entry validity
 }
 
