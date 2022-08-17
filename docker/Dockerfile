@@ -70,7 +70,7 @@ RUN ./pyth-client/scripts/patch-solana.sh
 
 # Build and test the oracle program.
 RUN cd pyth-client && ./scripts/build-bpf.sh .
-RUN ./scripts/run-aggregation-tests.sh
+RUN cd pyth-client && ./scripts/run-aggregation-tests.sh
 RUN /bin/bash -l -c "pytest-3 --pyargs pyth"
 
 ENTRYPOINT []
