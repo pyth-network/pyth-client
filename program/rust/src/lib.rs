@@ -19,6 +19,7 @@ mod tests;
 use crate::c_oracle_header::SUCCESSFULLY_UPDATED_AGGREGATE;
 use crate::error::OracleError;
 
+#[cfg(feature = "debug")]
 use crate::log::{
     post_log,
     pre_log,
@@ -51,6 +52,7 @@ use solana_program::{
 pub extern "C" fn entrypoint(input: *mut u8) -> u64 {
     let (program_id, accounts, instruction_data) = unsafe { deserialize(input) };
 
+    #[cfg(feature = "debug")]
     if let Err(error) = pre_log(&accounts, instruction_data) {
         return error.into();
     }
@@ -60,6 +62,7 @@ pub extern "C" fn entrypoint(input: *mut u8) -> u64 {
         Ok(success_status) => success_status,
     };
 
+    #[cfg(feature = "debug")]
     if let Err(error) = post_log(c_ret_val, &accounts) {
         return error.into();
     }

@@ -13,5 +13,8 @@ solana-program = "=1.10.29"
 bytemuck = "1.11.0"
 thiserror = "1.0"
 
+[features]
+debug = []
+
 [lib]
 crate-type = ["cdylib", "lib"]
