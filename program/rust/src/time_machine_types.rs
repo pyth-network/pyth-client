@@ -142,7 +142,9 @@ impl<const GRANULARITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
         Ok(SignedTrackerRunningSum::MAX - entry < try_convert(added_val)?)
     }
     ///Adds price and confidence each multiplied by update_time
-    /// to the entry
+    ///to the entry, we use the last two prices in order to have a better estimate
+    ///for the time weighted average using the Trapezoidal rule
+    ///Both prices need to the most recent valid prices received by the oracle
     fn add_price_to_entry(
         &mut self,
         prev_price: i64,
