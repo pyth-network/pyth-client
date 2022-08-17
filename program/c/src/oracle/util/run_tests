@@ -1,7 +1,7 @@
 #!/bin/sh
 
-module purge          || exit 1
-module load gcc-9.3.0 || exit 1
+# module purge          || exit 1
+# module load gcc-9.3.0 || exit 1
 
 ./clean       || exit 1
 mkdir -pv bin || exit 1
@@ -50,5 +50,5 @@ bin/test_avg   || exit 1
 #bin/test_prng_battery 2 0 0 || exit 1 # SmallCrush (seq 0, idx 0)
 #bin/test_prng_battery 3 0 0 || exit 1 # Crush: Takes >~20 min (seq 0, idx 0)
 #bin/test_prng_battery 4 0 0 || exit 1 # BigCrush: Takes >~3 hours (seq 0, idx 0)
-
+exit 1
 echo all tests passed
