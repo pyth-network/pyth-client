@@ -7,7 +7,6 @@
 mod c_oracle_header;
 mod deserialize;
 mod error;
-mod log;
 mod processor;
 mod rust_oracle;
 mod time_machine_types;
@@ -15,6 +14,9 @@ mod utils;
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(feature = "debug")]
+mod log;
 
 use crate::c_oracle_header::SUCCESSFULLY_UPDATED_AGGREGATE;
 use crate::error::OracleError;
@@ -24,6 +26,7 @@ use crate::log::{
     post_log,
     pre_log,
 };
+
 use processor::process_instruction;
 
 use solana_program::entrypoint::deserialize;

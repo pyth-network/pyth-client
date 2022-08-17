@@ -11,7 +11,6 @@ use solana_program::msg;
 use solana_program::program_error::ProgramError;
 use solana_program::sysvar::Sysvar;
 
-#[allow(dead_code)]
 pub fn pre_log(accounts: &[AccountInfo], instruction_data: &[u8]) -> ProgramResult {
     msg!("Pyth oracle contract");
 
@@ -99,8 +98,6 @@ pub fn pre_log(accounts: &[AccountInfo], instruction_data: &[u8]) -> ProgramResu
     Ok(())
 }
 
-
-#[allow(dead_code)]
 pub fn post_log(c_ret_val: u64, accounts: &[AccountInfo]) -> ProgramResult {
     if c_ret_val == SUCCESSFULLY_UPDATED_AGGREGATE {
         // We trust that the C oracle has properly checked account 1, we can only get here through
