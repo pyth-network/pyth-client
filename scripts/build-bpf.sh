@@ -9,6 +9,12 @@ PYTH_DIR=$( cd "${1:-.}" && pwd)
 C_DIR="$( find $PYTH_DIR | grep makefile)"
 C_DIR=$(dirname $C_DIR)
 
+if ! which cargo 2> /dev/null
+then
+  # shellcheck disable=SC1090
+  source "${CARGO_HOME:-$HOME/.cargo}/env"
+fi
+
 set -x
 
 #build the C code and make an archive file out of it
