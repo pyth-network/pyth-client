@@ -50,5 +50,5 @@ bin/test_avg   || exit 1
 #bin/test_prng_battery 2 0 0 || exit 1 # SmallCrush (seq 0, idx 0)
 #bin/test_prng_battery 3 0 0 || exit 1 # Crush: Takes >~20 min (seq 0, idx 0)
 #bin/test_prng_battery 4 0 0 || exit 1 # BigCrush: Takes >~3 hours (seq 0, idx 0)
-exit 1
+
 echo all tests passed
