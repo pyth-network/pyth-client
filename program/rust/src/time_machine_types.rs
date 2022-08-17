@@ -20,10 +20,11 @@ type UnsignedTrackerRunningSum = u64;
 
 
 #[repr(u8)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 enum Status {
-    Invalid = 0,
-    Valid   = 1,
+    Invalid         = 0,
+    Valid           = 1,
+    StronglyInvalid = 2,
 }
 //multiply by this to make up for errors that result when dividing integers
 pub const SMA_TRACKER_PRECISION_MULTIPLIER: i64 = 10;
@@ -47,6 +48,10 @@ pub trait Tracker<const GRANULARITY: i64, const NUM_ENTRIES: usize, const THRESH
     fn get_next_entry(current_entry: usize) -> usize {
         (current_entry + 1) % NUM_ENTRIES
     }
+    ///gets the index of the previou entry
+    fn get_prev_entry(current_entry: usize) -> usize {
+        (current_entry - 1) % NUM_ENTRIES
+    }
     ///Given a time, return the entry of that time
     fn time_to_entry(time: i64) -> Result<usize, OracleError> {
         Ok(try_convert::<i64, usize>(time / GRANULARITY)? % NUM_ENTRIES)
@@ -65,23 +70,49 @@ pub trait Tracker<const GRANULARITY: i64, const NUM_ENTRIES: usize, const THRESH
 /// gurantees accuracy up to the last decimal digit in the fixed point representation.
 /// Assumes THRESHOLD < GRANULARITY
 pub struct SmaTracker<const GRANULARITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64> {
-    valid_entry_counter:        u64, // is incremented everytime we add a valid entry
-    max_update_time_gap:        i64, // maximum time between two updates in the current entry.
-    running_price:              [SignedTrackerRunningSum; NUM_ENTRIES], /* price running time
-                                      * weighted sums */
-    running_confidence:         [UnsignedTrackerRunningSum; NUM_ENTRIES], /* confidence running
-                                                                           * time
-                                                                           * weighted sums */
-    max_observed_entry_abs_val: u64, /* The maximum value of a term in the time weighted sum (of
-                                      * either price or confidence), used to ensure that we do
-                                      * not compute an average using runsums on an internval
-                                      * longer than MAX_INT / max_observed_entry_abs_val */
-    entry_validity:             [Status; NUM_ENTRIES], //entry validity
+    valid_entry_counter: UnsignedTrackerRunningSum, /* is incremented everytime we add a valid
+                                                     * entry, and reset when running_prices
+                                                     * overflow */
+    max_update_time_gap: i64, // maximum time between two updates in the current entry.
+    running_price:       [SignedTrackerRunningSum; NUM_ENTRIES], /* price running time
+                               * weighted sums */
+    running_confidence:  [UnsignedTrackerRunningSum; NUM_ENTRIES], /* confidence running
+                                                                    * time
+                                                                    * weighted sums */
+    last_overflow_entry: i64, /* The absolute entry number (timestamp / GRANUALITY) of the last
+                               * entry not impacted by the last overflow. Used when Combining
+                               * VAAs over longer horizons */
+    entry_validity:      [Status; NUM_ENTRIES], //entry validity
 }
 
 impl<const GRANULARITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
     SmaTracker<GRANULARITY, NUM_ENTRIES, THRESHOLD>
 {
+    fn overflow_setup(
+        &mut self,
+        prev_time: i64,
+        prev_price: i64,
+        current_time: i64,
+        current_price: i64,
+    ) -> Result<(), OracleError> {
+        let avg_price = (prev_price + current_price) / 2;
+        let prev_entry = Self::time_to_entry(prev_price)?;
+        if Self::check_for_overflow(
+            self.running_price[prev_entry],
+            (current_time - prev_time) * avg_price,
+        )? {
+            if prev_entry == try_convert(self.last_overflow_entry)? {
+                self.entry_validity[prev_entry] = Status::StronglyInvalid;
+                return Ok(());
+            }
+            let pre_prev_entry = Self::get_prev_entry(prev_entry);
+            self.last_overflow_entry = try_convert(pre_prev_entry)?;
+            self.running_price[prev_entry] -= self.running_price[pre_prev_entry];
+            self.running_confidence[prev_entry] -= self.running_confidence[pre_prev_entry];
+            self.valid_entry_counter = 0;
+        }
+        Ok(())
+    }
     ///invalidates current_entry, and increments self.current_entry num_entries times
     fn invalidate_following_entries(&mut self, num_entries: usize, current_entry: usize) {
         let mut entry = current_entry;
@@ -104,6 +135,12 @@ impl<const GRANULARITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
     ) -> Result<T, OracleError> {
         Ok((w1 * v1 + w2 * v2) / (w1 + w2))
     }
+    fn check_for_overflow(
+        entry: SignedTrackerRunningSum,
+        added_val: i64,
+    ) -> Result<bool, OracleError> {
+        Ok(SignedTrackerRunningSum::MAX - entry < try_convert(added_val)?)
+    }
     ///Adds price and confidence each multiplied by update_time
     /// to the entry
     fn add_price_to_entry(
@@ -117,16 +154,17 @@ impl<const GRANULARITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
     ) -> Result<(), OracleError> {
         let avg_price = (prev_price + current_price) / 2;
         let avg_conf = (prev_conf + current_conf) / 2;
+        if Self::check_for_overflow(self.running_price[entry], update_time * avg_price)? {
+            self.entry_validity[entry] = Status::StronglyInvalid;
+            //This means that that an overflow occured within one entry, which is pretty bad
+            //unless it was a onetime bad price
+            return Ok(());
+        }
         self.running_price[entry] +=
             try_convert::<i64, SignedTrackerRunningSum>(update_time * avg_price)?;
         self.running_confidence[entry] += try_convert::<u64, UnsignedTrackerRunningSum>(
             try_convert::<i64, u64>(update_time)? * avg_conf,
         )?;
-        //since price is always greater than confidence, it is sufficient to look at the
-        // price we also look at the average because it is the value that
-        // gets multiplied with the number of seconds
-        self.max_observed_entry_abs_val =
-            cmp::max(try_convert(avg_price)?, self.max_observed_entry_abs_val);
         Ok(())
     }
 }
@@ -166,8 +204,17 @@ impl<const GRANULARITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
         let prev_entry = Self::time_to_entry(prev_time)?;
         let current_entry = Self::time_to_entry(current_time)?;
         let num_skipped_entries = current_entry - prev_entry;
+        //check for overflow, and set things up accordingly
+        self.overflow_setup(
+            prev_time,
+            inflated_prev_price,
+            current_time,
+            inflated_current_price,
+        )?;
+
+
         //update entries as needed
-        match current_entry - prev_entry {
+        match num_skipped_entries {
             0 => {
                 self.add_price_to_entry(
                     inflated_prev_price,
@@ -180,7 +227,6 @@ impl<const GRANULARITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
             }
             1 => {
                 //initialize next entry to be the same as the current one
-
                 self.running_price[current_entry] = self.running_price[prev_entry];
                 self.running_confidence[current_entry] = self.running_confidence[prev_entry];
 
@@ -210,7 +256,9 @@ impl<const GRANULARITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
                 )?;
 
                 //update current entry validity
-                self.entry_validity[prev_entry] = if self.max_update_time_gap >= THRESHOLD {
+                self.entry_validity[prev_entry] = if self.max_update_time_gap >= THRESHOLD
+                    || self.entry_validity[prev_entry] == Status::StronglyInvalid
+                {
                     Status::Invalid
                 } else {
                     self.valid_entry_counter += 1;
