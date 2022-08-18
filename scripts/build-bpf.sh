@@ -19,7 +19,7 @@ set -x
 
 #build the C code and make an archive file out of it
 cd "${C_DIR}"
-export V=1
+export V=1 #verbose flag for solana
 make clean 
 make
 make cpyth-bpf 
