@@ -1,21 +1,17 @@
+use std::mem::size_of;
+
+use solana_program::program_error::ProgramError;
+use solana_program::pubkey::Pubkey;
+
+use crate::c_oracle_header::{cmd_hdr, command_t_e_cmd_del_price, pc_price_t, pc_prod_t, PC_VERSION};
 use crate::deserialize::{
   initialize_pyth_account_checked,
   load_checked,
   load_mut,
 };
-use crate::rust_oracle::{del_price, del_publisher};
+use crate::rust_oracle::del_price;
 use crate::tests::test_utils::AccountSetup;
-use bytemuck::bytes_of;
-use solana_program::pubkey::Pubkey;
-
-use crate::c_oracle_header::{cmd_del_publisher, command_t_e_cmd_del_publisher, pc_price_comp_t, pc_price_info_t, pc_price_t, pc_pub_key_t, PythAccount, PC_STATUS_TRADING, PC_VERSION, cmd_hdr, command_t_e_cmd_del_price, pc_prod_t, pc_prod};
-use crate::utils::{
-  pubkey_assign,
-  pubkey_equal,
-  pubkey_is_zero,
-};
-use std::mem::size_of;
-use solana_program::program_error::ProgramError;
+use crate::utils::pubkey_assign;
 
 #[test]
 fn test_del_price() {
@@ -48,7 +44,7 @@ fn test_del_price() {
 
   // Same test with a random nonzero pubkey
   {
-    let mut product_data = load_checked(&product_account, PC_VERSION)?;
+    let mut product_data = load_checked::<pc_prod_t>(&product_account, PC_VERSION).unwrap();
     pubkey_assign(&mut product_data.px_acc_, &Pubkey::new_unique().to_bytes());
   }
   assert_eq!(del_price(

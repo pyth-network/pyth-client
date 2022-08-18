@@ -9,6 +9,7 @@ use crate::c_oracle_header::{
     command_t_e_cmd_add_product,
     command_t_e_cmd_add_publisher,
     command_t_e_cmd_agg_price,
+    command_t_e_cmd_del_price,
     command_t_e_cmd_del_publisher,
     command_t_e_cmd_init_mapping,
     command_t_e_cmd_init_price,
