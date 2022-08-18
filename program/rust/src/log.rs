@@ -98,7 +98,6 @@ pub fn pre_log(accounts: &[AccountInfo], instruction_data: &[u8]) -> ProgramResu
     Ok(())
 }
 
-
 pub fn post_log(c_ret_val: u64, accounts: &[AccountInfo]) -> ProgramResult {
     if c_ret_val == SUCCESSFULLY_UPDATED_AGGREGATE {
         // We trust that the C oracle has properly checked account 1, we can only get here through

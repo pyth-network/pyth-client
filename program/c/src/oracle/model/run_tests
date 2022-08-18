@@ -1,8 +1,5 @@
 #!/bin/sh
 
-# module purge          || exit 1
-# module load gcc-9.3.0 || exit 1
-
 ./clean       || exit 1
 mkdir -pv bin || exit 1
 
