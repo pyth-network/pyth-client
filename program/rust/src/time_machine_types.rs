@@ -30,37 +30,32 @@ enum Status {
 pub const SMA_TRACKER_PRECISION_MULTIPLIER: i64 = 10;
 
 
-pub trait Tracker<const GRANULARITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64> {
-    ///initializes a zero initialized tracker
-    fn initialize(&mut self) -> Result<(), OracleError>;
+mod track_helpers {
+    use crate::error::OracleError;
+    use crate::utils::try_convert;
 
-    ///add a new price to the tracker
-    fn add_price(
-        &mut self,
-        prev_time: i64,
-        prev_price: i64,
-        prev_conf: u64,
-        current_time: i64,
-        current_price: i64,
-        current_conf: u64,
-    ) -> Result<(), OracleError>;
     ///gets the index of the next entry
-    fn get_next_entry(current_entry: usize) -> usize {
-        (current_entry + 1) % NUM_ENTRIES
+    pub fn get_next_entry(current_entry: usize, num_entries: usize) -> usize {
+        (current_entry + 1) % num_entries
     }
     ///gets the index of the previou entry
-    fn get_prev_entry(current_entry: usize) -> usize {
-        (current_entry - 1) % NUM_ENTRIES
+    pub fn get_prev_entry(current_entry: usize, num_entries: usize) -> usize {
+        (current_entry - 1) % num_entries
     }
     ///Given a time, return the entry of that time
-    fn time_to_entry(time: i64) -> Result<usize, OracleError> {
-        Ok(try_convert::<i64, usize>(time / GRANULARITY)? % NUM_ENTRIES)
+    pub fn time_to_entry(
+        time: i64,
+        num_entries: usize,
+        granuality: i64,
+    ) -> Result<usize, OracleError> {
+        Ok(try_convert::<i64, usize>(time / granuality)? % num_entries)
     }
     ///returns the remining time before the next multiple of GRANULARITY
-    fn get_time_to_entry_end(time: i64) -> i64 {
-        (GRANULARITY - (time % GRANULARITY)) % GRANULARITY
+    pub fn get_time_to_entry_end(time: i64, granuality: i64) -> i64 {
+        (granuality - (time % granuality)) % granuality
     }
 }
+use track_helpers::*;
 
 #[derive(Debug, Copy, Clone)]
 #[repr(C)]
@@ -69,7 +64,9 @@ pub trait Tracker<const GRANULARITY: i64, const NUM_ENTRIES: usize, const THRESH
 ///The prices are assumed to be provided under some fixed point representation, and the computation
 /// gurantees accuracy up to the last decimal digit in the fixed point representation.
 /// Assumes THRESHOLD < GRANULARITY
-pub struct SmaTracker<const GRANULARITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64> {
+pub struct SmaTracker<const NUM_ENTRIES: usize> {
+    threshold:           i64,
+    granularity:         i64,
     valid_entry_counter: UnsignedTrackerRunningSum, /* is incremented everytime we add a valid
                                                      * entry, and reset when running_prices
                                                      * overflow */
@@ -85,9 +82,7 @@ pub struct SmaTracker<const GRANULARITY: i64, const NUM_ENTRIES: usize, const TH
     entry_validity:      [Status; NUM_ENTRIES], //entry validity
 }
 
-impl<const GRANULARITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
-    SmaTracker<GRANULARITY, NUM_ENTRIES, THRESHOLD>
-{
+impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
     fn overflow_setup(
         &mut self,
         prev_time: i64,
@@ -96,7 +91,7 @@ impl<const GRANULARITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
         current_price: i64,
     ) -> Result<(), OracleError> {
         let avg_price = (prev_price + current_price) / 2;
-        let prev_entry = Self::time_to_entry(prev_price)?;
+        let prev_entry = time_to_entry(prev_price, NUM_ENTRIES, self.granularity)?;
         if Self::check_for_overflow(
             self.running_price[prev_entry],
             (current_time - prev_time) * avg_price,
@@ -105,7 +100,7 @@ impl<const GRANULARITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
                 self.entry_validity[prev_entry] = Status::StronglyInvalid;
                 return Ok(());
             }
-            let pre_prev_entry = Self::get_prev_entry(prev_entry);
+            let pre_prev_entry = get_prev_entry(prev_entry, NUM_ENTRIES);
             self.last_overflow_entry = try_convert(pre_prev_entry)?;
             self.running_price[prev_entry] -= self.running_price[pre_prev_entry];
             self.running_confidence[prev_entry] -= self.running_confidence[pre_prev_entry];
@@ -118,7 +113,7 @@ impl<const GRANULARITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
         let mut entry = current_entry;
         for _ in 0..num_entries {
             self.entry_validity[entry] = Status::Invalid;
-            entry = Self::get_next_entry(entry);
+            entry = get_next_entry(entry, NUM_ENTRIES);
         }
     }
     /// returns a weighted average of v with weights w
@@ -169,15 +164,13 @@ impl<const GRANULARITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
         )?;
         Ok(())
     }
-}
 
-impl<const GRANULARITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
-    Tracker<GRANULARITY, NUM_ENTRIES, THRESHOLD>
-    for SmaTracker<GRANULARITY, NUM_ENTRIES, THRESHOLD>
-{
-    fn initialize(&mut self) -> Result<(), OracleError> {
+
+    fn initialize(&mut self, threshold: i64, granularity: i64) -> Result<(), OracleError> {
         //ensure that the first entry is invalid
-        self.max_update_time_gap = THRESHOLD;
+        self.threshold = threshold;
+        self.granularity = granularity;
+        self.max_update_time_gap = self.threshold;
         Ok(())
     }
 
@@ -203,8 +196,8 @@ impl<const GRANULARITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
         let update_time = current_time - prev_time;
         self.max_update_time_gap = cmp::max(self.max_update_time_gap, update_time);
 
-        let prev_entry = Self::time_to_entry(prev_time)?;
-        let current_entry = Self::time_to_entry(current_time)?;
+        let prev_entry = time_to_entry(prev_time, NUM_ENTRIES, self.granularity)?;
+        let current_entry = time_to_entry(current_time, NUM_ENTRIES, self.granularity)?;
         let num_skipped_entries = current_entry - prev_entry;
         //check for overflow, and set things up accordingly
         self.overflow_setup(
@@ -233,7 +226,7 @@ impl<const GRANULARITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
                 self.running_confidence[current_entry] = self.running_confidence[prev_entry];
 
                 //update price
-                let time_to_entry_end = Self::get_time_to_entry_end(prev_time);
+                let time_to_entry_end = get_time_to_entry_end(prev_time, self.granularity);
                 let time_after_entry_end = update_time - time_to_entry_end;
                 let entry_end_price = Self::weighted_average(
                     time_after_entry_end,
@@ -258,7 +251,7 @@ impl<const GRANULARITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
                 )?;
 
                 //update current entry validity
-                self.entry_validity[prev_entry] = if self.max_update_time_gap >= THRESHOLD
+                self.entry_validity[prev_entry] = if self.max_update_time_gap >= self.threshold
                     || self.entry_validity[prev_entry] == Status::StronglyInvalid
                 {
                     Status::Invalid
@@ -294,12 +287,13 @@ impl<const GRANULARITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
     }
 }
 
-
 #[derive(Debug, Copy, Clone)]
 #[repr(C)]
 /// A Tracker that has NUM_ENTRIES entries
 /// each tracking the last tick (price and confidence) before every GRANULARITY seconds.
-pub struct TickTracker<const GRANULARITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64> {
+pub struct TickTracker<const NUM_ENTRIES: usize> {
+    threshold:      i64,
+    granularity:    i64,
     prices:         [SignedTrackerRunningSum; NUM_ENTRIES], /* price running time
                                                              * weighted sums */
     confidences:    [UnsignedTrackerRunningSum; NUM_ENTRIES], /* confidence running
@@ -309,25 +303,19 @@ pub struct TickTracker<const GRANULARITY: i64, const NUM_ENTRIES: usize, const T
 }
 
 
-impl<const GRANULARITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
-    TickTracker<GRANULARITY, NUM_ENTRIES, THRESHOLD>
-{
+impl<const NUM_ENTRIES: usize> TickTracker<NUM_ENTRIES> {
     ///invalidates current_entry, and increments self.current_entry num_entries times
     fn invalidate_following_entries(&mut self, num_entries: usize, current_entry: usize) {
         let mut entry = current_entry;
         for _ in 0..num_entries {
             self.entry_validity[entry] = Status::Invalid;
-            entry = Self::get_next_entry(entry);
+            entry = get_next_entry(entry, NUM_ENTRIES);
         }
     }
-}
 
-
-impl<const GRANULARITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
-    Tracker<GRANULARITY, NUM_ENTRIES, THRESHOLD>
-    for TickTracker<GRANULARITY, NUM_ENTRIES, THRESHOLD>
-{
-    fn initialize(&mut self) -> Result<(), OracleError> {
+    fn initialize(&mut self, threshold: i64, granularity: i64) -> Result<(), OracleError> {
+        self.threshold = threshold;
+        self.granularity = granularity;
         Ok(())
     }
 
@@ -338,11 +326,9 @@ impl<const GRANULARITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
         prev_price: i64,
         prev_conf: u64,
         current_time: i64,
-        _current_price: i64,
-        _current_conf: u64,
     ) -> Result<(), OracleError> {
-        let prev_entry = Self::time_to_entry(prev_time)?;
-        let current_entry = Self::time_to_entry(current_time)?;
+        let prev_entry = time_to_entry(prev_time, NUM_ENTRIES, self.granularity)?;
+        let current_entry = time_to_entry(current_time, NUM_ENTRIES, self.granularity)?;
         let num_skipped_entries = current_entry - prev_entry;
 
         // unlike SMAs, first entry here can be valid
@@ -350,23 +336,26 @@ impl<const GRANULARITY: i64, const NUM_ENTRIES: usize, const THRESHOLD: i64>
         self.confidences[prev_entry] = prev_conf;
 
         //update validity if it is time to do so
-        self.entry_validity[prev_entry] =
-            if Self::get_time_to_entry_end(prev_time) >= THRESHOLD || num_skipped_entries == 0 {
-                Status::Invalid
-            } else {
-                Status::Valid
-            };
+        self.entry_validity[prev_entry] = if get_time_to_entry_end(prev_time, self.granularity)
+            >= self.threshold
+            || num_skipped_entries == 0
+        {
+            Status::Invalid
+        } else {
+            Status::Valid
+        };
 
         //invalidate skipped entries if any
         self.invalidate_following_entries(
             cmp::min(num_skipped_entries, NUM_ENTRIES),
-            Self::get_next_entry(prev_entry),
+            get_next_entry(prev_entry, NUM_ENTRIES),
         );
         //We do not need to store thre current_price or conf, they will be stored on the next
         //price send. However, we can use to interpolate the border price if we wish to do so.
         Ok(())
     }
 }
+
 
 const THIRTY_MINUTES: i64 = 30 * 60;
 const TEN_HOURS: usize = 10 * 60 * 60;
@@ -376,16 +365,16 @@ const TWENTY_SECONDS: i64 = 20;
 /// this wraps multiple SMA and tick trackers, and includes all the state
 /// used by the time machine
 pub struct TimeMachineWrapper {
-    sma_tracker:
-        SmaTracker<THIRTY_MINUTES, { TEN_HOURS / (THIRTY_MINUTES as usize) }, TWENTY_SECONDS>,
-    tick_tracker:
-        TickTracker<THIRTY_MINUTES, { TEN_HOURS / (THIRTY_MINUTES as usize) }, TWENTY_SECONDS>,
+    sma_tracker:  SmaTracker<{ TEN_HOURS / (THIRTY_MINUTES as usize) }>,
+    tick_tracker: TickTracker<{ TEN_HOURS / (THIRTY_MINUTES as usize) }>,
 }
 
 impl TimeMachineWrapper {
     pub fn initialize(&mut self) -> Result<(), OracleError> {
-        self.sma_tracker.initialize()?;
-        self.tick_tracker.initialize()?;
+        self.sma_tracker
+            .initialize(TWENTY_SECONDS, THIRTY_MINUTES)?;
+        self.tick_tracker
+            .initialize(TWENTY_SECONDS, THIRTY_MINUTES)?;
         Ok(())
     }
 
@@ -406,14 +395,8 @@ impl TimeMachineWrapper {
             current_price,
             current_conf,
         )?;
-        self.tick_tracker.add_price(
-            prev_time,
-            prev_price,
-            prev_conf,
-            current_time,
-            current_price,
-            current_conf,
-        )?;
+        self.tick_tracker
+            .add_price(prev_time, prev_price, prev_conf, current_time)?;
         Ok(())
     }
 }

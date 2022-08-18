@@ -15,7 +15,7 @@ const uint64_t SUCCESSFULLY_UPDATED_AGGREGATE = 1000ULL;
 
 // The size of the "time machine" account defined in the
 // Rust portion of the codebase.
-const uint64_t TIME_MACHINE_STRUCT_SIZE = 712ULL;
+const uint64_t TIME_MACHINE_STRUCT_SIZE = 744ULL;
 
 const uint64_t EXTRA_PUBLISHER_SPACE = 1000ULL;
 
