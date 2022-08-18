@@ -1,10 +1,8 @@
 #!/usr/bin/env bash
 #
-# Build given bpf makefile dir (./program by default):
+# Build bpf oracle program :
 #   ~/pyth-client$ ./scripts/build-bpf.sh
-#   ~/pyth-client/program$ ../scripts/build-bpf.sh .
-#   ~/$ ./pyth-client/scripts/build-bpf.sh ./serum-pyth/program
-#
+#   ~/pyth-client/program$ ../scripts/build-bpf.sh
 
 set -eu
 
@@ -21,14 +19,13 @@ then
   source "${CARGO_HOME:-$HOME/.cargo}/env"
 fi
 
-
 set -x
 
 #build the C code and make an archive file out of it
 cd "${C_DIR}"
-export V="${V:-1}"
+export V="${V:-1}" #verbose flag for solana
 make clean 
-make  "${@:2}" 
+make
 make cpyth-bpf 
 make cpyth-native
 rm ./target/*-keypair.json
