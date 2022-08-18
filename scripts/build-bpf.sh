@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Build given bpf makefile dir (./program by default):
+# Build bpf oracle program :
 #   ~/pyth-client$ ./scripts/build-bpf.sh
 #   ~/pyth-client/program$ ../scripts/build-bpf.sh
 
