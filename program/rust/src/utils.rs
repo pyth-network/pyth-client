@@ -98,6 +98,15 @@ pub fn pubkey_assign(target: &mut pc_pub_key_t, source: &[u8]) {
     unsafe { target.k1_.copy_from_slice(source) }
 }
 
+/// Set `target` to contain all-zeros.
+pub fn pubkey_clear(target: &mut pc_pub_key_t) {
+    unsafe {
+        for i in 0..4 {
+            target.k8_[i] = 0
+        }
+    }
+}
+
 pub fn pubkey_is_zero(key: &pc_pub_key_t) -> bool {
     return unsafe { key.k8_.iter().all(|x| *x == 0) };
 }

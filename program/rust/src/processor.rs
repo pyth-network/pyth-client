@@ -29,6 +29,7 @@ use crate::rust_oracle::{
     add_price,
     add_product,
     add_publisher,
+    del_price,
     del_publisher,
     init_mapping,
     init_price,
@@ -77,6 +78,7 @@ pub fn process_instruction(
         command_t_e_cmd_add_product => add_product(program_id, accounts, instruction_data),
         command_t_e_cmd_upd_product => upd_product(program_id, accounts, instruction_data),
         command_t_e_cmd_set_min_pub => set_min_pub(program_id, accounts, instruction_data),
+        command_t_e_cmd_del_price => del_price(program_id, accounts, instruction_data),
         _ => Err(OracleError::UnrecognizedInstruction.into()),
     }
 }

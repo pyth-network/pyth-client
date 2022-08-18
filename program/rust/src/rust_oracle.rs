@@ -68,6 +68,7 @@ use crate::utils::{
     check_valid_writable_account,
     is_component_update,
     pubkey_assign,
+    pubkey_clear,
     pubkey_equal,
     pubkey_is_zero,
     pyth_assert,
@@ -368,6 +369,56 @@ pub fn add_price(
     pubkey_assign(&mut price_data.prod_, &product_account.key.to_bytes());
     pubkey_assign(&mut price_data.next_, bytes_of(&product_data.px_acc_));
     pubkey_assign(&mut product_data.px_acc_, &price_account.key.to_bytes());
+
+    Ok(SUCCESS)
+}
+
+/// Delete a price account. This function will remove the link between the price account and its
+/// corresponding product account, then transfer any SOL in the price account to the funding
+/// account. This function expects there to be only a single price account in the linked list of
+/// price accounts for the given product.
+///
+/// Warning: This function is dangerous and will break any programs that depend on the deleted
+/// price account!
+pub fn del_price(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
+    instruction_data: &[u8],
+) -> OracleResult {
+    let [funding_account, product_account, price_account, system_program_account] = match accounts {
+        [w, x, y, z] => Ok([w, x, y, z]),
+        _ => Err(ProgramError::InvalidArgument),
+    }?;
+
+    check_valid_funding_account(funding_account)?;
+    check_valid_signable_account(program_id, product_account, PC_PROD_ACC_SIZE as usize)?;
+    check_valid_signable_account(program_id, price_account, size_of::<pc_price_t>())?;
+    pyth_assert(
+        check_id(system_program_account.key),
+        OracleError::InvalidSystemAccount.into(),
+    )?;
+
+    let cmd_args = load::<cmd_hdr_t>(&instruction_data)?;
+    let mut product_data = load_checked::<pc_prod_t>(product_account, cmd_args.ver_)?;
+    let price_data = load_checked::<pc_price_t>(price_account, cmd_args.ver_)?;
+    pyth_assert(
+        pubkey_equal(&product_data.px_acc_, &price_account.key.to_bytes()),
+        ProgramError::InvalidArgument,
+    )?;
+    pyth_assert(
+        pubkey_is_zero(&price_data.next_),
+        ProgramError::InvalidArgument,
+    )?;
+
+    pubkey_clear(&mut product_data.px_acc_);
+
+    // Zero out the balance of the price account to delete it.
+    send_lamports(
+        price_account,
+        funding_account,
+        system_program_account,
+        price_account.lamports(),
+    )?;
 
     Ok(SUCCESS)
 }

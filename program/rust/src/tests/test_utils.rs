@@ -78,6 +78,22 @@ impl AccountSetup {
         };
     }
 
+    pub fn new_system_program() -> Self {
+        let key = system_program::id();
+        let owner = sysvar::id();
+        // Note: I have no clue what the right size is. This isn't going to work in reality anyway.
+        let size = clock::Clock::size_of();
+        let balance = Rent::minimum_balance(&Rent::default(), size);
+        let data = [0u8; UPPER_BOUND_OF_ALL_ACCOUNT_SIZES];
+        return AccountSetup {
+            key,
+            owner,
+            balance,
+            size,
+            data,
+        };
+    }
+
     pub fn to_account_info(&mut self) -> AccountInfo {
         return AccountInfo::new(
             &self.key,
