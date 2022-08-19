@@ -252,51 +252,22 @@ impl<const NUM_ENTRIES: usize> TickTracker<NUM_ENTRIES> {
         current_price: i64,
         current_conf: u64,
     ) -> Result<(), OracleError> {
-        self.close_previous_tick(prev_time, current_time)?;
-
-        self.invalidate_intermediate_entries(prev_time, current_time)?;
-
-        self.update_current_tick(current_time, current_price, current_conf)?;
-
-        Ok(())
-    }
-    fn close_previous_tick(
-        &mut self,
-        prev_time: i64,
-        current_time: i64,
-    ) -> Result<(), OracleError> {
+        //close current entry
         let current_entry = time_to_entry(current_time, NUM_ENTRIES, self.granularity)?;
         let prev_entry = time_to_entry(prev_time, NUM_ENTRIES, self.granularity)?;
         if current_entry != prev_entry && self.entry_validity[prev_entry] == Status::Pending {
             self.entry_validity[prev_entry] = Status::Valid;
         }
-        Ok(())
-    }
-    fn invalidate_intermediate_entries(
-        &mut self,
-        prev_time: i64,
-        current_time: i64,
-    ) -> Result<(), OracleError> {
-        let current_entry = time_to_entry(current_time, NUM_ENTRIES, self.granularity)?;
-        let prev_entry = time_to_entry(prev_time, NUM_ENTRIES, self.granularity)?;
 
-
+        //invalidate intermediate entries
         let num_skipped_entries = current_entry - prev_entry;
         let mut entry = prev_entry;
         for _ in 0..min(num_skipped_entries, NUM_ENTRIES) {
             entry = get_next_entry(entry, NUM_ENTRIES);
             self.entry_validity[current_entry] = Status::Invalid;
         }
-        Ok(())
-    }
-    fn update_current_tick(
-        &mut self,
-        current_time: i64,
-        current_price: i64,
-        current_conf: u64,
-    ) -> Result<(), OracleError> {
-        let current_entry = time_to_entry(current_time, NUM_ENTRIES, self.granularity)?;
 
+        //update current tick
         self.prices[current_entry] = current_price;
         self.confidences[current_entry] = current_conf;
         self.entry_validity[current_entry] =
