@@ -223,16 +223,15 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
         Ok(())
     }
     ///invalidate everything as a panic button
-    pub fn invalidate_state(&mut self){
+    pub fn invalidate_state(&mut self) {
         self.current_entry_slot_accumulator = 0;
         self.current_entry_weighted_confidence_accumulator = 0;
         self.current_entry_weighted_price_accumulator = 0;
         self.current_entry_status = Status::Invalid;
-        for validity in self.running_valid_entry_counter.iter_mut(){
+        for validity in self.running_valid_entry_counter.iter_mut() {
             *validity = 0;
         }
     }
-
 }
 
 
@@ -300,8 +299,8 @@ impl<const NUM_ENTRIES: usize> TickTracker<NUM_ENTRIES> {
         Ok(())
     }
     ///invalidate everything as a panic button
-    pub fn invalidate_state(&mut self){
-        for validity in self.entry_validity.iter_mut(){
+    pub fn invalidate_state(&mut self) {
+        for validity in self.entry_validity.iter_mut() {
             *validity = Status::Invalid;
         }
     }
@@ -336,21 +335,24 @@ impl TimeMachineWrapper {
         last_two_confs: (u64, u64),
         slot_gap: u64,
     ) -> Result<(), OracleError> {
-        if self.sma_tracker.add_price(
-            prev_time,
-            current_time,
-            last_two_prices,
-            last_two_confs,
-            slot_gap,
-        ).is_err(){
+        if self
+            .sma_tracker
+            .add_price(
+                prev_time,
+                current_time,
+                last_two_prices,
+                last_two_confs,
+                slot_gap,
+            )
+            .is_err()
+        {
             self.sma_tracker.invalidate_state();
         }
-        if self.tick_tracker.add_price(
-            prev_time,
-            current_time,
-            last_two_prices.1,
-            last_two_confs.1,
-        ).is_err(){
+        if self
+            .tick_tracker
+            .add_price(prev_time, current_time, last_two_prices.1, last_two_confs.1)
+            .is_err()
+        {
             self.tick_tracker.invalidate_state();
         }
         Ok(())
