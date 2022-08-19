@@ -142,8 +142,6 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
         last_two_confs: (u64, u64),
         slot_gap: u64,
     ) -> Result<(), OracleError> {
-        //multiply by precision multiplier so that our entry aggregated can be rounded to have
-        //the same accuracy as user input
         let prev_entry = time_to_entry(prev_time, NUM_ENTRIES, self.granularity)?;
         let current_entry = time_to_entry(current_time, NUM_ENTRIES, self.granularity)?;
         let num_skipped_entries = current_entry - prev_entry;
@@ -164,6 +162,8 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
         last_two_confs: (u64, u64),
         slot_gap: u64,
     ) -> Result<(), OracleError> {
+        //multiply by precision multiplier so that our entry aggregated can be rounded to have
+        //the same accuracy as user input
         //update slot accumulator
         self.current_entry_slot_accumulator += slot_gap;
         //update price accumulator
