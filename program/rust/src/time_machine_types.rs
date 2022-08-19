@@ -105,15 +105,22 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
         &mut self,
         prev_time: i64,
         current_time: i64,
-        avg_price: i64,
-        avg_conf: u64,
+        last_two_prices: (i64, i64),
+        last_two_confs: (u64, u64),
         slot_gap: u64,
     ) -> Result<(), OracleError> {
         //multiply by precision multiplier so that our entry aggregated can be rounded to have
         //the same accuracy as user input
-        let inflated_avg_price = avg_price * SMA_TRACKER_PRECISION_MULTIPLIER;
-        let inflated_avg_conf =
-            avg_conf * try_convert::<i64, u64>(SMA_TRACKER_PRECISION_MULTIPLIER)?;
+        let (prev_price , current_price) = last_two_prices;
+        let (prev_conf , current_conf) = last_two_confs;
+        let inflated_prev_price = prev_price * SMA_TRACKER_PRECISION_MULTIPLIER;
+        let inflated_current_price = current_price * SMA_TRACKER_PRECISION_MULTIPLIER;
+        let inflated_prev_conf =
+            prev_conf * try_convert::<i64, u64>(SMA_TRACKER_PRECISION_MULTIPLIER)?;
+        let inflated_current_conf =
+            current_conf * try_convert::<i64, u64>(SMA_TRACKER_PRECISION_MULTIPLIER)?;
+        let inflated_avg_price = (inflated_current_price + inflated_prev_price) / 2;
+        let inflated_avg_conf =(inflated_current_conf + inflated_prev_conf) / 2;
         let prev_entry = time_to_entry(prev_time, NUM_ENTRIES, self.granularity)?;
         let current_entry = time_to_entry(current_time, NUM_ENTRIES, self.granularity)?;
         let num_skipped_entries = current_entry - prev_entry;
@@ -310,10 +317,8 @@ impl TimeMachineWrapper {
         last_two_confs: (u64, u64),
         slot_gap: u64,
     ) -> Result<(), OracleError> {
-        let avg_price = (last_two_prices.0 + last_two_prices.1) / 2;
-        let avg_conf = (last_two_confs.0 + last_two_confs.1) / 2;
         self.sma_tracker
-            .add_price(prev_time, current_time, avg_price, avg_conf, slot_gap)?;
+            .add_price(prev_time, current_time, last_two_prices, last_two_confs, slot_gap)?;
         self.tick_tracker.add_price(
             prev_time,
             last_two_prices.0,
