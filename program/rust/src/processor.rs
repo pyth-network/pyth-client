@@ -1,7 +1,3 @@
-use solana_program::program_error::ProgramError;
-use solana_program::pubkey::Pubkey;
-use solana_program::sysvar::slot_history::AccountInfo;
-
 use crate::c_oracle_header::{
     cmd_hdr,
     command_t_e_cmd_add_mapping,
@@ -20,10 +16,12 @@ use crate::c_oracle_header::{
     PC_VERSION,
 };
 use crate::deserialize::load;
-use crate::error::{
-    OracleError,
-    OracleResult,
-};
+use crate::error::OracleError;
+use solana_program::entrypoint::ProgramResult;
+use solana_program::program_error::ProgramError;
+use solana_program::pubkey::Pubkey;
+use solana_program::sysvar::slot_history::AccountInfo;
+
 use crate::rust_oracle::{
     add_mapping,
     add_price,
@@ -44,13 +42,10 @@ pub fn process_instruction(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
     instruction_data: &[u8],
-) -> OracleResult {
+) -> ProgramResult {
     let cmd_data = load::<cmd_hdr>(instruction_data)?;
 
     if cmd_data.ver_ != PC_VERSION {
-        //FIXME: I am not sure what's best to do here (this is copied from C)
-        // it seems to me like we should not break when version numbers change
-        //instead we should log a message that asks users to call update_version
         return Err(ProgramError::InvalidArgument);
     }
 
