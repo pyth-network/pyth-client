@@ -149,7 +149,7 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
         let num_skipped_entries = current_entry - prev_entry;
 
         let mut entry_to_finalize = prev_entry;
-        for _ in 0..min(num_skipped_entries, NUM_ENTRIES) - 1 {
+        for _ in 0..min(num_skipped_entries - 1, NUM_ENTRIES) {
             self.move_to_next_entry(self.threshold, current_entry)?;
             entry_to_finalize = get_next_entry(entry_to_finalize, NUM_ENTRIES);
         }
