@@ -86,10 +86,11 @@ use track_helpers::*;
 #[derive(Debug, Copy, Clone)]
 #[repr(C)]
 /// Represents a Simple Moving Average Tracker Tracker that has NUM_ENTRIES entries
-/// each tracking time weighted sums for GRANULARITY seconds periods.
+/// each tracking time weighted sums for granularity seconds periods.
 ///The prices are assumed to be provided under some fixed point representation, and the computation
 /// guarantees accuracy up to the last decimal digit in the fixed point representation.
-/// Assumes THRESHOLD < GRANULARITY
+/// Assumes threshold < granularity
+/// Both threshold and granularity are set on initialization
 pub struct SmaTracker<const NUM_ENTRIES: usize> {
     threshold:                                     u64, /* the maximum slot gap we are willing
                                                          * to accept */
@@ -219,7 +220,8 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
 #[derive(Debug, Copy, Clone)]
 #[repr(C)]
 /// A Tracker that has NUM_ENTRIES entries
-/// each tracking the last tick (price and confidence) before every GRANULARITY seconds.
+/// each tracking the last tick (price and confidence) before every granularity seconds
+/// where granularity is set on initialization
 pub struct TickTracker<const NUM_ENTRIES: usize> {
     threshold:      i64,
     granularity:    i64,
