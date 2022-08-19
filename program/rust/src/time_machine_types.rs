@@ -68,7 +68,7 @@ mod track_helpers {
 
     ///returns the remining time before the next multiple of GRANULARITY
     pub fn get_time_to_entry_end(time: i64, granuality: i64) -> i64 {
-        (granuality - (time % granuality)) % granuality
+        granuality - (time % granuality)
     }
     pub fn get_inflated_average<
         T: TryFrom<i64> + Mul<T, Output = T> + Add<T, Output = T> + Div<T, Output = T>,
