@@ -383,7 +383,7 @@ pub fn del_price(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
     instruction_data: &[u8],
-) -> OracleResult {
+) -> ProgramResult {
     let [funding_account, product_account, price_account, system_program_account] = match accounts {
         [w, x, y, z] => Ok([w, x, y, z]),
         _ => Err(ProgramError::InvalidArgument),
@@ -419,7 +419,7 @@ pub fn del_price(
         price_account.lamports(),
     )?;
 
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn init_price(
