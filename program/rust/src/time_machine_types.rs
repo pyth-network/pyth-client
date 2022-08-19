@@ -348,8 +348,8 @@ impl TimeMachineWrapper {
         self.tick_tracker.add_price(
             prev_time,
             current_time,
-            last_two_prices.0,
-            last_two_confs.0,
+            last_two_prices.1,
+            last_two_confs.1,
         )?;
         Ok(())
     }
