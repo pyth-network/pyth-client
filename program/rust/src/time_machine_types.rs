@@ -91,19 +91,24 @@ use track_helpers::*;
 /// gurantees accuracy up to the last decimal digit in the fixed point representation.
 /// Assumes THRESHOLD < GRANULARITY
 pub struct SmaTracker<const NUM_ENTRIES: usize> {
-    threshold:                      u64, //the maximum slot gap we are willing to accept
-    granularity:                    i64, //the length of the time covered per entry
-    current_entry_slot_accumelator: u64, /* accumelates the number of slots that went into the
-                                          * weights of the current entry, reset to 0 before
-                                          * moving to the next one */
-    current_entry_status:           Status, //the status of the current entry
-    running_entry_prices:           [SignedTrackerRunningSum; NUM_ENTRIES], /* A running sum of the slot weighted average of each entry. (except for current entry, which is a working space for computing the current slot weighted average) */
-    running_entry_confidences:      [UnsignedTrackerRunningSum; NUM_ENTRIES], //Ditto
-    running_valid_entry_counter:    [u64; NUM_ENTRIES],                     /* Each entry
-                                                                             * increment the
-                                                                             * counter of the
-                                                                             * previous one if
-                                                                             * it is valid */
+    threshold:                                     u64, /* the maximum slot gap we are willing
+                                                         * to accept */
+    granularity:                                   i64, //the length of the time covered per entry
+    current_entry_slot_accumelator:                u64, /* accumelates the number of slots that
+                                                         * went into the
+                                                         * weights of the current entry, reset
+                                                         * to 0 before
+                                                         * moving to the next one */
+    current_entry_status:                          Status, //the status of the current entry
+    current_entry_weighted_price_accumelator:      SignedTrackerRunningSum,
+    current_entry_weighted_confidence_accumelator: UnsignedTrackerRunningSum,
+    running_entry_prices:                          [SignedTrackerRunningSum; NUM_ENTRIES], /* A running sum of the slot weighted average of each entry. (except for current entry, which is a working space for computing the current slot weighted average) */
+    running_entry_confidences:                     [UnsignedTrackerRunningSum; NUM_ENTRIES], //Ditto
+    running_valid_entry_counter:                   [u64; NUM_ENTRIES], /* Each entry
+                                                                        * increment the
+                                                                        * counter of the
+                                                                        * previous one if
+                                                                        * it is valid */
 }
 
 impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
@@ -129,8 +134,6 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
     ) -> Result<(), OracleError> {
         //multiply by precision multiplier so that our entry aggregated can be rounded to have
         //the same accuracy as user input
-        let inflated_avg_price = get_inflated_average(last_two_prices)?;
-        let inflated_avg_conf = get_inflated_average(last_two_confs)?;
         let prev_entry = time_to_entry(prev_time, NUM_ENTRIES, self.granularity)?;
         let current_entry = time_to_entry(current_time, NUM_ENTRIES, self.granularity)?;
         let num_skipped_entries = current_entry - prev_entry;
@@ -141,29 +144,30 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
             entry_to_finalize = get_next_entry(entry_to_finalize, NUM_ENTRIES);
         }
 
-        self.update_entry_price(
-            inflated_avg_price,
-            inflated_avg_conf,
-            slot_gap,
-            current_entry,
-        )
+        self.update_entry_price(last_two_prices, last_two_confs, slot_gap)
     }
     ///updates the current entry with the given price, confidence,
     /// and sets it's validity according to slot gap
     fn update_entry_price(
         &mut self,
-        avg_price: i64,
-        avg_conf: u64,
+        last_two_prices: (i64, i64),
+        last_two_confs: (u64, u64),
         slot_gap: u64,
-        entry: usize,
     ) -> Result<(), OracleError> {
+        //update slot accumelator
         self.current_entry_slot_accumelator += slot_gap;
-        self.running_entry_prices[entry] += try_convert::<i64, SignedTrackerRunningSum>(
-            try_convert::<u64, i64>(slot_gap)? * avg_price,
+        //update price accumelator
+        let inflated_avg_price = get_inflated_average(last_two_prices)?;
+        self.current_entry_weighted_price_accumelator += try_convert::<i64, SignedTrackerRunningSum>(
+            try_convert::<u64, i64>(slot_gap)? * inflated_avg_price,
         )?;
-        self.running_entry_confidences[entry] += try_convert::<u64, UnsignedTrackerRunningSum>(
-            try_convert::<u64, u64>(slot_gap)? * avg_conf,
-        )?;
+        //update confidence accumelator
+        let inflated_avg_conf = get_inflated_average(last_two_confs)?;
+        self.current_entry_weighted_confidence_accumelator +=
+            try_convert::<u64, UnsignedTrackerRunningSum>(
+                try_convert::<u64, u64>(slot_gap)? * inflated_avg_conf,
+            )?;
+        //update entry validity
         if slot_gap >= self.threshold {
             self.current_entry_status = Status::Invalid;
         }
@@ -173,15 +177,14 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
     /// and computes the average of the current entry, so that it is added to the previous one
     fn move_to_next_entry(&mut self, slot_gap: u64, entry: usize) -> Result<(), OracleError> {
         let prev_entry = get_prev_entry(entry, NUM_ENTRIES);
-        let next_entry = get_next_entry(entry, NUM_ENTRIES);
-        //setup the current entry price
-        self.running_entry_prices[entry] /=
-            try_convert::<u64, SignedTrackerRunningSum>(self.current_entry_slot_accumelator)?;
-        self.running_entry_prices[entry] += self.running_entry_prices[prev_entry];
-        self.running_entry_confidences[entry] /=
-            try_convert::<u64, UnsignedTrackerRunningSum>(self.current_entry_slot_accumelator)?;
-        self.running_entry_confidences[entry] += self.running_entry_confidences[prev_entry];
-
+        //compute the current entry's price
+        self.running_entry_prices[entry] = self.running_entry_prices[prev_entry];
+        self.running_entry_prices[entry] += self.current_entry_weighted_price_accumelator
+            / try_convert::<u64, SignedTrackerRunningSum>(self.current_entry_slot_accumelator)?;
+        //compute the current entry's confidence
+        self.running_entry_confidences[entry] = self.running_entry_confidences[prev_entry];
+        self.running_entry_confidences[entry] += self.current_entry_weighted_confidence_accumelator
+            + try_convert::<u64, UnsignedTrackerRunningSum>(self.current_entry_slot_accumelator)?;
         //check current entry validity
         self.running_valid_entry_counter[entry] =
             if self.current_entry_status == Status::Pending && slot_gap < self.threshold {
@@ -190,16 +193,15 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
                 self.running_valid_entry_counter[prev_entry]
             };
 
-        //setup the following entry
+        //setup working variables for the next entry
         self.current_entry_slot_accumelator = 0;
+        self.current_entry_weighted_confidence_accumelator = 0;
+        self.current_entry_weighted_price_accumelator = 0;
         self.current_entry_status = if slot_gap < self.threshold {
             Status::Pending
         } else {
             Status::Invalid
         };
-        self.running_entry_confidences[next_entry] = 0;
-        self.running_entry_prices[next_entry] = 0;
-        self.running_valid_entry_counter[next_entry] = 0;
         Ok(())
     }
 }
