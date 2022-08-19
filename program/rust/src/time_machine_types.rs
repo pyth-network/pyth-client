@@ -187,14 +187,21 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
     /// and computes the average of the current entry, so that it is added to the previous one
     fn move_to_next_entry(&mut self, slot_gap: u64, entry: usize) -> Result<(), OracleError> {
         let prev_entry = get_prev_entry(entry, NUM_ENTRIES);
-        //compute the current entry's price
-        self.running_entry_prices[entry] = self.running_entry_prices[prev_entry];
-        self.running_entry_prices[entry] += self.current_entry_weighted_price_accumulator
-            / try_convert::<u64, SignedTrackerRunningSum>(self.current_entry_slot_accumulator)?;
-        //compute the current entry's confidence
-        self.running_entry_confidences[entry] = self.running_entry_confidences[prev_entry];
-        self.running_entry_confidences[entry] += self.current_entry_weighted_confidence_accumulator
-            / try_convert::<u64, UnsignedTrackerRunningSum>(self.current_entry_slot_accumulator)?;
+        if self.current_entry_slot_accumulator != 0 {
+            //compute the current entry's price
+            self.running_entry_prices[entry] += self.current_entry_weighted_price_accumulator
+                / try_convert::<u64, SignedTrackerRunningSum>(self.current_entry_slot_accumulator)?;
+            //compute the current entry's confidence
+            self.running_entry_confidences[entry] += self
+                .current_entry_weighted_confidence_accumulator
+                / try_convert::<u64, UnsignedTrackerRunningSum>(
+                    self.current_entry_slot_accumulator,
+                )?;
+        } else {
+            self.running_entry_prices[entry] = self.running_entry_prices[prev_entry];
+            self.running_entry_confidences[entry] = self.running_entry_confidences[prev_entry];
+            self.current_entry_status = Status::Invalid;
+        }
         //check current entry validity
         self.running_valid_entry_counter[entry] =
             if self.current_entry_status == Status::Pending && slot_gap < self.threshold {
@@ -202,6 +209,7 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
             } else {
                 self.running_valid_entry_counter[prev_entry]
             };
+
 
         //setup working variables for the next entry
         self.current_entry_slot_accumulator = 0;
