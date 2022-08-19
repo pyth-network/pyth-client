@@ -112,24 +112,11 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
         let num_skipped_entries = current_entry - prev_entry;
         //check for overflow, and set things up accordingly
 
-        //update entries as needed
+        //set up to update current_entry
         match num_skipped_entries {
-            0 => {
-                self.update_entry_price(
-                    inflated_avg_price,
-                    inflated_avg_conf,
-                    slot_gap,
-                    current_entry,
-                )?;
-            }
+            0 => {}
             1 => {
                 self.move_to_next_entry(slot_gap, prev_entry)?;
-                self.update_entry_price(
-                    inflated_avg_price,
-                    inflated_avg_conf,
-                    slot_gap,
-                    current_entry,
-                )?;
             }
             _ => {
                 //invalidate all the entries in your way
@@ -137,7 +124,12 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
                 self.invalidate_following_entries(prev_entry, num_skipped_entries)?;
             }
         }
-        Ok(())
+        self.update_entry_price(
+            inflated_avg_price,
+            inflated_avg_conf,
+            slot_gap,
+            current_entry,
+        )?;
     }
     ///updates the current entry with the given price, confidence,
     /// and sets it's validity according to slot gap
