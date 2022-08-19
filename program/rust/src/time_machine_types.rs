@@ -11,7 +11,7 @@ use bytemuck::{
     Pod,
     Zeroable,
 };
-use std::cmp;
+use std::cmp::min;
 
 //To make it easy to change the types to allow for more usefull
 //running sums if needed
@@ -136,7 +136,7 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
         let num_skipped_entries = current_entry - prev_entry;
 
         let mut entry_to_finalize = prev_entry;
-        for _ in 0..num_skipped_entries - 1 {
+        for _ in 0..min(num_skipped_entries, NUM_ENTRIES) - 1 {
             self.move_to_next_entry(self.threshold, current_entry)?;
             entry_to_finalize = get_next_entry(entry_to_finalize, NUM_ENTRIES);
         }
@@ -266,7 +266,7 @@ impl<const NUM_ENTRIES: usize> TickTracker<NUM_ENTRIES> {
 
         //invalidate skipped entries if any
         self.invalidate_following_entries(
-            cmp::min(num_skipped_entries, NUM_ENTRIES),
+            min(num_skipped_entries, NUM_ENTRIES),
             get_next_entry(prev_entry, NUM_ENTRIES),
         );
         //We do not need to store thre current_price or conf, they will be stored on the next
