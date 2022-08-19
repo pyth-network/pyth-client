@@ -184,7 +184,7 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
         //compute the current entry's confidence
         self.running_entry_confidences[entry] = self.running_entry_confidences[prev_entry];
         self.running_entry_confidences[entry] += self.current_entry_weighted_confidence_accumelator
-            + try_convert::<u64, UnsignedTrackerRunningSum>(self.current_entry_slot_accumelator)?;
+            / try_convert::<u64, UnsignedTrackerRunningSum>(self.current_entry_slot_accumelator)?;
         //check current entry validity
         self.running_valid_entry_counter[entry] =
             if self.current_entry_status == Status::Pending && slot_gap < self.threshold {
