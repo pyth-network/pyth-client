@@ -134,26 +134,20 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
         let prev_entry = time_to_entry(prev_time, NUM_ENTRIES, self.granularity)?;
         let current_entry = time_to_entry(current_time, NUM_ENTRIES, self.granularity)?;
         let num_skipped_entries = current_entry - prev_entry;
-        //check for overflow, and set things up accordingly
 
-        //set up to update current_entry
-        match num_skipped_entries {
-            0 => {}
-            1 => {
-                self.move_to_next_entry(slot_gap, prev_entry)?;
-            }
-            _ => {
-                //invalidate all the entries in your way
-                //this is ok because THRESHOLD < GranulARity
-                self.invalidate_following_entries(prev_entry, num_skipped_entries)?;
-            }
+        let mut entry_to_finalize = prev_entry;
+        for _ in 0..num_skipped_entries - 1 {
+            self.move_to_next_entry(self.threshold, current_entry)?;
+            entry_to_finalize = get_next_entry(entry_to_finalize, NUM_ENTRIES);
         }
+
         self.update_entry_price(
             inflated_avg_price,
             inflated_avg_conf,
             slot_gap,
             current_entry,
         )
+
     }
     ///updates the current entry with the given price, confidence,
     /// and sets it's validity according to slot gap
@@ -207,23 +201,6 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
         self.running_entry_confidences[next_entry] = 0;
         self.running_entry_prices[next_entry] = 0;
         self.running_valid_entry_counter[next_entry] = 0;
-        Ok(())
-    }
-    ///Invalidates the given number of entries starting from and including
-    /// the first one
-    fn invalidate_following_entries(
-        &mut self,
-        entry: usize,
-        num_invalid: usize,
-    ) -> Result<(), OracleError> {
-        let entries_to_invalidate = cmp::min(num_invalid, NUM_ENTRIES);
-        let mut current_entry = entry;
-        //each call to move_next_entry invalidates two entries that is why we subtract one
-        for _ in 0..entries_to_invalidate - 1 {
-            //we assume that entries must be invaldiated whenever  block is skipped
-            self.move_to_next_entry(self.threshold, current_entry)?;
-            current_entry = get_next_entry(current_entry, NUM_ENTRIES);
-        }
         Ok(())
     }
 }
