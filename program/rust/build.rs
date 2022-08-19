@@ -9,6 +9,7 @@ fn main() {
 
     //generate and write bindings
     let bindings = Builder::default()
+        .clang_arg("-I../../../solana/sdk/bpf/c/inc/")
         .header("./src/bindings.h")
         .parse_callbacks(Box::new(parser))
         .rustfmt_bindings(true)
