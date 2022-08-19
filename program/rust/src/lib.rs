@@ -7,7 +7,6 @@
 mod c_oracle_header;
 mod deserialize;
 mod error;
-mod log;
 mod processor;
 mod rust_oracle;
 mod time_machine_types;
@@ -16,20 +15,13 @@ mod utils;
 #[cfg(test)]
 mod tests;
 
-use crate::c_oracle_header::SUCCESSFULLY_UPDATED_AGGREGATE;
-use crate::error::OracleError;
+#[cfg(feature = "debug")]
+mod log;
 
-use crate::log::{
-    post_log,
-    pre_log,
-};
+use crate::error::OracleError;
 use processor::process_instruction;
 
-use solana_program::entrypoint::deserialize;
-use solana_program::{
-    custom_heap_default,
-    custom_panic_default,
-};
+use solana_program::entrypoint;
 
 //Below is a high lever description of the rust/c setup.
 
@@ -46,32 +38,4 @@ use solana_program::{
 //at the the top of c_oracle_headers.rs. One of the most important traits we deal are the Borsh
 //serialization traits.
 
-
-#[no_mangle]
-pub extern "C" fn entrypoint(input: *mut u8) -> u64 {
-    let (program_id, accounts, instruction_data) = unsafe { deserialize(input) };
-
-    if let Err(error) = pre_log(&accounts, instruction_data) {
-        return error.into();
-    }
-
-    let c_ret_val = match process_instruction(program_id, &accounts, instruction_data) {
-        Err(error) => error.into(),
-        Ok(success_status) => success_status,
-    };
-
-    if let Err(error) = post_log(c_ret_val, &accounts) {
-        return error.into();
-    }
-
-
-    if c_ret_val == SUCCESSFULLY_UPDATED_AGGREGATE {
-        //0 is the SUCCESS value for solana
-        0
-    } else {
-        c_ret_val
-    }
-}
-
-custom_heap_default!();
-custom_panic_default!();
+entrypoint!(process_instruction);
