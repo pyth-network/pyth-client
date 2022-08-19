@@ -147,7 +147,6 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
             slot_gap,
             current_entry,
         )
-
     }
     ///updates the current entry with the given price, confidence,
     /// and sets it's validity according to slot gap
