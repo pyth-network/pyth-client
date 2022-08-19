@@ -78,10 +78,12 @@ impl AccountSetup {
         };
     }
 
+    /// Create a mock account for the system program.
+    /// This account is a barely passable version of the system program account --
+    /// it has the correct id, but nothing else works.
     pub fn new_system_program() -> Self {
         let key = system_program::id();
         let owner = sysvar::id();
-        // Note: I have no clue what the right size is. This isn't going to work in reality anyway.
         let size = clock::Clock::size_of();
         let balance = Rent::minimum_balance(&Rent::default(), size);
         let data = [0u8; UPPER_BOUND_OF_ALL_ACCOUNT_SIZES];

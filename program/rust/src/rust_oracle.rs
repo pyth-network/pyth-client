@@ -397,7 +397,7 @@ pub fn del_price(
         OracleError::InvalidSystemAccount.into(),
     )?;
 
-    let cmd_args = load::<cmd_hdr_t>(&instruction_data)?;
+    let cmd_args = load::<cmd_hdr_t>(instruction_data)?;
     let mut product_data = load_checked::<pc_prod_t>(product_account, cmd_args.ver_)?;
     let price_data = load_checked::<pc_price_t>(price_account, cmd_args.ver_)?;
     pyth_assert(
