@@ -248,14 +248,14 @@ pub struct TickTracker<const NUM_ENTRIES: usize> {
 
 
 impl<const NUM_ENTRIES: usize> TickTracker<NUM_ENTRIES> {
-    fn initialize(&mut self, threshold: i64, granularity: i64) -> Result<(), OracleError> {
+    pub fn initialize(&mut self, threshold: i64, granularity: i64) -> Result<(), OracleError> {
         self.threshold = threshold;
         self.granularity = granularity;
         Ok(())
     }
 
     ///add a new price to the tracker
-    fn add_price(
+    pub fn add_price(
         &mut self,
         prev_time: i64,
         current_time: i64,
