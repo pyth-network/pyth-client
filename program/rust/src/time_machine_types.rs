@@ -13,7 +13,7 @@ use bytemuck::{
 };
 use std::cmp::min;
 
-//To make it easy to change the types to allow for more usefull
+//To make it easy to change the types to allow for more useful
 //running sums if needed
 type SignedTrackerRunningSum = i64;
 type UnsignedTrackerRunningSum = u64;
@@ -29,10 +29,10 @@ enum Status {
 // multiply by this to make up for errors that result when dividing integers
 pub const SMA_TRACKER_PRECISION_MULTIPLIER: i64 = 10;
 // Our computation off the SMA involves three averaging operations:
-// 1. Averaging the two most recent prices, results in an error of atmost 1 (we are rounding down)
+// 1. Averaging the two most recent prices, results in an error of at most 1 (we are rounding down)
 // 2. Slot weighted Average (results in an error bounded to that of the previous step plus at most,
 // one way to think about is that the error of the average is the average error of the entries plus
-// the error computing the average) 3. Averages accrosss entries (Ditto)
+// the error computing the average) 3. Averages across entries (Ditto)
 // This means that our error is bounded by 3
 // So we multiply by 10, do the averaging, then divide by 10 and get the closes integer
 
@@ -53,7 +53,7 @@ mod track_helpers {
     pub fn get_next_entry(current_entry: usize, num_entries: usize) -> usize {
         (current_entry + 1) % num_entries
     }
-    ///gets the index of the previou entry
+    ///gets the index of the previous entry
     pub fn get_prev_entry(current_entry: usize, num_entries: usize) -> usize {
         (current_entry - 1) % num_entries
     }
@@ -61,14 +61,14 @@ mod track_helpers {
     pub fn time_to_entry(
         time: i64,
         num_entries: usize,
-        granuality: i64,
+        granularity: i64,
     ) -> Result<usize, OracleError> {
-        Ok(try_convert::<i64, usize>(time / granuality)? % num_entries)
+        Ok(try_convert::<i64, usize>(time / granularity)? % num_entries)
     }
 
-    ///returns the remining time before the next multiple of GRANULARITY
-    pub fn get_time_to_entry_end(time: i64, granuality: i64) -> i64 {
-        granuality - (time % granuality)
+    ///returns the remaining time before the next multiple of GRANULARITY
+    pub fn get_time_to_entry_end(time: i64, granularity: i64) -> i64 {
+        granularity - (time % granularity)
     }
     pub fn get_inflated_average<
         T: TryFrom<i64> + Mul<T, Output = T> + Add<T, Output = T> + Div<T, Output = T>,
@@ -88,25 +88,25 @@ use track_helpers::*;
 /// Represents a Simple Moving Average Tracker Tracker that has NUM_ENTRIES entries
 /// each tracking time weighted sums for GRANULARITY seconds periods.
 ///The prices are assumed to be provided under some fixed point representation, and the computation
-/// gurantees accuracy up to the last decimal digit in the fixed point representation.
+/// guarantees accuracy up to the last decimal digit in the fixed point representation.
 /// Assumes THRESHOLD < GRANULARITY
 pub struct SmaTracker<const NUM_ENTRIES: usize> {
     threshold:                                     u64, /* the maximum slot gap we are willing
                                                          * to accept */
     granularity:                                   i64, //the length of the time covered per entry
-    current_entry_slot_accumelator:                u64, /* accumelates the number of slots that
+    current_entry_slot_accumulator:                u64, /* accumulates the number of slots that
                                                          * went into the
                                                          * weights of the current entry, reset
                                                          * to 0 before
                                                          * moving to the next one */
     current_entry_status:                          Status, //the status of the current entry
-    current_entry_weighted_price_accumelator:      SignedTrackerRunningSum, /* accumelates
+    current_entry_weighted_price_accumulator:      SignedTrackerRunningSum, /* accumulates
                                                             * slot_delta *
                                                             * (inflated_p1 +
                                                             * inflated_p2) / 2
                                                             * to compute
                                                             * averages */
-    current_entry_weighted_confidence_accumelator: UnsignedTrackerRunningSum, //ditto
+    current_entry_weighted_confidence_accumulator: UnsignedTrackerRunningSum, //ditto
     running_entry_prices:                          [SignedTrackerRunningSum; NUM_ENTRIES], /* A running sum of the slot weighted average of each entry. */
     running_entry_confidences:                     [UnsignedTrackerRunningSum; NUM_ENTRIES], //Ditto
     running_valid_entry_counter:                   [u64; NUM_ENTRIES], /* Each entry
@@ -117,7 +117,7 @@ pub struct SmaTracker<const NUM_ENTRIES: usize> {
 }
 
 impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
-    ///sets threshold and Granuality, and makes it so that the first produced
+    ///sets threshold and Granularity, and makes it so that the first produced
     /// entry is invalid
     pub fn initialize(&mut self, threshold: u64, granularity: i64) -> Result<(), OracleError> {
         //ensure that the first entry is invalid
@@ -159,16 +159,16 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
         last_two_confs: (u64, u64),
         slot_gap: u64,
     ) -> Result<(), OracleError> {
-        //update slot accumelator
-        self.current_entry_slot_accumelator += slot_gap;
-        //update price accumelator
+        //update slot accumulator
+        self.current_entry_slot_accumulator += slot_gap;
+        //update price accumulator
         let inflated_avg_price = get_inflated_average(last_two_prices)?;
-        self.current_entry_weighted_price_accumelator += try_convert::<i64, SignedTrackerRunningSum>(
+        self.current_entry_weighted_price_accumulator += try_convert::<i64, SignedTrackerRunningSum>(
             try_convert::<u64, i64>(slot_gap)? * inflated_avg_price,
         )?;
-        //update confidence accumelator
+        //update confidence accumulator
         let inflated_avg_conf = get_inflated_average(last_two_confs)?;
-        self.current_entry_weighted_confidence_accumelator +=
+        self.current_entry_weighted_confidence_accumulator +=
             try_convert::<u64, UnsignedTrackerRunningSum>(
                 try_convert::<u64, u64>(slot_gap)? * inflated_avg_conf,
             )?;
@@ -184,12 +184,12 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
         let prev_entry = get_prev_entry(entry, NUM_ENTRIES);
         //compute the current entry's price
         self.running_entry_prices[entry] = self.running_entry_prices[prev_entry];
-        self.running_entry_prices[entry] += self.current_entry_weighted_price_accumelator
-            / try_convert::<u64, SignedTrackerRunningSum>(self.current_entry_slot_accumelator)?;
+        self.running_entry_prices[entry] += self.current_entry_weighted_price_accumulator
+            / try_convert::<u64, SignedTrackerRunningSum>(self.current_entry_slot_accumulator)?;
         //compute the current entry's confidence
         self.running_entry_confidences[entry] = self.running_entry_confidences[prev_entry];
-        self.running_entry_confidences[entry] += self.current_entry_weighted_confidence_accumelator
-            / try_convert::<u64, UnsignedTrackerRunningSum>(self.current_entry_slot_accumelator)?;
+        self.running_entry_confidences[entry] += self.current_entry_weighted_confidence_accumulator
+            / try_convert::<u64, UnsignedTrackerRunningSum>(self.current_entry_slot_accumulator)?;
         //check current entry validity
         self.running_valid_entry_counter[entry] =
             if self.current_entry_status == Status::Pending && slot_gap < self.threshold {
@@ -199,9 +199,9 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
             };
 
         //setup working variables for the next entry
-        self.current_entry_slot_accumelator = 0;
-        self.current_entry_weighted_confidence_accumelator = 0;
-        self.current_entry_weighted_price_accumelator = 0;
+        self.current_entry_slot_accumulator = 0;
+        self.current_entry_weighted_confidence_accumulator = 0;
+        self.current_entry_weighted_price_accumulator = 0;
         self.current_entry_status = if slot_gap < self.threshold {
             Status::Pending
         } else {
