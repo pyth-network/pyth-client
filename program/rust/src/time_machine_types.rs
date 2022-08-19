@@ -100,9 +100,14 @@ pub struct SmaTracker<const NUM_ENTRIES: usize> {
                                                          * to 0 before
                                                          * moving to the next one */
     current_entry_status:                          Status, //the status of the current entry
-    current_entry_weighted_price_accumelator:      SignedTrackerRunningSum,
-    current_entry_weighted_confidence_accumelator: UnsignedTrackerRunningSum,
-    running_entry_prices:                          [SignedTrackerRunningSum; NUM_ENTRIES], /* A running sum of the slot weighted average of each entry. (except for current entry, which is a working space for computing the current slot weighted average) */
+    current_entry_weighted_price_accumelator:      SignedTrackerRunningSum, /* accumelates
+                                                                             * slot_delta *
+                                                                             * (inflated_p1 +
+                                                                             * inflated_p2) / 2
+                                                                             * to compute
+                                                                             * averages */
+    current_entry_weighted_confidence_accumelator: UnsignedTrackerRunningSum, //ditto
+    running_entry_prices:                          [SignedTrackerRunningSum; NUM_ENTRIES], /* A running sum of the slot weighted average of each entry. */
     running_entry_confidences:                     [UnsignedTrackerRunningSum; NUM_ENTRIES], //Ditto
     running_valid_entry_counter:                   [u64; NUM_ENTRIES], /* Each entry
                                                                         * increment the
