@@ -38,7 +38,15 @@ pub const SMA_TRACKER_PRECISION_MULTIPLIER: i64 = 10;
 
 
 mod track_helpers {
+    use std::ops::{
+        Add,
+        Div,
+        Mul,
+    };
+
+
     use crate::error::OracleError;
+    use crate::time_machine_types::SMA_TRACKER_PRECISION_MULTIPLIER;
     use crate::utils::try_convert;
 
     ///gets the index of the next entry
@@ -61,6 +69,16 @@ mod track_helpers {
     ///returns the remining time before the next multiple of GRANULARITY
     pub fn get_time_to_entry_end(time: i64, granuality: i64) -> i64 {
         (granuality - (time % granuality)) % granuality
+    }
+    pub fn get_inflated_average<
+        T: TryFrom<i64> + Mul<T, Output = T> + Add<T, Output = T> + Div<T, Output = T>,
+    >(
+        last_two_values: (T, T),
+    ) -> Result<T, OracleError> {
+        let (prev, current) = last_two_values;
+        let inflated_prev = prev * try_convert::<i64, T>(SMA_TRACKER_PRECISION_MULTIPLIER)?;
+        let inflated_current = current * try_convert::<i64, T>(SMA_TRACKER_PRECISION_MULTIPLIER)?;
+        Ok((inflated_prev + inflated_current) / try_convert::<i64, T>(2)?)
     }
 }
 use track_helpers::*;
@@ -111,16 +129,8 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
     ) -> Result<(), OracleError> {
         //multiply by precision multiplier so that our entry aggregated can be rounded to have
         //the same accuracy as user input
-        let (prev_price , current_price) = last_two_prices;
-        let (prev_conf , current_conf) = last_two_confs;
-        let inflated_prev_price = prev_price * SMA_TRACKER_PRECISION_MULTIPLIER;
-        let inflated_current_price = current_price * SMA_TRACKER_PRECISION_MULTIPLIER;
-        let inflated_prev_conf =
-            prev_conf * try_convert::<i64, u64>(SMA_TRACKER_PRECISION_MULTIPLIER)?;
-        let inflated_current_conf =
-            current_conf * try_convert::<i64, u64>(SMA_TRACKER_PRECISION_MULTIPLIER)?;
-        let inflated_avg_price = (inflated_current_price + inflated_prev_price) / 2;
-        let inflated_avg_conf =(inflated_current_conf + inflated_prev_conf) / 2;
+        let inflated_avg_price = get_inflated_average(last_two_prices)?;
+        let inflated_avg_conf = get_inflated_average(last_two_confs)?;
         let prev_entry = time_to_entry(prev_time, NUM_ENTRIES, self.granularity)?;
         let current_entry = time_to_entry(current_time, NUM_ENTRIES, self.granularity)?;
         let num_skipped_entries = current_entry - prev_entry;
@@ -317,8 +327,13 @@ impl TimeMachineWrapper {
         last_two_confs: (u64, u64),
         slot_gap: u64,
     ) -> Result<(), OracleError> {
-        self.sma_tracker
-            .add_price(prev_time, current_time, last_two_prices, last_two_confs, slot_gap)?;
+        self.sma_tracker.add_price(
+            prev_time,
+            current_time,
+            last_two_prices,
+            last_two_confs,
+            slot_gap,
+        )?;
         self.tick_tracker.add_price(
             prev_time,
             last_two_prices.0,
