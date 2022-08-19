@@ -26,8 +26,15 @@ enum Status {
     Valid   = 1,
     Pending = 2,
 }
-//multiply by this to make up for errors that result when dividing integers
+// multiply by this to make up for errors that result when dividing integers
 pub const SMA_TRACKER_PRECISION_MULTIPLIER: i64 = 10;
+// Our computation off the SMA involves three averaging operations:
+// 1. Averaging the two most recent prices, results in an error of atmost 1 (we are rounding down)
+// 2. Slot weighted Average (results in an error bounded to that of the previous step plus at most,
+// one way to think about is that the error of the average is the average error of the entries plus
+// the error computing the average) 3. Averages accrosss entries (Ditto)
+// This means that our error is bounded by 3
+// So we multiply by 10, do the averaging, then divide by 10 and get the closes integer
 
 
 mod track_helpers {
