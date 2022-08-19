@@ -6,13 +6,6 @@
 extern "C" {
 #endif
 
-//A return value indicating that the aggregate price was updated
-//this triggers SMA trackers to update
-//values 0-14 are defined in solana_sdk.h (v1.10.31 )
-//used consts instead of define because bingen always turns
-// defines to u32 (even with ULL suffix)
-const uint64_t SUCCESSFULLY_UPDATED_AGGREGATE = 1000ULL;
-
 // The size of the "time machine" account defined in the
 // Rust portion of the codebase.
 const uint64_t TIME_MACHINE_STRUCT_SIZE = 1864ULL;

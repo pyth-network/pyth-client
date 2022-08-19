@@ -9,7 +9,7 @@ use bytemuck::{
 };
 use solana_program::account_info::AccountInfo;
 use solana_program::clock::Clock;
-use solana_program::entrypoint::SUCCESS;
+use solana_program::entrypoint::ProgramResult;
 use solana_program::program_error::ProgramError;
 use solana_program::program_memory::{
     sol_memcpy,
@@ -57,7 +57,6 @@ use crate::deserialize::{
     load_account_as_mut,
     load_checked,
 };
-use crate::error::OracleResult;
 use crate::OracleError;
 
 use crate::utils::{
@@ -114,7 +113,7 @@ pub fn resize_price_account(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
     _instruction_data: &[u8],
-) -> OracleResult {
+) -> ProgramResult {
     let [funding_account_info, price_account_info, system_program] = match accounts {
         [x, y, z] => Ok([x, y, z]),
         _ => Err(ProgramError::InvalidArgument),
@@ -157,9 +156,9 @@ pub fn resize_price_account(
                 load_checked::<PriceAccountWrapper>(price_account_info, PC_VERSION)?;
             //Initialize Time Machine
             price_account.initialize_time_machine()?;
-            Ok(SUCCESS)
+            Ok(())
         }
-        PRICE_ACCOUNT_SIZE => Ok(SUCCESS),
+        PRICE_ACCOUNT_SIZE => Ok(()),
         _ => Err(ProgramError::InvalidArgument),
     }
 }
@@ -172,7 +171,7 @@ pub fn init_mapping(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
     instruction_data: &[u8],
-) -> OracleResult {
+) -> ProgramResult {
     let [funding_account, fresh_mapping_account] = match accounts {
         [x, y] => Ok([x, y]),
         _ => Err(ProgramError::InvalidArgument),
@@ -190,14 +189,14 @@ pub fn init_mapping(
     let hdr = load::<cmd_hdr_t>(instruction_data)?;
     initialize_pyth_account_checked::<pc_map_table_t>(fresh_mapping_account, hdr.ver_)?;
 
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn add_mapping(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
     instruction_data: &[u8],
-) -> OracleResult {
+) -> ProgramResult {
     let [funding_account, cur_mapping, next_mapping] = match accounts {
         [x, y, z] => Ok([x, y, z]),
         _ => Err(ProgramError::InvalidArgument),
@@ -218,7 +217,7 @@ pub fn add_mapping(
     initialize_pyth_account_checked::<pc_map_table_t>(next_mapping, hdr.ver_)?;
     pubkey_assign(&mut cur_mapping.next_, &next_mapping.key.to_bytes());
 
-    Ok(SUCCESS)
+    Ok(())
 }
 
 /// a publisher updates a price
@@ -229,7 +228,7 @@ pub fn upd_price(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
     instruction_data: &[u8],
-) -> OracleResult {
+) -> ProgramResult {
     let cmd_args = load::<cmd_upd_price_t>(instruction_data)?;
 
     let [funding_account, price_account, clock_account] = match accounts {
@@ -317,16 +316,16 @@ pub fn upd_price(
         }
     }
 
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn upd_price_no_fail_on_error(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
     instruction_data: &[u8],
-) -> OracleResult {
+) -> ProgramResult {
     match upd_price(program_id, accounts, instruction_data) {
-        Err(_) => Ok(SUCCESS),
+        Err(_) => Ok(()),
         Ok(value) => Ok(value),
     }
 }
@@ -340,7 +339,7 @@ pub fn add_price(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
     instruction_data: &[u8],
-) -> OracleResult {
+) -> ProgramResult {
     let cmd_args = load::<cmd_add_price_t>(instruction_data)?;
 
     check_exponent_range(cmd_args.expo_)?;
@@ -370,7 +369,7 @@ pub fn add_price(
     pubkey_assign(&mut price_data.next_, bytes_of(&product_data.px_acc_));
     pubkey_assign(&mut product_data.px_acc_, &price_account.key.to_bytes());
 
-    Ok(SUCCESS)
+    Ok(())
 }
 
 /// Delete a price account. This function will remove the link between the price account and its
@@ -427,7 +426,7 @@ pub fn init_price(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
     instruction_data: &[u8],
-) -> OracleResult {
+) -> ProgramResult {
     let cmd_args = load::<cmd_init_price_t>(instruction_data)?;
 
     check_exponent_range(cmd_args.expo_)?;
@@ -483,7 +482,7 @@ pub fn init_price(
         );
     }
 
-    Ok(SUCCESS)
+    Ok(())
 }
 
 /// add a publisher to a price account
@@ -493,7 +492,7 @@ pub fn add_publisher(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
     instruction_data: &[u8],
-) -> OracleResult {
+) -> ProgramResult {
     let cmd_args = load::<cmd_add_publisher_t>(instruction_data)?;
 
     pyth_assert(
@@ -536,7 +535,7 @@ pub fn add_publisher(
     price_data.size_ =
         try_convert::<_, u32>(size_of::<pc_price_t>() - size_of_val(&price_data.comp_))?
             + price_data.num_ * try_convert::<_, u32>(size_of::<pc_price_comp>())?;
-    Ok(SUCCESS)
+    Ok(())
 }
 
 /// add a publisher to a price account
@@ -546,7 +545,7 @@ pub fn del_publisher(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
     instruction_data: &[u8],
-) -> OracleResult {
+) -> ProgramResult {
     let cmd_args = load::<cmd_del_publisher_t>(instruction_data)?;
 
     pyth_assert(
@@ -580,7 +579,7 @@ pub fn del_publisher(
             price_data.size_ =
                 try_convert::<_, u32>(size_of::<pc_price_t>() - size_of_val(&price_data.comp_))?
                     + price_data.num_ * try_convert::<_, u32>(size_of::<pc_price_comp>())?;
-            return Ok(SUCCESS);
+            return Ok(());
         }
     }
     Err(ProgramError::InvalidArgument)
@@ -590,7 +589,7 @@ pub fn add_product(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
     instruction_data: &[u8],
-) -> OracleResult {
+) -> ProgramResult {
     let [funding_account, tail_mapping_account, new_product_account] = match accounts {
         [x, y, z] => Ok([x, y, z]),
         _ => Err(ProgramError::InvalidArgument),
@@ -625,7 +624,7 @@ pub fn add_product(
         try_convert::<_, u32>(size_of::<pc_map_table_t>() - size_of_val(&mapping_data.prod_))?
             + mapping_data.num_ * try_convert::<_, u32>(size_of::<pc_pub_key_t>())?;
 
-    Ok(SUCCESS)
+    Ok(())
 }
 
 /// Update the metadata associated with a product, overwriting any existing metadata.
@@ -634,7 +633,7 @@ pub fn upd_product(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
     instruction_data: &[u8],
-) -> OracleResult {
+) -> ProgramResult {
     let [funding_account, product_account] = match accounts {
         [x, y] => Ok([x, y]),
         _ => Err(ProgramError::InvalidArgument),
@@ -685,14 +684,14 @@ pub fn upd_product(
     let mut product_data = load_checked::<pc_prod_t>(product_account, hdr.ver_)?;
     product_data.size_ = try_convert(size_of::<pc_prod_t>() + new_data.len())?;
 
-    Ok(SUCCESS)
+    Ok(())
 }
 
 pub fn set_min_pub(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
     instruction_data: &[u8],
-) -> OracleResult {
+) -> ProgramResult {
     let cmd = load::<cmd_set_min_pub_t>(instruction_data)?;
 
     pyth_assert(
@@ -711,5 +710,5 @@ pub fn set_min_pub(
     let mut price_account_data = load_checked::<pc_price_t>(price_account, cmd.ver_)?;
     price_account_data.min_pub_ = cmd.min_pub_;
 
-    Ok(SUCCESS)
+    Ok(())
 }
