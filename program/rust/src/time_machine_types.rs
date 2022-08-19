@@ -101,11 +101,11 @@ pub struct SmaTracker<const NUM_ENTRIES: usize> {
                                                          * moving to the next one */
     current_entry_status:                          Status, //the status of the current entry
     current_entry_weighted_price_accumelator:      SignedTrackerRunningSum, /* accumelates
-                                                                             * slot_delta *
-                                                                             * (inflated_p1 +
-                                                                             * inflated_p2) / 2
-                                                                             * to compute
-                                                                             * averages */
+                                                            * slot_delta *
+                                                            * (inflated_p1 +
+                                                            * inflated_p2) / 2
+                                                            * to compute
+                                                            * averages */
     current_entry_weighted_confidence_accumelator: UnsignedTrackerRunningSum, //ditto
     running_entry_prices:                          [SignedTrackerRunningSum; NUM_ENTRIES], /* A running sum of the slot weighted average of each entry. */
     running_entry_confidences:                     [UnsignedTrackerRunningSum; NUM_ENTRIES], //Ditto
@@ -229,15 +229,6 @@ pub struct TickTracker<const NUM_ENTRIES: usize> {
 
 
 impl<const NUM_ENTRIES: usize> TickTracker<NUM_ENTRIES> {
-    ///invalidates current_entry, and increments self.current_entry num_entries times
-    fn invalidate_following_entries(&mut self, num_entries: usize, current_entry: usize) {
-        let mut entry = current_entry;
-        for _ in 0..num_entries {
-            self.entry_validity[entry] = Status::Invalid;
-            entry = get_next_entry(entry, NUM_ENTRIES);
-        }
-    }
-
     fn initialize(&mut self, threshold: i64, granularity: i64) -> Result<(), OracleError> {
         self.threshold = threshold;
         self.granularity = granularity;
@@ -248,35 +239,63 @@ impl<const NUM_ENTRIES: usize> TickTracker<NUM_ENTRIES> {
     fn add_price(
         &mut self,
         prev_time: i64,
-        prev_price: i64,
-        prev_conf: u64,
+        current_time: i64,
+        current_price: i64,
+        current_conf: u64,
+    ) -> Result<(), OracleError> {
+        self.close_previous_tick(prev_time, current_time)?;
+
+        self.invalidate_intermediate_entries(prev_time, current_time)?;
+
+        self.update_current_tick(current_time, current_price, current_conf)?;
+
+        Ok(())
+    }
+    fn close_previous_tick(
+        &mut self,
+        prev_time: i64,
         current_time: i64,
     ) -> Result<(), OracleError> {
-        let prev_entry = time_to_entry(prev_time, NUM_ENTRIES, self.granularity)?;
         let current_entry = time_to_entry(current_time, NUM_ENTRIES, self.granularity)?;
+        let prev_entry = time_to_entry(prev_time, NUM_ENTRIES, self.granularity)?;
+        if current_entry != prev_entry && self.entry_validity[prev_entry] == Status::Pending {
+            self.entry_validity[prev_entry] = Status::Valid;
+        }
+        Ok(())
+    }
+    fn invalidate_intermediate_entries(
+        &mut self,
+        prev_time: i64,
+        current_time: i64,
+    ) -> Result<(), OracleError> {
+        let current_entry = time_to_entry(current_time, NUM_ENTRIES, self.granularity)?;
+        let prev_entry = time_to_entry(prev_time, NUM_ENTRIES, self.granularity)?;
+
+
         let num_skipped_entries = current_entry - prev_entry;
+        let mut entry = prev_entry;
+        for _ in 0..min(num_skipped_entries, NUM_ENTRIES) {
+            entry = get_next_entry(entry, NUM_ENTRIES);
+            self.entry_validity[current_entry] = Status::Invalid;
+        }
+        Ok(())
+    }
+    fn update_current_tick(
+        &mut self,
+        current_time: i64,
+        current_price: i64,
+        current_conf: u64,
+    ) -> Result<(), OracleError> {
+        let current_entry = time_to_entry(current_time, NUM_ENTRIES, self.granularity)?;
 
-        // unlike SMAs, first entry here can be valid
-        self.prices[prev_entry] = prev_price;
-        self.confidences[prev_entry] = prev_conf;
-
-        //update validity if it is time to do so
-        self.entry_validity[prev_entry] = if get_time_to_entry_end(prev_time, self.granularity)
-            >= self.threshold
-            || num_skipped_entries == 0
-        {
-            Status::Invalid
-        } else {
-            Status::Valid
-        };
-
-        //invalidate skipped entries if any
-        self.invalidate_following_entries(
-            min(num_skipped_entries, NUM_ENTRIES),
-            get_next_entry(prev_entry, NUM_ENTRIES),
-        );
-        //We do not need to store thre current_price or conf, they will be stored on the next
-        //price send. However, we can use to interpolate the border price if we wish to do so.
+        self.prices[current_entry] = current_price;
+        self.confidences[current_entry] = current_conf;
+        self.entry_validity[current_entry] =
+            if get_time_to_entry_end(current_time, self.granularity) >= self.threshold {
+                Status::Invalid
+            } else {
+                Status::Pending
+            };
         Ok(())
     }
 }
@@ -319,9 +338,9 @@ impl TimeMachineWrapper {
         )?;
         self.tick_tracker.add_price(
             prev_time,
+            current_time,
             last_two_prices.0,
             last_two_confs.0,
-            current_time,
         )?;
         Ok(())
     }
