@@ -99,13 +99,17 @@ pub struct SmaTracker<const NUM_ENTRIES: usize> {
                                                          * weights of the current entry, reset
                                                          * to 0 before
                                                          * moving to the next one */
-    current_entry_status:                          Status, //the status of the current entry
+    current_entry_status:                          Status, /* the status of the current entry,
+                                                            * INVALID if an update takes too
+                                                            * long, PENDING if it is still being
+                                                            * updated but the updates have been
+                                                            * consistent so far. */
     current_entry_weighted_price_accumulator:      SignedTrackerRunningSum, /* accumulates
-                                                            * slot_delta *
-                                                            * (inflated_p1 +
-                                                            * inflated_p2) / 2
-                                                            * to compute
-                                                            * averages */
+                                                                             * slot_delta *
+                                                                             * (inflated_p1 +
+                                                                             * inflated_p2) / 2
+                                                                             * to compute
+                                                                             * averages */
     current_entry_weighted_confidence_accumulator: UnsignedTrackerRunningSum, //ditto
     running_entry_prices:                          [SignedTrackerRunningSum; NUM_ENTRIES], /* A running sum of the slot weighted average of each entry. */
     running_entry_confidences:                     [UnsignedTrackerRunningSum; NUM_ENTRIES], //Ditto
@@ -224,7 +228,12 @@ pub struct TickTracker<const NUM_ENTRIES: usize> {
     confidences:    [UnsignedTrackerRunningSum; NUM_ENTRIES], /* confidence running
                                                                * time
                                                                * weighted sums */
-    entry_validity: [Status; NUM_ENTRIES], //entry validity
+    entry_validity: [Status; NUM_ENTRIES], /* entry validity, INVALID if the last tick in an
+                                            * entry is too far from the end, PENDING if it is
+                                            * the entry is still being updated but the current
+                                            * tick is close enough, VALID if the entry is no
+                                            * longer being updated and the last tick is
+                                            * sufficiently close */
 }
 
 
