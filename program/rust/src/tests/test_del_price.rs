@@ -1,30 +1,22 @@
-use solana_program::instruction::{
-    AccountMeta,
-    Instruction,
-};
 use std::mem::size_of;
 use std::str::FromStr;
 
+use bytemuck::bytes_of;
+use solana_program::system_instruction;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
-use solana_program::sysvar;
+use solana_program::rent::Rent;
 use solana_program_test::{
     processor,
     ProgramTest,
 };
+use solana_sdk::signature::{Keypair, Signer};
 use solana_sdk::transaction::Transaction;
 
-use crate::c_oracle_header::{
-    cmd_hdr,
-    command_t_e_cmd_del_price,
-    pc_price_t,
-    pc_prod_t,
-    PC_VERSION,
-};
+use crate::c_oracle_header::{cmd_hdr, command_t_e_cmd_del_price, pc_map_table_t, pc_price_t, pc_prod_t, PC_VERSION};
 use crate::deserialize::{
     initialize_pyth_account_checked,
     load_checked,
-    load_mut,
 };
 use crate::processor::process_instruction;
 use crate::rust_oracle::del_price;
@@ -34,10 +26,8 @@ use crate::utils::pubkey_assign;
 #[test]
 fn test_del_price() {
     let program_id = Pubkey::new_unique();
-    let mut instruction_data = [0u8; size_of::<cmd_hdr>()];
-    let mut hdr = load_mut::<cmd_hdr>(&mut instruction_data).unwrap();
-    hdr.ver_ = PC_VERSION;
-    hdr.cmd_ = command_t_e_cmd_del_price as i32;
+    let hdr = del_price_instruction();
+    let instruction_data = bytes_of(&hdr);
 
     let mut funding_setup = AccountSetup::new_funding();
     let funding_account = funding_setup.to_account_info();
@@ -92,16 +82,38 @@ fn test_del_price() {
 
 #[tokio::test]
 async fn test_sysvar() {
-    println!("This test!");
     let program_id = Pubkey::from_str("Pyth111111111111111111111111111111111111111").unwrap();
     let (mut banks_client, payer, recent_blockhash) = ProgramTest::new(
-        "spl_example_sysvar",
+        "pyth",
         program_id,
         processor!(process_instruction),
     )
     .start()
     .await;
 
+    let hdr = del_price_instruction();
+    let _instruction_data = bytes_of(&hdr);
+
+    let mapping_keypair = Keypair::new();
+
+    let size = size_of::<pc_map_table_t>();
+    let rent = Rent::minimum_balance(&Rent::default(), size);
+    let instruction = system_instruction::create_account(&payer.pubkey(), &mapping_keypair.pubkey(), rent, size as u64, &program_id);
+    let mut transaction = Transaction::new_with_payer(
+        &[instruction],
+        Some(&payer.pubkey()),
+    );
+    transaction.sign(&[&payer, &mapping_keypair], recent_blockhash);
+    // transaction.sign(&[&mapping_keypair], recent_blockhash);
+
+
+    banks_client.process_transaction(transaction).await.unwrap();
+
+    let foo = banks_client.get_account(mapping_keypair.pubkey()).await.unwrap().unwrap();
+
+    assert_eq!(foo.data.len(), 7);
+
+    /*
     let mut transaction = Transaction::new_with_payer(
         &[Instruction::new_with_bincode(
             program_id,
@@ -115,4 +127,12 @@ async fn test_sysvar() {
     );
     transaction.sign(&[&payer], recent_blockhash);
     banks_client.process_transaction(transaction).await.unwrap();
+     */
+}
+
+fn del_price_instruction() -> cmd_hdr {
+    cmd_hdr {
+        ver_: PC_VERSION,
+        cmd_: command_t_e_cmd_del_price as i32,
+    }
 }

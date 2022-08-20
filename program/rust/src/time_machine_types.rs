@@ -75,7 +75,7 @@ pub mod tests {
     fn c_time_machine_size_is_correct() {
         assert_eq!(
         size_of::<TimeMachineWrapper>(),
-        TIME_MACHINE_STRUCT_SIZE.try_into().unwrap(),
+        TIME_MACHINE_STRUCT_SIZE as usize,
         "expected TIME_MACHINE_STRUCT_SIZE ({}) in oracle.h to the same as the size of TimeMachineWrapper ({})",
         TIME_MACHINE_STRUCT_SIZE,
         size_of::<TimeMachineWrapper>()
@@ -86,7 +86,7 @@ pub mod tests {
     fn c_price_account_size_is_correct() {
         assert_eq!(
         size_of::<PriceAccountWrapper>(),
-        PRICE_ACCOUNT_SIZE.try_into().unwrap(),
+        PRICE_ACCOUNT_SIZE as usize,
         "expected PRICE_ACCOUNT_SIZE ({}) in oracle.h to the same as the size of PriceAccountWrapper ({})",
         PRICE_ACCOUNT_SIZE,
         size_of::<PriceAccountWrapper>()
