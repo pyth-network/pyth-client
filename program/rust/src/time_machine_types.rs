@@ -20,8 +20,8 @@ type UnsignedTrackerRunningSum = u64;
 
 
 #[repr(u8)]
-#[derive(Debug, Copy, Clone, PartialEq)]
-enum Status {
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum Status {
     Invalid = 0,
     Valid   = 1,
     Pending = 2,
@@ -231,6 +231,38 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
         for validity in self.running_valid_entry_counter.iter_mut() {
             *validity = 0;
         }
+    }
+    #[allow(dead_code)]
+    ///gets the average of all the entries between start and end offsets (half_open)
+    /// where offsets are the offsets from the current entry
+    pub fn get_sma_entries_ago(
+        &self,
+        start_offset: usize,
+        end_offset: usize,
+        last_update_time: i64,
+    ) -> Result<(i64, u64, Status), OracleError> {
+        if start_offset < end_offset || start_offset > NUM_ENTRIES - 1 {
+            return Err(OracleError::InvalidTimeMachineRequest);
+        }
+        let current_entry = time_to_entry(last_update_time, NUM_ENTRIES, self.granularity)?;
+        let pre_start_entry = (current_entry + 2 * NUM_ENTRIES - start_offset - 1) % NUM_ENTRIES;
+        let pre_end_entry = (current_entry + 2 * NUM_ENTRIES - end_offset - 1) % NUM_ENTRIES;
+        let num_avg_entries = end_offset - start_offset;
+        let avg_price = (self.running_entry_prices[pre_end_entry]
+            - self.running_entry_prices[pre_start_entry])
+            / try_convert::<usize, i64>(num_avg_entries)?;
+        let avg_confidence = (self.running_entry_confidences[pre_end_entry]
+            - self.running_entry_confidences[pre_start_entry])
+            / try_convert::<usize, u64>(num_avg_entries)?;
+        let validity = if (self.running_valid_entry_counter[pre_end_entry]
+            - self.running_valid_entry_counter[pre_start_entry])
+            == try_convert::<usize, u64>(num_avg_entries)?
+        {
+            Status::Valid
+        } else {
+            Status::Invalid
+        };
+        Ok((avg_price, avg_confidence, validity))
     }
 }
 

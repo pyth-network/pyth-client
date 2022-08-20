@@ -11,25 +11,27 @@ pub type OracleResult = Result<u64, ProgramError>;
 pub enum OracleError {
     /// Generic catch all error
     #[error("Generic")]
-    Generic                 = 600,
+    Generic                   = 600,
     /// integer casting error
     #[error("IntegerCastingError")]
-    IntegerCastingError     = 601,
+    IntegerCastingError       = 601,
     /// c_entrypoint returned an unexpected value
     #[error("UnknownCError")]
-    UnknownCError           = 602,
+    UnknownCError             = 602,
     #[error("UnrecognizedInstruction")]
-    UnrecognizedInstruction = 603,
+    UnrecognizedInstruction   = 603,
     #[error("InvalidFundingAccount")]
-    InvalidFundingAccount   = 604,
+    InvalidFundingAccount     = 604,
     #[error("InvalidSignableAccount")]
-    InvalidSignableAccount  = 605,
+    InvalidSignableAccount    = 605,
     #[error("InvalidSystemAccount")]
-    InvalidSystemAccount    = 606,
+    InvalidSystemAccount      = 606,
     #[error("InvalidWritableAccount")]
-    InvalidWritableAccount  = 607,
+    InvalidWritableAccount    = 607,
     #[error("InvalidWritableAccount")]
-    InvalidFreshAccount     = 608,
+    InvalidFreshAccount       = 608,
+    #[error("InvalidTimeMachineRequest")]
+    InvalidTimeMachineRequest = 609,
 }
 
 impl From<OracleError> for ProgramError {
