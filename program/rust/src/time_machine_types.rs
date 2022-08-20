@@ -336,6 +336,24 @@ impl<const NUM_ENTRIES: usize> TickTracker<NUM_ENTRIES> {
             *validity = Status::Invalid;
         }
     }
+    /// offset is the number of entries from the current entry
+    #[allow(dead_code)]
+    pub fn get_tick_entries_ago(
+        &self,
+        offset: usize,
+        last_update_time: i64,
+    ) -> Result<(i64, u64, Status), OracleError> {
+        if offset > NUM_ENTRIES - 1 {
+            return Err(OracleError::InvalidTimeMachineRequest);
+        }
+        let current_entry = time_to_entry(last_update_time, NUM_ENTRIES, self.granularity)?;
+        let requested_entry = (current_entry + NUM_ENTRIES - offset) % NUM_ENTRIES;
+        Ok((
+            self.prices[requested_entry],
+            self.confidences[requested_entry],
+            self.entry_validity[requested_entry],
+        ))
+    }
 }
 
 const THIRTY_MINUTES: i64 = 30 * 60;
