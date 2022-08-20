@@ -82,6 +82,8 @@ fn test_del_price() {
 
 #[tokio::test]
 async fn test_sysvar() {
+
+    /*
     let program_id = Pubkey::from_str("Pyth111111111111111111111111111111111111111").unwrap();
     let (mut banks_client, payer, recent_blockhash) = ProgramTest::new(
         "pyth",
@@ -94,22 +96,12 @@ async fn test_sysvar() {
     let hdr = del_price_instruction();
     let _instruction_data = bytes_of(&hdr);
 
-    let mapping_keypair = Keypair::new();
+*/
 
-    let size = size_of::<pc_map_table_t>();
-    let rent = Rent::minimum_balance(&Rent::default(), size);
-    let instruction = system_instruction::create_account(&payer.pubkey(), &mapping_keypair.pubkey(), rent, size as u64, &program_id);
-    let mut transaction = Transaction::new_with_payer(
-        &[instruction],
-        Some(&payer.pubkey()),
-    );
-    transaction.sign(&[&payer, &mapping_keypair], recent_blockhash);
-    // transaction.sign(&[&mapping_keypair], recent_blockhash);
+    let sim = PythSimulator::new();
+    let mapping_pubkey = sim.init_mapping();
 
-
-    banks_client.process_transaction(transaction).await.unwrap();
-
-    let foo = banks_client.get_account(mapping_keypair.pubkey()).await.unwrap().unwrap();
+    let foo = banks_client.get_account(mapping_pubkey).await.unwrap().unwrap();
 
     assert_eq!(foo.data.len(), 7);
 
