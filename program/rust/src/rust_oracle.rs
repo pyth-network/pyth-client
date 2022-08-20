@@ -384,7 +384,7 @@ pub fn del_price(
     accounts: &[AccountInfo],
     instruction_data: &[u8],
 ) -> ProgramResult {
-    let [funding_account, product_account, price_account, system_program_account] = match accounts {
+    let [funding_account, product_account, price_account] = match accounts {
         [w, x, y, z] => Ok([w, x, y, z]),
         _ => Err(ProgramError::InvalidArgument),
     }?;
@@ -392,10 +392,6 @@ pub fn del_price(
     check_valid_funding_account(funding_account)?;
     check_valid_signable_account(program_id, product_account, PC_PROD_ACC_SIZE as usize)?;
     check_valid_signable_account(program_id, price_account, size_of::<pc_price_t>())?;
-    pyth_assert(
-        check_id(system_program_account.key),
-        OracleError::InvalidSystemAccount.into(),
-    )?;
 
     {
         let cmd_args = load::<cmd_hdr_t>(instruction_data)?;
