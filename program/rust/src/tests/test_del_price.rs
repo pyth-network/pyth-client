@@ -17,7 +17,10 @@ use crate::deserialize::{
 use crate::rust_oracle::del_price;
 use crate::tests::test_tx_utils::PythSimulator;
 use crate::tests::test_utils::AccountSetup;
-use crate::utils::pubkey_assign;
+use crate::utils::{
+    pubkey_assign,
+    pubkey_is_zero,
+};
 
 #[test]
 fn test_del_price() {
@@ -85,30 +88,18 @@ async fn test_del_price_integration() {
     let price1 = sim.add_price(&product1, -8).await;
     let price2 = sim.add_price(&product2, -8).await;
 
-    {
-        assert!(sim.get_account(price1.pubkey()).await.is_some());
-        assert!(sim.get_account(price2.pubkey()).await.is_some());
-    }
+    assert!(sim.get_account(price1.pubkey()).await.is_some());
+    assert!(sim.get_account(price2.pubkey()).await.is_some());
 
     sim.del_price(&product1, &price1).await;
 
     assert!(sim.get_account(price1.pubkey()).await.is_none());
 
-    /*
-    let mut transaction = Transaction::new_with_payer(
-        &[Instruction::new_with_bincode(
-            program_id,
-            &(),
-            vec![
-                AccountMeta::new(sysvar::clock::id(), false),
-                AccountMeta::new(sysvar::rent::id(), false),
-            ],
-        )],
-        Some(&payer.pubkey()),
-    );
-    transaction.sign(&[&payer], recent_blockhash);
-    banks_client.process_transaction(transaction).await.unwrap();
-     */
+    let product1_data = sim
+        .get_account_data_as::<pc_prod_t>(product1.pubkey())
+        .await
+        .unwrap();
+    assert!(pubkey_is_zero(&product1_data.px_acc_));
 }
 
 fn del_price_instruction() -> cmd_hdr {

@@ -10,6 +10,7 @@ use bytemuck::{
 use solana_program::account_info::AccountInfo;
 use solana_program::clock::Clock;
 use solana_program::entrypoint::ProgramResult;
+use solana_program::program::invoke;
 use solana_program::program_error::ProgramError;
 use solana_program::program_memory::{
     sol_memcpy,
@@ -17,14 +18,9 @@ use solana_program::program_memory::{
 };
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
-use solana_program::sysvar::Sysvar;
-
-
-use crate::time_machine_types::PriceAccountWrapper;
-use solana_program::program::invoke;
 use solana_program::system_instruction::transfer;
 use solana_program::system_program::check_id;
-
+use solana_program::sysvar::Sysvar;
 
 use crate::c_oracle_header::{
     cmd_add_price_t,
@@ -57,8 +53,7 @@ use crate::deserialize::{
     load_account_as_mut,
     load_checked,
 };
-use crate::OracleError;
-
+use crate::time_machine_types::PriceAccountWrapper;
 use crate::utils::{
     check_exponent_range,
     check_valid_fresh_account,
@@ -74,6 +69,7 @@ use crate::utils::{
     read_pc_str_t,
     try_convert,
 };
+use crate::OracleError;
 
 const PRICE_T_SIZE: usize = size_of::<pc_price_t>();
 const PRICE_ACCOUNT_SIZE: usize = size_of::<PriceAccountWrapper>();
@@ -385,7 +381,7 @@ pub fn del_price(
     instruction_data: &[u8],
 ) -> ProgramResult {
     let [funding_account, product_account, price_account] = match accounts {
-        [w, x, y, z] => Ok([w, x, y, z]),
+        [w, x, y] => Ok([w, x, y]),
         _ => Err(ProgramError::InvalidArgument),
     }?;
 
