@@ -1,7 +1,18 @@
+use solana_program::instruction::{
+    AccountMeta,
+    Instruction,
+};
 use std::mem::size_of;
+use std::str::FromStr;
 
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
+use solana_program::sysvar;
+use solana_program_test::{
+    processor,
+    ProgramTest,
+};
+use solana_sdk::transaction::Transaction;
 
 use crate::c_oracle_header::{
     cmd_hdr,
@@ -15,6 +26,7 @@ use crate::deserialize::{
     load_checked,
     load_mut,
 };
+use crate::processor::process_instruction;
 use crate::rust_oracle::del_price;
 use crate::tests::test_utils::AccountSetup;
 use crate::utils::pubkey_assign;
@@ -76,4 +88,31 @@ fn test_del_price() {
     );
 
     // Note that we can't test success outside of the solana vm because of the system program.
+}
+
+#[tokio::test]
+async fn test_sysvar() {
+    println!("This test!");
+    let program_id = Pubkey::from_str("Pyth111111111111111111111111111111111111111").unwrap();
+    let (mut banks_client, payer, recent_blockhash) = ProgramTest::new(
+        "spl_example_sysvar",
+        program_id,
+        processor!(process_instruction),
+    )
+    .start()
+    .await;
+
+    let mut transaction = Transaction::new_with_payer(
+        &[Instruction::new_with_bincode(
+            program_id,
+            &(),
+            vec![
+                AccountMeta::new(sysvar::clock::id(), false),
+                AccountMeta::new(sysvar::rent::id(), false),
+            ],
+        )],
+        Some(&payer.pubkey()),
+    );
+    transaction.sign(&[&payer], recent_blockhash);
+    banks_client.process_transaction(transaction).await.unwrap();
 }
