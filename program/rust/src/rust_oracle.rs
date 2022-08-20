@@ -397,27 +397,28 @@ pub fn del_price(
         OracleError::InvalidSystemAccount.into(),
     )?;
 
-    let cmd_args = load::<cmd_hdr_t>(instruction_data)?;
-    let mut product_data = load_checked::<pc_prod_t>(product_account, cmd_args.ver_)?;
-    let price_data = load_checked::<pc_price_t>(price_account, cmd_args.ver_)?;
-    pyth_assert(
-        pubkey_equal(&product_data.px_acc_, &price_account.key.to_bytes()),
-        ProgramError::InvalidArgument,
-    )?;
-    pyth_assert(
-        pubkey_is_zero(&price_data.next_),
-        ProgramError::InvalidArgument,
-    )?;
+    {
+        let cmd_args = load::<cmd_hdr_t>(instruction_data)?;
+        let mut product_data = load_checked::<pc_prod_t>(product_account, cmd_args.ver_)?;
+        let price_data = load_checked::<pc_price_t>(price_account, cmd_args.ver_)?;
+        pyth_assert(
+            pubkey_equal(&product_data.px_acc_, &price_account.key.to_bytes()),
+            ProgramError::InvalidArgument,
+        )?;
+        pyth_assert(
+            pubkey_is_zero(&price_data.next_),
+            ProgramError::InvalidArgument,
+        )?;
 
-    pubkey_clear(&mut product_data.px_acc_);
+        pubkey_clear(&mut product_data.px_acc_);
+    }
 
     // Zero out the balance of the price account to delete it.
-    send_lamports(
-        price_account,
-        funding_account,
-        system_program_account,
-        price_account.lamports(),
-    )?;
+    // Note that you can't use the system program's transfer instruction to do this operation, as
+    // that instruction fails if the source account has any data.
+    let lamports = price_account.lamports();
+    **price_account.lamports.borrow_mut() = 0;
+    **funding_account.lamports.borrow_mut() += lamports;
 
     Ok(())
 }

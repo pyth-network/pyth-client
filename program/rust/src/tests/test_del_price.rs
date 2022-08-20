@@ -1,25 +1,21 @@
-use std::mem::size_of;
-use std::str::FromStr;
-
 use bytemuck::bytes_of;
-use solana_program::system_instruction;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
-use solana_program::rent::Rent;
-use solana_program_test::{
-    processor,
-    ProgramTest,
-};
-use solana_sdk::signature::{Keypair, Signer};
-use solana_sdk::transaction::Transaction;
+use solana_sdk::signer::Signer;
 
-use crate::c_oracle_header::{cmd_hdr, command_t_e_cmd_del_price, pc_map_table_t, pc_price_t, pc_prod_t, PC_VERSION};
+use crate::c_oracle_header::{
+    cmd_hdr,
+    command_t_e_cmd_del_price,
+    pc_price_t,
+    pc_prod_t,
+    PC_VERSION,
+};
 use crate::deserialize::{
     initialize_pyth_account_checked,
     load_checked,
 };
-use crate::processor::process_instruction;
 use crate::rust_oracle::del_price;
+use crate::tests::test_tx_utils::PythSimulator;
 use crate::tests::test_utils::AccountSetup;
 use crate::utils::pubkey_assign;
 
@@ -81,29 +77,22 @@ fn test_del_price() {
 }
 
 #[tokio::test]
-async fn test_sysvar() {
+async fn test_del_price_integration() {
+    let mut sim = PythSimulator::new().await;
+    let mapping_keypair = sim.init_mapping().await;
+    let product1 = sim.add_product(&mapping_keypair).await;
+    let product2 = sim.add_product(&mapping_keypair).await;
+    let price1 = sim.add_price(&product1, -8).await;
+    let price2 = sim.add_price(&product2, -8).await;
 
-    /*
-    let program_id = Pubkey::from_str("Pyth111111111111111111111111111111111111111").unwrap();
-    let (mut banks_client, payer, recent_blockhash) = ProgramTest::new(
-        "pyth",
-        program_id,
-        processor!(process_instruction),
-    )
-    .start()
-    .await;
+    {
+        assert!(sim.get_account(price1.pubkey()).await.is_some());
+        assert!(sim.get_account(price2.pubkey()).await.is_some());
+    }
 
-    let hdr = del_price_instruction();
-    let _instruction_data = bytes_of(&hdr);
+    sim.del_price(&product1, &price1).await;
 
-*/
-
-    let sim = PythSimulator::new();
-    let mapping_pubkey = sim.init_mapping();
-
-    let foo = banks_client.get_account(mapping_pubkey).await.unwrap().unwrap();
-
-    assert_eq!(foo.data.len(), 7);
+    assert!(sim.get_account(price1.pubkey()).await.is_none());
 
     /*
     let mut transaction = Transaction::new_with_payer(
