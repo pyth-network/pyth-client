@@ -94,8 +94,9 @@ async fn test_del_price_integration() {
     assert!(sim.get_account(price2_1.pubkey()).await.is_some());
 
     assert!(sim.del_price(&product2, &price1).await.is_err());
-    assert!(sim.del_price(&product2, &price2_1).await.is_err());
+    assert!(sim.del_price(&product1, &price2_1).await.is_err());
     assert!(sim.del_price(&product1, &price2_2).await.is_err());
+    assert!(sim.del_price(&product3, &price2_1).await.is_err());
     assert!(sim.del_price(&product3, &price2_2).await.is_err());
 
     sim.del_price(&product1, &price1).await.unwrap();
@@ -106,6 +107,23 @@ async fn test_del_price_integration() {
         .await
         .unwrap();
     assert!(pubkey_is_zero(&product1_data.px_acc_));
+
+
+    // price2_1 is the 2nd item in the linked list since price2_2 got added after t.
+    assert!(sim.del_price(&product2, &price2_1).await.is_err());
+    // Can delete the accounts in the opposite order though
+    assert!(sim.del_price(&product2, &price2_2).await.is_ok());
+    assert!(sim.del_price(&product2, &price2_1).await.is_ok());
+
+    assert!(sim.get_account(price2_2.pubkey()).await.is_none());
+    assert!(sim.get_account(price2_1.pubkey()).await.is_none());
+
+    let product2_data = sim
+        .get_account_data_as::<pc_prod_t>(product2.pubkey())
+        .await
+        .unwrap();
+
+    assert!(pubkey_is_zero(&product2_data.px_acc_));
 }
 
 fn del_price_instruction() -> cmd_hdr {

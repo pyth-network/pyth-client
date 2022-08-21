@@ -274,7 +274,6 @@ typedef enum {
   // key[0] funding account       [signer writable]
   // key[1] product account       [signer writable]
   // key[2] price account         [signer writable]
-  // key[3] system program
   e_cmd_del_price,
 } command_t;
 

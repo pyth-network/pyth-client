@@ -17,6 +17,7 @@ use solana_program_test::{
     BanksClient,
     BanksClientError,
     ProgramTest,
+    ProgramTestBanksClientExt,
 };
 use solana_sdk::account::Account;
 use solana_sdk::signature::{
@@ -42,10 +43,13 @@ use crate::deserialize::load;
 use crate::processor::process_instruction;
 
 pub struct PythSimulator {
-    program_id:       Pubkey,
-    banks_client:     BanksClient,
-    payer:            Keypair,
-    recent_blockhash: Hash,
+    program_id:     Pubkey,
+    banks_client:   BanksClient,
+    payer:          Keypair,
+    /// Hash used to submit the last transaction. The hash must be advanced for each new
+    /// transaction; otherwise, replayed transactions in different states can return stale
+    /// results.
+    last_blockhash: Hash,
 }
 
 impl PythSimulator {
@@ -60,8 +64,31 @@ impl PythSimulator {
             program_id,
             banks_client,
             payer,
-            recent_blockhash,
+            last_blockhash: recent_blockhash,
         }
+    }
+
+    /// Process a transaction containing `instruction` signed by `signers`.
+    /// The transaction is assumed to require `self.payer` to pay for and sign the transaction.
+    async fn process_ix(
+        &mut self,
+        instruction: Instruction,
+        signers: &Vec<&Keypair>,
+    ) -> Result<(), BanksClientError> {
+        let mut transaction =
+            Transaction::new_with_payer(&[instruction], Some(&self.payer.pubkey()));
+
+        let blockhash = self
+            .banks_client
+            .get_new_latest_blockhash(&self.last_blockhash)
+            .await
+            .unwrap();
+        self.last_blockhash = blockhash;
+
+        transaction.partial_sign(&[&self.payer], self.last_blockhash);
+        transaction.partial_sign(signers, self.last_blockhash);
+
+        self.banks_client.process_transaction(transaction).await
     }
 
     /// Create an account owned by the pyth program containing `size` bytes.
@@ -76,13 +103,8 @@ impl PythSimulator {
             size as u64,
             &self.program_id,
         );
-        let mut transaction =
-            Transaction::new_with_payer(&[instruction], Some(&self.payer.pubkey()));
-        transaction.sign(&[&self.payer, &keypair], self.recent_blockhash);
-        self.banks_client
-            .process_transaction(transaction)
-            .await
-            .unwrap();
+
+        self.process_ix(instruction, &vec![&keypair]).await.unwrap();
 
         keypair
     }
@@ -105,11 +127,7 @@ impl PythSimulator {
             ],
         );
 
-        let mut transaction =
-            Transaction::new_with_payer(&[instruction], Some(&self.payer.pubkey()));
-        transaction.sign(&[&self.payer, &mapping_keypair], self.recent_blockhash);
-        self.banks_client
-            .process_transaction(transaction)
+        self.process_ix(instruction, &vec![&mapping_keypair])
             .await
             .map(|_| mapping_keypair)
     }
@@ -136,14 +154,7 @@ impl PythSimulator {
             ],
         );
 
-        let mut transaction =
-            Transaction::new_with_payer(&[instruction], Some(&self.payer.pubkey()));
-        transaction.sign(
-            &[&self.payer, &mapping_keypair, &product_keypair],
-            self.recent_blockhash,
-        );
-        self.banks_client
-            .process_transaction(transaction)
+        self.process_ix(instruction, &vec![&mapping_keypair, &product_keypair])
             .await
             .map(|_| product_keypair)
     }
@@ -173,14 +184,7 @@ impl PythSimulator {
             ],
         );
 
-        let mut transaction =
-            Transaction::new_with_payer(&[instruction], Some(&self.payer.pubkey()));
-        transaction.sign(
-            &[&self.payer, &product_keypair, &price_keypair],
-            self.recent_blockhash,
-        );
-        self.banks_client
-            .process_transaction(transaction)
+        self.process_ix(instruction, &vec![&product_keypair, &price_keypair])
             .await
             .map(|_| price_keypair)
     }
@@ -205,16 +209,8 @@ impl PythSimulator {
             ],
         );
 
-        let mut transaction =
-            Transaction::new_with_payer(&[instruction], Some(&self.payer.pubkey()));
-        transaction.sign(
-            &[&self.payer, &product_keypair, &price_keypair],
-            self.recent_blockhash,
-        );
-        self.banks_client
-            .process_transaction(transaction)
+        self.process_ix(instruction, &vec![&product_keypair, &price_keypair])
             .await
-            .map(|_| ())
     }
 
     /// Get the account at `key`. Returns `None` if no such account exists.

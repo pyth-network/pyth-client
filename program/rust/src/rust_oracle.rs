@@ -62,7 +62,6 @@ use crate::utils::{
     check_valid_writable_account,
     is_component_update,
     pubkey_assign,
-    pubkey_clear,
     pubkey_equal,
     pubkey_is_zero,
     pyth_assert,
@@ -370,7 +369,7 @@ pub fn add_price(
 
 /// Delete a price account. This function will remove the link between the price account and its
 /// corresponding product account, then transfer any SOL in the price account to the funding
-/// account. This function expects there to be only a single price account in the linked list of
+/// account. This function can only delete the first price account in the linked list of
 /// price accounts for the given product.
 ///
 /// Warning: This function is dangerous and will break any programs that depend on the deleted
@@ -397,12 +396,13 @@ pub fn del_price(
             pubkey_equal(&product_data.px_acc_, &price_account.key.to_bytes()),
             ProgramError::InvalidArgument,
         )?;
+
         pyth_assert(
-            pubkey_is_zero(&price_data.next_),
+            pubkey_equal(&price_data.prod_, &product_account.key.to_bytes()),
             ProgramError::InvalidArgument,
         )?;
 
-        pubkey_clear(&mut product_data.px_acc_);
+        pubkey_assign(&mut product_data.px_acc_, bytes_of(&price_data.next_));
     }
 
     // Zero out the balance of the price account to delete it.
