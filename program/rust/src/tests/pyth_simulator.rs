@@ -58,7 +58,7 @@ impl PythSimulator {
     pub async fn new() -> PythSimulator {
         let program_id = Pubkey::new_unique();
         let (banks_client, payer, recent_blockhash) =
-            ProgramTest::new("pyth", program_id, processor!(process_instruction))
+            ProgramTest::new("pyth_oracle", program_id, processor!(process_instruction))
                 .start()
                 .await;
 
