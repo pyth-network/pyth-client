@@ -275,6 +275,12 @@ typedef enum {
   // key[1] product account       [signer writable]
   // key[2] price account         [signer writable]
   e_cmd_del_price,
+
+  // deletes a product account
+  // key[0] funding account       [signer writable]
+  // key[1] mapping account       [signer writable]
+  // key[2] product account       [signer writable]
+  e_cmd_del_product,
 } command_t;
 
 typedef struct cmd_hdr

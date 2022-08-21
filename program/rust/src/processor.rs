@@ -6,6 +6,7 @@ use crate::c_oracle_header::{
     command_t_e_cmd_add_publisher,
     command_t_e_cmd_agg_price,
     command_t_e_cmd_del_price,
+    command_t_e_cmd_del_product,
     command_t_e_cmd_del_publisher,
     command_t_e_cmd_init_mapping,
     command_t_e_cmd_init_price,
@@ -29,6 +30,7 @@ use crate::rust_oracle::{
     add_product,
     add_publisher,
     del_price,
+    del_product,
     del_publisher,
     init_mapping,
     init_price,
@@ -75,6 +77,7 @@ pub fn process_instruction(
         command_t_e_cmd_upd_product => upd_product(program_id, accounts, instruction_data),
         command_t_e_cmd_set_min_pub => set_min_pub(program_id, accounts, instruction_data),
         command_t_e_cmd_del_price => del_price(program_id, accounts, instruction_data),
+        command_t_e_cmd_del_product => del_product(program_id, accounts, instruction_data),
         _ => Err(OracleError::UnrecognizedInstruction.into()),
     }
 }
