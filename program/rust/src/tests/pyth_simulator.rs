@@ -42,6 +42,8 @@ use crate::c_oracle_header::{
 use crate::deserialize::load;
 use crate::processor::process_instruction;
 
+/// Simulator for the state of the pyth program on Solana. You can run solana transactions against
+/// this struct to test how pyth instructions execute in the Solana runtime.
 pub struct PythSimulator {
     program_id:     Pubkey,
     banks_client:   BanksClient,
