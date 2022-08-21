@@ -15,6 +15,7 @@ use solana_program::system_instruction;
 use solana_program_test::{
     processor,
     BanksClient,
+    BanksClientError,
     ProgramTest,
 };
 use solana_sdk::account::Account;
@@ -88,7 +89,7 @@ impl PythSimulator {
 
     /// Initialize a mapping account (using the init_mapping instruction), returning the keypair
     /// associated with the newly-created account.
-    pub async fn init_mapping(&mut self) -> Keypair {
+    pub async fn init_mapping(&mut self) -> Result<Keypair, BanksClientError> {
         let mapping_keypair = self.create_pyth_account(size_of::<pc_map_table_t>()).await;
 
         let cmd = cmd_hdr_t {
@@ -110,14 +111,15 @@ impl PythSimulator {
         self.banks_client
             .process_transaction(transaction)
             .await
-            .unwrap();
-
-        mapping_keypair
+            .map(|_| mapping_keypair)
     }
 
     /// Initialize a product account and add it to an existing mapping account (using the
     /// add_product instruction). Returns the keypair associated with the newly-created account.
-    pub async fn add_product(&mut self, mapping_keypair: &Keypair) -> Keypair {
+    pub async fn add_product(
+        &mut self,
+        mapping_keypair: &Keypair,
+    ) -> Result<Keypair, BanksClientError> {
         let product_keypair = self.create_pyth_account(PC_PROD_ACC_SIZE as usize).await;
 
         let cmd = cmd_hdr_t {
@@ -143,14 +145,16 @@ impl PythSimulator {
         self.banks_client
             .process_transaction(transaction)
             .await
-            .unwrap();
-
-        product_keypair
+            .map(|_| product_keypair)
     }
 
     /// Initialize a price account and add it to an existing product account (using the add_price
     /// instruction). Returns the keypair associated with the newly-created account.
-    pub async fn add_price(&mut self, product_keypair: &Keypair, expo: i32) -> Keypair {
+    pub async fn add_price(
+        &mut self,
+        product_keypair: &Keypair,
+        expo: i32,
+    ) -> Result<Keypair, BanksClientError> {
         let price_keypair = self.create_pyth_account(size_of::<pc_price_t>()).await;
 
         let cmd = cmd_add_price_t {
@@ -178,13 +182,15 @@ impl PythSimulator {
         self.banks_client
             .process_transaction(transaction)
             .await
-            .unwrap();
-
-        price_keypair
+            .map(|_| price_keypair)
     }
 
     /// Delete a price account from an existing product account (using the del_price instruction).
-    pub async fn del_price(&mut self, product_keypair: &Keypair, price_keypair: &Keypair) -> () {
+    pub async fn del_price(
+        &mut self,
+        product_keypair: &Keypair,
+        price_keypair: &Keypair,
+    ) -> Result<(), BanksClientError> {
         let cmd = cmd_hdr_t {
             ver_: PC_VERSION,
             cmd_: command_t_e_cmd_del_price as i32,
@@ -208,7 +214,7 @@ impl PythSimulator {
         self.banks_client
             .process_transaction(transaction)
             .await
-            .unwrap();
+            .map(|_| ())
     }
 
     /// Get the account at `key`. Returns `None` if no such account exists.
