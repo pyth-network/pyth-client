@@ -47,8 +47,7 @@ use crate::c_oracle_header::{
     PC_VERSION,
 };
 use crate::deserialize::{
-    initialize_pyth_account_checked, /* TODO: This has a confusingly similar name to a Solana
-                                      * sdk function */
+    initialize_pyth_account_checked,
     load,
     load_account_as_mut,
     load_checked,

@@ -10,6 +10,7 @@ use crate::deserialize::{
     load_account_as_mut,
     load_checked,
 };
+use crate::instruction::OracleCommand;
 use crate::processor::process_instruction;
 use crate::tests::test_utils::AccountSetup;
 use crate::utils::{
@@ -18,7 +19,6 @@ use crate::utils::{
     pubkey_equal,
     pubkey_is_zero,
 };
-use crate::instruction::OracleCommand;
 use bytemuck::bytes_of;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;

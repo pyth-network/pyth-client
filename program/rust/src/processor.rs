@@ -1,13 +1,9 @@
-use crate::c_oracle_header::{
-    cmd_hdr,
-    PC_VERSION,
-};
-
-use crate::instruction::{OracleCommand, load_command_header_checked};
-use crate::deserialize::load;
 use crate::error::OracleError;
+use crate::instruction::{
+    load_command_header_checked,
+    OracleCommand,
+};
 use solana_program::entrypoint::ProgramResult;
-use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use solana_program::sysvar::slot_history::AccountInfo;
 
@@ -26,7 +22,6 @@ use crate::rust_oracle::{
     upd_price_no_fail_on_error,
     upd_product,
 };
-use num_traits::FromPrimitive;
 
 ///dispatch to the right instruction in the oracle
 pub fn process_instruction(
@@ -34,9 +29,7 @@ pub fn process_instruction(
     accounts: &[AccountInfo],
     instruction_data: &[u8],
 ) -> ProgramResult {
-
-    match load_command_header_checked(instruction_data)?
-    {
+    match load_command_header_checked(instruction_data)? {
         OracleCommand::InitMapping => init_mapping(program_id, accounts, instruction_data),
         OracleCommand::AddMapping => add_mapping(program_id, accounts, instruction_data),
         OracleCommand::AddProduct => add_product(program_id, accounts, instruction_data),
@@ -50,9 +43,12 @@ pub fn process_instruction(
         OracleCommand::InitTest => Err(OracleError::UnrecognizedInstruction.into()),
         OracleCommand::UpdTest => Err(OracleError::UnrecognizedInstruction.into()),
         OracleCommand::SetMinPub => set_min_pub(program_id, accounts, instruction_data),
-        OracleCommand::UpdPriceNoFailOnError => upd_price_no_fail_on_error(program_id, accounts, instruction_data),
-        OracleCommand::ResizePriceAccount => resize_price_account(program_id, accounts, instruction_data),
-        OracleCommand::DelPrice =>  del_price(program_id, accounts, instruction_data)
-
+        OracleCommand::UpdPriceNoFailOnError => {
+            upd_price_no_fail_on_error(program_id, accounts, instruction_data)
+        }
+        OracleCommand::ResizePriceAccount => {
+            resize_price_account(program_id, accounts, instruction_data)
+        }
+        OracleCommand::DelPrice => del_price(program_id, accounts, instruction_data),
     }
 }

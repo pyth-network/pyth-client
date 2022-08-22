@@ -1,4 +1,4 @@
-// #![deny(warnings)]
+#![deny(warnings)]
 // Allow non upper case globals from C
 #![allow(non_upper_case_globals)]
 // Allow using the solana_program::entrypoint::deserialize function
@@ -7,10 +7,10 @@
 mod c_oracle_header;
 mod deserialize;
 mod error;
+mod instruction;
 mod processor;
 mod rust_oracle;
 mod time_machine_types;
-mod instruction;
 mod utils;
 
 #[cfg(test)]

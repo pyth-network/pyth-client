@@ -1,4 +1,12 @@
-use crate::c_oracle_header::PythAccount;
+use crate::c_oracle_header::{
+    PythAccount,
+    PC_VERSION,
+};
+use crate::instruction::{
+    CommandHeader,
+    OracleCommand,
+};
+use num_traits::ToPrimitive;
 use solana_program::account_info::AccountInfo;
 use solana_program::clock::Epoch;
 use solana_program::native_token::LAMPORTS_PER_SOL;
@@ -8,14 +16,11 @@ use solana_program::sysvar::{
     Sysvar,
     SysvarId,
 };
-use crate::c_oracle_header::PC_VERSION;
 use solana_program::{
     clock,
     system_program,
     sysvar,
 };
-use crate::instruction::{OracleCommand, CommandHeader};
-use num_traits::ToPrimitive;
 const UPPER_BOUND_OF_ALL_ACCOUNT_SIZES: usize = 20536;
 
 /// The goal of this struct is to easily instantiate fresh solana accounts
@@ -101,10 +106,10 @@ pub fn update_clock_slot(clock_account: &mut AccountInfo, slot: u64) {
 }
 
 impl Into<CommandHeader> for OracleCommand {
-    fn into(self) -> CommandHeader{
+    fn into(self) -> CommandHeader {
         return CommandHeader {
-            version : PC_VERSION,
-            command : self.to_i32().unwrap(), // This can never fail
-        }
+            version: PC_VERSION,
+            command: self.to_i32().unwrap(), // This can never fail
+        };
     }
 }

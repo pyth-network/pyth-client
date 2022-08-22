@@ -6,9 +6,9 @@ use crate::c_oracle_header::{
     PC_MAGIC,
     PC_VERSION,
 };
-use crate::processor::process_instruction;
 use crate::deserialize::load_account_as;
 use crate::error::OracleError;
+use crate::processor::process_instruction;
 use crate::tests::test_utils::AccountSetup;
 use crate::utils::clear_account;
 use bytemuck::bytes_of;
