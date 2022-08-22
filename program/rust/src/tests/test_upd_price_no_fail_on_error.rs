@@ -3,8 +3,6 @@ use solana_program::pubkey::Pubkey;
 use std::mem::size_of;
 
 use crate::c_oracle_header::{
-    cmd_upd_price_t,
-    command_t_e_cmd_upd_price_no_fail_on_error,
     pc_price_t,
     PC_STATUS_TRADING,
     PC_STATUS_UNKNOWN,
@@ -16,10 +14,11 @@ use crate::deserialize::{
     load_checked,
     load_mut,
 };
-use crate::rust_oracle::{
-    upd_price,
-    upd_price_no_fail_on_error,
+use crate::instruction::{
+    OracleCommand,
+    UpdPriceArgs,
 };
+use crate::processor::process_instruction;
 use crate::tests::test_utils::{
     update_clock_slot,
     AccountSetup,
@@ -27,7 +26,7 @@ use crate::tests::test_utils::{
 use crate::utils::pubkey_assign;
 #[test]
 fn test_upd_price_no_fail_on_error_no_fail_on_error() {
-    let mut instruction_data = [0u8; size_of::<cmd_upd_price_t>()];
+    let mut instruction_data = [0u8; size_of::<UpdPriceArgs>()];
 
     let program_id = Pubkey::new_unique();
 
@@ -45,12 +44,13 @@ fn test_upd_price_no_fail_on_error_no_fail_on_error() {
     clock_account.is_writable = false;
 
     update_clock_slot(&mut clock_account, 1);
-    populate_instruction(&mut instruction_data, 42, 9, 1);
 
 
     // Check that the normal upd_price fails
+    populate_instruction(&mut instruction_data, 42, 9, 1, false);
+
     assert_eq!(
-        upd_price(
+        process_instruction(
             &program_id,
             &[
                 funding_account.clone(),
@@ -63,10 +63,11 @@ fn test_upd_price_no_fail_on_error_no_fail_on_error() {
     );
 
 
+    populate_instruction(&mut instruction_data, 42, 9, 1, true);
     // We haven't permissioned the publish account for the price account
     // yet, so any update should fail silently and have no effect. The
     // transaction should "succeed".
-    assert!(upd_price_no_fail_on_error(
+    assert!(process_instruction(
         &program_id,
         &[
             funding_account.clone(),
@@ -98,7 +99,7 @@ fn test_upd_price_no_fail_on_error_no_fail_on_error() {
     }
 
     // The update should now succeed, and have an effect.
-    assert!(upd_price_no_fail_on_error(
+    assert!(process_instruction(
         &program_id,
         &[
             funding_account.clone(),
@@ -123,11 +124,11 @@ fn test_upd_price_no_fail_on_error_no_fail_on_error() {
 
     // Invalid updates, such as publishing an update for the current slot,
     // should still fail silently and have no effect.
-    populate_instruction(&mut instruction_data, 55, 22, 1);
 
     // Check that the normal upd_price fails
+    populate_instruction(&mut instruction_data, 55, 22, 1, false);
     assert_eq!(
-        upd_price(
+        process_instruction(
             &program_id,
             &[
                 funding_account.clone(),
@@ -139,7 +140,8 @@ fn test_upd_price_no_fail_on_error_no_fail_on_error() {
         Err(ProgramError::InvalidArgument)
     );
 
-    assert!(upd_price_no_fail_on_error(
+    populate_instruction(&mut instruction_data, 55, 22, 1, true);
+    assert!(process_instruction(
         &program_id,
         &[
             funding_account.clone(),
@@ -164,11 +166,20 @@ fn test_upd_price_no_fail_on_error_no_fail_on_error() {
 }
 
 
-// Create an upd_price_no_fail_on_error instruction with the provided parameters
-fn populate_instruction(instruction_data: &mut [u8], price: i64, conf: u64, pub_slot: u64) -> () {
-    let mut cmd = load_mut::<cmd_upd_price_t>(instruction_data).unwrap();
-    cmd.ver_ = PC_VERSION;
-    cmd.cmd_ = command_t_e_cmd_upd_price_no_fail_on_error as i32;
+// Create an upd_price_no_fail_on_error or upd_price instruction with the provided parameters
+fn populate_instruction(
+    instruction_data: &mut [u8],
+    price: i64,
+    conf: u64,
+    pub_slot: u64,
+    no_fail_on_error: bool,
+) -> () {
+    let mut cmd = load_mut::<UpdPriceArgs>(instruction_data).unwrap();
+    cmd.header = if no_fail_on_error {
+        OracleCommand::UpdPriceNoFailOnError.into()
+    } else {
+        OracleCommand::UpdPrice.into()
+    };
     cmd.status_ = PC_STATUS_TRADING;
     cmd.price_ = price;
     cmd.conf_ = conf;

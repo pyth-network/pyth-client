@@ -27,20 +27,17 @@ use solana_sdk::signature::{
 use solana_sdk::transaction::Transaction;
 
 use crate::c_oracle_header::{
-    cmd_add_price_t,
-    cmd_hdr_t,
-    command_t_e_cmd_add_price,
-    command_t_e_cmd_add_product,
-    command_t_e_cmd_del_price,
-    command_t_e_cmd_del_product,
-    command_t_e_cmd_init_mapping,
     pc_map_table_t,
     pc_price_t,
     PC_PROD_ACC_SIZE,
     PC_PTYPE_PRICE,
-    PC_VERSION,
 };
 use crate::deserialize::load;
+use crate::instruction::{
+    AddPriceArgs,
+    CommandHeader,
+    OracleCommand,
+};
 use crate::processor::process_instruction;
 
 /// Simulator for the state of the pyth program on Solana. You can run solana transactions against
@@ -117,10 +114,7 @@ impl PythSimulator {
     pub async fn init_mapping(&mut self) -> Result<Keypair, BanksClientError> {
         let mapping_keypair = self.create_pyth_account(size_of::<pc_map_table_t>()).await;
 
-        let cmd = cmd_hdr_t {
-            ver_: PC_VERSION,
-            cmd_: command_t_e_cmd_init_mapping as i32,
-        };
+        let cmd: CommandHeader = OracleCommand::InitMapping.into();
         let instruction = Instruction::new_with_bytes(
             self.program_id,
             bytes_of(&cmd),
@@ -143,10 +137,7 @@ impl PythSimulator {
     ) -> Result<Keypair, BanksClientError> {
         let product_keypair = self.create_pyth_account(PC_PROD_ACC_SIZE as usize).await;
 
-        let cmd = cmd_hdr_t {
-            ver_: PC_VERSION,
-            cmd_: command_t_e_cmd_add_product as i32,
-        };
+        let cmd: CommandHeader = OracleCommand::AddProduct.into();
         let instruction = Instruction::new_with_bytes(
             self.program_id,
             bytes_of(&cmd),
@@ -168,10 +159,7 @@ impl PythSimulator {
         mapping_keypair: &Keypair,
         product_keypair: &Keypair,
     ) -> Result<(), BanksClientError> {
-        let cmd = cmd_hdr_t {
-            ver_: PC_VERSION,
-            cmd_: command_t_e_cmd_del_product as i32,
-        };
+        let cmd: CommandHeader = OracleCommand::DelProduct.into();
         let instruction = Instruction::new_with_bytes(
             self.program_id,
             bytes_of(&cmd),
@@ -195,9 +183,8 @@ impl PythSimulator {
     ) -> Result<Keypair, BanksClientError> {
         let price_keypair = self.create_pyth_account(size_of::<pc_price_t>()).await;
 
-        let cmd = cmd_add_price_t {
-            ver_:   PC_VERSION,
-            cmd_:   command_t_e_cmd_add_price as i32,
+        let cmd = AddPriceArgs {
+            header: OracleCommand::AddPrice.into(),
             expo_:  expo,
             ptype_: PC_PTYPE_PRICE,
         };
@@ -222,10 +209,7 @@ impl PythSimulator {
         product_keypair: &Keypair,
         price_keypair: &Keypair,
     ) -> Result<(), BanksClientError> {
-        let cmd = cmd_hdr_t {
-            ver_: PC_VERSION,
-            cmd_: command_t_e_cmd_del_price as i32,
-        };
+        let cmd: CommandHeader = OracleCommand::DelPrice.into();
         let instruction = Instruction::new_with_bytes(
             self.program_id,
             bytes_of(&cmd),

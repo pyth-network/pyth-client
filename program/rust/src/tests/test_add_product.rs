@@ -1,17 +1,6 @@
 use std::mem::size_of;
 
-use crate::error::OracleError;
-use crate::tests::test_utils::AccountSetup;
-use bytemuck::bytes_of;
-use solana_program::account_info::AccountInfo;
-use solana_program::clock::Epoch;
-use solana_program::program_error::ProgramError;
-use solana_program::pubkey::Pubkey;
-use solana_program::rent::Rent;
-
 use crate::c_oracle_header::{
-    cmd_hdr_t,
-    command_t_e_cmd_add_product,
     pc_map_table_t,
     pc_prod_t,
     PythAccount,
@@ -26,20 +15,29 @@ use crate::deserialize::{
     load_account_as,
     load_checked,
 };
+use crate::error::OracleError;
+use crate::instruction::{
+    CommandHeader,
+    OracleCommand,
+};
+use crate::processor::process_instruction;
+use crate::tests::test_utils::AccountSetup;
 use crate::utils::{
     clear_account,
     pubkey_equal,
 };
+use bytemuck::bytes_of;
+use solana_program::account_info::AccountInfo;
+use solana_program::clock::Epoch;
+use solana_program::program_error::ProgramError;
+use solana_program::pubkey::Pubkey;
+use solana_program::rent::Rent;
 
-use crate::rust_oracle::add_product;
 
 #[test]
 fn test_add_product() {
-    let hdr = cmd_hdr_t {
-        ver_: PC_VERSION,
-        cmd_: command_t_e_cmd_add_product as i32,
-    };
-    let instruction_data = bytes_of::<cmd_hdr_t>(&hdr);
+    let hdr: CommandHeader = OracleCommand::AddProduct.into();
+    let instruction_data = bytes_of::<CommandHeader>(&hdr);
 
     let program_id = Pubkey::new_unique();
 
@@ -56,7 +54,7 @@ fn test_add_product() {
     let mut product_setup_2 = AccountSetup::new::<pc_prod_t>(&program_id);
     let product_account_2 = product_setup_2.to_account_info();
 
-    assert!(add_product(
+    assert!(process_instruction(
         &program_id,
         &[
             funding_account.clone(),
@@ -83,7 +81,7 @@ fn test_add_product() {
         ));
     }
 
-    assert!(add_product(
+    assert!(process_instruction(
         &program_id,
         &[
             funding_account.clone(),
@@ -118,7 +116,7 @@ fn test_add_product() {
         Epoch::default(),
     );
     assert_eq!(
-        add_product(
+        process_instruction(
             &program_id,
             &[
                 funding_account.clone(),
@@ -137,7 +135,7 @@ fn test_add_product() {
     for i in 0..PC_MAP_TABLE_SIZE {
         clear_account(&product_account).unwrap();
 
-        assert!(add_product(
+        assert!(process_instruction(
             &program_id,
             &[
                 funding_account.clone(),
@@ -158,7 +156,7 @@ fn test_add_product() {
     clear_account(&product_account).unwrap();
 
     assert_eq!(
-        add_product(
+        process_instruction(
             &program_id,
             &[
                 funding_account.clone(),

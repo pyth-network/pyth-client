@@ -3,8 +3,6 @@ use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 
 use crate::c_oracle_header::{
-    cmd_init_price_t,
-    command_t_e_cmd_init_price,
     pc_price_t,
     pc_pub_key_t,
     PC_MAX_NUM_DECIMALS,
@@ -14,7 +12,11 @@ use crate::deserialize::{
     initialize_pyth_account_checked,
     load_checked,
 };
-use crate::rust_oracle::init_price;
+use crate::instruction::{
+    InitPriceArgs,
+    OracleCommand,
+};
+use crate::processor::process_instruction;
 use crate::tests::test_utils::AccountSetup;
 use crate::utils::{
     pubkey_assign,
@@ -26,14 +28,13 @@ use crate::OracleError;
 fn test_init_price() {
     let ptype = 3;
 
-    let cmd: cmd_init_price_t = cmd_init_price_t {
-        ver_:   PC_VERSION,
-        cmd_:   command_t_e_cmd_init_price as i32,
+    let cmd: InitPriceArgs = InitPriceArgs {
+        header: OracleCommand::InitPrice.into(),
         expo_:  -2,
         ptype_: ptype,
     };
 
-    let instruction_data = bytes_of::<cmd_init_price_t>(&cmd);
+    let instruction_data = bytes_of::<InitPriceArgs>(&cmd);
 
     let program_id = Pubkey::new_unique();
     let publisher = pc_pub_key_t::new_unique();
@@ -49,7 +50,7 @@ fn test_init_price() {
 
     // Price account must be initialized
     assert_eq!(
-        init_price(
+        process_instruction(
             &program_id,
             &[funding_account.clone(), price_account.clone()],
             instruction_data
@@ -92,7 +93,7 @@ fn test_init_price() {
         price_data.comp_[num_components - 1].latest_.price_ = 100;
     }
 
-    assert!(init_price(
+    assert!(process_instruction(
         &program_id,
         &[funding_account.clone(), price_account.clone()],
         instruction_data
@@ -142,7 +143,7 @@ fn test_init_price() {
 
     price_account.is_signer = false;
     assert_eq!(
-        init_price(
+        process_instruction(
             &program_id,
             &[funding_account.clone(), price_account.clone()],
             instruction_data
@@ -151,15 +152,14 @@ fn test_init_price() {
     );
 
     price_account.is_signer = true;
-    let cmd: cmd_init_price_t = cmd_init_price_t {
-        ver_:   PC_VERSION,
-        cmd_:   command_t_e_cmd_init_price as i32,
+    let cmd: InitPriceArgs = InitPriceArgs {
+        header: OracleCommand::InitPrice.into(),
         expo_:  -(PC_MAX_NUM_DECIMALS as i32) - 1,
         ptype_: ptype,
     };
-    let instruction_data = bytes_of::<cmd_init_price_t>(&cmd);
+    let instruction_data = bytes_of::<InitPriceArgs>(&cmd);
     assert_eq!(
-        init_price(
+        process_instruction(
             &program_id,
             &[funding_account.clone(), price_account.clone()],
             instruction_data

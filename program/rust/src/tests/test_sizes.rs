@@ -7,6 +7,15 @@ use crate::c_oracle_header::{
     PC_COMP_SIZE,
     PC_MAP_TABLE_SIZE,
 };
+use crate::instruction::{
+    AddPriceArgs,
+    AddPublisherArgs,
+    CommandHeader,
+    DelPublisherArgs,
+    InitPriceArgs,
+    SetMinPubArgs,
+    UpdPriceArgs,
+};
 use std::mem::size_of;
 
 #[test]
@@ -28,4 +37,11 @@ fn test_sizes() {
             + size_of::<pc_price_info_t>()
             + (PC_COMP_SIZE as usize) * size_of::<pc_price_comp_t>()
     );
+    assert_eq!(size_of::<CommandHeader>(), 8);
+    assert_eq!(size_of::<AddPriceArgs>(), 16);
+    assert_eq!(size_of::<InitPriceArgs>(), 16);
+    assert_eq!(size_of::<SetMinPubArgs>(), 12);
+    assert_eq!(size_of::<AddPublisherArgs>(), 40);
+    assert_eq!(size_of::<DelPublisherArgs>(), 40);
+    assert_eq!(size_of::<UpdPriceArgs>(), 40);
 }
