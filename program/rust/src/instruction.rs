@@ -11,77 +11,78 @@ use num_derive::{
 };
 use num_traits::FromPrimitive;
 
+/// WARNING : NEW COMMANDS SHOULD BE ADDED AT THE END OF THE LIST
 #[repr(i32)]
 #[derive(FromPrimitive, ToPrimitive)]
 pub enum OracleCommand {
     // initialize first mapping list account
     // account[0] funding account       [signer writable]
     // account[1] mapping account       [signer writable]
-    InitMapping,
+    InitMapping           = 0,
     // initialize and add new mapping account
     // account[0] funding account       [signer writable]
     // account[1] tail mapping account  [signer writable]
     // account[2] new mapping account   [signer writable]
-    AddMapping,
+    AddMapping            = 1,
     // initialize and add new product reference data account
     // account[0] funding account       [signer writable]
     // account[1] mapping account       [signer writable]
     // account[2] new product account   [signer writable]
-    AddProduct,
+    AddProduct            = 2,
     // update product account
     // account[0] funding account       [signer writable]
     // account[1] product account       [signer writable]
-    UpdProduct,
+    UpdProduct            = 3,
     // add new price account to a product account
     // account[0] funding account       [signer writable]
     // account[1] product account       [signer writable]
     // account[2] new price account     [signer writable]
-    AddPrice,
+    AddPrice              = 4,
     // add publisher to symbol account
     // account[0] funding account       [signer writable]
     // account[1] price account         [signer writable]
-    AddPublisher,
+    AddPublisher          = 5,
     // delete publisher from symbol account
     // account[0] funding account       [signer writable]
     // account[1] price account         [signer writable]
-    DelPublisher,
+    DelPublisher          = 6,
     // publish component price
     // account[0] funding account       [signer writable]
     // account[1] price account         [writable]
     // account[2] sysvar_clock account  []
-    UpdPrice,
+    UpdPrice              = 7,
     // compute aggregate price
     // account[0] funding account       [signer writable]
     // account[1] price account         [writable]
     // account[2] sysvar_clock account  []
-    AggPrice,
+    AggPrice              = 8,
     // (re)initialize price account
     // account[0] funding account       [signer writable]
     // account[1] new price account     [signer writable]
-    InitPrice,
+    InitPrice             = 9,
     // deprecated
-    InitTest,
+    InitTest              = 10,
     // deprecated
-    UpdTest,
+    UpdTest               = 11,
     // set min publishers
     // account[0] funding account       [signer writable]
     // account[1] price account         [signer writable]
-    SetMinPub,
+    SetMinPub             = 12,
     // publish component price, never returning an error even if the update failed
     // account[0] funding account       [signer writable]
     // account[1] price account         [writable]
     // account[2] sysvar_clock account  []
-    UpdPriceNoFailOnError,
+    UpdPriceNoFailOnError = 13,
     // resizes a price account so that it fits the Time Machine
     // account[0] funding account       [signer writable]
     // account[1] price account         [signer writable]
     // account[2] system program        []
-    ResizePriceAccount,
+    ResizePriceAccount    = 14,
     // deletes a price account
     // account[0] funding account       [signer writable]
     // account[1] product account       [signer writable]
     // account[2] price account         [signer writable]
-    DelPrice,
+    DelPrice              = 15,
 }
 
 #[repr(C)]
