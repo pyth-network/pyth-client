@@ -6,9 +6,9 @@ use crate::c_oracle_header::{
     PC_MAGIC,
     PC_VERSION,
 };
+use crate::processor::process_instruction;
 use crate::deserialize::load_account_as;
 use crate::error::OracleError;
-use crate::rust_oracle::init_mapping;
 use crate::tests::test_utils::AccountSetup;
 use crate::utils::clear_account;
 use bytemuck::bytes_of;
@@ -34,7 +34,7 @@ fn test_init_mapping() {
     let mut mapping_setup = AccountSetup::new::<pc_map_table_t>(&program_id);
     let mut mapping_account = mapping_setup.to_account_info();
 
-    assert!(init_mapping(
+    assert!(process_instruction(
         &program_id,
         &[funding_account.clone(), mapping_account.clone()],
         instruction_data
@@ -51,7 +51,7 @@ fn test_init_mapping() {
     }
 
     assert_eq!(
-        init_mapping(
+        process_instruction(
             &program_id,
             &[funding_account.clone(), mapping_account.clone()],
             instruction_data
@@ -62,14 +62,14 @@ fn test_init_mapping() {
     clear_account(&mapping_account).unwrap();
 
     assert_eq!(
-        init_mapping(&program_id, &[funding_account.clone()], instruction_data),
+        process_instruction(&program_id, &[funding_account.clone()], instruction_data),
         Err(ProgramError::InvalidArgument)
     );
 
     funding_account.is_signer = false;
 
     assert_eq!(
-        init_mapping(
+        process_instruction(
             &program_id,
             &[funding_account.clone(), mapping_account.clone()],
             instruction_data
@@ -81,7 +81,7 @@ fn test_init_mapping() {
     mapping_account.is_signer = false;
 
     assert_eq!(
-        init_mapping(
+        process_instruction(
             &program_id,
             &[funding_account.clone(), mapping_account.clone()],
             instruction_data
@@ -93,7 +93,7 @@ fn test_init_mapping() {
     funding_account.is_writable = false;
 
     assert_eq!(
-        init_mapping(
+        process_instruction(
             &program_id,
             &[funding_account.clone(), mapping_account.clone()],
             instruction_data
@@ -105,7 +105,7 @@ fn test_init_mapping() {
     mapping_account.is_writable = false;
 
     assert_eq!(
-        init_mapping(
+        process_instruction(
             &program_id,
             &[funding_account.clone(), mapping_account.clone()],
             instruction_data
@@ -117,7 +117,7 @@ fn test_init_mapping() {
     mapping_account.owner = &program_id_2;
 
     assert_eq!(
-        init_mapping(
+        process_instruction(
             &program_id,
             &[funding_account.clone(), mapping_account.clone()],
             instruction_data
@@ -130,7 +130,7 @@ fn test_init_mapping() {
     mapping_account.data = Rc::new(RefCell::new(&mut []));
 
     assert_eq!(
-        init_mapping(
+        process_instruction(
             &program_id,
             &[funding_account.clone(), mapping_account.clone()],
             instruction_data
@@ -140,7 +140,7 @@ fn test_init_mapping() {
 
     mapping_account.data = prev_data;
 
-    assert!(init_mapping(
+    assert!(process_instruction(
         &program_id,
         &[funding_account.clone(), mapping_account.clone()],
         instruction_data

@@ -1,6 +1,5 @@
 use crate::c_oracle_header::{
     cmd_hdr_t,
-    command_t_e_cmd_add_mapping,
     pc_map_table_t,
     PC_MAGIC,
     PC_MAP_TABLE_SIZE,
@@ -11,8 +10,7 @@ use crate::deserialize::{
     load_account_as_mut,
     load_checked,
 };
-
-use crate::rust_oracle::add_mapping;
+use crate::processor::process_instruction;
 use crate::tests::test_utils::AccountSetup;
 use crate::utils::{
     clear_account,
@@ -20,6 +18,7 @@ use crate::utils::{
     pubkey_equal,
     pubkey_is_zero,
 };
+use crate::instruction::OracleCommand;
 use bytemuck::bytes_of;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
@@ -28,7 +27,7 @@ use solana_program::pubkey::Pubkey;
 fn test_add_mapping() {
     let hdr: cmd_hdr_t = cmd_hdr_t {
         ver_: PC_VERSION,
-        cmd_: command_t_e_cmd_add_mapping as i32,
+        cmd_: OracleCommand::AddMapping as i32,
     };
     let instruction_data = bytes_of::<cmd_hdr_t>(&hdr);
 
@@ -50,7 +49,7 @@ fn test_add_mapping() {
         cur_mapping_data.num_ = PC_MAP_TABLE_SIZE;
     }
 
-    assert!(add_mapping(
+    assert!(process_instruction(
         &program_id,
         &[
             funding_account.clone(),
@@ -78,7 +77,7 @@ fn test_add_mapping() {
     clear_account(&next_mapping).unwrap();
 
     assert_eq!(
-        add_mapping(
+        process_instruction(
             &program_id,
             &[
                 funding_account.clone(),
@@ -99,7 +98,7 @@ fn test_add_mapping() {
     }
 
     assert_eq!(
-        add_mapping(
+        process_instruction(
             &program_id,
             &[
                 funding_account.clone(),
@@ -116,7 +115,7 @@ fn test_add_mapping() {
         cur_mapping_data.magic_ = PC_MAGIC;
     }
 
-    assert!(add_mapping(
+    assert!(process_instruction(
         &program_id,
         &[
             funding_account.clone(),

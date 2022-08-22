@@ -10,6 +10,7 @@ mod error;
 mod processor;
 mod rust_oracle;
 mod time_machine_types;
+mod instruction;
 mod utils;
 
 #[cfg(test)]
