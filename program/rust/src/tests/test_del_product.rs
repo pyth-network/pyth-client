@@ -1,6 +1,14 @@
+use std::mem::{
+    size_of,
+    size_of_val,
+};
+
 use solana_sdk::signer::Signer;
 
-use crate::c_oracle_header::pc_map_table_t;
+use crate::c_oracle_header::{
+    pc_map_table_t,
+    pc_pub_key_t,
+};
 use crate::tests::pyth_simulator::PythSimulator;
 use crate::utils::{
     pubkey_equal,
@@ -34,6 +42,8 @@ async fn test_del_product() {
 
     assert!(sim.del_product(&mapping_keypair, &product2).await.is_ok());
 
+    assert!(sim.get_account(product2.pubkey()).await.is_none());
+
     let mapping_data = sim
         .get_account_data_as::<pc_map_table_t>(mapping_keypair.pubkey())
         .await
@@ -44,9 +54,16 @@ async fn test_del_product() {
         &mapping_data.prod_[1],
         &product5.pubkey().to_bytes()
     ));
+    assert!(sim.get_account(product5.pubkey()).await.is_some());
     assert!(pubkey_equal(
         &mapping_data.prod_[3],
         &product4.pubkey().to_bytes()
     ));
     assert!(pubkey_is_zero(&mapping_data.prod_[4]));
+
+    assert_eq!(
+        mapping_data.size_,
+        (size_of::<pc_map_table_t>() - size_of_val(&mapping_data.prod_)) as u32
+            + 4 * size_of::<pc_pub_key_t>() as u32
+    );
 }

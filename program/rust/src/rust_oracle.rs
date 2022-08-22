@@ -707,8 +707,13 @@ pub fn set_min_pub(
     Ok(())
 }
 
+/// Delete a product account and remove it from the product list of its associated mapping account.
 /// The deleted product account must not have any price accounts.
-/// Note that this function allows you to delete products from non-tail mapping accounts.
+///
+/// This function allows you to delete products from non-tail mapping accounts. This ability is a
+/// little weird, as it allows you to construct a list of multiple mapping accounts where non-tail
+/// accounts have empty space. This is fine however; users should simply add new products to the
+/// first available spot.
 pub fn del_product(
     program_id: &Pubkey,
     accounts: &[AccountInfo],

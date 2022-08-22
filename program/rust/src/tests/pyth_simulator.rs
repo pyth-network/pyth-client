@@ -162,6 +162,7 @@ impl PythSimulator {
             .map(|_| product_keypair)
     }
 
+    /// Delete a product account (using the del_product instruction).
     pub async fn del_product(
         &mut self,
         mapping_keypair: &Keypair,
