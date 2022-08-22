@@ -62,6 +62,7 @@ use crate::utils::{
     check_valid_writable_account,
     is_component_update,
     pubkey_assign,
+    pubkey_clear,
     pubkey_equal,
     pubkey_is_zero,
     pyth_assert,
@@ -702,6 +703,75 @@ pub fn set_min_pub(
 
     let mut price_account_data = load_checked::<pc_price_t>(price_account, cmd.ver_)?;
     price_account_data.min_pub_ = cmd.min_pub_;
+
+    Ok(())
+}
+
+/// Delete a product account and remove it from the product list of its associated mapping account.
+/// The deleted product account must not have any price accounts.
+///
+/// This function allows you to delete products from non-tail mapping accounts. This ability is a
+/// little weird, as it allows you to construct a list of multiple mapping accounts where non-tail
+/// accounts have empty space. This is fine however; users should simply add new products to the
+/// first available spot.
+pub fn del_product(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
+    instruction_data: &[u8],
+) -> ProgramResult {
+    let [funding_account, mapping_account, product_account] = match accounts {
+        [w, x, y] => Ok([w, x, y]),
+        _ => Err(ProgramError::InvalidArgument),
+    }?;
+
+    check_valid_funding_account(funding_account)?;
+    check_valid_signable_account(program_id, mapping_account, size_of::<pc_map_table_t>())?;
+    check_valid_signable_account(program_id, product_account, PC_PROD_ACC_SIZE as usize)?;
+
+    {
+        let cmd_args = load::<cmd_hdr_t>(instruction_data)?;
+        let mut mapping_data = load_checked::<pc_map_table_t>(mapping_account, cmd_args.ver_)?;
+        let product_data = load_checked::<pc_prod_t>(product_account, cmd_args.ver_)?;
+
+        // This assertion is just to make the subtractions below simpler
+        pyth_assert(mapping_data.num_ >= 1, ProgramError::InvalidArgument)?;
+        pyth_assert(
+            pubkey_is_zero(&product_data.px_acc_),
+            ProgramError::InvalidArgument,
+        )?;
+
+        let product_key = product_account.key.to_bytes();
+        let product_index = mapping_data
+            .prod_
+            .iter()
+            .position(|x| pubkey_equal(x, &product_key))
+            .ok_or(ProgramError::InvalidArgument)?;
+
+        let num_after_removal: usize = try_convert(
+            mapping_data
+                .num_
+                .checked_sub(1)
+                .ok_or(ProgramError::InvalidArgument)?,
+        )?;
+
+        let last_key_bytes = mapping_data.prod_[num_after_removal];
+        pubkey_assign(
+            &mut mapping_data.prod_[product_index],
+            bytes_of(&last_key_bytes),
+        );
+        pubkey_clear(&mut mapping_data.prod_[num_after_removal]);
+        mapping_data.num_ = try_convert::<_, u32>(num_after_removal)?;
+        mapping_data.size_ =
+            try_convert::<_, u32>(size_of::<pc_map_table_t>() - size_of_val(&mapping_data.prod_))?
+                + mapping_data.num_ * try_convert::<_, u32>(size_of::<pc_pub_key_t>())?;
+    }
+
+    // Zero out the balance of the price account to delete it.
+    // Note that you can't use the system program's transfer instruction to do this operation, as
+    // that instruction fails if the source account has any data.
+    let lamports = product_account.lamports();
+    **product_account.lamports.borrow_mut() = 0;
+    **funding_account.lamports.borrow_mut() += lamports;
 
     Ok(())
 }
