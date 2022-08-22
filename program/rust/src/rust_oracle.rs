@@ -747,15 +747,20 @@ pub fn del_product(
             .position(|x| pubkey_equal(x, &product_key))
             .ok_or(ProgramError::InvalidArgument)?;
 
-        let last_index: usize = try_convert(mapping_data.num_ - 1)?;
+        let num_after_removal: usize = try_convert(
+            mapping_data
+                .num_
+                .checked_sub(1)
+                .ok_or(ProgramError::InvalidArgument)?,
+        )?;
 
-        let last_key_bytes = mapping_data.prod_[last_index];
+        let last_key_bytes = mapping_data.prod_[num_after_removal];
         pubkey_assign(
             &mut mapping_data.prod_[product_index],
             bytes_of(&last_key_bytes),
         );
-        pubkey_clear(&mut mapping_data.prod_[last_index]);
-        mapping_data.num_ -= 1;
+        pubkey_clear(&mut mapping_data.prod_[num_after_removal]);
+        mapping_data.num_ = try_convert::<_, u32>(num_after_removal)?;
         mapping_data.size_ =
             try_convert::<_, u32>(size_of::<pc_map_table_t>() - size_of_val(&mapping_data.prod_))?
                 + mapping_data.num_ * try_convert::<_, u32>(size_of::<pc_pub_key_t>())?;
