@@ -8,12 +8,14 @@ use solana_program::sysvar::{
     Sysvar,
     SysvarId,
 };
+use crate::c_oracle_header::PC_VERSION;
 use solana_program::{
     clock,
     system_program,
     sysvar,
 };
-
+use crate::instruction::{OracleCommand, CommandHeader};
+use num_traits::ToPrimitive;
 const UPPER_BOUND_OF_ALL_ACCOUNT_SIZES: usize = 20536;
 
 /// The goal of this struct is to easily instantiate fresh solana accounts
@@ -96,4 +98,13 @@ pub fn update_clock_slot(clock_account: &mut AccountInfo, slot: u64) {
     let mut clock_data = clock::Clock::from_account_info(clock_account).unwrap();
     clock_data.slot = slot;
     clock_data.to_account_info(clock_account);
+}
+
+impl Into<CommandHeader> for OracleCommand {
+    fn into(self) -> CommandHeader{
+        return CommandHeader {
+            version : PC_VERSION,
+            command : self.to_i32().unwrap(), // This can never fail
+        }
+    }
 }

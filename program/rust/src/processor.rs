@@ -3,7 +3,7 @@ use crate::c_oracle_header::{
     PC_VERSION,
 };
 
-use crate::instruction::OracleCommand;
+use crate::instruction::{OracleCommand, load_command_header_checked};
 use crate::deserialize::load;
 use crate::error::OracleError;
 use solana_program::entrypoint::ProgramResult;
@@ -34,13 +34,8 @@ pub fn process_instruction(
     accounts: &[AccountInfo],
     instruction_data: &[u8],
 ) -> ProgramResult {
-    let cmd_data = load::<cmd_hdr>(instruction_data)?;
 
-    if cmd_data.ver_ != PC_VERSION {
-        return Err(ProgramError::InvalidArgument);
-    }
-
-    match OracleCommand::from_i32(cmd_data.cmd_).ok_or(OracleError::UnrecognizedInstruction)?
+    match load_command_header_checked(instruction_data)?
     {
         OracleCommand::InitMapping => init_mapping(program_id, accounts, instruction_data),
         OracleCommand::AddMapping => add_mapping(program_id, accounts, instruction_data),

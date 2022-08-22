@@ -11,6 +11,7 @@ use crate::c_oracle_header::{
     PythAccount,
     PC_MAGIC,
 };
+use crate::error::OracleError;
 use crate::utils::{
     clear_account,
     pyth_assert,
@@ -26,22 +27,22 @@ use std::cell::{
 /// This will fail if :
 /// - `data` is too short
 /// - `data` is not aligned for T
-pub fn load<T: Pod>(data: &[u8]) -> Result<&T, ProgramError> {
+pub fn load<T: Pod>(data: &[u8]) -> Result<&T, OracleError> {
     try_from_bytes(
         data.get(0..size_of::<T>())
-            .ok_or(ProgramError::InvalidArgument)?,
+            .ok_or(OracleError::InstructionDataTooShort)?,
     )
-    .map_err(|_| ProgramError::InvalidArgument)
+    .map_err(|_| OracleError::InstructionDataSliceMisaligned)
 }
 
 /// Interpret the bytes in `data` as a mutable value of type `T`
 #[allow(unused)]
-pub fn load_mut<T: Pod>(data: &mut [u8]) -> Result<&mut T, ProgramError> {
+pub fn load_mut<T: Pod>(data: &mut [u8]) -> Result<&mut T, OracleError> {
     try_from_bytes_mut(
         data.get_mut(0..size_of::<T>())
-            .ok_or(ProgramError::InvalidArgument)?,
+            .ok_or(OracleError::InstructionDataTooShort)?,
     )
-    .map_err(|_| ProgramError::InvalidArgument)
+    .map_err(|_| OracleError::InstructionDataSliceMisaligned)
 }
 
 /// Get the data stored in `account` as a value of type `T`

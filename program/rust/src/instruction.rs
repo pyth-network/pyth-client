@@ -1,6 +1,11 @@
-use num_derive::FromPrimitive;
+use bytemuck::{Zeroable, Pod};
+use crate::{deserialize::load, error::OracleError};
+use num_derive::{FromPrimitive, ToPrimitive};
+use crate::c_oracle_header::PC_VERSION;
+use num_traits::FromPrimitive;
+
 #[repr(i32)]
-#[derive(FromPrimitive)]
+#[derive(FromPrimitive, ToPrimitive)]
 pub enum OracleCommand {
     // initialize first mapping list account
     // account[0] funding account       [signer writable]
@@ -70,4 +75,20 @@ pub enum OracleCommand {
     // account[1] product account       [signer writable]
     // account[2] price account         [signer writable]
     DelPrice
+}
+
+#[repr(C)]
+#[derive(Zeroable, Pod, Copy, Clone)]
+pub struct CommandHeader{
+    pub version : u32,
+    pub command : i32
+}
+
+pub fn load_command_header_checked(data : &[u8]) -> Result<OracleCommand, OracleError>{
+    let command_header = load::<CommandHeader>(data)?;
+
+    if command_header.version != PC_VERSION {
+        return Err(OracleError::InvalidInstructionVersion);
+    }
+    OracleCommand::from_i32(command_header.command).ok_or(OracleError::UnrecognizedInstruction)
 }

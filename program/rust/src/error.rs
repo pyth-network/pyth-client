@@ -26,6 +26,12 @@ pub enum OracleError {
     InvalidWritableAccount  = 607,
     #[error("InvalidFreshAccount")]
     InvalidFreshAccount     = 608,
+    #[error("InvalidInstructionVersion")]
+    InvalidInstructionVersion     = 609,
+    #[error("InstructionDataTooShort")]
+    InstructionDataTooShort     = 610,
+    #[error("InstructionDataSliceMisaligned")]
+    InstructionDataSliceMisaligned     = 611,
 }
 
 impl From<OracleError> for ProgramError {
