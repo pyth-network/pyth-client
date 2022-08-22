@@ -83,6 +83,11 @@ pub enum OracleCommand {
     // account[1] product account       [signer writable]
     // account[2] price account         [signer writable]
     DelPrice              = 15,
+    // deletes a product account
+    // key[0] funding account       [signer writable]
+    // key[1] mapping account       [signer writable]
+    // key[2] product account       [signer writable]
+    DelProduct            = 16,
 }
 
 #[repr(C)]
