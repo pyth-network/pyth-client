@@ -1,4 +1,4 @@
-name: Check Formatting
+name: Rust CI Checks
 
 on:
   pull_request:
@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 jobs:
-  pre-commit:
+  rust-ci-checks:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -17,3 +17,9 @@ jobs:
         toolchain: nightly
         components: rustfmt, clippy
     - uses: pre-commit/action@v2.0.3
+    - name: Build
+      run: RUSTFLAGS="-D warnings" cargo build
+    - name: Test
+      run: |
+         cargo test
+         cargo test-bpf
