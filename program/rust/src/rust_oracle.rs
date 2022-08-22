@@ -47,12 +47,12 @@ use crate::c_oracle_header::{
     PC_VERSION,
 };
 use crate::deserialize::{
-    initialize_pyth_account_checked, /* TODO: This has a confusingly similar name to a Solana
-                                      * sdk function */
+    initialize_pyth_account_checked,
     load,
     load_account_as_mut,
     load_checked,
 };
+use crate::instruction::CommandHeader;
 use crate::time_machine_types::PriceAccountWrapper;
 use crate::utils::{
     check_exponent_range,
@@ -729,9 +729,9 @@ pub fn del_product(
     check_valid_signable_account(program_id, product_account, PC_PROD_ACC_SIZE as usize)?;
 
     {
-        let cmd_args = load::<cmd_hdr_t>(instruction_data)?;
-        let mut mapping_data = load_checked::<pc_map_table_t>(mapping_account, cmd_args.ver_)?;
-        let product_data = load_checked::<pc_prod_t>(product_account, cmd_args.ver_)?;
+        let cmd_args = load::<CommandHeader>(instruction_data)?;
+        let mut mapping_data = load_checked::<pc_map_table_t>(mapping_account, cmd_args.version)?;
+        let product_data = load_checked::<pc_prod_t>(product_account, cmd_args.version)?;
 
         // This assertion is just to make the subtractions below simpler
         pyth_assert(mapping_data.num_ >= 1, ProgramError::InvalidArgument)?;

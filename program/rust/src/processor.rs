@@ -1,26 +1,9 @@
-use crate::c_oracle_header::{
-    cmd_hdr,
-    command_t_e_cmd_add_mapping,
-    command_t_e_cmd_add_price,
-    command_t_e_cmd_add_product,
-    command_t_e_cmd_add_publisher,
-    command_t_e_cmd_agg_price,
-    command_t_e_cmd_del_price,
-    command_t_e_cmd_del_product,
-    command_t_e_cmd_del_publisher,
-    command_t_e_cmd_init_mapping,
-    command_t_e_cmd_init_price,
-    command_t_e_cmd_resize_price_account,
-    command_t_e_cmd_set_min_pub,
-    command_t_e_cmd_upd_price,
-    command_t_e_cmd_upd_price_no_fail_on_error,
-    command_t_e_cmd_upd_product,
-    PC_VERSION,
-};
-use crate::deserialize::load;
 use crate::error::OracleError;
+use crate::instruction::{
+    load_command_header_checked,
+    OracleCommand,
+};
 use solana_program::entrypoint::ProgramResult;
-use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use solana_program::sysvar::slot_history::AccountInfo;
 
@@ -47,37 +30,27 @@ pub fn process_instruction(
     accounts: &[AccountInfo],
     instruction_data: &[u8],
 ) -> ProgramResult {
-    let cmd_data = load::<cmd_hdr>(instruction_data)?;
-
-    if cmd_data.ver_ != PC_VERSION {
-        return Err(ProgramError::InvalidArgument);
-    }
-
-    match cmd_data
-        .cmd_
-        .try_into()
-        .map_err(|_| OracleError::IntegerCastingError)?
-    {
-        command_t_e_cmd_upd_price | command_t_e_cmd_agg_price => {
-            upd_price(program_id, accounts, instruction_data)
-        }
-        command_t_e_cmd_upd_price_no_fail_on_error => {
+    match load_command_header_checked(instruction_data)? {
+        OracleCommand::InitMapping => init_mapping(program_id, accounts, instruction_data),
+        OracleCommand::AddMapping => add_mapping(program_id, accounts, instruction_data),
+        OracleCommand::AddProduct => add_product(program_id, accounts, instruction_data),
+        OracleCommand::UpdProduct => upd_product(program_id, accounts, instruction_data),
+        OracleCommand::AddPrice => add_price(program_id, accounts, instruction_data),
+        OracleCommand::AddPublisher => add_publisher(program_id, accounts, instruction_data),
+        OracleCommand::DelPublisher => del_publisher(program_id, accounts, instruction_data),
+        OracleCommand::UpdPrice => upd_price(program_id, accounts, instruction_data),
+        OracleCommand::AggPrice => upd_price(program_id, accounts, instruction_data),
+        OracleCommand::InitPrice => init_price(program_id, accounts, instruction_data),
+        OracleCommand::InitTest => Err(OracleError::UnrecognizedInstruction.into()),
+        OracleCommand::UpdTest => Err(OracleError::UnrecognizedInstruction.into()),
+        OracleCommand::SetMinPub => set_min_pub(program_id, accounts, instruction_data),
+        OracleCommand::UpdPriceNoFailOnError => {
             upd_price_no_fail_on_error(program_id, accounts, instruction_data)
         }
-        command_t_e_cmd_resize_price_account => {
+        OracleCommand::ResizePriceAccount => {
             resize_price_account(program_id, accounts, instruction_data)
         }
-        command_t_e_cmd_add_price => add_price(program_id, accounts, instruction_data),
-        command_t_e_cmd_init_mapping => init_mapping(program_id, accounts, instruction_data),
-        command_t_e_cmd_init_price => init_price(program_id, accounts, instruction_data),
-        command_t_e_cmd_add_mapping => add_mapping(program_id, accounts, instruction_data),
-        command_t_e_cmd_add_publisher => add_publisher(program_id, accounts, instruction_data),
-        command_t_e_cmd_del_publisher => del_publisher(program_id, accounts, instruction_data),
-        command_t_e_cmd_add_product => add_product(program_id, accounts, instruction_data),
-        command_t_e_cmd_upd_product => upd_product(program_id, accounts, instruction_data),
-        command_t_e_cmd_set_min_pub => set_min_pub(program_id, accounts, instruction_data),
-        command_t_e_cmd_del_price => del_price(program_id, accounts, instruction_data),
-        command_t_e_cmd_del_product => del_product(program_id, accounts, instruction_data),
-        _ => Err(OracleError::UnrecognizedInstruction.into()),
+        OracleCommand::DelPrice => del_price(program_id, accounts, instruction_data),
+        OracleCommand::DelProduct => del_product(program_id, accounts, instruction_data),
     }
 }
