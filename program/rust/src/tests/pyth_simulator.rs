@@ -32,6 +32,7 @@ use crate::c_oracle_header::{
     command_t_e_cmd_add_price,
     command_t_e_cmd_add_product,
     command_t_e_cmd_del_price,
+    command_t_e_cmd_del_product,
     command_t_e_cmd_init_mapping,
     pc_map_table_t,
     pc_price_t,
@@ -159,6 +160,30 @@ impl PythSimulator {
         self.process_ix(instruction, &vec![&mapping_keypair, &product_keypair])
             .await
             .map(|_| product_keypair)
+    }
+
+    /// Delete a product account (using the del_product instruction).
+    pub async fn del_product(
+        &mut self,
+        mapping_keypair: &Keypair,
+        product_keypair: &Keypair,
+    ) -> Result<(), BanksClientError> {
+        let cmd = cmd_hdr_t {
+            ver_: PC_VERSION,
+            cmd_: command_t_e_cmd_del_product as i32,
+        };
+        let instruction = Instruction::new_with_bytes(
+            self.program_id,
+            bytes_of(&cmd),
+            vec![
+                AccountMeta::new(self.payer.pubkey(), true),
+                AccountMeta::new(mapping_keypair.pubkey(), true),
+                AccountMeta::new(product_keypair.pubkey(), true),
+            ],
+        );
+
+        self.process_ix(instruction, &vec![&mapping_keypair, &product_keypair])
+            .await
     }
 
     /// Initialize a price account and add it to an existing product account (using the add_price

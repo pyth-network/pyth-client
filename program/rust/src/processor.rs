@@ -13,6 +13,7 @@ use crate::rust_oracle::{
     add_product,
     add_publisher,
     del_price,
+    del_product,
     del_publisher,
     init_mapping,
     init_price,
@@ -50,5 +51,6 @@ pub fn process_instruction(
             resize_price_account(program_id, accounts, instruction_data)
         }
         OracleCommand::DelPrice => del_price(program_id, accounts, instruction_data),
+        OracleCommand::DelProduct => del_product(program_id, accounts, instruction_data),
     }
 }

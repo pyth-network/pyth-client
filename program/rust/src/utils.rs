@@ -108,6 +108,15 @@ pub fn pubkey_equal(target: &pc_pub_key_t, source: &[u8]) -> bool {
     unsafe { target.k1_ == *source }
 }
 
+/// Zero out the bytes of `key`.
+pub fn pubkey_clear(key: &mut pc_pub_key_t) {
+    unsafe {
+        for i in 0..key.k8_.len() {
+            key.k8_[i] = 0;
+        }
+    }
+}
+
 /// Convert `x: T` into a `U`, returning the appropriate `OracleError` if the conversion fails.
 pub fn try_convert<T, U: TryFrom<T>>(x: T) -> Result<U, OracleError> {
     // Note: the error here assumes we're only applying this function to integers right now.
