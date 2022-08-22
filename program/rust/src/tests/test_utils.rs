@@ -109,7 +109,7 @@ impl Into<CommandHeader> for OracleCommand {
     fn into(self) -> CommandHeader {
         return CommandHeader {
             version: PC_VERSION,
-            command: self.to_i32().unwrap(), // This can never fail
+            command: self.to_i32().unwrap(), // This can never fail and is only used in tests
         };
     }
 }
