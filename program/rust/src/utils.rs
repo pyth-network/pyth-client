@@ -1,13 +1,15 @@
 use crate::c_oracle_header::{
-    cmd_upd_price_t,
-    command_t_e_cmd_upd_price,
-    command_t_e_cmd_upd_price_no_fail_on_error,
     pc_acc,
     pc_pub_key_t,
     PC_MAX_NUM_DECIMALS,
 };
 use crate::deserialize::load_account_as;
+use crate::instruction::{
+    OracleCommand,
+    UpdPriceArgs,
+};
 use crate::OracleError;
+use num_traits::FromPrimitive;
 use solana_program::account_info::AccountInfo;
 use solana_program::program_error::ProgramError;
 use solana_program::program_memory::sol_memset;
@@ -147,9 +149,11 @@ pub fn check_valid_writable_account(
 
 /// Checks whether this instruction is trying to update an individual publisher's price (`true`) or
 /// is only trying to refresh the aggregate (`false`)
-pub fn is_component_update(cmd_args: &cmd_upd_price_t) -> Result<bool, ProgramError> {
-    Ok(
-        try_convert::<_, u32>(cmd_args.cmd_)? == command_t_e_cmd_upd_price
-            || try_convert::<_, u32>(cmd_args.cmd_)? == command_t_e_cmd_upd_price_no_fail_on_error,
-    )
+pub fn is_component_update(cmd_args: &UpdPriceArgs) -> Result<bool, OracleError> {
+    match OracleCommand::from_i32(cmd_args.header.command)
+        .ok_or(OracleError::UnrecognizedInstruction)?
+    {
+        OracleCommand::UpdPrice | OracleCommand::UpdPriceNoFailOnError => Ok(true),
+        _ => Ok(false),
+    }
 }

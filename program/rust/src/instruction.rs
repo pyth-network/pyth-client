@@ -1,4 +1,7 @@
-use crate::c_oracle_header::PC_VERSION;
+use crate::c_oracle_header::{
+    pc_pub_key_t,
+    PC_VERSION,
+};
 use crate::deserialize::load;
 use crate::error::OracleError;
 use bytemuck::{
@@ -98,4 +101,45 @@ pub fn load_command_header_checked(data: &[u8]) -> Result<OracleCommand, OracleE
         return Err(OracleError::InvalidInstructionVersion);
     }
     OracleCommand::from_i32(command_header.command).ok_or(OracleError::UnrecognizedInstruction)
+}
+
+#[repr(C)]
+#[derive(Zeroable, Pod, Copy, Clone)]
+pub struct AddPriceArgs {
+    pub header: CommandHeader,
+    pub expo_:  i32,
+    pub ptype_: u32,
+}
+pub type InitPriceArgs = AddPriceArgs;
+
+#[repr(C)]
+#[derive(Zeroable, Pod, Copy, Clone)]
+pub struct AddPublisherArgs {
+    pub header: CommandHeader,
+    pub pub_:   pc_pub_key_t,
+}
+
+pub type DelPublisherArgs = AddPublisherArgs;
+
+// This is embarassing, Pod derivation doesn't work for this struct. I think it's related to
+// the size in bytes not being a multiple of 8
+unsafe impl Pod for SetMinPubArgs {
+}
+
+#[repr(C)]
+#[derive(Zeroable, Clone, Copy)]
+pub struct SetMinPubArgs {
+    pub header:   CommandHeader,
+    pub min_pub_: u8,
+}
+
+#[repr(C)]
+#[derive(Zeroable, Pod, Copy, Clone)]
+pub struct UpdPriceArgs {
+    pub header:    CommandHeader,
+    pub status_:   u32,
+    pub unused_:   u32,
+    pub price_:    i64,
+    pub conf_:     u64,
+    pub pub_slot_: u64,
 }
