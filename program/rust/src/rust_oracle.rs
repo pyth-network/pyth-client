@@ -10,6 +10,7 @@ use bytemuck::{
 use solana_program::account_info::AccountInfo;
 use solana_program::clock::Clock;
 use solana_program::entrypoint::ProgramResult;
+use solana_program::program::invoke;
 use solana_program::program_error::ProgramError;
 use solana_program::program_memory::{
     sol_memcpy,
@@ -17,14 +18,9 @@ use solana_program::program_memory::{
 };
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
-use solana_program::sysvar::Sysvar;
-
-
-use crate::time_machine_types::PriceAccountWrapper;
-use solana_program::program::invoke;
 use solana_program::system_instruction::transfer;
 use solana_program::system_program::check_id;
-
+use solana_program::sysvar::Sysvar;
 
 use crate::c_oracle_header::{
     cmd_add_price_t,
@@ -57,8 +53,7 @@ use crate::deserialize::{
     load_account_as_mut,
     load_checked,
 };
-use crate::OracleError;
-
+use crate::time_machine_types::PriceAccountWrapper;
 use crate::utils::{
     check_exponent_range,
     check_valid_fresh_account,
@@ -73,6 +68,7 @@ use crate::utils::{
     read_pc_str_t,
     try_convert,
 };
+use crate::OracleError;
 
 const PRICE_T_SIZE: usize = size_of::<pc_price_t>();
 const PRICE_ACCOUNT_SIZE: usize = size_of::<PriceAccountWrapper>();
@@ -367,6 +363,54 @@ pub fn add_price(
     pubkey_assign(&mut price_data.prod_, &product_account.key.to_bytes());
     pubkey_assign(&mut price_data.next_, bytes_of(&product_data.px_acc_));
     pubkey_assign(&mut product_data.px_acc_, &price_account.key.to_bytes());
+
+    Ok(())
+}
+
+/// Delete a price account. This function will remove the link between the price account and its
+/// corresponding product account, then transfer any SOL in the price account to the funding
+/// account. This function can only delete the first price account in the linked list of
+/// price accounts for the given product.
+///
+/// Warning: This function is dangerous and will break any programs that depend on the deleted
+/// price account!
+pub fn del_price(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
+    instruction_data: &[u8],
+) -> ProgramResult {
+    let [funding_account, product_account, price_account] = match accounts {
+        [w, x, y] => Ok([w, x, y]),
+        _ => Err(ProgramError::InvalidArgument),
+    }?;
+
+    check_valid_funding_account(funding_account)?;
+    check_valid_signable_account(program_id, product_account, PC_PROD_ACC_SIZE as usize)?;
+    check_valid_signable_account(program_id, price_account, size_of::<pc_price_t>())?;
+
+    {
+        let cmd_args = load::<cmd_hdr_t>(instruction_data)?;
+        let mut product_data = load_checked::<pc_prod_t>(product_account, cmd_args.ver_)?;
+        let price_data = load_checked::<pc_price_t>(price_account, cmd_args.ver_)?;
+        pyth_assert(
+            pubkey_equal(&product_data.px_acc_, &price_account.key.to_bytes()),
+            ProgramError::InvalidArgument,
+        )?;
+
+        pyth_assert(
+            pubkey_equal(&price_data.prod_, &product_account.key.to_bytes()),
+            ProgramError::InvalidArgument,
+        )?;
+
+        pubkey_assign(&mut product_data.px_acc_, bytes_of(&price_data.next_));
+    }
+
+    // Zero out the balance of the price account to delete it.
+    // Note that you can't use the system program's transfer instruction to do this operation, as
+    // that instruction fails if the source account has any data.
+    let lamports = price_account.lamports();
+    **price_account.lamports.borrow_mut() = 0;
+    **funding_account.lamports.borrow_mut() += lamports;
 
     Ok(())
 }
