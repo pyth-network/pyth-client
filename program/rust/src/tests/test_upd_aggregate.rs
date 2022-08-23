@@ -270,9 +270,9 @@ fn test_upd_aggregate() {
 fn populate_instruction(instruction_data: &mut [u8], price: i64, conf: u64, pub_slot: u64) -> () {
     let mut cmd = load_mut::<UpdPriceArgs>(instruction_data).unwrap();
     cmd.header = OracleCommand::AggPrice.into();
-    cmd.status_ = PC_STATUS_TRADING;
-    cmd.price_ = price;
-    cmd.conf_ = conf;
-    cmd.pub_slot_ = pub_slot;
+    cmd.status = PC_STATUS_TRADING;
+    cmd.price = price;
+    cmd.confidence = conf;
+    cmd.publishing_slot = pub_slot;
     cmd.unused_ = 0;
 }

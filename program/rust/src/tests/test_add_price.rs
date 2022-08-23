@@ -30,9 +30,9 @@ fn test_add_price() {
     let hdr_add_product = OracleCommand::AddProduct.into();
 
     let mut hdr_add_price = AddPriceArgs {
-        header: OracleCommand::AddPrice.into(),
-        expo_:  1,
-        ptype_: 1,
+        header:     OracleCommand::AddPrice.into(),
+        exponent:   1,
+        price_type: 1,
     };
     let instruction_data_add_product = bytes_of::<CommandHeader>(&hdr_add_product);
     let mut instruction_data_add_price = bytes_of::<AddPriceArgs>(&hdr_add_price);
@@ -151,9 +151,9 @@ fn test_add_price() {
 
     // Wrong ptype
     hdr_add_price = AddPriceArgs {
-        header: OracleCommand::AddPrice.into(),
-        expo_:  6,
-        ptype_: 0,
+        header:     OracleCommand::AddPrice.into(),
+        exponent:   6,
+        price_type: 0,
     };
     instruction_data_add_price = bytes_of::<AddPriceArgs>(&hdr_add_price);
 
@@ -174,9 +174,9 @@ fn test_add_price() {
 
     //Price not signing
     hdr_add_price = AddPriceArgs {
-        header: OracleCommand::AddPrice.into(),
-        expo_:  6,
-        ptype_: 1,
+        header:     OracleCommand::AddPrice.into(),
+        exponent:   6,
+        price_type: 1,
     };
 
     instruction_data_add_price = bytes_of::<AddPriceArgs>(&hdr_add_price);

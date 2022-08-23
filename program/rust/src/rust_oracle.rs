@@ -265,7 +265,7 @@ pub fn upd_price(
         // Check that publisher is publishing a more recent price
         pyth_assert(
             !is_component_update(cmd_args)?
-                || cmd_args.pub_slot_ > latest_publisher_price.pub_slot_,
+                || cmd_args.publishing_slot > latest_publisher_price.pub_slot_,
             ProgramError::InvalidArgument,
         )?;
     }
@@ -290,14 +290,14 @@ pub fn upd_price(
 
     // Try to update the publisher's price
     if is_component_update(cmd_args)? {
-        let mut status: u32 = cmd_args.status_;
-        let mut threshold_conf = cmd_args.price_ / PC_MAX_CI_DIVISOR as i64;
+        let mut status: u32 = cmd_args.status;
+        let mut threshold_conf = cmd_args.price / PC_MAX_CI_DIVISOR as i64;
 
         if threshold_conf < 0 {
             threshold_conf = -threshold_conf;
         }
 
-        if cmd_args.conf_ > try_convert::<_, u64>(threshold_conf)? {
+        if cmd_args.confidence > try_convert::<_, u64>(threshold_conf)? {
             status = PC_STATUS_UNKNOWN
         }
 
@@ -305,10 +305,10 @@ pub fn upd_price(
             let mut price_data =
                 load_checked::<pc_price_t>(price_account, cmd_args.header.version)?;
             let publisher_price = &mut price_data.comp_[publisher_index].latest_;
-            publisher_price.price_ = cmd_args.price_;
-            publisher_price.conf_ = cmd_args.conf_;
+            publisher_price.price_ = cmd_args.price;
+            publisher_price.conf_ = cmd_args.confidence;
             publisher_price.status_ = status;
-            publisher_price.pub_slot_ = cmd_args.pub_slot_;
+            publisher_price.pub_slot_ = cmd_args.publishing_slot;
         }
     }
 
@@ -338,9 +338,9 @@ pub fn add_price(
 ) -> ProgramResult {
     let cmd_args = load::<AddPriceArgs>(instruction_data)?;
 
-    check_exponent_range(cmd_args.expo_)?;
+    check_exponent_range(cmd_args.exponent)?;
     pyth_assert(
-        cmd_args.ptype_ != PC_PTYPE_UNKNOWN,
+        cmd_args.price_type != PC_PTYPE_UNKNOWN,
         ProgramError::InvalidArgument,
     )?;
 
@@ -359,8 +359,8 @@ pub fn add_price(
 
     let mut price_data =
         initialize_pyth_account_checked::<pc_price_t>(price_account, cmd_args.header.version)?;
-    price_data.expo_ = cmd_args.expo_;
-    price_data.ptype_ = cmd_args.ptype_;
+    price_data.expo_ = cmd_args.exponent;
+    price_data.ptype_ = cmd_args.price_type;
     pubkey_assign(&mut price_data.prod_, &product_account.key.to_bytes());
     pubkey_assign(&mut price_data.next_, bytes_of(&product_data.px_acc_));
     pubkey_assign(&mut product_data.px_acc_, &price_account.key.to_bytes());
@@ -423,7 +423,7 @@ pub fn init_price(
 ) -> ProgramResult {
     let cmd_args = load::<InitPriceArgs>(instruction_data)?;
 
-    check_exponent_range(cmd_args.expo_)?;
+    check_exponent_range(cmd_args.exponent)?;
 
     let [funding_account, price_account] = match accounts {
         [x, y] => Ok([x, y]),
@@ -435,11 +435,11 @@ pub fn init_price(
 
     let mut price_data = load_checked::<pc_price_t>(price_account, cmd_args.header.version)?;
     pyth_assert(
-        price_data.ptype_ == cmd_args.ptype_,
+        price_data.ptype_ == cmd_args.price_type,
         ProgramError::InvalidArgument,
     )?;
 
-    price_data.expo_ = cmd_args.expo_;
+    price_data.expo_ = cmd_args.exponent;
 
     price_data.last_slot_ = 0;
     price_data.valid_slot_ = 0;
@@ -490,7 +490,8 @@ pub fn add_publisher(
     let cmd_args = load::<AddPublisherArgs>(instruction_data)?;
 
     pyth_assert(
-        instruction_data.len() == size_of::<AddPublisherArgs>() && !pubkey_is_zero(&cmd_args.pub_),
+        instruction_data.len() == size_of::<AddPublisherArgs>()
+            && !pubkey_is_zero(&cmd_args.publisher),
         ProgramError::InvalidArgument,
     )?;
 
@@ -509,7 +510,7 @@ pub fn add_publisher(
     }
 
     for i in 0..(price_data.num_ as usize) {
-        if pubkey_equal(&cmd_args.pub_, bytes_of(&price_data.comp_[i].pub_)) {
+        if pubkey_equal(&cmd_args.publisher, bytes_of(&price_data.comp_[i].pub_)) {
             return Err(ProgramError::InvalidArgument);
         }
     }
@@ -522,7 +523,7 @@ pub fn add_publisher(
     );
     pubkey_assign(
         &mut price_data.comp_[current_index].pub_,
-        bytes_of(&cmd_args.pub_),
+        bytes_of(&cmd_args.publisher),
     );
     price_data.num_ += 1;
     price_data.size_ =
@@ -542,7 +543,8 @@ pub fn del_publisher(
     let cmd_args = load::<DelPublisherArgs>(instruction_data)?;
 
     pyth_assert(
-        instruction_data.len() == size_of::<DelPublisherArgs>() && !pubkey_is_zero(&cmd_args.pub_),
+        instruction_data.len() == size_of::<DelPublisherArgs>()
+            && !pubkey_is_zero(&cmd_args.publisher),
         ProgramError::InvalidArgument,
     )?;
 
@@ -557,7 +559,7 @@ pub fn del_publisher(
     let mut price_data = load_checked::<pc_price_t>(price_account, cmd_args.header.version)?;
 
     for i in 0..(price_data.num_ as usize) {
-        if pubkey_equal(&cmd_args.pub_, bytes_of(&price_data.comp_[i].pub_)) {
+        if pubkey_equal(&cmd_args.publisher, bytes_of(&price_data.comp_[i].pub_)) {
             for j in i + 1..(price_data.num_ as usize) {
                 price_data.comp_[j - 1] = price_data.comp_[j];
             }
@@ -700,7 +702,7 @@ pub fn set_min_pub(
     check_valid_signable_account(program_id, price_account, size_of::<pc_price_t>())?;
 
     let mut price_account_data = load_checked::<pc_price_t>(price_account, cmd.header.version)?;
-    price_account_data.min_pub_ = cmd.min_pub_;
+    price_account_data.min_pub_ = cmd.minimum_publishers;
 
     Ok(())
 }

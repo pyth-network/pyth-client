@@ -112,17 +112,17 @@ pub fn load_command_header_checked(data: &[u8]) -> Result<OracleCommand, OracleE
 #[repr(C)]
 #[derive(Zeroable, Pod, Copy, Clone)]
 pub struct AddPriceArgs {
-    pub header: CommandHeader,
-    pub expo_:  i32,
-    pub ptype_: u32,
+    pub header:     CommandHeader,
+    pub exponent:   i32,
+    pub price_type: u32,
 }
 pub type InitPriceArgs = AddPriceArgs;
 
 #[repr(C)]
 #[derive(Zeroable, Pod, Copy, Clone)]
 pub struct AddPublisherArgs {
-    pub header: CommandHeader,
-    pub pub_:   pc_pub_key_t,
+    pub header:    CommandHeader,
+    pub publisher: pc_pub_key_t,
 }
 
 pub type DelPublisherArgs = AddPublisherArgs;
@@ -130,18 +130,18 @@ pub type DelPublisherArgs = AddPublisherArgs;
 #[repr(C)]
 #[derive(Zeroable, Clone, Copy, Pod)]
 pub struct SetMinPubArgs {
-    pub header:   CommandHeader,
-    pub min_pub_: u8,
-    pub unused_:  [u8; 3],
+    pub header:             CommandHeader,
+    pub minimum_publishers: u8,
+    pub unused_:            [u8; 3],
 }
 
 #[repr(C)]
 #[derive(Zeroable, Pod, Copy, Clone)]
 pub struct UpdPriceArgs {
-    pub header:    CommandHeader,
-    pub status_:   u32,
-    pub unused_:   u32,
-    pub price_:    i64,
-    pub conf_:     u64,
-    pub pub_slot_: u64,
+    pub header:          CommandHeader,
+    pub status:          u32,
+    pub unused_:         u32,
+    pub price:           i64,
+    pub confidence:      u64,
+    pub publishing_slot: u64,
 }

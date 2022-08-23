@@ -184,9 +184,9 @@ impl PythSimulator {
         let price_keypair = self.create_pyth_account(size_of::<pc_price_t>()).await;
 
         let cmd = AddPriceArgs {
-            header: OracleCommand::AddPrice.into(),
-            expo_:  expo,
-            ptype_: PC_PTYPE_PRICE,
+            header:     OracleCommand::AddPrice.into(),
+            exponent:   expo,
+            price_type: PC_PTYPE_PRICE,
         };
         let instruction = Instruction::new_with_bytes(
             self.program_id,

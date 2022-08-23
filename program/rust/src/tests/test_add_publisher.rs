@@ -34,7 +34,7 @@ fn test_add_publisher() {
 
     let mut cmd = AddPublisherArgs {
         header: OracleCommand::AddPublisher.into(),
-        pub_:   publisher,
+        publisher,
     };
     let mut instruction_data = bytes_of::<AddPublisherArgs>(&cmd);
 
@@ -109,7 +109,7 @@ fn test_add_publisher() {
 
     //Fill up price node
     for i in 0..PC_COMP_SIZE {
-        cmd.pub_ = pc_pub_key_t::new_unique();
+        cmd.publisher = pc_pub_key_t::new_unique();
         instruction_data = bytes_of::<AddPublisherArgs>(&cmd);
         assert!(process_instruction(
             &program_id,
@@ -124,7 +124,7 @@ fn test_add_publisher() {
             assert_eq!(price_data.num_, i + 1);
             assert!(pubkey_equal(
                 &price_data.comp_[i as usize].pub_,
-                bytes_of(&cmd.pub_)
+                bytes_of(&cmd.publisher)
             ));
             assert_eq!(
                 price_data.size_,
@@ -133,7 +133,7 @@ fn test_add_publisher() {
         }
     }
 
-    cmd.pub_ = pc_pub_key_t::new_unique();
+    cmd.publisher = pc_pub_key_t::new_unique();
     instruction_data = bytes_of::<AddPublisherArgs>(&cmd);
     assert_eq!(
         process_instruction(

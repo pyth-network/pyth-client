@@ -180,9 +180,9 @@ fn populate_instruction(
     } else {
         OracleCommand::UpdPrice.into()
     };
-    cmd.status_ = PC_STATUS_TRADING;
-    cmd.price_ = price;
-    cmd.conf_ = conf;
-    cmd.pub_slot_ = pub_slot;
+    cmd.status = PC_STATUS_TRADING;
+    cmd.price = price;
+    cmd.confidence = conf;
+    cmd.publishing_slot = pub_slot;
     cmd.unused_ = 0;
 }

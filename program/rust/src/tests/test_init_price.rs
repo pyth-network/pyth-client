@@ -29,9 +29,9 @@ fn test_init_price() {
     let ptype = 3;
 
     let cmd: InitPriceArgs = InitPriceArgs {
-        header: OracleCommand::InitPrice.into(),
-        expo_:  -2,
-        ptype_: ptype,
+        header:     OracleCommand::InitPrice.into(),
+        exponent:   -2,
+        price_type: ptype,
     };
 
     let instruction_data = bytes_of::<InitPriceArgs>(&cmd);
@@ -153,9 +153,9 @@ fn test_init_price() {
 
     price_account.is_signer = true;
     let cmd: InitPriceArgs = InitPriceArgs {
-        header: OracleCommand::InitPrice.into(),
-        expo_:  -(PC_MAX_NUM_DECIMALS as i32) - 1,
-        ptype_: ptype,
+        header:     OracleCommand::InitPrice.into(),
+        exponent:   -(PC_MAX_NUM_DECIMALS as i32) - 1,
+        price_type: ptype,
     };
     let instruction_data = bytes_of::<InitPriceArgs>(&cmd);
     assert_eq!(

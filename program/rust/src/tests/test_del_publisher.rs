@@ -52,7 +52,7 @@ fn test_del_publisher() {
     let mut instruction_data = [0u8; size_of::<DelPublisherArgs>()];
     let mut hdr = load_mut::<DelPublisherArgs>(&mut instruction_data).unwrap();
     hdr.header = OracleCommand::DelPublisher.into();
-    hdr.pub_ = publisher;
+    hdr.publisher = publisher;
 
     let mut funding_setup = AccountSetup::new_funding();
     let funding_account = funding_setup.to_account_info();

@@ -58,7 +58,7 @@ fn test_set_min_pub() {
 fn populate_instruction(instruction_data: &mut [u8], min_pub: u8) -> () {
     let mut hdr = load_mut::<SetMinPubArgs>(instruction_data).unwrap();
     hdr.header = OracleCommand::SetMinPub.into();
-    hdr.min_pub_ = min_pub;
+    hdr.minimum_publishers = min_pub;
 }
 
 fn get_min_pub(account: &AccountInfo) -> Result<u8, ProgramError> {
