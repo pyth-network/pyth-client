@@ -34,17 +34,9 @@ pub trait PythAccount: Pod {
     }
 }
 
-
-#[repr(C)]
-#[derive(Copy, Clone, Pod, Zeroable)]
-pub struct ProductAccount {
-    pub header:              AccountHeader,
-    pub first_price_account: CPubkey,
-}
-
 impl PythAccount for MappingAccount {
     const ACCOUNT_TYPE: u32 = PC_ACCTYPE_MAPPING;
-    const INITIAL_SIZE: u32 = 56;
+    const INITIAL_SIZE: u32 = 56; // Tested in test_sizes.rs
 }
 
 impl PythAccount for ProductAccount {
@@ -57,7 +49,7 @@ impl PythAccount for ProductAccount {
 
 impl PythAccount for PriceAccount {
     const ACCOUNT_TYPE: u32 = PC_ACCTYPE_PRICE;
-    const INITIAL_SIZE: u32 = 240;
+    const INITIAL_SIZE: u32 = 240; // Tested in test_sizes.rs
 }
 
 #[repr(C)]
@@ -121,6 +113,13 @@ pub struct AccountHeader {
     pub version:      u32,
     pub account_type: u32,
     pub size:         u32,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Pod, Zeroable)]
+pub struct ProductAccount {
+    pub header:              AccountHeader,
+    pub first_price_account: CPubkey,
 }
 
 #[repr(C)]
