@@ -1,5 +1,5 @@
 use crate::c_oracle_header::{
-    MappingAccount,
+    pc_map_table_t,
     PC_ACCTYPE_MAPPING,
     PC_MAGIC,
     PC_VERSION,
@@ -30,7 +30,7 @@ fn test_init_mapping() {
     let mut funding_setup = AccountSetup::new_funding();
     let mut funding_account = funding_setup.to_account_info();
 
-    let mut mapping_setup = AccountSetup::new::<MappingAccount>(&program_id);
+    let mut mapping_setup = AccountSetup::new::<pc_map_table_t>(&program_id);
     let mut mapping_account = mapping_setup.to_account_info();
 
     assert!(process_instruction(
@@ -41,12 +41,12 @@ fn test_init_mapping() {
     .is_ok());
 
     {
-        let mapping_data = load_account_as::<MappingAccount>(&mapping_account).unwrap();
+        let mapping_data = load_account_as::<pc_map_table_t>(&mapping_account).unwrap();
 
-        assert_eq!(mapping_data.header.version, PC_VERSION);
-        assert_eq!(mapping_data.header.magic_number, PC_MAGIC);
-        assert_eq!(mapping_data.header.account_type, PC_ACCTYPE_MAPPING);
-        assert_eq!(mapping_data.header.size, 56);
+        assert_eq!(mapping_data.ver_, PC_VERSION);
+        assert_eq!(mapping_data.magic_, PC_MAGIC);
+        assert_eq!(mapping_data.type_, PC_ACCTYPE_MAPPING);
+        assert_eq!(mapping_data.size_, 56);
     }
 
     assert_eq!(

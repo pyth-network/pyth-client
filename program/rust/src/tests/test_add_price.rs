@@ -1,7 +1,7 @@
 use crate::c_oracle_header::{
-    MappingAccount,
-    PriceAccount,
-    ProductAccount,
+    pc_map_table_t,
+    pc_price_t,
+    pc_prod_t,
     PC_VERSION,
 };
 use crate::deserialize::{
@@ -42,17 +42,17 @@ fn test_add_price() {
     let mut funding_setup = AccountSetup::new_funding();
     let funding_account = funding_setup.to_account_info();
 
-    let mut mapping_setup = AccountSetup::new::<MappingAccount>(&program_id);
+    let mut mapping_setup = AccountSetup::new::<pc_map_table_t>(&program_id);
     let mapping_account = mapping_setup.to_account_info();
-    initialize_pyth_account_checked::<MappingAccount>(&mapping_account, PC_VERSION).unwrap();
+    initialize_pyth_account_checked::<pc_map_table_t>(&mapping_account, PC_VERSION).unwrap();
 
-    let mut product_setup = AccountSetup::new::<ProductAccount>(&program_id);
+    let mut product_setup = AccountSetup::new::<pc_prod_t>(&program_id);
     let product_account = product_setup.to_account_info();
 
-    let mut price_setup = AccountSetup::new::<PriceAccount>(&program_id);
+    let mut price_setup = AccountSetup::new::<pc_price_t>(&program_id);
     let mut price_account = price_setup.to_account_info();
 
-    let mut price_setup_2 = AccountSetup::new::<PriceAccount>(&program_id);
+    let mut price_setup_2 = AccountSetup::new::<pc_price_t>(&program_id);
     let price_account_2 = price_setup_2.to_account_info();
 
     assert!(process_instruction(
@@ -78,17 +78,17 @@ fn test_add_price() {
     .is_ok());
 
     {
-        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
-        let product_data = load_checked::<ProductAccount>(&product_account, PC_VERSION).unwrap();
-        assert_eq!(price_data.exponent, 1);
-        assert_eq!(price_data.price_type, 1);
+        let price_data = load_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
+        let product_data = load_checked::<pc_prod_t>(&product_account, PC_VERSION).unwrap();
+        assert_eq!(price_data.expo_, 1);
+        assert_eq!(price_data.ptype_, 1);
         assert!(pubkey_equal(
-            &price_data.product_account,
+            &price_data.prod_,
             &product_account.key.to_bytes()
         ));
-        assert!(pubkey_is_zero(&price_data.next_price_account));
+        assert!(pubkey_is_zero(&price_data.next_));
         assert!(pubkey_equal(
-            &product_data.first_price_account,
+            &product_data.px_acc_,
             &price_account.key.to_bytes()
         ));
     }
@@ -105,20 +105,20 @@ fn test_add_price() {
     .is_ok());
 
     {
-        let price_data_2 = load_checked::<PriceAccount>(&price_account_2, PC_VERSION).unwrap();
-        let product_data = load_checked::<ProductAccount>(&product_account, PC_VERSION).unwrap();
-        assert_eq!(price_data_2.exponent, 1);
-        assert_eq!(price_data_2.price_type, 1);
+        let price_data_2 = load_checked::<pc_price_t>(&price_account_2, PC_VERSION).unwrap();
+        let product_data = load_checked::<pc_prod_t>(&product_account, PC_VERSION).unwrap();
+        assert_eq!(price_data_2.expo_, 1);
+        assert_eq!(price_data_2.ptype_, 1);
         assert!(pubkey_equal(
-            &price_data_2.product_account,
+            &price_data_2.prod_,
             &product_account.key.to_bytes()
         ));
         assert!(pubkey_equal(
-            &price_data_2.next_price_account,
+            &price_data_2.next_,
             &price_account.key.to_bytes()
         ));
         assert!(pubkey_equal(
-            &product_data.first_price_account,
+            &product_data.px_acc_,
             &price_account_2.key.to_bytes()
         ));
     }

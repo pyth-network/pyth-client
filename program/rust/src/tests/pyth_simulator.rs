@@ -27,8 +27,8 @@ use solana_sdk::signature::{
 use solana_sdk::transaction::Transaction;
 
 use crate::c_oracle_header::{
-    MappingAccount,
-    PriceAccount,
+    pc_map_table_t,
+    pc_price_t,
     PC_PROD_ACC_SIZE,
     PC_PTYPE_PRICE,
 };
@@ -112,7 +112,7 @@ impl PythSimulator {
     /// Initialize a mapping account (using the init_mapping instruction), returning the keypair
     /// associated with the newly-created account.
     pub async fn init_mapping(&mut self) -> Result<Keypair, BanksClientError> {
-        let mapping_keypair = self.create_pyth_account(size_of::<MappingAccount>()).await;
+        let mapping_keypair = self.create_pyth_account(size_of::<pc_map_table_t>()).await;
 
         let cmd: CommandHeader = OracleCommand::InitMapping.into();
         let instruction = Instruction::new_with_bytes(
@@ -181,7 +181,7 @@ impl PythSimulator {
         product_keypair: &Keypair,
         expo: i32,
     ) -> Result<Keypair, BanksClientError> {
-        let price_keypair = self.create_pyth_account(size_of::<PriceAccount>()).await;
+        let price_keypair = self.create_pyth_account(size_of::<pc_price_t>()).await;
 
         let cmd = AddPriceArgs {
             header:     OracleCommand::AddPrice.into(),

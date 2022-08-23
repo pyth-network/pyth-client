@@ -2,8 +2,8 @@ use solana_program::pubkey::Pubkey;
 use std::mem::size_of;
 
 use crate::c_oracle_header::{
-    PriceAccount,
-    PriceInfo,
+    pc_price_info_t,
+    pc_price_t,
     PC_STATUS_TRADING,
     PC_STATUS_UNKNOWN,
     PC_VERSION,
@@ -22,7 +22,7 @@ use crate::rust_oracle::c_upd_aggregate;
 use crate::tests::test_utils::AccountSetup;
 #[test]
 fn test_upd_aggregate() {
-    let p1: PriceInfo = PriceInfo {
+    let p1: pc_price_info_t = pc_price_info_t {
         price_:           100,
         conf_:            10,
         status_:          PC_STATUS_TRADING,
@@ -30,7 +30,7 @@ fn test_upd_aggregate() {
         corp_act_status_: 0,
     };
 
-    let p2: PriceInfo = PriceInfo {
+    let p2: pc_price_info_t = pc_price_info_t {
         price_:           200,
         conf_:            20,
         status_:          PC_STATUS_TRADING,
@@ -38,7 +38,7 @@ fn test_upd_aggregate() {
         corp_act_status_: 0,
     };
 
-    let p3: PriceInfo = PriceInfo {
+    let p3: pc_price_info_t = pc_price_info_t {
         price_:           300,
         conf_:            30,
         status_:          PC_STATUS_TRADING,
@@ -46,7 +46,7 @@ fn test_upd_aggregate() {
         corp_act_status_: 0,
     };
 
-    let p4: PriceInfo = PriceInfo {
+    let p4: pc_price_info_t = pc_price_info_t {
         price_:           400,
         conf_:            40,
         status_:          PC_STATUS_TRADING,
@@ -59,14 +59,14 @@ fn test_upd_aggregate() {
 
     let program_id = Pubkey::new_unique();
 
-    let mut price_setup = AccountSetup::new::<PriceAccount>(&program_id);
+    let mut price_setup = AccountSetup::new::<pc_price_t>(&program_id);
     let mut price_account = price_setup.to_account_info();
     price_account.is_signer = false;
-    initialize_pyth_account_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+    initialize_pyth_account_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
 
     // single publisher
     {
-        let mut price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        let mut price_data = load_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
         price_data.num_ = 1;
         price_data.last_slot_ = 1000;
         price_data.agg_.pub_slot_ = 1000;
@@ -81,7 +81,7 @@ fn test_upd_aggregate() {
     }
 
     {
-        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
 
         assert_eq!(price_data.agg_.price_, 100);
         assert_eq!(price_data.agg_.conf_, 10);
@@ -97,7 +97,7 @@ fn test_upd_aggregate() {
 
     // two publishers
     {
-        let mut price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        let mut price_data = load_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
 
         price_data.num_ = 2;
         price_data.last_slot_ = 1000;
@@ -115,7 +115,7 @@ fn test_upd_aggregate() {
     }
 
     {
-        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
 
         assert_eq!(price_data.agg_.price_, 145);
         assert_eq!(price_data.agg_.conf_, 55);
@@ -132,7 +132,7 @@ fn test_upd_aggregate() {
 
     // three publishers
     {
-        let mut price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        let mut price_data = load_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
 
         price_data.num_ = 3;
         price_data.last_slot_ = 1000;
@@ -151,7 +151,7 @@ fn test_upd_aggregate() {
     }
 
     {
-        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
 
         assert_eq!(price_data.agg_.price_, 200);
         assert_eq!(price_data.agg_.conf_, 90);
@@ -167,7 +167,7 @@ fn test_upd_aggregate() {
 
     // four publishers
     {
-        let mut price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        let mut price_data = load_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
 
         price_data.num_ = 4;
         price_data.last_slot_ = 1000;
@@ -187,7 +187,7 @@ fn test_upd_aggregate() {
     }
 
     {
-        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
 
         assert_eq!(price_data.agg_.price_, 245);
         assert_eq!(price_data.agg_.conf_, 85);
@@ -211,7 +211,7 @@ fn test_upd_aggregate() {
     }
 
     {
-        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
 
         assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
         assert_eq!(price_data.last_slot_, 1025);
@@ -232,7 +232,7 @@ fn test_upd_aggregate() {
         ));
     }
     {
-        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
 
         assert_eq!(price_data.agg_.status_, PC_STATUS_UNKNOWN);
         assert_eq!(price_data.last_slot_, 1025);
@@ -253,7 +253,7 @@ fn test_upd_aggregate() {
     }
 
     {
-        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
 
         assert_eq!(price_data.agg_.status_, PC_STATUS_UNKNOWN);
         assert_eq!(price_data.last_slot_, 1025);

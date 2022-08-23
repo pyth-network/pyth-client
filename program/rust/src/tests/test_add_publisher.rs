@@ -1,7 +1,7 @@
 use crate::c_oracle_header::{
-    CPubkey,
-    PriceAccount,
-    PriceComponent,
+    pc_price_comp_t,
+    pc_price_t,
+    pc_pub_key_t,
     PythAccount,
     PC_COMP_SIZE,
     PC_VERSION,
@@ -30,7 +30,7 @@ use std::mem::size_of;
 #[test]
 fn test_add_publisher() {
     let program_id = Pubkey::new_unique();
-    let publisher = CPubkey::new_unique();
+    let publisher = pc_pub_key_t::new_unique();
 
     let mut cmd = AddPublisherArgs {
         header: OracleCommand::AddPublisher.into(),
@@ -41,9 +41,9 @@ fn test_add_publisher() {
     let mut funding_setup = AccountSetup::new_funding();
     let funding_account = funding_setup.to_account_info();
 
-    let mut price_setup = AccountSetup::new::<PriceAccount>(&program_id);
+    let mut price_setup = AccountSetup::new::<pc_price_t>(&program_id);
     let price_account = price_setup.to_account_info();
-    initialize_pyth_account_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+    initialize_pyth_account_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
 
 
     **price_account.try_borrow_mut_lamports().unwrap() = 100;
@@ -60,7 +60,7 @@ fn test_add_publisher() {
 
     // Now give the price account enough lamports to be rent exempt
     **price_account.try_borrow_mut_lamports().unwrap() =
-        Rent::minimum_balance(&Rent::default(), PriceAccount::minimum_size());
+        Rent::minimum_balance(&Rent::default(), pc_price_t::minimum_size());
 
 
     assert!(process_instruction(
@@ -71,11 +71,11 @@ fn test_add_publisher() {
     .is_ok());
 
     {
-        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
         assert_eq!(price_data.num_, 1);
         assert_eq!(
-            price_data.header.size,
-            PriceAccount::INITIAL_SIZE + (size_of::<PriceComponent>() as u32)
+            price_data.size_,
+            pc_price_t::INITIAL_SIZE + (size_of::<pc_price_comp_t>() as u32)
         );
         assert!(pubkey_equal(
             &price_data.comp_[0].pub_,
@@ -105,11 +105,11 @@ fn test_add_publisher() {
         Err(ProgramError::InvalidArgument)
     );
 
-    initialize_pyth_account_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+    initialize_pyth_account_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
 
     //Fill up price node
     for i in 0..PC_COMP_SIZE {
-        cmd.publisher = CPubkey::new_unique();
+        cmd.publisher = pc_pub_key_t::new_unique();
         instruction_data = bytes_of::<AddPublisherArgs>(&cmd);
         assert!(process_instruction(
             &program_id,
@@ -120,20 +120,20 @@ fn test_add_publisher() {
 
 
         {
-            let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+            let price_data = load_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
             assert_eq!(price_data.num_, i + 1);
             assert!(pubkey_equal(
                 &price_data.comp_[i as usize].pub_,
                 bytes_of(&cmd.publisher)
             ));
             assert_eq!(
-                price_data.header.size,
-                PriceAccount::INITIAL_SIZE + (size_of::<PriceComponent>() as u32) * (i + 1)
+                price_data.size_,
+                pc_price_t::INITIAL_SIZE + (size_of::<pc_price_comp_t>() as u32) * (i + 1)
             );
         }
     }
 
-    cmd.publisher = CPubkey::new_unique();
+    cmd.publisher = pc_pub_key_t::new_unique();
     instruction_data = bytes_of::<AddPublisherArgs>(&cmd);
     assert_eq!(
         process_instruction(

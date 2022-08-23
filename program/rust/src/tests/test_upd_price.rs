@@ -3,7 +3,7 @@ use solana_program::pubkey::Pubkey;
 use std::mem::size_of;
 
 use crate::c_oracle_header::{
-    PriceAccount,
+    pc_price_t,
     PC_STATUS_TRADING,
     PC_STATUS_UNKNOWN,
     PC_VERSION,
@@ -34,13 +34,13 @@ fn test_upd_price() {
     let mut funding_setup = AccountSetup::new_funding();
     let funding_account = funding_setup.to_account_info();
 
-    let mut price_setup = AccountSetup::new::<PriceAccount>(&program_id);
+    let mut price_setup = AccountSetup::new::<pc_price_t>(&program_id);
     let mut price_account = price_setup.to_account_info();
     price_account.is_signer = false;
-    initialize_pyth_account_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+    initialize_pyth_account_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
 
     {
-        let mut price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        let mut price_data = load_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
         price_data.num_ = 1;
         pubkey_assign(
             &mut price_data.comp_[0].pub_,
@@ -67,7 +67,7 @@ fn test_upd_price() {
     .is_ok());
 
     {
-        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
         assert_eq!(price_data.comp_[0].latest_.price_, 42);
         assert_eq!(price_data.comp_[0].latest_.conf_, 2);
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 1);
@@ -95,7 +95,7 @@ fn test_upd_price() {
     );
 
     {
-        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
         assert_eq!(price_data.comp_[0].latest_.price_, 42);
         assert_eq!(price_data.comp_[0].latest_.conf_, 2);
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 1);
@@ -122,7 +122,7 @@ fn test_upd_price() {
     .is_ok());
 
     {
-        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
         assert_eq!(price_data.comp_[0].latest_.price_, 81);
         assert_eq!(price_data.comp_[0].latest_.conf_, 2);
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 2);
@@ -148,7 +148,7 @@ fn test_upd_price() {
     .is_ok());
 
     {
-        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
         assert_eq!(price_data.comp_[0].latest_.price_, 81);
         assert_eq!(price_data.comp_[0].latest_.conf_, 2);
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 3);
@@ -174,7 +174,7 @@ fn test_upd_price() {
     .is_ok());
 
     {
-        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
         assert_eq!(price_data.comp_[0].latest_.price_, 81);
         assert_eq!(price_data.comp_[0].latest_.conf_, 2);
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 4);
@@ -202,7 +202,7 @@ fn test_upd_price() {
     );
 
     {
-        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
         assert_eq!(price_data.comp_[0].latest_.price_, 81);
         assert_eq!(price_data.comp_[0].latest_.conf_, 2);
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 4);
@@ -220,7 +220,7 @@ fn test_upd_price() {
 
     // check that someone doesn't accidentally break the test.
     {
-        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
         assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_TRADING);
     }
 
@@ -236,7 +236,7 @@ fn test_upd_price() {
     .is_ok());
 
     {
-        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
         assert_eq!(price_data.comp_[0].latest_.price_, 50);
         assert_eq!(price_data.comp_[0].latest_.conf_, 6);
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 5);
@@ -263,7 +263,7 @@ fn test_upd_price() {
     .is_ok());
 
     {
-        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
         assert_eq!(price_data.comp_[0].latest_.price_, 50);
         assert_eq!(price_data.comp_[0].latest_.conf_, 6);
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 6);

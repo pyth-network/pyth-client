@@ -1,8 +1,8 @@
 use crate::c_oracle_header::{
-    CPubkey,
-    PriceAccount,
-    PriceComponent,
-    PriceInfo,
+    pc_price_comp_t,
+    pc_price_info_t,
+    pc_price_t,
+    pc_pub_key_t,
     PythAccount,
     PC_STATUS_TRADING,
     PC_VERSION,
@@ -29,7 +29,7 @@ use std::mem::size_of;
 
 #[test]
 fn test_del_publisher() {
-    let p1: PriceInfo = PriceInfo {
+    let p1: pc_price_info_t = pc_price_info_t {
         price_:           100,
         conf_:            10,
         status_:          PC_STATUS_TRADING,
@@ -37,7 +37,7 @@ fn test_del_publisher() {
         corp_act_status_: 0,
     };
 
-    let p2: PriceInfo = PriceInfo {
+    let p2: pc_price_info_t = pc_price_info_t {
         price_:           200,
         conf_:            20,
         status_:          PC_STATUS_TRADING,
@@ -46,8 +46,8 @@ fn test_del_publisher() {
     };
 
     let program_id = Pubkey::new_unique();
-    let publisher = CPubkey::new_unique();
-    let publisher2 = CPubkey::new_unique();
+    let publisher = pc_pub_key_t::new_unique();
+    let publisher2 = pc_pub_key_t::new_unique();
 
     let mut instruction_data = [0u8; size_of::<DelPublisherArgs>()];
     let mut hdr = load_mut::<DelPublisherArgs>(&mut instruction_data).unwrap();
@@ -57,11 +57,11 @@ fn test_del_publisher() {
     let mut funding_setup = AccountSetup::new_funding();
     let funding_account = funding_setup.to_account_info();
 
-    let mut price_setup = AccountSetup::new::<PriceAccount>(&program_id);
+    let mut price_setup = AccountSetup::new::<pc_price_t>(&program_id);
     let price_account = price_setup.to_account_info();
-    initialize_pyth_account_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+    initialize_pyth_account_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
     {
-        let mut price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        let mut price_data = load_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
         price_data.num_ = 1;
         price_data.comp_[0].latest_ = p1;
         pubkey_assign(&mut price_data.comp_[0].pub_, bytes_of(&publisher));
@@ -75,14 +75,14 @@ fn test_del_publisher() {
     .is_ok());
 
     {
-        let mut price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        let mut price_data = load_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
         assert_eq!(price_data.num_, 0);
         assert_eq!(price_data.comp_[0].latest_.price_, 0);
         assert_eq!(price_data.comp_[0].latest_.conf_, 0);
         assert_eq!(price_data.comp_[0].latest_.status_, 0);
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 0);
         assert_eq!(price_data.comp_[0].latest_.corp_act_status_, 0);
-        assert_eq!(price_data.header.size, PriceAccount::INITIAL_SIZE);
+        assert_eq!(price_data.size_, pc_price_t::INITIAL_SIZE);
         assert!(pubkey_is_zero(&price_data.comp_[0].pub_));
 
         price_data.num_ = 2;
@@ -101,7 +101,7 @@ fn test_del_publisher() {
     .is_ok());
 
     {
-        let mut price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        let mut price_data = load_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
         assert_eq!(price_data.num_, 1);
         assert_eq!(price_data.comp_[0].latest_.price_, p2.price_);
         assert_eq!(price_data.comp_[0].latest_.conf_, p2.conf_);
@@ -117,8 +117,8 @@ fn test_del_publisher() {
         assert_eq!(price_data.comp_[1].latest_.pub_slot_, 0);
         assert_eq!(price_data.comp_[1].latest_.corp_act_status_, 0);
         assert_eq!(
-            price_data.header.size,
-            PriceAccount::INITIAL_SIZE + (size_of::<PriceComponent>() as u32)
+            price_data.size_,
+            pc_price_t::INITIAL_SIZE + (size_of::<pc_price_comp_t>() as u32)
         );
         assert!(pubkey_equal(
             &price_data.comp_[0].pub_,
@@ -142,7 +142,7 @@ fn test_del_publisher() {
     .is_ok());
 
     {
-        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
         assert_eq!(price_data.num_, 1);
         assert_eq!(price_data.comp_[0].latest_.price_, p2.price_);
         assert_eq!(price_data.comp_[0].latest_.conf_, p2.conf_);
@@ -158,8 +158,8 @@ fn test_del_publisher() {
         assert_eq!(price_data.comp_[1].latest_.pub_slot_, 0);
         assert_eq!(price_data.comp_[1].latest_.corp_act_status_, 0);
         assert_eq!(
-            price_data.header.size,
-            PriceAccount::INITIAL_SIZE + (size_of::<PriceComponent>() as u32)
+            price_data.size_,
+            pc_price_t::INITIAL_SIZE + (size_of::<pc_price_comp_t>() as u32)
         );
         assert!(pubkey_equal(
             &price_data.comp_[0].pub_,
