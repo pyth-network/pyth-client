@@ -47,7 +47,7 @@ fn test_upd_price_no_fail_on_error_no_fail_on_error() {
 
 
     // Check that the normal upd_price fails
-    populate_instruction(&mut instruction_data, 42, 9, 1, false);
+    populate_instruction(&mut instruction_data, 42, 9, 1, true);
 
     assert_eq!(
         process_instruction(
@@ -63,7 +63,7 @@ fn test_upd_price_no_fail_on_error_no_fail_on_error() {
     );
 
 
-    populate_instruction(&mut instruction_data, 42, 9, 1, true);
+    populate_instruction(&mut instruction_data, 42, 9, 1, false);
     // We haven't permissioned the publish account for the price account
     // yet, so any update should fail silently and have no effect. The
     // transaction should "succeed".
@@ -126,7 +126,7 @@ fn test_upd_price_no_fail_on_error_no_fail_on_error() {
     // should still fail silently and have no effect.
 
     // Check that the normal upd_price fails
-    populate_instruction(&mut instruction_data, 55, 22, 1, false);
+    populate_instruction(&mut instruction_data, 55, 22, 1, true);
     assert_eq!(
         process_instruction(
             &program_id,
@@ -140,7 +140,7 @@ fn test_upd_price_no_fail_on_error_no_fail_on_error() {
         Err(ProgramError::InvalidArgument)
     );
 
-    populate_instruction(&mut instruction_data, 55, 22, 1, true);
+    populate_instruction(&mut instruction_data, 55, 22, 1, false);
     assert!(process_instruction(
         &program_id,
         &[
@@ -172,13 +172,13 @@ fn populate_instruction(
     price: i64,
     conf: u64,
     pub_slot: u64,
-    no_fail_on_error: bool,
+    fail_on_error: bool,
 ) -> () {
     let mut cmd = load_mut::<UpdPriceArgs>(instruction_data).unwrap();
-    cmd.header = if no_fail_on_error {
-        OracleCommand::UpdPriceNoFailOnError.into()
-    } else {
+    cmd.header = if fail_on_error {
         OracleCommand::UpdPrice.into()
+    } else {
+        OracleCommand::UpdPriceNoFailOnError.into()
     };
     cmd.status = PC_STATUS_TRADING;
     cmd.price = price;
