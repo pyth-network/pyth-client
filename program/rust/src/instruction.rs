@@ -127,16 +127,12 @@ pub struct AddPublisherArgs {
 
 pub type DelPublisherArgs = AddPublisherArgs;
 
-
-unsafe impl Pod for SetMinPubArgs {
-}
-/// This is embarassing, Pod derivation doesn't work for this struct because it has padding in the
-/// end WARNING: DO NOT ACCESS THE 3 LAST BYTES OF THIS STRUCT!
 #[repr(C)]
-#[derive(Zeroable, Clone, Copy)]
+#[derive(Zeroable, Clone, Copy, Pod)]
 pub struct SetMinPubArgs {
     pub header:   CommandHeader,
     pub min_pub_: u8,
+    pub unused_:  [u8; 3],
 }
 
 #[repr(C)]
