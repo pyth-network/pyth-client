@@ -127,11 +127,11 @@ pub struct AddPublisherArgs {
 
 pub type DelPublisherArgs = AddPublisherArgs;
 
-// This is embarassing, Pod derivation doesn't work for this struct. I think it's related to
-// the size in bytes not being a multiple of 8
+
 unsafe impl Pod for SetMinPubArgs {
 }
-
+/// This is embarassing, Pod derivation doesn't work for this struct because it has padding in the
+/// end WARNING: DO NOT ACCESS THE 3 LAST BYTES OF THIS STRUCT!
 #[repr(C)]
 #[derive(Zeroable, Clone, Copy)]
 pub struct SetMinPubArgs {
