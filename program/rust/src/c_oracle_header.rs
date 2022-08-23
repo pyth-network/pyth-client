@@ -21,11 +21,11 @@ pub trait PythAccount: Pod {
     /// price
     const ACCOUNT_TYPE: u32;
     /// `INITIAL_SIZE` is the value that the field `size` will take when the account is first
-    /// initialized this one is slightly tricky because for mapping (resp. price) `size_` won't
-    /// include the unpopulated entries of `prod_` (resp. `comp_`). At the beginning there are 0
-    /// products (resp. 0 components) therefore `INITIAL_SIZE` will be equal to the offset of
-    /// `prod_` (resp. `comp_`)  Similarly the product account `INITIAL_SIZE` won't include any
-    /// key values.
+    /// initialized this one is slightly tricky because for mapping (resp. price) `size` won't
+    /// include the unpopulated entries of `products_list` (resp. `comp_`). At the beginning there
+    /// are 0 products (resp. 0 components) therefore `INITIAL_SIZE` will be equal to the offset
+    /// of `product_list` (resp. `comp_`)  Similarly the product account `INITIAL_SIZE` won't
+    /// include any key values.
     const INITIAL_SIZE: u32;
     /// `minimum_size()` is the minimum size that the solana account holding the struct needs to
     /// have. `INITIAL_SIZE` <= `minimum_size()`
