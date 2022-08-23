@@ -187,6 +187,34 @@ static_assert( sizeof( pc_price_t ) == 3312, "" );
 
 const uint64_t PRICE_ACCOUNT_SIZE = TIME_MACHINE_STRUCT_SIZE + EXTRA_PUBLISHER_SPACE + sizeof( pc_price_t );
 
+/// The functions belows are still used by pythd
+// compare if two pub_keys (accounts) are the same
+inline bool pc_pub_key_equal( pc_pub_key_t *p1, pc_pub_key_t *p2 )
+{
+  return p1->k8_[0] == p2->k8_[0] &&
+         p1->k8_[1] == p2->k8_[1] &&
+         p1->k8_[2] == p2->k8_[2] &&
+         p1->k8_[3] == p2->k8_[3];
+}
+
+// check for null (zero) public key
+inline bool pc_pub_key_is_zero( pc_pub_key_t *p )
+{
+  return p->k8_[0] == 0UL &&
+         p->k8_[1] == 0UL &&
+         p->k8_[2] == 0UL &&
+         p->k8_[3] == 0UL;
+}
+
+// assign one pub_key from another
+inline void pc_pub_key_assign( pc_pub_key_t *tgt, pc_pub_key_t *src )
+{
+  tgt->k8_[0] = src->k8_[0];
+  tgt->k8_[1] = src->k8_[1];
+  tgt->k8_[2] = src->k8_[2];
+  tgt->k8_[3] = src->k8_[3];
+}
+
 #ifdef __cplusplus
 }
 #endif
