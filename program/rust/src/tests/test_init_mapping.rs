@@ -1,6 +1,6 @@
 use crate::c_oracle_header::{
     MappingAccount,
-    PC_ACCTYPE_MAPPING,
+    PythAccount,
     PC_MAGIC,
     PC_VERSION,
 };
@@ -14,6 +14,7 @@ use crate::processor::process_instruction;
 use crate::tests::test_utils::AccountSetup;
 use crate::utils::clear_account;
 use bytemuck::bytes_of;
+use num_traits::ToPrimitive;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use std::cell::RefCell;
@@ -45,7 +46,10 @@ fn test_init_mapping() {
 
         assert_eq!(mapping_data.header.version, PC_VERSION);
         assert_eq!(mapping_data.header.magic_number, PC_MAGIC);
-        assert_eq!(mapping_data.header.account_type, PC_ACCTYPE_MAPPING);
+        assert_eq!(
+            mapping_data.header.account_type,
+            MappingAccount::ACCOUNT_TYPE.to_u32().unwrap()
+        );
         assert_eq!(mapping_data.header.size, 56);
     }
 

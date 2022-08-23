@@ -1,8 +1,8 @@
 use crate::c_oracle_header::{
+    AccountType,
     PriceAccount,
     PythAccount,
     EXTRA_PUBLISHER_SPACE,
-    PC_ACCTYPE_PRICE,
 };
 use crate::error::OracleError;
 use bytemuck::{
@@ -55,7 +55,7 @@ unsafe impl Pod for PriceAccountWrapper {
 }
 
 impl PythAccount for PriceAccountWrapper {
-    const ACCOUNT_TYPE: u32 = PC_ACCTYPE_PRICE;
+    const ACCOUNT_TYPE: AccountType = AccountType::Price;
     const INITIAL_SIZE: u32 = PriceAccount::INITIAL_SIZE;
 }
 

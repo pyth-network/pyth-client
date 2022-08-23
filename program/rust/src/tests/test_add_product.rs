@@ -4,7 +4,6 @@ use crate::c_oracle_header::{
     MappingAccount,
     ProductAccount,
     PythAccount,
-    PC_ACCTYPE_PRODUCT,
     PC_MAGIC,
     PC_MAP_TABLE_SIZE,
     PC_PROD_ACC_SIZE,
@@ -27,6 +26,7 @@ use crate::utils::{
     pubkey_equal,
 };
 use bytemuck::bytes_of;
+use num_traits::ToPrimitive;
 use solana_program::account_info::AccountInfo;
 use solana_program::clock::Epoch;
 use solana_program::program_error::ProgramError;
@@ -71,7 +71,10 @@ fn test_add_product() {
 
         assert_eq!(product_data.header.magic_number, PC_MAGIC);
         assert_eq!(product_data.header.version, PC_VERSION);
-        assert_eq!(product_data.header.account_type, PC_ACCTYPE_PRODUCT);
+        assert_eq!(
+            product_data.header.account_type,
+            ProductAccount::ACCOUNT_TYPE.to_u32().unwrap()
+        );
         assert_eq!(product_data.header.size, size_of::<ProductAccount>() as u32);
         assert_eq!(mapping_data.number_of_products, 1);
         assert_eq!(

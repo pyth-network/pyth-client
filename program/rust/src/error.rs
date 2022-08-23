@@ -32,6 +32,8 @@ pub enum OracleError {
     InstructionDataTooShort        = 610,
     #[error("InstructionDataSliceMisaligned")]
     InstructionDataSliceMisaligned = 611,
+    #[error("EnumConversionError")]
+    EnumConversionError            = 612,
 }
 
 impl From<OracleError> for ProgramError {

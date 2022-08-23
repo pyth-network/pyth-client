@@ -1,12 +1,7 @@
 use std::mem::size_of;
 
-use bytemuck::{
-    try_from_bytes,
-    try_from_bytes_mut,
-    Pod,
-};
-
 use crate::c_oracle_header::{
+    to_u32_checked,
     AccountHeader,
     PythAccount,
     PC_MAGIC,
@@ -15,6 +10,11 @@ use crate::error::OracleError;
 use crate::utils::{
     clear_account,
     pyth_assert,
+};
+use bytemuck::{
+    try_from_bytes,
+    try_from_bytes_mut,
+    Pod,
 };
 use solana_program::account_info::AccountInfo;
 use solana_program::program_error::ProgramError;
@@ -75,7 +75,7 @@ pub fn load_checked<'a, T: PythAccount>(
         pyth_assert(
             account_header.magic_number == PC_MAGIC
                 && account_header.version == version
-                && account_header.account_type == T::ACCOUNT_TYPE,
+                && account_header.account_type == to_u32_checked(&T::ACCOUNT_TYPE)?,
             ProgramError::InvalidArgument,
         )?;
     }
@@ -93,7 +93,7 @@ pub fn initialize_pyth_account_checked<'a, T: PythAccount>(
         let mut account_header = load_account_as_mut::<AccountHeader>(account)?;
         account_header.magic_number = PC_MAGIC;
         account_header.version = version;
-        account_header.account_type = T::ACCOUNT_TYPE;
+        account_header.account_type = to_u32_checked(&T::ACCOUNT_TYPE)?;
         account_header.size = T::INITIAL_SIZE;
     }
 
