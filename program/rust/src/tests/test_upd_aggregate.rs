@@ -2,8 +2,6 @@ use solana_program::pubkey::Pubkey;
 use std::mem::size_of;
 
 use crate::c_oracle_header::{
-    cmd_upd_price_t,
-    command_t_e_cmd_upd_price,
     pc_price_info_t,
     pc_price_t,
     PC_STATUS_TRADING,
@@ -15,6 +13,10 @@ use crate::deserialize::{
     initialize_pyth_account_checked,
     load_checked,
     load_mut,
+};
+use crate::instruction::{
+    OracleCommand,
+    UpdPriceArgs,
 };
 use crate::rust_oracle::c_upd_aggregate;
 use crate::tests::test_utils::AccountSetup;
@@ -52,7 +54,7 @@ fn test_upd_aggregate() {
         corp_act_status_: 0,
     };
 
-    let mut instruction_data = [0u8; size_of::<cmd_upd_price_t>()];
+    let mut instruction_data = [0u8; size_of::<UpdPriceArgs>()];
     populate_instruction(&mut instruction_data, 42, 2, 1);
 
     let program_id = Pubkey::new_unique();
@@ -266,12 +268,11 @@ fn test_upd_aggregate() {
 
 // Create an upd_price instruction with the provided parameters
 fn populate_instruction(instruction_data: &mut [u8], price: i64, conf: u64, pub_slot: u64) -> () {
-    let mut cmd = load_mut::<cmd_upd_price_t>(instruction_data).unwrap();
-    cmd.ver_ = PC_VERSION;
-    cmd.cmd_ = command_t_e_cmd_upd_price as i32;
-    cmd.status_ = PC_STATUS_TRADING;
-    cmd.price_ = price;
-    cmd.conf_ = conf;
-    cmd.pub_slot_ = pub_slot;
+    let mut cmd = load_mut::<UpdPriceArgs>(instruction_data).unwrap();
+    cmd.header = OracleCommand::AggPrice.into();
+    cmd.status = PC_STATUS_TRADING;
+    cmd.price = price;
+    cmd.confidence = conf;
+    cmd.publishing_slot = pub_slot;
     cmd.unused_ = 0;
 }

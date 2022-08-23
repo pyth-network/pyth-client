@@ -85,27 +85,11 @@ unsafe impl Pod for pc_price {
 }
 
 #[cfg(target_endian = "little")]
-unsafe impl Zeroable for cmd_hdr {
-}
-
-#[cfg(target_endian = "little")]
-unsafe impl Pod for cmd_hdr {
-}
-
-#[cfg(target_endian = "little")]
 unsafe impl Zeroable for pc_price_info {
 }
 
 #[cfg(target_endian = "little")]
 unsafe impl Pod for pc_price_info {
-}
-
-#[cfg(target_endian = "little")]
-unsafe impl Zeroable for cmd_upd_price {
-}
-
-#[cfg(target_endian = "little")]
-unsafe impl Pod for cmd_upd_price {
 }
 
 #[cfg(target_endian = "little")]
@@ -116,44 +100,6 @@ unsafe impl Zeroable for pc_ema {
 unsafe impl Pod for pc_ema {
 }
 
-#[cfg(target_endian = "little")]
-unsafe impl Zeroable for cmd_add_price_t {
-}
-
-#[cfg(target_endian = "little")]
-unsafe impl Pod for cmd_add_price_t {
-}
-
-#[cfg(target_endian = "little")]
-unsafe impl Zeroable for cmd_init_price_t {
-}
-
-#[cfg(target_endian = "little")]
-unsafe impl Pod for cmd_init_price_t {
-}
-
-#[cfg(target_endian = "little")]
-unsafe impl Zeroable for cmd_add_publisher_t {
-}
-
-#[cfg(target_endian = "little")]
-unsafe impl Pod for cmd_add_publisher_t {
-}
-
-#[cfg(target_endian = "little")]
-unsafe impl Zeroable for cmd_del_publisher_t {
-}
-
-#[cfg(target_endian = "little")]
-unsafe impl Pod for cmd_del_publisher_t {
-}
-
-unsafe impl Zeroable for cmd_set_min_pub_t {
-}
-
-#[cfg(target_endian = "little")]
-unsafe impl Pod for cmd_set_min_pub_t {
-}
 
 #[cfg(target_endian = "little")]
 unsafe impl Zeroable for pc_pub_key_t {

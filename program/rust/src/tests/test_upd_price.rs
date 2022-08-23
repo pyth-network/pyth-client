@@ -3,8 +3,6 @@ use solana_program::pubkey::Pubkey;
 use std::mem::size_of;
 
 use crate::c_oracle_header::{
-    cmd_upd_price_t,
-    command_t_e_cmd_upd_price,
     pc_price_t,
     PC_STATUS_TRADING,
     PC_STATUS_UNKNOWN,
@@ -16,7 +14,11 @@ use crate::deserialize::{
     load_checked,
     load_mut,
 };
-use crate::rust_oracle::upd_price;
+use crate::instruction::{
+    OracleCommand,
+    UpdPriceArgs,
+};
+use crate::processor::process_instruction;
 use crate::tests::test_utils::{
     update_clock_slot,
     AccountSetup,
@@ -24,7 +26,7 @@ use crate::tests::test_utils::{
 use crate::utils::pubkey_assign;
 #[test]
 fn test_upd_price() {
-    let mut instruction_data = [0u8; size_of::<cmd_upd_price_t>()];
+    let mut instruction_data = [0u8; size_of::<UpdPriceArgs>()];
     populate_instruction(&mut instruction_data, 42, 2, 1);
 
     let program_id = Pubkey::new_unique();
@@ -53,7 +55,7 @@ fn test_upd_price() {
 
     update_clock_slot(&mut clock_account, 1);
 
-    assert!(upd_price(
+    assert!(process_instruction(
         &program_id,
         &[
             funding_account.clone(),
@@ -80,7 +82,7 @@ fn test_upd_price() {
     populate_instruction(&mut instruction_data, 43, 2, 1);
 
     assert_eq!(
-        upd_price(
+        process_instruction(
             &program_id,
             &[
                 funding_account.clone(),
@@ -108,7 +110,7 @@ fn test_upd_price() {
     populate_instruction(&mut instruction_data, 81, 2, 2);
     update_clock_slot(&mut clock_account, 3);
 
-    assert!(upd_price(
+    assert!(process_instruction(
         &program_id,
         &[
             funding_account.clone(),
@@ -134,7 +136,7 @@ fn test_upd_price() {
     // next price doesnt change but slot does
     populate_instruction(&mut instruction_data, 81, 2, 3);
     update_clock_slot(&mut clock_account, 4);
-    assert!(upd_price(
+    assert!(process_instruction(
         &program_id,
         &[
             funding_account.clone(),
@@ -160,7 +162,7 @@ fn test_upd_price() {
     // next price doesnt change and neither does aggregate but slot does
     populate_instruction(&mut instruction_data, 81, 2, 4);
     update_clock_slot(&mut clock_account, 5);
-    assert!(upd_price(
+    assert!(process_instruction(
         &program_id,
         &[
             funding_account.clone(),
@@ -187,7 +189,7 @@ fn test_upd_price() {
     populate_instruction(&mut instruction_data, 81, 2, 1);
     update_clock_slot(&mut clock_account, 5);
     assert_eq!(
-        upd_price(
+        process_instruction(
             &program_id,
             &[
                 funding_account.clone(),
@@ -222,7 +224,7 @@ fn test_upd_price() {
         assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_TRADING);
     }
 
-    assert!(upd_price(
+    assert!(process_instruction(
         &program_id,
         &[
             funding_account.clone(),
@@ -249,7 +251,7 @@ fn test_upd_price() {
     populate_instruction(&mut instruction_data, 50, 6, 6);
     update_clock_slot(&mut clock_account, 7);
 
-    assert!(upd_price(
+    assert!(process_instruction(
         &program_id,
         &[
             funding_account.clone(),
@@ -275,12 +277,11 @@ fn test_upd_price() {
 
 // Create an upd_price instruction with the provided parameters
 fn populate_instruction(instruction_data: &mut [u8], price: i64, conf: u64, pub_slot: u64) -> () {
-    let mut cmd = load_mut::<cmd_upd_price_t>(instruction_data).unwrap();
-    cmd.ver_ = PC_VERSION;
-    cmd.cmd_ = command_t_e_cmd_upd_price as i32;
-    cmd.status_ = PC_STATUS_TRADING;
-    cmd.price_ = price;
-    cmd.conf_ = conf;
-    cmd.pub_slot_ = pub_slot;
+    let mut cmd = load_mut::<UpdPriceArgs>(instruction_data).unwrap();
+    cmd.header = OracleCommand::UpdPrice.into();
+    cmd.status = PC_STATUS_TRADING;
+    cmd.price = price;
+    cmd.confidence = conf;
+    cmd.publishing_slot = pub_slot;
     cmd.unused_ = 0;
 }

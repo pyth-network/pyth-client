@@ -1,16 +1,4 @@
-use crate::deserialize::{
-    initialize_pyth_account_checked,
-    load_checked,
-    load_mut,
-};
-use crate::rust_oracle::del_publisher;
-use crate::tests::test_utils::AccountSetup;
-use bytemuck::bytes_of;
-use solana_program::pubkey::Pubkey;
-
 use crate::c_oracle_header::{
-    cmd_del_publisher,
-    command_t_e_cmd_del_publisher,
     pc_price_comp_t,
     pc_price_info_t,
     pc_price_t,
@@ -19,11 +7,24 @@ use crate::c_oracle_header::{
     PC_STATUS_TRADING,
     PC_VERSION,
 };
+use crate::deserialize::{
+    initialize_pyth_account_checked,
+    load_checked,
+    load_mut,
+};
+use crate::instruction::{
+    DelPublisherArgs,
+    OracleCommand,
+};
+use crate::processor::process_instruction;
+use crate::tests::test_utils::AccountSetup;
 use crate::utils::{
     pubkey_assign,
     pubkey_equal,
     pubkey_is_zero,
 };
+use bytemuck::bytes_of;
+use solana_program::pubkey::Pubkey;
 use std::mem::size_of;
 
 #[test]
@@ -48,11 +49,10 @@ fn test_del_publisher() {
     let publisher = pc_pub_key_t::new_unique();
     let publisher2 = pc_pub_key_t::new_unique();
 
-    let mut instruction_data = [0u8; size_of::<cmd_del_publisher>()];
-    let mut hdr = load_mut::<cmd_del_publisher>(&mut instruction_data).unwrap();
-    hdr.ver_ = PC_VERSION;
-    hdr.cmd_ = command_t_e_cmd_del_publisher as i32;
-    hdr.pub_ = publisher;
+    let mut instruction_data = [0u8; size_of::<DelPublisherArgs>()];
+    let mut hdr = load_mut::<DelPublisherArgs>(&mut instruction_data).unwrap();
+    hdr.header = OracleCommand::DelPublisher.into();
+    hdr.publisher = publisher;
 
     let mut funding_setup = AccountSetup::new_funding();
     let funding_account = funding_setup.to_account_info();
@@ -67,7 +67,7 @@ fn test_del_publisher() {
         pubkey_assign(&mut price_data.comp_[0].pub_, bytes_of(&publisher));
     }
 
-    assert!(del_publisher(
+    assert!(process_instruction(
         &program_id,
         &[funding_account.clone(), price_account.clone(),],
         &instruction_data
@@ -93,7 +93,7 @@ fn test_del_publisher() {
     }
 
     // Delete publisher at position 0
-    assert!(del_publisher(
+    assert!(process_instruction(
         &program_id,
         &[funding_account.clone(), price_account.clone(),],
         &instruction_data
@@ -134,7 +134,7 @@ fn test_del_publisher() {
     }
 
     // Delete publisher at position 1
-    assert!(del_publisher(
+    assert!(process_instruction(
         &program_id,
         &[funding_account.clone(), price_account.clone(),],
         &instruction_data

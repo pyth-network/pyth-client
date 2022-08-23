@@ -1,4 +1,7 @@
-use crate::c_oracle_header::PC_VERSION;
+use crate::c_oracle_header::{
+    pc_pub_key_t,
+    PC_VERSION,
+};
 use crate::deserialize::load;
 use crate::error::OracleError;
 use bytemuck::{
@@ -104,4 +107,41 @@ pub fn load_command_header_checked(data: &[u8]) -> Result<OracleCommand, OracleE
         return Err(OracleError::InvalidInstructionVersion);
     }
     OracleCommand::from_i32(command_header.command).ok_or(OracleError::UnrecognizedInstruction)
+}
+
+#[repr(C)]
+#[derive(Zeroable, Pod, Copy, Clone)]
+pub struct AddPriceArgs {
+    pub header:     CommandHeader,
+    pub exponent:   i32,
+    pub price_type: u32,
+}
+pub type InitPriceArgs = AddPriceArgs;
+
+#[repr(C)]
+#[derive(Zeroable, Pod, Copy, Clone)]
+pub struct AddPublisherArgs {
+    pub header:    CommandHeader,
+    pub publisher: pc_pub_key_t,
+}
+
+pub type DelPublisherArgs = AddPublisherArgs;
+
+#[repr(C)]
+#[derive(Zeroable, Clone, Copy, Pod)]
+pub struct SetMinPubArgs {
+    pub header:             CommandHeader,
+    pub minimum_publishers: u8,
+    pub unused_:            [u8; 3],
+}
+
+#[repr(C)]
+#[derive(Zeroable, Pod, Copy, Clone)]
+pub struct UpdPriceArgs {
+    pub header:          CommandHeader,
+    pub status:          u32,
+    pub unused_:         u32,
+    pub price:           i64,
+    pub confidence:      u64,
+    pub publishing_slot: u64,
 }

@@ -1,14 +1,4 @@
-use crate::error::OracleError;
-use crate::tests::test_utils::AccountSetup;
-use bytemuck::bytes_of;
-use solana_program::program_error::ProgramError;
-use solana_program::pubkey::Pubkey;
-
 use crate::c_oracle_header::{
-    cmd_add_price,
-    cmd_hdr_t,
-    command_t_e_cmd_add_price,
-    command_t_e_cmd_add_product,
     pc_map_table_t,
     pc_price_t,
     pc_prod_t,
@@ -18,31 +8,34 @@ use crate::deserialize::{
     initialize_pyth_account_checked,
     load_checked,
 };
-use crate::rust_oracle::{
-    add_price,
-    add_product,
+use crate::error::OracleError;
+use crate::instruction::{
+    AddPriceArgs,
+    CommandHeader,
+    OracleCommand,
 };
+use crate::processor::process_instruction;
+use crate::tests::test_utils::AccountSetup;
 use crate::utils::{
     clear_account,
     pubkey_equal,
     pubkey_is_zero,
 };
+use bytemuck::bytes_of;
+use solana_program::program_error::ProgramError;
+use solana_program::pubkey::Pubkey;
 
 #[test]
 fn test_add_price() {
-    let hdr_add_product = cmd_hdr_t {
-        ver_: PC_VERSION,
-        cmd_: command_t_e_cmd_add_product as i32,
-    };
+    let hdr_add_product = OracleCommand::AddProduct.into();
 
-    let mut hdr_add_price = cmd_add_price {
-        ver_:   PC_VERSION,
-        cmd_:   command_t_e_cmd_add_price as i32,
-        expo_:  1,
-        ptype_: 1,
+    let mut hdr_add_price = AddPriceArgs {
+        header:     OracleCommand::AddPrice.into(),
+        exponent:   1,
+        price_type: 1,
     };
-    let instruction_data_add_product = bytes_of::<cmd_hdr_t>(&hdr_add_product);
-    let mut instruction_data_add_price = bytes_of::<cmd_add_price>(&hdr_add_price);
+    let instruction_data_add_product = bytes_of::<CommandHeader>(&hdr_add_product);
+    let mut instruction_data_add_price = bytes_of::<AddPriceArgs>(&hdr_add_price);
 
     let program_id = Pubkey::new_unique();
 
@@ -62,7 +55,7 @@ fn test_add_price() {
     let mut price_setup_2 = AccountSetup::new::<pc_price_t>(&program_id);
     let price_account_2 = price_setup_2.to_account_info();
 
-    assert!(add_product(
+    assert!(process_instruction(
         &program_id,
         &[
             funding_account.clone(),
@@ -73,7 +66,7 @@ fn test_add_price() {
     )
     .is_ok());
 
-    assert!(add_price(
+    assert!(process_instruction(
         &program_id,
         &[
             funding_account.clone(),
@@ -100,7 +93,7 @@ fn test_add_price() {
         ));
     }
 
-    assert!(add_price(
+    assert!(process_instruction(
         &program_id,
         &[
             funding_account.clone(),
@@ -132,7 +125,7 @@ fn test_add_price() {
 
     // Wrong number of accounts
     assert_eq!(
-        add_price(
+        process_instruction(
             &program_id,
             &[funding_account.clone(), product_account.clone()],
             instruction_data_add_price
@@ -142,7 +135,7 @@ fn test_add_price() {
 
     // Price account is already initialized
     assert_eq!(
-        add_price(
+        process_instruction(
             &program_id,
             &[
                 funding_account.clone(),
@@ -157,17 +150,16 @@ fn test_add_price() {
     clear_account(&price_account).unwrap();
 
     // Wrong ptype
-    hdr_add_price = cmd_add_price {
-        ver_:   PC_VERSION,
-        cmd_:   command_t_e_cmd_add_price as i32,
-        expo_:  6,
-        ptype_: 0,
+    hdr_add_price = AddPriceArgs {
+        header:     OracleCommand::AddPrice.into(),
+        exponent:   6,
+        price_type: 0,
     };
-    instruction_data_add_price = bytes_of::<cmd_add_price>(&hdr_add_price);
+    instruction_data_add_price = bytes_of::<AddPriceArgs>(&hdr_add_price);
 
 
     assert_eq!(
-        add_price(
+        process_instruction(
             &program_id,
             &[
                 funding_account.clone(),
@@ -181,17 +173,17 @@ fn test_add_price() {
 
 
     //Price not signing
-    hdr_add_price = cmd_add_price {
-        ver_:   PC_VERSION,
-        cmd_:   command_t_e_cmd_add_price as i32,
-        expo_:  6,
-        ptype_: 1,
+    hdr_add_price = AddPriceArgs {
+        header:     OracleCommand::AddPrice.into(),
+        exponent:   6,
+        price_type: 1,
     };
-    instruction_data_add_price = bytes_of::<cmd_add_price>(&hdr_add_price);
+
+    instruction_data_add_price = bytes_of::<AddPriceArgs>(&hdr_add_price);
     price_account.is_signer = false;
 
     assert_eq!(
-        add_price(
+        process_instruction(
             &program_id,
             &[
                 funding_account.clone(),
@@ -209,7 +201,7 @@ fn test_add_price() {
 
 
     assert_eq!(
-        add_price(
+        process_instruction(
             &program_id,
             &[
                 funding_account.clone(),

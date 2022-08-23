@@ -1,5 +1,10 @@
 use std::mem::size_of;
 
+use crate::instruction::{
+    CommandHeader,
+    OracleCommand,
+};
+use crate::processor::process_instruction;
 use crate::tests::test_utils::AccountSetup;
 use crate::utils::{
     read_pc_str_t,
@@ -10,9 +15,6 @@ use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 
 use crate::c_oracle_header::{
-    cmd_hdr_t,
-    cmd_upd_product_t,
-    command_t_e_cmd_upd_product,
     pc_prod_t,
     PythAccount,
     PC_PROD_ACC_SIZE,
@@ -23,7 +25,6 @@ use crate::deserialize::{
     load_checked,
     load_mut,
 };
-use crate::rust_oracle::upd_product;
 
 #[test]
 fn test_upd_product() {
@@ -41,7 +42,7 @@ fn test_upd_product() {
 
     let kvs = ["foo", "barz"];
     let size = populate_instruction(&mut instruction_data, &kvs);
-    assert!(upd_product(
+    assert!(process_instruction(
         &program_id,
         &[funding_account.clone(), product_account.clone()],
         &instruction_data[..size]
@@ -55,9 +56,9 @@ fn test_upd_product() {
     }
 
     // bad size on the 1st string in the key-value pair list
-    instruction_data[size_of::<cmd_upd_product_t>()] = 2;
+    instruction_data[size_of::<CommandHeader>()] = 2;
     assert_eq!(
-        upd_product(
+        process_instruction(
             &program_id,
             &[funding_account.clone(), product_account.clone()],
             &instruction_data[..size]
@@ -68,7 +69,7 @@ fn test_upd_product() {
 
     let kvs = [];
     let size = populate_instruction(&mut instruction_data, &kvs);
-    assert!(upd_product(
+    assert!(process_instruction(
         &program_id,
         &[funding_account.clone(), product_account.clone()],
         &instruction_data[..size]
@@ -84,7 +85,7 @@ fn test_upd_product() {
     let bad_kvs = ["foo", "bar", "baz"];
     let size = populate_instruction(&mut instruction_data, &bad_kvs);
     assert_eq!(
-        upd_product(
+        process_instruction(
             &program_id,
             &[funding_account.clone(), product_account.clone()],
             &instruction_data[..size]
@@ -97,12 +98,11 @@ fn test_upd_product() {
 // Create an upd_product instruction that sets the product metadata to strings
 fn populate_instruction(instruction_data: &mut [u8], strings: &[&str]) -> usize {
     {
-        let mut hdr = load_mut::<cmd_hdr_t>(instruction_data).unwrap();
-        hdr.ver_ = PC_VERSION;
-        hdr.cmd_ = command_t_e_cmd_upd_product as i32
+        let hdr = load_mut::<CommandHeader>(instruction_data).unwrap();
+        *hdr = OracleCommand::UpdProduct.into();
     }
 
-    let mut idx = size_of::<cmd_upd_product_t>();
+    let mut idx = size_of::<CommandHeader>();
     for s in strings.iter() {
         let pc_str = create_pc_str_t(s);
         instruction_data[idx..(idx + pc_str.len())].copy_from_slice(pc_str.as_slice());
