@@ -69,10 +69,10 @@ pub struct PriceAccount {
     pub unused_1_:          i8,
     pub unused_2_:          i16,
     pub unused_3_:          i32,
-    pub product_account:    CPubkey,
-    pub next_price_account: CPubkey,
-    pub prev_slot_:         u64, /* Second to last slot where aggregation was succesful (status
-                                  * : TRADING) */
+    pub product_account:    CPubkey, // Corresponding mapping account
+    pub next_price_account: CPubkey, // Next price account in the list
+    pub prev_slot_:         u64,     /* Second to last slot where aggregation was succesful
+                                      * (status : TRADING) */
     pub prev_price_:        i64,       // Aggregate price at prev_slot_
     pub prev_conf_:         u64,       // Confidence interval at prev_slot_
     pub prev_timestamp_:    i64,       // Timestamp of prev_slot_
@@ -132,14 +132,14 @@ pub struct MappingAccount {
     pub product_list:         [CPubkey; 640usize],
 }
 
-// Unsafe impl because pc_pub_key is a union
+// Unsafe impl because CPubkey is a union
 unsafe impl Pod for CPubkey {
 }
 unsafe impl Zeroable for CPubkey {
 }
 
 
-// Unsafe impl because prod_ is of size 640 and there's no derived trait for this size
+// Unsafe impl because product_list is of size 640 and there's no derived trait for this size
 unsafe impl Pod for MappingAccount {
 }
 unsafe impl Zeroable for MappingAccount {
