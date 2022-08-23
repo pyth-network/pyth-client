@@ -52,6 +52,25 @@ impl PythAccount for PriceAccount {
     const INITIAL_SIZE: u32 = 240; // Tested in test_sizes.rs
 }
 
+impl PythAccount for pc_map_table_t {
+    const ACCOUNT_TYPE: u32 = PC_ACCTYPE_MAPPING;
+    const INITIAL_SIZE: u32 = 56; // Tested in test_sizes.rs
+}
+
+impl PythAccount for pc_prod_t {
+    const ACCOUNT_TYPE: u32 = PC_ACCTYPE_PRODUCT;
+    const INITIAL_SIZE: u32 = size_of::<ProductAccount>() as u32;
+    fn minimum_size() -> usize {
+        PC_PROD_ACC_SIZE as usize
+    }
+}
+
+impl PythAccount for pc_price_t {
+    const ACCOUNT_TYPE: u32 = PC_ACCTYPE_PRICE;
+    const INITIAL_SIZE: u32 = 240; // Tested in test_sizes.rs
+}
+
+
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]
 pub struct PriceAccount {
@@ -133,10 +152,10 @@ pub struct MappingAccount {
 }
 
 // Unsafe impl because CPubkey is a union
-unsafe impl Pod for CPubkey {
-}
-unsafe impl Zeroable for CPubkey {
-}
+// unsafe impl Pod for CPubkey {
+// }
+// unsafe impl Zeroable for CPubkey {
+// }
 
 
 // Unsafe impl because product_list is of size 640 and there's no derived trait for this size
@@ -145,13 +164,14 @@ unsafe impl Pod for MappingAccount {
 unsafe impl Zeroable for MappingAccount {
 }
 
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub union CPubkey {
-    pub k1_: [u8; 32usize],
-    pub k8_: [u64; 4usize],
-}
+// #[repr(C)]
+// #[derive(Copy, Clone)]
+// pub union CPubkey {
+//     pub k1_: [u8; 32usize],
+//     pub k8_: [u64; 4usize],
+// }
 
+pub type CPubkey = pc_pub_key_t;
 impl CPubkey {
     pub fn new_unique() -> CPubkey {
         let solana_unique = Pubkey::new_unique();
@@ -159,4 +179,70 @@ impl CPubkey {
             k1_: solana_unique.to_bytes(),
         }
     }
+}
+
+#[cfg(target_endian = "little")]
+unsafe impl Zeroable for pc_acc {
+}
+
+#[cfg(target_endian = "little")]
+unsafe impl Pod for pc_acc {
+}
+
+#[cfg(target_endian = "little")]
+unsafe impl Zeroable for pc_map_table {
+}
+
+#[cfg(target_endian = "little")]
+unsafe impl Pod for pc_map_table {
+}
+
+#[cfg(target_endian = "little")]
+unsafe impl Zeroable for pc_prod {
+}
+
+#[cfg(target_endian = "little")]
+unsafe impl Pod for pc_prod {
+}
+
+#[cfg(target_endian = "little")]
+unsafe impl Zeroable for pc_price {
+}
+
+#[cfg(target_endian = "little")]
+unsafe impl Pod for pc_price {
+}
+
+#[cfg(target_endian = "little")]
+unsafe impl Zeroable for pc_price_info {
+}
+
+#[cfg(target_endian = "little")]
+unsafe impl Pod for pc_price_info {
+}
+
+#[cfg(target_endian = "little")]
+unsafe impl Zeroable for pc_ema {
+}
+
+#[cfg(target_endian = "little")]
+unsafe impl Pod for pc_ema {
+}
+
+
+#[cfg(target_endian = "little")]
+unsafe impl Zeroable for pc_pub_key_t {
+}
+
+#[cfg(target_endian = "little")]
+unsafe impl Pod for pc_pub_key_t {
+}
+
+
+#[cfg(target_endian = "little")]
+unsafe impl Zeroable for pc_price_comp_t {
+}
+
+#[cfg(target_endian = "little")]
+unsafe impl Pod for pc_price_comp_t {
 }
