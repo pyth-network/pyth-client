@@ -1,6 +1,6 @@
 use crate::c_oracle_header::{
-    pc_acc,
-    pc_pub_key_t,
+    AccountHeader,
+    CPubkey,
     PC_MAX_NUM_DECIMALS,
 };
 use crate::deserialize::load_account_as;
@@ -73,9 +73,9 @@ pub fn check_valid_signable_account(
 /// Returns `true` if the `account` is fresh, i.e., its data can be overwritten.
 /// Use this check to prevent accidentally overwriting accounts whose data is already populated.
 pub fn valid_fresh_account(account: &AccountInfo) -> bool {
-    let pyth_acc = load_account_as::<pc_acc>(account);
+    let pyth_acc = load_account_as::<AccountHeader>(account);
     match pyth_acc {
-        Ok(pyth_acc) => pyth_acc.magic_ == 0 && pyth_acc.ver_ == 0,
+        Ok(pyth_acc) => pyth_acc.magic_number == 0 && pyth_acc.version == 0,
         Err(_) => false,
     }
 }
@@ -96,20 +96,20 @@ pub fn check_exponent_range(expo: i32) -> Result<(), ProgramError> {
 }
 
 // Assign pubkey bytes from source to target, fails if source is not 32 bytes
-pub fn pubkey_assign(target: &mut pc_pub_key_t, source: &[u8]) {
+pub fn pubkey_assign(target: &mut CPubkey, source: &[u8]) {
     unsafe { target.k1_.copy_from_slice(source) }
 }
 
-pub fn pubkey_is_zero(key: &pc_pub_key_t) -> bool {
+pub fn pubkey_is_zero(key: &CPubkey) -> bool {
     return unsafe { key.k8_.iter().all(|x| *x == 0) };
 }
 
-pub fn pubkey_equal(target: &pc_pub_key_t, source: &[u8]) -> bool {
+pub fn pubkey_equal(target: &CPubkey, source: &[u8]) -> bool {
     unsafe { target.k1_ == *source }
 }
 
 /// Zero out the bytes of `key`.
-pub fn pubkey_clear(key: &mut pc_pub_key_t) {
+pub fn pubkey_clear(key: &mut CPubkey) {
     unsafe {
         for i in 0..key.k8_.len() {
             key.k8_[i] = 0;

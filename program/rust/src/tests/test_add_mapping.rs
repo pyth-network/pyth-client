@@ -1,5 +1,5 @@
 use crate::c_oracle_header::{
-    pc_map_table_t,
+    MappingAccount,
     PC_MAGIC,
     PC_MAP_TABLE_SIZE,
     PC_VERSION,
@@ -35,17 +35,17 @@ fn test_add_mapping() {
     let mut funding_setup = AccountSetup::new_funding();
     let funding_account = funding_setup.to_account_info();
 
-    let mut curr_mapping_setup = AccountSetup::new::<pc_map_table_t>(&program_id);
+    let mut curr_mapping_setup = AccountSetup::new::<MappingAccount>(&program_id);
     let cur_mapping = curr_mapping_setup.to_account_info();
-    initialize_pyth_account_checked::<pc_map_table_t>(&cur_mapping, PC_VERSION).unwrap();
+    initialize_pyth_account_checked::<MappingAccount>(&cur_mapping, PC_VERSION).unwrap();
 
-    let mut next_mapping_setup = AccountSetup::new::<pc_map_table_t>(&program_id);
+    let mut next_mapping_setup = AccountSetup::new::<MappingAccount>(&program_id);
     let next_mapping = next_mapping_setup.to_account_info();
 
     {
         let mut cur_mapping_data =
-            load_checked::<pc_map_table_t>(&cur_mapping, PC_VERSION).unwrap();
-        cur_mapping_data.num_ = PC_MAP_TABLE_SIZE;
+            load_checked::<MappingAccount>(&cur_mapping, PC_VERSION).unwrap();
+        cur_mapping_data.number_of_products = PC_MAP_TABLE_SIZE;
     }
 
     assert!(process_instruction(
@@ -60,17 +60,20 @@ fn test_add_mapping() {
     .is_ok());
 
     {
-        let next_mapping_data = load_checked::<pc_map_table_t>(&next_mapping, PC_VERSION).unwrap();
+        let next_mapping_data = load_checked::<MappingAccount>(&next_mapping, PC_VERSION).unwrap();
         let mut cur_mapping_data =
-            load_checked::<pc_map_table_t>(&cur_mapping, PC_VERSION).unwrap();
+            load_checked::<MappingAccount>(&cur_mapping, PC_VERSION).unwrap();
 
         assert!(pubkey_equal(
-            &cur_mapping_data.next_,
+            &cur_mapping_data.next_mapping_account,
             &next_mapping.key.to_bytes()
         ));
-        assert!(pubkey_is_zero(&next_mapping_data.next_));
-        pubkey_assign(&mut cur_mapping_data.next_, &Pubkey::default().to_bytes());
-        cur_mapping_data.num_ = 0;
+        assert!(pubkey_is_zero(&next_mapping_data.next_mapping_account));
+        pubkey_assign(
+            &mut cur_mapping_data.next_mapping_account,
+            &Pubkey::default().to_bytes(),
+        );
+        cur_mapping_data.number_of_products = 0;
     }
 
     clear_account(&next_mapping).unwrap();
@@ -90,10 +93,10 @@ fn test_add_mapping() {
 
     {
         let mut cur_mapping_data =
-            load_checked::<pc_map_table_t>(&cur_mapping, PC_VERSION).unwrap();
-        assert!(pubkey_is_zero(&cur_mapping_data.next_));
-        cur_mapping_data.num_ = PC_MAP_TABLE_SIZE;
-        cur_mapping_data.magic_ = 0;
+            load_checked::<MappingAccount>(&cur_mapping, PC_VERSION).unwrap();
+        assert!(pubkey_is_zero(&cur_mapping_data.next_mapping_account));
+        cur_mapping_data.number_of_products = PC_MAP_TABLE_SIZE;
+        cur_mapping_data.header.magic_number = 0;
     }
 
     assert_eq!(
@@ -110,8 +113,8 @@ fn test_add_mapping() {
     );
 
     {
-        let mut cur_mapping_data = load_account_as_mut::<pc_map_table_t>(&cur_mapping).unwrap();
-        cur_mapping_data.magic_ = PC_MAGIC;
+        let mut cur_mapping_data = load_account_as_mut::<MappingAccount>(&cur_mapping).unwrap();
+        cur_mapping_data.header.magic_number = PC_MAGIC;
     }
 
     assert!(process_instruction(

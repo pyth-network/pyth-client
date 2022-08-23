@@ -7,8 +7,8 @@ use solana_program::pubkey::Pubkey;
 use solana_sdk::signer::Signer;
 
 use crate::c_oracle_header::{
-    pc_map_table_t,
-    pc_pub_key_t,
+    CPubkey,
+    MappingAccount,
 };
 use crate::tests::pyth_simulator::PythSimulator;
 use crate::utils::pubkey_equal;
@@ -43,7 +43,7 @@ async fn test_del_product() {
     assert!(sim.get_account(product2.pubkey()).await.is_none());
 
     let mapping_data = sim
-        .get_account_data_as::<pc_map_table_t>(mapping_keypair.pubkey())
+        .get_account_data_as::<MappingAccount>(mapping_keypair.pubkey())
         .await
         .unwrap();
     assert!(mapping_product_list_equals(
@@ -60,7 +60,7 @@ async fn test_del_product() {
 
     assert!(sim.del_product(&mapping_keypair, &product4).await.is_ok());
     let mapping_data = sim
-        .get_account_data_as::<pc_map_table_t>(mapping_keypair.pubkey())
+        .get_account_data_as::<MappingAccount>(mapping_keypair.pubkey())
         .await
         .unwrap();
 
@@ -72,19 +72,19 @@ async fn test_del_product() {
 
 /// Returns true if the list of products in `mapping_data` contains the keys in `expected` (in the
 /// same order). Also checks `mapping_data.num_` and `size_`.
-fn mapping_product_list_equals(mapping_data: &pc_map_table_t, expected: Vec<Pubkey>) -> bool {
-    if mapping_data.num_ != expected.len() as u32 {
+fn mapping_product_list_equals(mapping_data: &MappingAccount, expected: Vec<Pubkey>) -> bool {
+    if mapping_data.number_of_products != expected.len() as u32 {
         return false;
     }
 
-    let expected_size = (size_of::<pc_map_table_t>() - size_of_val(&mapping_data.prod_)
-        + expected.len() * size_of::<pc_pub_key_t>()) as u32;
-    if mapping_data.size_ != expected_size {
+    let expected_size = (size_of::<MappingAccount>() - size_of_val(&mapping_data.product_list)
+        + expected.len() * size_of::<CPubkey>()) as u32;
+    if mapping_data.header.size != expected_size {
         return false;
     }
 
     for i in 0..expected.len() {
-        if !pubkey_equal(&mapping_data.prod_[i], &expected[i].to_bytes()) {
+        if !pubkey_equal(&mapping_data.product_list[i], &expected[i].to_bytes()) {
             return false;
         }
     }

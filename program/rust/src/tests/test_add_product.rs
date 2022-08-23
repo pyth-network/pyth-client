@@ -1,8 +1,8 @@
 use std::mem::size_of;
 
 use crate::c_oracle_header::{
-    pc_map_table_t,
-    pc_prod_t,
+    MappingAccount,
+    ProductAccount,
     PythAccount,
     PC_ACCTYPE_PRODUCT,
     PC_MAGIC,
@@ -44,14 +44,14 @@ fn test_add_product() {
     let mut funding_setup = AccountSetup::new_funding();
     let funding_account = funding_setup.to_account_info();
 
-    let mut mapping_setup = AccountSetup::new::<pc_map_table_t>(&program_id);
+    let mut mapping_setup = AccountSetup::new::<MappingAccount>(&program_id);
     let mapping_account = mapping_setup.to_account_info();
-    initialize_pyth_account_checked::<pc_map_table_t>(&mapping_account, PC_VERSION).unwrap();
+    initialize_pyth_account_checked::<MappingAccount>(&mapping_account, PC_VERSION).unwrap();
 
-    let mut product_setup = AccountSetup::new::<pc_prod_t>(&program_id);
+    let mut product_setup = AccountSetup::new::<ProductAccount>(&program_id);
     let product_account = product_setup.to_account_info();
 
-    let mut product_setup_2 = AccountSetup::new::<pc_prod_t>(&program_id);
+    let mut product_setup_2 = AccountSetup::new::<ProductAccount>(&program_id);
     let product_account_2 = product_setup_2.to_account_info();
 
     assert!(process_instruction(
@@ -66,17 +66,20 @@ fn test_add_product() {
     .is_ok());
 
     {
-        let product_data = load_account_as::<pc_prod_t>(&product_account).unwrap();
-        let mapping_data = load_checked::<pc_map_table_t>(&mapping_account, PC_VERSION).unwrap();
+        let product_data = load_account_as::<ProductAccount>(&product_account).unwrap();
+        let mapping_data = load_checked::<MappingAccount>(&mapping_account, PC_VERSION).unwrap();
 
-        assert_eq!(product_data.magic_, PC_MAGIC);
-        assert_eq!(product_data.ver_, PC_VERSION);
-        assert_eq!(product_data.type_, PC_ACCTYPE_PRODUCT);
-        assert_eq!(product_data.size_, size_of::<pc_prod_t>() as u32);
-        assert_eq!(mapping_data.num_, 1);
-        assert_eq!(mapping_data.size_, (pc_map_table_t::INITIAL_SIZE + 32));
+        assert_eq!(product_data.header.magic_number, PC_MAGIC);
+        assert_eq!(product_data.header.version, PC_VERSION);
+        assert_eq!(product_data.header.account_type, PC_ACCTYPE_PRODUCT);
+        assert_eq!(product_data.header.size, size_of::<ProductAccount>() as u32);
+        assert_eq!(mapping_data.number_of_products, 1);
+        assert_eq!(
+            mapping_data.header.size,
+            (MappingAccount::INITIAL_SIZE + 32)
+        );
         assert!(pubkey_equal(
-            &mapping_data.prod_[0],
+            &mapping_data.product_list[0],
             &product_account.key.to_bytes()
         ));
     }
@@ -92,11 +95,14 @@ fn test_add_product() {
     )
     .is_ok());
     {
-        let mapping_data = load_checked::<pc_map_table_t>(&mapping_account, PC_VERSION).unwrap();
-        assert_eq!(mapping_data.num_, 2);
-        assert_eq!(mapping_data.size_, (pc_map_table_t::INITIAL_SIZE + 2 * 32));
+        let mapping_data = load_checked::<MappingAccount>(&mapping_account, PC_VERSION).unwrap();
+        assert_eq!(mapping_data.number_of_products, 2);
+        assert_eq!(
+            mapping_data.header.size,
+            (MappingAccount::INITIAL_SIZE + 2 * 32)
+        );
         assert!(pubkey_equal(
-            &mapping_data.prod_[1],
+            &mapping_data.product_list[1],
             &product_account_2.key.to_bytes()
         ));
     }
@@ -130,7 +136,7 @@ fn test_add_product() {
 
     // test fill up of mapping table
     clear_account(&mapping_account).unwrap();
-    initialize_pyth_account_checked::<pc_map_table_t>(&mapping_account, PC_VERSION).unwrap();
+    initialize_pyth_account_checked::<MappingAccount>(&mapping_account, PC_VERSION).unwrap();
 
     for i in 0..PC_MAP_TABLE_SIZE {
         clear_account(&product_account).unwrap();
@@ -145,12 +151,12 @@ fn test_add_product() {
             instruction_data
         )
         .is_ok());
-        let mapping_data = load_checked::<pc_map_table_t>(&mapping_account, PC_VERSION).unwrap();
+        let mapping_data = load_checked::<MappingAccount>(&mapping_account, PC_VERSION).unwrap();
         assert_eq!(
-            mapping_data.size_,
-            pc_map_table_t::INITIAL_SIZE + (i + 1) * 32
+            mapping_data.header.size,
+            MappingAccount::INITIAL_SIZE + (i + 1) * 32
         );
-        assert_eq!(mapping_data.num_, i + 1);
+        assert_eq!(mapping_data.number_of_products, i + 1);
     }
 
     clear_account(&product_account).unwrap();
@@ -168,6 +174,6 @@ fn test_add_product() {
         Err(ProgramError::InvalidArgument)
     );
 
-    let mapping_data = load_checked::<pc_map_table_t>(&mapping_account, PC_VERSION).unwrap();
-    assert_eq!(mapping_data.num_, PC_MAP_TABLE_SIZE);
+    let mapping_data = load_checked::<MappingAccount>(&mapping_account, PC_VERSION).unwrap();
+    assert_eq!(mapping_data.number_of_products, PC_MAP_TABLE_SIZE);
 }

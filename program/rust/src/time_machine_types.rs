@@ -1,9 +1,8 @@
 use crate::c_oracle_header::{
-    pc_price_t,
+    PriceAccount,
     PythAccount,
     EXTRA_PUBLISHER_SPACE,
     PC_ACCTYPE_PRICE,
-    PC_PRICE_T_COMP_OFFSET,
 };
 use crate::error::OracleError;
 use bytemuck::{
@@ -12,6 +11,8 @@ use bytemuck::{
 };
 use solana_program::msg;
 
+#[allow(dead_code)]
+pub const PRICE_ACCOUNT_SIZE: usize = 6176;
 
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
@@ -27,7 +28,7 @@ pub struct TimeMachineWrapper {
 /// wraps everything stored in a price account
 pub struct PriceAccountWrapper {
     //an instance of the c price_t type
-    pub price_data:            pc_price_t,
+    pub price_data:            PriceAccount,
     //space for more publishers
     pub extra_publisher_space: [u8; EXTRA_PUBLISHER_SPACE as usize],
     //TimeMachine
@@ -55,18 +56,16 @@ unsafe impl Pod for PriceAccountWrapper {
 
 impl PythAccount for PriceAccountWrapper {
     const ACCOUNT_TYPE: u32 = PC_ACCTYPE_PRICE;
-    const INITIAL_SIZE: u32 = PC_PRICE_T_COMP_OFFSET as u32;
+    const INITIAL_SIZE: u32 = PriceAccount::INITIAL_SIZE;
 }
 
 #[cfg(test)]
 pub mod tests {
-    use crate::c_oracle_header::{
-        PRICE_ACCOUNT_SIZE,
-        TIME_MACHINE_STRUCT_SIZE,
-    };
+    use crate::c_oracle_header::TIME_MACHINE_STRUCT_SIZE;
     use crate::time_machine_types::{
         PriceAccountWrapper,
         TimeMachineWrapper,
+        PRICE_ACCOUNT_SIZE,
     };
     use std::mem::size_of;
     #[test]

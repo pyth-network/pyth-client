@@ -7,7 +7,7 @@ use bytemuck::{
 };
 
 use crate::c_oracle_header::{
-    pc_acc,
+    AccountHeader,
     PythAccount,
     PC_MAGIC,
 };
@@ -71,11 +71,11 @@ pub fn load_checked<'a, T: PythAccount>(
     version: u32,
 ) -> Result<RefMut<'a, T>, ProgramError> {
     {
-        let account_header = load_account_as::<pc_acc>(account)?;
+        let account_header = load_account_as::<AccountHeader>(account)?;
         pyth_assert(
-            account_header.magic_ == PC_MAGIC
-                && account_header.ver_ == version
-                && account_header.type_ == T::ACCOUNT_TYPE,
+            account_header.magic_number == PC_MAGIC
+                && account_header.version == version
+                && account_header.account_type == T::ACCOUNT_TYPE,
             ProgramError::InvalidArgument,
         )?;
     }
@@ -90,11 +90,11 @@ pub fn initialize_pyth_account_checked<'a, T: PythAccount>(
     clear_account(account)?;
 
     {
-        let mut account_header = load_account_as_mut::<pc_acc>(account)?;
-        account_header.magic_ = PC_MAGIC;
-        account_header.ver_ = version;
-        account_header.type_ = T::ACCOUNT_TYPE;
-        account_header.size_ = T::INITIAL_SIZE;
+        let mut account_header = load_account_as_mut::<AccountHeader>(account)?;
+        account_header.magic_number = PC_MAGIC;
+        account_header.version = version;
+        account_header.account_type = T::ACCOUNT_TYPE;
+        account_header.size = T::INITIAL_SIZE;
     }
 
     load_account_as_mut::<T>(account)

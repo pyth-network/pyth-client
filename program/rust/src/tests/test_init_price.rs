@@ -3,8 +3,8 @@ use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 
 use crate::c_oracle_header::{
-    pc_price_t,
-    pc_pub_key_t,
+    CPubkey,
+    PriceAccount,
     PC_MAX_NUM_DECIMALS,
     PC_VERSION,
 };
@@ -37,15 +37,15 @@ fn test_init_price() {
     let instruction_data = bytes_of::<InitPriceArgs>(&cmd);
 
     let program_id = Pubkey::new_unique();
-    let publisher = pc_pub_key_t::new_unique();
-    let publisher2 = pc_pub_key_t::new_unique();
-    let product = pc_pub_key_t::new_unique();
-    let next_price = pc_pub_key_t::new_unique();
+    let publisher = CPubkey::new_unique();
+    let publisher2 = CPubkey::new_unique();
+    let product = CPubkey::new_unique();
+    let next_price = CPubkey::new_unique();
 
     let mut funding_setup = AccountSetup::new_funding();
     let funding_account = funding_setup.to_account_info();
 
-    let mut price_setup = AccountSetup::new::<pc_price_t>(&program_id);
+    let mut price_setup = AccountSetup::new::<PriceAccount>(&program_id);
     let mut price_account = price_setup.to_account_info();
 
     // Price account must be initialized
@@ -58,17 +58,17 @@ fn test_init_price() {
         Err(ProgramError::InvalidArgument)
     );
 
-    initialize_pyth_account_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
+    initialize_pyth_account_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
     {
-        let mut price_data = load_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
-        price_data.ptype_ = ptype;
-        price_data.expo_ = 0;
+        let mut price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        price_data.price_type = ptype;
+        price_data.exponent = 0;
         price_data.min_pub_ = 7;
         price_data.num_ = 4;
         pubkey_assign(&mut price_data.comp_[0].pub_, bytes_of(&publisher));
         pubkey_assign(&mut price_data.comp_[3].pub_, bytes_of(&publisher2));
-        pubkey_assign(&mut price_data.prod_, bytes_of(&product));
-        pubkey_assign(&mut price_data.next_, bytes_of(&next_price));
+        pubkey_assign(&mut price_data.product_account, bytes_of(&product));
+        pubkey_assign(&mut price_data.next_price_account, bytes_of(&next_price));
 
         price_data.last_slot_ = 100;
         price_data.valid_slot_ = 100;
@@ -101,10 +101,10 @@ fn test_init_price() {
     .is_ok());
 
     {
-        let price_data = load_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
 
-        assert_eq!(price_data.expo_, -2);
-        assert_eq!(price_data.ptype_, ptype);
+        assert_eq!(price_data.exponent, -2);
+        assert_eq!(price_data.price_type, ptype);
         assert_eq!(price_data.min_pub_, 7);
         assert_eq!(price_data.num_, 4);
         assert!(pubkey_equal(
@@ -115,8 +115,14 @@ fn test_init_price() {
             &price_data.comp_[3].pub_,
             bytes_of(&publisher2)
         ));
-        assert!(pubkey_equal(&price_data.prod_, bytes_of(&product)));
-        assert!(pubkey_equal(&price_data.next_, bytes_of(&next_price)));
+        assert!(pubkey_equal(
+            &price_data.product_account,
+            bytes_of(&product)
+        ));
+        assert!(pubkey_equal(
+            &price_data.next_price_account,
+            bytes_of(&next_price)
+        ));
 
         assert_eq!(price_data.last_slot_, 0);
         assert_eq!(price_data.valid_slot_, 0);
