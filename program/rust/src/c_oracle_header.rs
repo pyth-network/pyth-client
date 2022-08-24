@@ -36,6 +36,7 @@ pub trait PythAccount: Pod {
 
 impl PythAccount for MappingAccount {
     const ACCOUNT_TYPE: u32 = PC_ACCTYPE_MAPPING;
+    /// Equal to the offset of `prod_` in `MappingAccount`, see the trait comment for more detail
     const INITIAL_SIZE: u32 = PC_MAP_TABLE_T_PROD_OFFSET as u32;
 }
 
@@ -49,6 +50,7 @@ impl PythAccount for ProductAccount {
 
 impl PythAccount for PriceAccount {
     const ACCOUNT_TYPE: u32 = PC_ACCTYPE_PRICE;
+    /// Equal to the offset of `comp_` in `PriceAccount`, see the trait comment for more detail
     const INITIAL_SIZE: u32 = PC_PRICE_T_COMP_OFFSET as u32;
 }
 
@@ -59,28 +61,45 @@ pub struct PriceAccount {
     pub ver_:            u32,
     pub type_:           u32,
     pub size_:           u32,
-    pub ptype_:          u32,      // Type of the price account
-    pub expo_:           i32,      // Exponent for the published prices
-    pub num_:            u32,      // Current number of authorized publishers
-    pub num_qt_:         u32,      // Number of valid quotes for the last aggregation
-    pub last_slot_:      u64,      // Last slot with a succesful aggregation (status : TRADING)
-    pub valid_slot_:     u64,      // Second to last slot where aggregation was attempted
-    pub twap_:           PriceEma, // Ema for price
-    pub twac_:           PriceEma, // Ema for confidence
-    pub timestamp_:      i64,      // Last time aggregation was attempted
-    pub min_pub_:        u8,       // Minimum valid publisher quotes for a succesful aggregation
+    /// Type of the price account
+    pub ptype_:          u32,
+    /// Exponent for the published prices
+    pub expo_:           i32,
+    /// Current number of authorized publishers
+    pub num_:            u32,
+    /// Number of valid quotes for the last aggregation
+    pub num_qt_:         u32,
+    /// Last slot with a succesful aggregation (status : TRADING)
+    pub last_slot_:      u64,
+    /// Second to last slot where aggregation was attempted
+    pub valid_slot_:     u64,
+    /// Ema for price
+    pub twap_:           PriceEma,
+    /// Ema for confidence
+    pub twac_:           PriceEma,
+    /// Last time aggregation was attempted
+    pub timestamp_:      i64,
+    /// Minimum valid publisher quotes for a succesful aggregation
+    pub min_pub_:        u8,
     pub unused_1_:       i8,
     pub unused_2_:       i16,
     pub unused_3_:       i32,
-    pub prod_:           CPubkey, // Corresponding mapping account
-    pub next_:           CPubkey, // Next price account in the list
-    pub prev_slot_:      u64,     /* Second to last slot where aggregation was succesful
-                                   * (status : TRADING) */
-    pub prev_price_:     i64,       // Aggregate price at prev_slot_
-    pub prev_conf_:      u64,       // Confidence interval at prev_slot_
-    pub prev_timestamp_: i64,       // Timestamp of prev_slot_
-    pub agg_:            PriceInfo, // Last attempted aggregate results
-    pub comp_:           [PriceComponent; 32usize], // Publisher's price components
+    /// Corresponding product account
+    pub prod_:           CPubkey,
+    /// Next price account in the list
+    pub next_:           CPubkey,
+    /// Second to last slot where aggregation was succesful (i.e. status : TRADING)
+    pub prev_slot_:      u64,
+    /// Aggregate price at prev_slot_
+    pub prev_price_:     i64,
+    /// Confidence interval at prev_slot_
+    pub prev_conf_:      u64,
+    /// Timestamp of prev_slot_
+    pub prev_timestamp_: i64,
+    /// Last attempted aggregate results
+    pub agg_:            PriceInfo,
+    /// Publishers' price components
+    pub comp_:           [PriceComponent; PC_COMP_SIZE as usize],
 }
 
 #[repr(C)]
@@ -138,7 +157,7 @@ pub struct MappingAccount {
     pub num_:    u32,
     pub unused_: u32,
     pub next_:   CPubkey,
-    pub prod_:   [CPubkey; 640usize],
+    pub prod_:   [CPubkey; PC_MAP_TABLE_SIZE as usize],
 }
 
 // Unsafe impl because CPubkey is a union
