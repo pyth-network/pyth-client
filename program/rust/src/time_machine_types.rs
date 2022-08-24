@@ -10,7 +10,6 @@ use bytemuck::{
     Pod,
     Zeroable,
 };
-use solana_program::msg;
 
 
 #[derive(Debug, Clone, Copy)]
@@ -35,12 +34,12 @@ pub struct PriceAccountWrapper {
 }
 impl PriceAccountWrapper {
     pub fn initialize_time_machine(&mut self) -> Result<(), OracleError> {
-        msg!("implement me");
+        // TO DO
         Ok(())
     }
 
     pub fn add_price_to_time_machine(&mut self) -> Result<(), OracleError> {
-        msg!("implement me");
+        // TO DO
         Ok(())
     }
 }
