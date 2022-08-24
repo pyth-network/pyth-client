@@ -1,5 +1,5 @@
 use crate::c_oracle_header::{
-    pc_pub_key_t,
+    CPubkey,
     PC_VERSION,
 };
 use crate::deserialize::load;
@@ -122,7 +122,7 @@ pub type InitPriceArgs = AddPriceArgs;
 #[derive(Zeroable, Pod, Copy, Clone)]
 pub struct AddPublisherArgs {
     pub header:    CommandHeader,
-    pub publisher: pc_pub_key_t,
+    pub publisher: CPubkey,
 }
 
 pub type DelPublisherArgs = AddPublisherArgs;

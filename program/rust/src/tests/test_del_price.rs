@@ -1,6 +1,6 @@
 use solana_sdk::signer::Signer;
 
-use crate::c_oracle_header::pc_prod_t;
+use crate::c_oracle_header::ProductAccount;
 use crate::tests::pyth_simulator::PythSimulator;
 use crate::utils::pubkey_is_zero;
 
@@ -28,7 +28,7 @@ async fn test_del_price() {
     assert!(sim.get_account(price1.pubkey()).await.is_none());
 
     let product1_data = sim
-        .get_account_data_as::<pc_prod_t>(product1.pubkey())
+        .get_account_data_as::<ProductAccount>(product1.pubkey())
         .await
         .unwrap();
     assert!(pubkey_is_zero(&product1_data.px_acc_));
@@ -44,7 +44,7 @@ async fn test_del_price() {
     assert!(sim.get_account(price2_1.pubkey()).await.is_none());
 
     let product2_data = sim
-        .get_account_data_as::<pc_prod_t>(product2.pubkey())
+        .get_account_data_as::<ProductAccount>(product2.pubkey())
         .await
         .unwrap();
 

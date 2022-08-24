@@ -1,5 +1,5 @@
 use crate::c_oracle_header::{
-    pc_price_t,
+    PriceAccount,
     PythAccount,
     EXTRA_PUBLISHER_SPACE,
     PC_ACCTYPE_PRICE,
@@ -27,7 +27,7 @@ pub struct TimeMachineWrapper {
 /// wraps everything stored in a price account
 pub struct PriceAccountWrapper {
     //an instance of the c price_t type
-    pub price_data:            pc_price_t,
+    pub price_data:            PriceAccount,
     //space for more publishers
     pub extra_publisher_space: [u8; EXTRA_PUBLISHER_SPACE as usize],
     //TimeMachine

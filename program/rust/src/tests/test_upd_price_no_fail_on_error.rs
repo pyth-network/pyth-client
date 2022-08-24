@@ -3,7 +3,7 @@ use solana_program::pubkey::Pubkey;
 use std::mem::size_of;
 
 use crate::c_oracle_header::{
-    pc_price_t,
+    PriceAccount,
     PC_STATUS_TRADING,
     PC_STATUS_UNKNOWN,
     PC_VERSION,
@@ -33,10 +33,10 @@ fn test_upd_price_no_fail_on_error_no_fail_on_error() {
     let mut funding_setup = AccountSetup::new_funding();
     let funding_account = funding_setup.to_account_info();
 
-    let mut price_setup = AccountSetup::new::<pc_price_t>(&program_id);
+    let mut price_setup = AccountSetup::new::<PriceAccount>(&program_id);
     let mut price_account = price_setup.to_account_info();
     price_account.is_signer = false;
-    initialize_pyth_account_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
+    initialize_pyth_account_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
 
     let mut clock_setup = AccountSetup::new_clock();
     let mut clock_account = clock_setup.to_account_info();
@@ -80,7 +80,7 @@ fn test_upd_price_no_fail_on_error_no_fail_on_error() {
 
 
     {
-        let mut price_data = load_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
+        let mut price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
         assert_eq!(price_data.comp_[0].latest_.price_, 0);
         assert_eq!(price_data.comp_[0].latest_.conf_, 0);
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 0);
@@ -111,7 +111,7 @@ fn test_upd_price_no_fail_on_error_no_fail_on_error() {
     .is_ok());
 
     {
-        let price_data = load_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
         assert_eq!(price_data.comp_[0].latest_.price_, 42);
         assert_eq!(price_data.comp_[0].latest_.conf_, 9);
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 1);
@@ -153,7 +153,7 @@ fn test_upd_price_no_fail_on_error_no_fail_on_error() {
     .is_ok());
 
     {
-        let price_data = load_checked::<pc_price_t>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
         assert_eq!(price_data.comp_[0].latest_.price_, 42);
         assert_eq!(price_data.comp_[0].latest_.conf_, 9);
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 1);
