@@ -827,8 +827,8 @@ bool price::send( price *prices[], const unsigned n )
             .add( "product_account", *p1->prod_->get_account() )
             .add( "symbol", p1->get_symbol() )
             .add( "price_type", price_type_to_str( p1->get_price_type() ) )
-            .add( "sig", p1->tvec_.back().first )
-            .add( "pub_slot", p1->preq_->get_slot() )
+            .add( "sig", p->tvec_.back().first )
+            .add( "pub_slot", p->preq_->get_slot() )
             .end();
           if ( PC_UNLIKELY( p1->tvec_.size() >= 100 ) ) {
             PC_LOG_WRN( "too many unacked price update transactions" )
