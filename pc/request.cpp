@@ -815,12 +815,12 @@ bool price::send( price *prices[], const unsigned n )
       }
       else {
         p->get_rpc_client()->send( &upds_[ 0 ], upds_.size(), mgr->get_requested_upd_price_cu_units(), mgr->get_requested_upd_price_cu_price() );
+        p->tvec_.emplace_back(
+          std::string( 100, '\0' ), p->preq_->get_sent_time()
+        );
+        p->preq_->get_signature()->enc_base58( p->tvec_.back().first );
         for ( unsigned k = j; k <= i; ++k ) {
           price *const p1 = prices[ k ];
-          p1->tvec_.emplace_back(
-            std::string( 100, '\0' ), p1->preq_->get_sent_time()
-          );
-          p1->preq_->get_signature()->enc_base58( p1->tvec_.back().first );
           PC_LOG_DBG( "sent price update" )
             .add( "secondary", mgr->get_is_secondary() )
             .add( "price_account", *p1->get_account() )
