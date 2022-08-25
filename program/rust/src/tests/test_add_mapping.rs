@@ -1,5 +1,5 @@
 use crate::c_oracle_header::{
-    pc_map_table_t,
+    MappingAccount,
     PC_MAGIC,
     PC_MAP_TABLE_SIZE,
     PC_VERSION,
@@ -35,16 +35,16 @@ fn test_add_mapping() {
     let mut funding_setup = AccountSetup::new_funding();
     let funding_account = funding_setup.to_account_info();
 
-    let mut curr_mapping_setup = AccountSetup::new::<pc_map_table_t>(&program_id);
+    let mut curr_mapping_setup = AccountSetup::new::<MappingAccount>(&program_id);
     let cur_mapping = curr_mapping_setup.to_account_info();
-    initialize_pyth_account_checked::<pc_map_table_t>(&cur_mapping, PC_VERSION).unwrap();
+    initialize_pyth_account_checked::<MappingAccount>(&cur_mapping, PC_VERSION).unwrap();
 
-    let mut next_mapping_setup = AccountSetup::new::<pc_map_table_t>(&program_id);
+    let mut next_mapping_setup = AccountSetup::new::<MappingAccount>(&program_id);
     let next_mapping = next_mapping_setup.to_account_info();
 
     {
         let mut cur_mapping_data =
-            load_checked::<pc_map_table_t>(&cur_mapping, PC_VERSION).unwrap();
+            load_checked::<MappingAccount>(&cur_mapping, PC_VERSION).unwrap();
         cur_mapping_data.num_ = PC_MAP_TABLE_SIZE;
     }
 
@@ -60,9 +60,9 @@ fn test_add_mapping() {
     .is_ok());
 
     {
-        let next_mapping_data = load_checked::<pc_map_table_t>(&next_mapping, PC_VERSION).unwrap();
+        let next_mapping_data = load_checked::<MappingAccount>(&next_mapping, PC_VERSION).unwrap();
         let mut cur_mapping_data =
-            load_checked::<pc_map_table_t>(&cur_mapping, PC_VERSION).unwrap();
+            load_checked::<MappingAccount>(&cur_mapping, PC_VERSION).unwrap();
 
         assert!(pubkey_equal(
             &cur_mapping_data.next_,
@@ -90,7 +90,7 @@ fn test_add_mapping() {
 
     {
         let mut cur_mapping_data =
-            load_checked::<pc_map_table_t>(&cur_mapping, PC_VERSION).unwrap();
+            load_checked::<MappingAccount>(&cur_mapping, PC_VERSION).unwrap();
         assert!(pubkey_is_zero(&cur_mapping_data.next_));
         cur_mapping_data.num_ = PC_MAP_TABLE_SIZE;
         cur_mapping_data.magic_ = 0;
@@ -110,7 +110,7 @@ fn test_add_mapping() {
     );
 
     {
-        let mut cur_mapping_data = load_account_as_mut::<pc_map_table_t>(&cur_mapping).unwrap();
+        let mut cur_mapping_data = load_account_as_mut::<MappingAccount>(&cur_mapping).unwrap();
         cur_mapping_data.magic_ = PC_MAGIC;
     }
 

@@ -7,7 +7,7 @@ use bytemuck::{
 };
 
 use crate::c_oracle_header::{
-    pc_acc,
+    AccountHeader,
     PythAccount,
     PC_MAGIC,
 };
@@ -71,7 +71,7 @@ pub fn load_checked<'a, T: PythAccount>(
     version: u32,
 ) -> Result<RefMut<'a, T>, ProgramError> {
     {
-        let account_header = load_account_as::<pc_acc>(account)?;
+        let account_header = load_account_as::<AccountHeader>(account)?;
         pyth_assert(
             account_header.magic_ == PC_MAGIC
                 && account_header.ver_ == version
@@ -90,7 +90,7 @@ pub fn initialize_pyth_account_checked<'a, T: PythAccount>(
     clear_account(account)?;
 
     {
-        let mut account_header = load_account_as_mut::<pc_acc>(account)?;
+        let mut account_header = load_account_as_mut::<AccountHeader>(account)?;
         account_header.magic_ = PC_MAGIC;
         account_header.ver_ = version;
         account_header.type_ = T::ACCOUNT_TYPE;
