@@ -228,7 +228,7 @@ impl PythSimulator {
     }
 
     /// Resize a price account (using the resize_price_account
-    /// instruction). Returns the keypair associated with the newly-created account.
+    /// instruction).
     pub async fn resize_price_account(
         &mut self,
         price_keypair: &Keypair,
