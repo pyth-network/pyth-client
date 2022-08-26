@@ -13,6 +13,8 @@ use std::mem::size_of;
 //things defined in bindings.h
 include!("../bindings.rs");
 
+pub const PERMISSIONS_SEED: &str = "permissions";
+
 /// The PythAccount trait's purpose is to attach constants to the 3 types of accounts that Pyth has
 /// (mapping, price, product). This allows less duplicated code, because now we can create generic
 /// functions to perform common checks on the accounts and to load and initialize the accounts.

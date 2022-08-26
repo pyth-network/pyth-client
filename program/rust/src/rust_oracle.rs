@@ -17,8 +17,9 @@ use crate::c_oracle_header::{
     PC_PROD_ACC_SIZE,
     PC_PTYPE_UNKNOWN,
     PC_STATUS_UNKNOWN,
-    PC_VERSION,
+    PC_VERSION, PERMISSIONS_SEED,
 };
+use bincode::deserialize;
 use crate::deserialize::{
     initialize_pyth_account_checked,
     load,
@@ -69,6 +70,7 @@ use solana_program::rent::Rent;
 use solana_program::system_instruction::transfer;
 use solana_program::system_program::check_id;
 use solana_program::sysvar::Sysvar;
+use solana_program::bpf_loader_upgradeable::{UpgradeableLoaderState, self};
 
 const PRICE_T_SIZE: usize = size_of::<PriceAccount>();
 const PRICE_ACCOUNT_SIZE: usize = size_of::<PriceAccountWrapper>();
@@ -779,3 +781,75 @@ pub fn del_product(
 
     Ok(())
 }
+
+
+pub fn upd_authorities(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
+    instruction_data: &[u8],
+) -> ProgramResult {
+    let [upgrade_authority, program_account, programdata_account, permissions_account, system_program] = match accounts {
+        [v, w, x, y, z] => Ok([v, w, x, y, z]),
+        _ => Err(ProgramError::InvalidArgument),
+    }?;
+
+    check_valid_funding_account(upgrade_authority)?;
+    pyth_assert(program_account.key.eq(program_id) && program_account.executable, OracleError::WrongProgramAccount.into())?;
+
+    let program_account_data: UpgradeableLoaderState = bincode::deserialize(&program_account.try_borrow_data()?).map_err(|_| OracleError::InstructionDataSliceMisaligned)?;
+    let programdata_account_data : UpgradeableLoaderState = bincode::deserialize(&program_account.try_borrow_data()?).map_err(|_| OracleError::InstructionDataSliceMisaligned)?;
+
+    if let  UpgradeableLoaderState::Program { programdata_address } =  program_account_data {
+        pyth_assert(programdata_address.eq(program_account.key), OracleError::Generic.into())?;
+    }
+    else {
+        return Err(OracleError::Generic.into())
+    }
+
+    if let  UpgradeableLoaderState::ProgramData { slot, upgrade_authority_address } =  programdata_account_data  {
+        if let Some(upgrade_authority_key) = upgrade_authority_address{
+        pyth_assert(upgrade_authority_key.eq(upgrade_authority.key), OracleError::Generic.into())?;
+        }
+        else {
+            return Err(OracleError::Generic.into())
+        }
+    }
+    else {
+        return Err(OracleError::Generic.into())
+    }
+
+    let (pda_address, __bump) =
+    Pubkey::find_program_address(&[PERMISSIONS_SEED.as_bytes()], program_id);
+
+    pyth_assert(pda_address.eq(permissions_account.key), OracleError::Generic.into());
+
+    // Create account if it doesn't exist
+    if permissions_account.lamports == 0{
+        todo!()
+    }
+
+    check_valid_writable_account(program_id, permissions_account, 1000)?;
+    load_checked(account, version);
+
+    
+
+    Ok(())
+    }
+
+    // check_upgrade_authority(upgrade_authority, program_account, program_id);
+// bincode::deserialize
+   
+    
+
+
+// pub fn check_upgrade_authority(upgrade_authority : &AccountInfo, program_account : &AccountInfo, program_id : &Pubkey) -> Result<(), ProgramError>{
+    
+   
+
+//     let upgradable_loader_state = UpgradeableLoaderState::tr(&mut data)?;
+//     let mut data: &[u8] = &self.info.try_borrow_data()?;
+//     let upgradable_loader_state = UpgradeableLoaderState::try_deserialize_unchecked()
+
+
+    
+// }

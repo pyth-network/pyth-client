@@ -21,7 +21,7 @@ use crate::rust_oracle::{
     set_min_pub,
     upd_price,
     upd_price_no_fail_on_error,
-    upd_product,
+    upd_product, upd_authorities,
 };
 
 ///dispatch to the right instruction in the oracle
@@ -52,5 +52,6 @@ pub fn process_instruction(
         }
         OracleCommand::DelPrice => del_price(program_id, accounts, instruction_data),
         OracleCommand::DelProduct => del_product(program_id, accounts, instruction_data),
+        OracleCommand::UpdAuthorities => upd_authorities(program_id, accounts, instruction_data)
     }
 }
