@@ -11,6 +11,7 @@ use crate::instruction::{
 use crate::OracleError;
 use num_traits::FromPrimitive;
 use solana_program::account_info::AccountInfo;
+use solana_program::bpf_loader_upgradeable::UpgradeableLoaderState;
 use solana_program::program_error::ProgramError;
 use solana_program::program_memory::sol_memset;
 use solana_program::pubkey::Pubkey;
@@ -165,4 +166,65 @@ pub fn is_component_update(cmd_args: &UpdPriceArgs) -> Result<bool, OracleError>
         OracleCommand::UpdPrice | OracleCommand::UpdPriceNoFailOnError => Ok(true),
         _ => Ok(false),
     }
+}
+
+pub fn check_pda_with_bump(
+    pda_account: &AccountInfo,
+    seeds: &[&[u8]],
+    program_id: &Pubkey,
+) -> Result<(), ProgramError> {
+    let (pda_address, __bump) = Pubkey::find_program_address(seeds, program_id);
+    pyth_assert(
+        pda_address.eq(pda_account.key),
+        OracleError::FailedPDAVerification.into(),
+    )?;
+    Ok(())
+}
+
+pub fn check_is_valid_upgradeauthority_program_programdata_triplet(
+    upgrade_authority: &AccountInfo,
+    program_account: &AccountInfo,
+    programdata_account: &AccountInfo,
+    program_id: &Pubkey,
+) -> Result<(), ProgramError> {
+    let program_account_data: UpgradeableLoaderState =
+        bincode::deserialize(&program_account.try_borrow_data()?)
+            .map_err(|_| OracleError::DeserializingError)?;
+    let programdata_account_data: UpgradeableLoaderState =
+        bincode::deserialize(&program_account.try_borrow_data()?)
+            .map_err(|_| OracleError::DeserializingError)?;
+
+    // program_account is actually this program's account
+    pyth_assert(
+        program_account.key.eq(program_id) && program_account.executable,
+        OracleError::FailedAuthenticatingUpgradeAuthority.into(),
+    )?;
+
+    // programdata_account is actually this program's buffer
+    if let UpgradeableLoaderState::Program {
+        programdata_address,
+    } = program_account_data
+    {
+        pyth_assert(
+            programdata_address.eq(programdata_account.key),
+            OracleError::FailedAuthenticatingUpgradeAuthority.into(),
+        )?;
+    } else {
+        return Err(OracleError::FailedAuthenticatingUpgradeAuthority.into());
+    }
+
+    // upgrade_authority is actually the authority inside programdata_account
+    if let UpgradeableLoaderState::ProgramData {
+        slot: _,
+        upgrade_authority_address: Some(upgrade_authority_key),
+    } = programdata_account_data
+    {
+        pyth_assert(
+            upgrade_authority_key.eq(upgrade_authority.key),
+            OracleError::FailedAuthenticatingUpgradeAuthority.into(),
+        )?;
+    } else {
+        return Err(OracleError::FailedAuthenticatingUpgradeAuthority.into());
+    }
+    Ok(())
 }

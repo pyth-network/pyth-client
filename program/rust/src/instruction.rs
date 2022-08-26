@@ -97,7 +97,7 @@ pub enum OracleCommand {
     // key[2] programdata account       []
     // key[3] permissions account       [writable]
     // key[4] system program            []
-    UpdAuthorities        = 17
+    UpdPermissions        = 17,
 }
 
 #[repr(C)]
@@ -151,4 +151,13 @@ pub struct UpdPriceArgs {
     pub price:           i64,
     pub confidence:      u64,
     pub publishing_slot: u64,
+}
+
+#[repr(C)]
+#[derive(Zeroable, Pod, Copy, Clone)]
+pub struct UpdPermissionsArgs {
+    pub header:                  CommandHeader,
+    pub master_authority:        CPubkey,
+    pub data_curation_authority: CPubkey,
+    pub security_authority:      CPubkey,
 }

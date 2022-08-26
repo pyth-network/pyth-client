@@ -56,6 +56,7 @@ const uint64_t EXTRA_PUBLISHER_SPACE = 1000ULL;
 #define PC_ACCTYPE_PRODUCT    2
 #define PC_ACCTYPE_PRICE      3
 #define PC_ACCTYPE_TEST       4
+#define PC_ACCTYPE_PERMISSIONS       5
 
 // binary version of sysvar_clock account id
 const uint64_t sysvar_clock[] = {

@@ -56,6 +56,23 @@ impl PythAccount for PriceAccount {
     const INITIAL_SIZE: u32 = PC_PRICE_T_COMP_OFFSET as u32;
 }
 
+impl PythAccount for PermissionAccount {
+    const ACCOUNT_TYPE: u32 = PC_ACCTYPE_PERMISSIONS;
+    /// Equal to the offset of `comp_` in `PriceAccount`, see the trait comment for more detail
+    const INITIAL_SIZE: u32 = size_of::<PermissionAccount>() as u32;
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Pod, Zeroable)]
+pub struct PermissionAccount {
+    pub header:                  AccountHeader,
+    pub bump:                    u8,
+    pub unused_:                 [u8; 7],
+    pub master_authority:        CPubkey,
+    pub data_curation_authority: CPubkey,
+    pub security_authority:      CPubkey,
+}
+
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]
 pub struct PriceAccount {
