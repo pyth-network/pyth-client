@@ -4,6 +4,10 @@ use bytemuck::{
     bytes_of,
     Pod,
 };
+use solana_program::bpf_loader_upgradeable::{
+    self,
+    UpgradeableLoaderState,
+};
 use solana_program::hash::Hash;
 use solana_program::instruction::{
     AccountMeta,
@@ -11,6 +15,7 @@ use solana_program::instruction::{
 };
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
+use solana_program::stake_history::Epoch;
 use solana_program::system_instruction;
 use solana_program_test::{
     processor,
@@ -227,6 +232,35 @@ impl PythSimulator {
     /// Get the account at `key`. Returns `None` if no such account exists.
     pub async fn get_account(&mut self, key: Pubkey) -> Option<Account> {
         self.banks_client.get_account(key).await.unwrap()
+    }
+
+    // Sets up pyth oracle as an upgradable program, returns the addresses of (program, programdata)
+    // By default tests will deploy the pyth program as non upgradable
+    // This function deploys it as upgradable
+    pub async fn setup_pyth_oracle_as_upgradable(&mut self) -> (Pubkey, Pubkey) {
+        let non_upgradable_program = self.get_account(self.program_id).await.unwrap();
+        let programdata_key = Pubkey::new_unique();
+        let program_key = Pubkey::new_unique();
+
+        let programdata_data = UpgradeableLoaderState::ProgramData {
+            slot:                      1,
+            upgrade_authority_address: Some(self.payer.pubkey()),
+        };
+        let program_data = UpgradeableLoaderState::Program {
+            programdata_address: programdata_key,
+        };
+        let mut programdata_vec = bincode::serialize(&programdata_data).unwrap();
+        programdata_vec.append(&mut non_upgradable_program.data.clone());
+
+        let programdata_account = Account {
+            lamports:   Rent::default().minimum_balance(programdata_vec.len()),
+            data:       programdata_vec,
+            owner:      bpf_loader_upgradeable::ID,
+            executable: false,
+            rent_epoch: Epoch::default(),
+        };
+
+        return (program_key, programdata_key);
     }
 
     /// Get the content of an account as a value of type `T`. This function returns a copy of the
