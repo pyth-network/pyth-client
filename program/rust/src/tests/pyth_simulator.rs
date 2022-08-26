@@ -13,12 +13,15 @@ use solana_program::instruction::{
     AccountMeta,
     Instruction,
 };
+use solana_program::native_token::LAMPORTS_PER_SOL;
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
 use solana_program::stake_history::Epoch;
 use solana_program::system_instruction;
 use solana_program_test::{
+    find_file,
     processor,
+    read_file,
     BanksClient,
     BanksClientError,
     ProgramTest,
@@ -72,6 +75,79 @@ impl PythSimulator {
             last_blockhash: recent_blockhash,
         }
     }
+
+    pub async fn new_upgradable() -> PythSimulator {
+        let mut bpf_data = read_file(find_file("pyth_oracle.so").unwrap_or_else(|| {
+            panic!("Unable to locate {}", "pyth_oracle.so");
+        }));
+
+
+        let mut program_test = ProgramTest::default();
+        let programdata_key = Pubkey::new_unique();
+        let program_key = Pubkey::new_unique();
+
+        let upgrade_authority_keypair = Keypair::new();
+
+        let programdata_data = UpgradeableLoaderState::ProgramData {
+            slot:                      1,
+            upgrade_authority_address: Some(upgrade_authority_keypair.pubkey()),
+        };
+        let program_data = UpgradeableLoaderState::Program {
+            programdata_address: programdata_key,
+        };
+        let mut programdata_vec = bincode::serialize(&programdata_data).unwrap();
+        let program_vec = bincode::serialize(&program_data).unwrap();
+        programdata_vec.append(&mut bpf_data);
+
+
+        let programdata_account = Account {
+            lamports:   Rent::default().minimum_balance(programdata_vec.len()),
+            data:       programdata_vec,
+            owner:      bpf_loader_upgradeable::ID,
+            executable: false,
+            rent_epoch: Epoch::default(),
+        };
+
+        let program_account = Account {
+            lamports:   Rent::default().minimum_balance(program_vec.len()),
+            data:       program_vec,
+            owner:      bpf_loader_upgradeable::ID,
+            executable: true,
+            rent_epoch: Epoch::default(),
+        };
+        program_test.add_account(program_key, program_account);
+        program_test.add_account(programdata_key, programdata_account);
+
+
+        let (mut banks_client, payer, mut recent_blockhash) = program_test.start().await;
+
+        let instruction = system_instruction::transfer(
+            &payer.pubkey(),
+            &upgrade_authority_keypair.pubkey(),
+            1000 * LAMPORTS_PER_SOL,
+        );
+
+        let mut transaction = Transaction::new_with_payer(&[instruction], Some(&payer.pubkey()));
+
+        let blockhash = banks_client
+            .get_new_latest_blockhash(&recent_blockhash)
+            .await
+            .unwrap();
+
+        recent_blockhash = blockhash;
+
+        transaction.partial_sign(&[&payer], recent_blockhash);
+
+        banks_client.process_transaction(transaction).await.unwrap();
+
+        return PythSimulator {
+            program_id: program_key,
+            banks_client,
+            payer: upgrade_authority_keypair,
+            last_blockhash: recent_blockhash,
+        };
+    }
+
 
     /// Process a transaction containing `instruction` signed by `signers`.
     /// The transaction is assumed to require `self.payer` to pay for and sign the transaction.
@@ -237,31 +313,14 @@ impl PythSimulator {
     // Sets up pyth oracle as an upgradable program, returns the addresses of (program, programdata)
     // By default tests will deploy the pyth program as non upgradable
     // This function deploys it as upgradable
-    pub async fn setup_pyth_oracle_as_upgradable(&mut self) -> (Pubkey, Pubkey) {
-        let non_upgradable_program = self.get_account(self.program_id).await.unwrap();
-        let programdata_key = Pubkey::new_unique();
-        let program_key = Pubkey::new_unique();
+    // pub async fn setup_pyth_oracle_as_upgradable(&mut self) -> (Pubkey, Pubkey) {
+    //     let non_upgradable_program = self.get_account(self.program_id).await.unwrap();
 
-        let programdata_data = UpgradeableLoaderState::ProgramData {
-            slot:                      1,
-            upgrade_authority_address: Some(self.payer.pubkey()),
-        };
-        let program_data = UpgradeableLoaderState::Program {
-            programdata_address: programdata_key,
-        };
-        let mut programdata_vec = bincode::serialize(&programdata_data).unwrap();
-        programdata_vec.append(&mut non_upgradable_program.data.clone());
 
-        let programdata_account = Account {
-            lamports:   Rent::default().minimum_balance(programdata_vec.len()),
-            data:       programdata_vec,
-            owner:      bpf_loader_upgradeable::ID,
-            executable: false,
-            rent_epoch: Epoch::default(),
-        };
+    //     ProgramTest::add_account( {}, address, account)
 
-        return (program_key, programdata_key);
-    }
+    //     return (program_key, programdata_key);
+    // }
 
     /// Get the content of an account as a value of type `T`. This function returns a copy of the
     /// account data -- you cannot mutate the result to mutate the on-chain account data.
