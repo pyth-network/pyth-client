@@ -834,7 +834,7 @@ pub fn upd_permissions(
         programdata_account,
         program_id,
     )?;
-    check_pda_with_bump(
+    let bump = check_pda_with_bump(
         permissions_account,
         &[PERMISSIONS_SEED.as_bytes()],
         program_id,
@@ -849,7 +849,7 @@ pub fn upd_permissions(
             system_program,
             PermissionAccount::minimum_size(),
             program_id,
-            &[PERMISSIONS_SEED.as_bytes()],
+            &[PERMISSIONS_SEED.as_bytes(), &[bump]],
         )?;
         check_valid_fresh_account(permissions_account)?;
         initialize_pyth_account_checked::<PermissionAccount>(
@@ -866,9 +866,18 @@ pub fn upd_permissions(
 
     let mut permissions_account_data =
         load_checked::<PermissionAccount>(permissions_account, cmd_args.header.version)?;
-    permissions_account_data.master_authority = cmd_args.master_authority;
-    permissions_account_data.data_curation_authority = cmd_args.data_curation_authority;
-    permissions_account_data.security_authority = cmd_args.security_authority;
+    pubkey_assign(
+        &mut permissions_account_data.master_authority,
+        bytes_of(&cmd_args.master_authority),
+    );
+    pubkey_assign(
+        &mut permissions_account_data.data_curation_authority,
+        bytes_of(&cmd_args.data_curation_authority),
+    );
+    pubkey_assign(
+        &mut permissions_account_data.security_authority,
+        bytes_of(&cmd_args.security_authority),
+    );
 
     Ok(())
 }

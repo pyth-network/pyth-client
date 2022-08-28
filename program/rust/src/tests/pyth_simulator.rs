@@ -1,4 +1,5 @@
 use std::mem::size_of;
+use std::process::id;
 
 use bytemuck::{
     bytes_of,
@@ -17,7 +18,10 @@ use solana_program::native_token::LAMPORTS_PER_SOL;
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
 use solana_program::stake_history::Epoch;
-use solana_program::system_instruction;
+use solana_program::{
+    system_instruction,
+    system_program,
+};
 use solana_program_test::{
     find_file,
     processor,
@@ -39,12 +43,14 @@ use crate::c_oracle_header::{
     PriceAccount,
     PC_PROD_ACC_SIZE,
     PC_PTYPE_PRICE,
+    PERMISSIONS_SEED,
 };
 use crate::deserialize::load;
 use crate::instruction::{
     AddPriceArgs,
     CommandHeader,
     OracleCommand,
+    UpdPermissionsArgs,
 };
 use crate::processor::process_instruction;
 
@@ -58,9 +64,11 @@ pub struct PythSimulator {
     /// transaction; otherwise, replayed transactions in different states can return stale
     /// results.
     last_blockhash: Hash,
+    programdata_id: Option<Pubkey>,
 }
 
 impl PythSimulator {
+    /// Deploys the oracle program as immutable
     pub async fn new() -> PythSimulator {
         let program_id = Pubkey::new_unique();
         let (banks_client, payer, recent_blockhash) =
@@ -73,9 +81,11 @@ impl PythSimulator {
             banks_client,
             payer,
             last_blockhash: recent_blockhash,
+            programdata_id: None,
         }
     }
 
+    /// Deploys the oracle program as upgradable
     pub async fn new_upgradable() -> PythSimulator {
         let mut bpf_data = read_file(find_file("pyth_oracle.so").unwrap_or_else(|| {
             panic!("Unable to locate {}", "pyth_oracle.so");
@@ -145,6 +155,7 @@ impl PythSimulator {
             banks_client,
             payer: upgrade_authority_keypair,
             last_blockhash: recent_blockhash,
+            programdata_id: Some(programdata_key),
         };
     }
 
@@ -305,22 +316,37 @@ impl PythSimulator {
             .await
     }
 
+    /// Update permissions (using the upd_permissions intruction) and return the pubkey of the
+    /// permissions account
+    pub async fn upd_permissions(
+        &mut self,
+        cmd_args: UpdPermissionsArgs,
+    ) -> Result<Pubkey, BanksClientError> {
+        let (permissions_pubkey, __bump) =
+            Pubkey::find_program_address(&[PERMISSIONS_SEED.as_bytes()], &self.program_id);
+
+        let instruction = Instruction::new_with_bytes(
+            self.program_id,
+            bytes_of(&cmd_args),
+            vec![
+                AccountMeta::new(self.payer.pubkey(), true),
+                AccountMeta::new_readonly(self.program_id, false),
+                AccountMeta::new_readonly(self.programdata_id.unwrap(), false),
+                AccountMeta::new(permissions_pubkey, false),
+                AccountMeta::new_readonly(system_program::id(), false),
+            ],
+        );
+
+        self.process_ix(instruction, &vec![])
+            .await
+            .map(|_| permissions_pubkey)
+    }
+
     /// Get the account at `key`. Returns `None` if no such account exists.
     pub async fn get_account(&mut self, key: Pubkey) -> Option<Account> {
         self.banks_client.get_account(key).await.unwrap()
     }
 
-    // Sets up pyth oracle as an upgradable program, returns the addresses of (program, programdata)
-    // By default tests will deploy the pyth program as non upgradable
-    // This function deploys it as upgradable
-    // pub async fn setup_pyth_oracle_as_upgradable(&mut self) -> (Pubkey, Pubkey) {
-    //     let non_upgradable_program = self.get_account(self.program_id).await.unwrap();
-
-
-    //     ProgramTest::add_account( {}, address, account)
-
-    //     return (program_key, programdata_key);
-    // }
 
     /// Get the content of an account as a value of type `T`. This function returns a copy of the
     /// account data -- you cannot mutate the result to mutate the on-chain account data.
