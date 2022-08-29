@@ -181,7 +181,7 @@ pub fn check_pda(
     Ok(bump)
 }
 
-/// This 3 accounts need to get passed to make sure that the upgrade authority is signing the
+/// These 3 accounts need to get passed to make sure that the upgrade authority is signing the
 /// transaction
 /// - `program_account` is the program at address `program_id`. It just contains a pointer to the
 ///   `programdata_account`
