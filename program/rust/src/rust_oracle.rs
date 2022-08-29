@@ -43,7 +43,7 @@ use crate::time_machine_types::PriceAccountWrapper;
 use crate::utils::{
     check_exponent_range,
     check_is_valid_upgradeauthority_program_programdata_triplet,
-    check_pda_with_bump,
+    check_pda,
     check_valid_fresh_account,
     check_valid_funding_account,
     check_valid_signable_account,
@@ -834,10 +834,14 @@ pub fn upd_permissions(
         programdata_account,
         program_id,
     )?;
-    let bump = check_pda_with_bump(
+    let bump = check_pda(
         permissions_account,
         &[PERMISSIONS_SEED.as_bytes()],
         program_id,
+    )?;
+    pyth_assert(
+        check_id(system_program.key),
+        OracleError::InvalidSystemAccount.into(),
     )?;
 
 
@@ -856,16 +860,17 @@ pub fn upd_permissions(
             permissions_account,
             cmd_args.header.version,
         )?;
-    } else {
-        check_valid_writable_account(
-            program_id,
-            permissions_account,
-            PermissionAccount::minimum_size(),
-        )?;
     }
+
+    check_valid_writable_account(
+        program_id,
+        permissions_account,
+        PermissionAccount::minimum_size(),
+    )?;
 
     let mut permissions_account_data =
         load_checked::<PermissionAccount>(permissions_account, cmd_args.header.version)?;
+    permissions_account_data.bump = bump;
     pubkey_assign(
         &mut permissions_account_data.master_authority,
         bytes_of(&cmd_args.master_authority),
