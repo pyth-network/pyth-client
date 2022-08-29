@@ -83,10 +83,10 @@ fn test_add_price() {
         assert_eq!(price_data.exponent, 1);
         assert_eq!(price_data.price_type, 1);
         assert!(pubkey_equal(
-            &price_data.prod_,
+            &price_data.product_account,
             &product_account.key.to_bytes()
         ));
-        assert!(pubkey_is_zero(&price_data.next_));
+        assert!(pubkey_is_zero(&price_data.next_price_account));
         assert!(pubkey_equal(
             &product_data.first_price_account,
             &price_account.key.to_bytes()
@@ -110,11 +110,11 @@ fn test_add_price() {
         assert_eq!(price_data_2.exponent, 1);
         assert_eq!(price_data_2.price_type, 1);
         assert!(pubkey_equal(
-            &price_data_2.prod_,
+            &price_data_2.product_account,
             &product_account.key.to_bytes()
         ));
         assert!(pubkey_equal(
-            &price_data_2.next_,
+            &price_data_2.next_price_account,
             &price_account.key.to_bytes()
         ));
         assert!(pubkey_equal(

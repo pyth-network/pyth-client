@@ -369,9 +369,12 @@ pub fn add_price(
         initialize_pyth_account_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
     price_data.exponent = cmd_args.exponent;
     price_data.price_type = cmd_args.price_type;
-    pubkey_assign(&mut price_data.prod_, &product_account.key.to_bytes());
     pubkey_assign(
-        &mut price_data.next_,
+        &mut price_data.product_account,
+        &product_account.key.to_bytes(),
+    );
+    pubkey_assign(
+        &mut price_data.next_price_account,
         bytes_of(&product_data.first_price_account),
     );
     pubkey_assign(
@@ -416,13 +419,13 @@ pub fn del_price(
         )?;
 
         pyth_assert(
-            pubkey_equal(&price_data.prod_, &product_account.key.to_bytes()),
+            pubkey_equal(&price_data.product_account, &product_account.key.to_bytes()),
             ProgramError::InvalidArgument,
         )?;
 
         pubkey_assign(
             &mut product_data.first_price_account,
-            bytes_of(&price_data.next_),
+            bytes_of(&price_data.next_price_account),
         );
     }
 

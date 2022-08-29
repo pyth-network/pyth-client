@@ -57,46 +57,46 @@ impl PythAccount for PriceAccount {
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]
 pub struct PriceAccount {
-    pub header:          AccountHeader,
+    pub header:             AccountHeader,
     /// Type of the price account
-    pub price_type:      u32,
+    pub price_type:         u32,
     /// Exponent for the published prices
-    pub exponent:        i32,
+    pub exponent:           i32,
     /// Current number of authorized publishers
-    pub num_:            u32,
+    pub num_:               u32,
     /// Number of valid quotes for the last aggregation
-    pub num_qt_:         u32,
+    pub num_qt_:            u32,
     /// Last slot with a succesful aggregation (status : TRADING)
-    pub last_slot_:      u64,
+    pub last_slot_:         u64,
     /// Second to last slot where aggregation was attempted
-    pub valid_slot_:     u64,
+    pub valid_slot_:        u64,
     /// Ema for price
-    pub twap_:           PriceEma,
+    pub twap_:              PriceEma,
     /// Ema for confidence
-    pub twac_:           PriceEma,
+    pub twac_:              PriceEma,
     /// Last time aggregation was attempted
-    pub timestamp_:      i64,
+    pub timestamp_:         i64,
     /// Minimum valid publisher quotes for a succesful aggregation
-    pub min_pub_:        u8,
-    pub unused_1_:       i8,
-    pub unused_2_:       i16,
-    pub unused_3_:       i32,
+    pub min_pub_:           u8,
+    pub unused_1_:          i8,
+    pub unused_2_:          i16,
+    pub unused_3_:          i32,
     /// Corresponding product account
-    pub prod_:           CPubkey,
+    pub product_account:    CPubkey,
     /// Next price account in the list
-    pub next_:           CPubkey,
+    pub next_price_account: CPubkey,
     /// Second to last slot where aggregation was succesful (i.e. status : TRADING)
-    pub prev_slot_:      u64,
+    pub prev_slot_:         u64,
     /// Aggregate price at prev_slot_
-    pub prev_price_:     i64,
+    pub prev_price_:        i64,
     /// Confidence interval at prev_slot_
-    pub prev_conf_:      u64,
+    pub prev_conf_:         u64,
     /// Timestamp of prev_slot_
-    pub prev_timestamp_: i64,
+    pub prev_timestamp_:    i64,
     /// Last attempted aggregate results
-    pub agg_:            PriceInfo,
+    pub agg_:               PriceInfo,
     /// Publishers' price components
-    pub comp_:           [PriceComponent; PC_COMP_SIZE as usize],
+    pub comp_:              [PriceComponent; PC_COMP_SIZE as usize],
 }
 
 #[repr(C)]

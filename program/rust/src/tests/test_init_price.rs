@@ -67,8 +67,8 @@ fn test_init_price() {
         price_data.num_ = 4;
         pubkey_assign(&mut price_data.comp_[0].pub_, bytes_of(&publisher));
         pubkey_assign(&mut price_data.comp_[3].pub_, bytes_of(&publisher2));
-        pubkey_assign(&mut price_data.prod_, bytes_of(&product));
-        pubkey_assign(&mut price_data.next_, bytes_of(&next_price));
+        pubkey_assign(&mut price_data.product_account, bytes_of(&product));
+        pubkey_assign(&mut price_data.next_price_account, bytes_of(&next_price));
 
         price_data.last_slot_ = 100;
         price_data.valid_slot_ = 100;
@@ -115,8 +115,14 @@ fn test_init_price() {
             &price_data.comp_[3].pub_,
             bytes_of(&publisher2)
         ));
-        assert!(pubkey_equal(&price_data.prod_, bytes_of(&product)));
-        assert!(pubkey_equal(&price_data.next_, bytes_of(&next_price)));
+        assert!(pubkey_equal(
+            &price_data.product_account,
+            bytes_of(&product)
+        ));
+        assert!(pubkey_equal(
+            &price_data.next_price_account,
+            bytes_of(&next_price)
+        ));
 
         assert_eq!(price_data.last_slot_, 0);
         assert_eq!(price_data.valid_slot_, 0);
