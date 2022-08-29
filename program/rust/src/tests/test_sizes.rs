@@ -99,3 +99,13 @@ fn test_offsets() {
         try_convert::<_, usize>(MappingAccount::INITIAL_SIZE).unwrap()
     );
 }
+
+#[test]
+fn test_pubkey() {
+    let default_pubkey = Pubkey::default();
+    let zero_pubkey = Pubkey::new(&[0u8; 32]);
+    let unique_pubkey = Pubkey::new_unique();
+
+    assert_eq!(default_pubkey, zero_pubkey);
+    assert!(unique_pubkey != default_pubkey);
+}
