@@ -73,9 +73,9 @@ pub fn load_checked<'a, T: PythAccount>(
     {
         let account_header = load_account_as::<AccountHeader>(account)?;
         pyth_assert(
-            account_header.magic_ == PC_MAGIC
-                && account_header.ver_ == version
-                && account_header.type_ == T::ACCOUNT_TYPE,
+            account_header.magic_number == PC_MAGIC
+                && account_header.version == version
+                && account_header.account_type == T::ACCOUNT_TYPE,
             ProgramError::InvalidArgument,
         )?;
     }
@@ -91,10 +91,10 @@ pub fn initialize_pyth_account_checked<'a, T: PythAccount>(
 
     {
         let mut account_header = load_account_as_mut::<AccountHeader>(account)?;
-        account_header.magic_ = PC_MAGIC;
-        account_header.ver_ = version;
-        account_header.type_ = T::ACCOUNT_TYPE;
-        account_header.size_ = T::INITIAL_SIZE;
+        account_header.magic_number = PC_MAGIC;
+        account_header.version = version;
+        account_header.account_type = T::ACCOUNT_TYPE;
+        account_header.size = T::INITIAL_SIZE;
     }
 
     load_account_as_mut::<T>(account)

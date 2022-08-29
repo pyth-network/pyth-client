@@ -61,8 +61,8 @@ fn test_init_price() {
     initialize_pyth_account_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
     {
         let mut price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
-        price_data.ptype_ = ptype;
-        price_data.expo_ = 0;
+        price_data.price_type = ptype;
+        price_data.exponent = 0;
         price_data.min_pub_ = 7;
         price_data.num_ = 4;
         pubkey_assign(&mut price_data.comp_[0].pub_, bytes_of(&publisher));
@@ -103,8 +103,8 @@ fn test_init_price() {
     {
         let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
 
-        assert_eq!(price_data.expo_, -2);
-        assert_eq!(price_data.ptype_, ptype);
+        assert_eq!(price_data.exponent, -2);
+        assert_eq!(price_data.price_type, ptype);
         assert_eq!(price_data.min_pub_, 7);
         assert_eq!(price_data.num_, 4);
         assert!(pubkey_equal(

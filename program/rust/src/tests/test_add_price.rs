@@ -80,15 +80,15 @@ fn test_add_price() {
     {
         let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
         let product_data = load_checked::<ProductAccount>(&product_account, PC_VERSION).unwrap();
-        assert_eq!(price_data.expo_, 1);
-        assert_eq!(price_data.ptype_, 1);
+        assert_eq!(price_data.exponent, 1);
+        assert_eq!(price_data.price_type, 1);
         assert!(pubkey_equal(
             &price_data.prod_,
             &product_account.key.to_bytes()
         ));
         assert!(pubkey_is_zero(&price_data.next_));
         assert!(pubkey_equal(
-            &product_data.px_acc_,
+            &product_data.first_price_account,
             &price_account.key.to_bytes()
         ));
     }
@@ -107,8 +107,8 @@ fn test_add_price() {
     {
         let price_data_2 = load_checked::<PriceAccount>(&price_account_2, PC_VERSION).unwrap();
         let product_data = load_checked::<ProductAccount>(&product_account, PC_VERSION).unwrap();
-        assert_eq!(price_data_2.expo_, 1);
-        assert_eq!(price_data_2.ptype_, 1);
+        assert_eq!(price_data_2.exponent, 1);
+        assert_eq!(price_data_2.price_type, 1);
         assert!(pubkey_equal(
             &price_data_2.prod_,
             &product_account.key.to_bytes()
@@ -118,7 +118,7 @@ fn test_add_price() {
             &price_account.key.to_bytes()
         ));
         assert!(pubkey_equal(
-            &product_data.px_acc_,
+            &product_data.first_price_account,
             &price_account_2.key.to_bytes()
         ));
     }

@@ -57,14 +57,11 @@ impl PythAccount for PriceAccount {
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]
 pub struct PriceAccount {
-    pub magic_:          u32,
-    pub ver_:            u32,
-    pub type_:           u32,
-    pub size_:           u32,
+    pub header:          AccountHeader,
     /// Type of the price account
-    pub ptype_:          u32,
+    pub price_type:      u32,
     /// Exponent for the published prices
-    pub expo_:           i32,
+    pub exponent:        i32,
     /// Current number of authorized publishers
     pub num_:            u32,
     /// Number of valid quotes for the last aggregation
@@ -131,33 +128,27 @@ pub struct PriceEma {
 #[repr(C)]
 #[derive(Copy, Clone, Zeroable, Pod)]
 pub struct AccountHeader {
-    pub magic_: u32,
-    pub ver_:   u32,
-    pub type_:  u32,
-    pub size_:  u32,
+    pub magic_number: u32,
+    pub version:      u32,
+    pub account_type: u32,
+    pub size:         u32,
 }
 
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]
 pub struct ProductAccount {
-    pub magic_:  u32,
-    pub ver_:    u32,
-    pub type_:   u32,
-    pub size_:   u32,
-    pub px_acc_: CPubkey,
+    pub header:              AccountHeader,
+    pub first_price_account: CPubkey,
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct MappingAccount {
-    pub magic_:  u32,
-    pub ver_:    u32,
-    pub type_:   u32,
-    pub size_:   u32,
-    pub num_:    u32,
-    pub unused_: u32,
-    pub next_:   CPubkey,
-    pub prod_:   [CPubkey; PC_MAP_TABLE_SIZE as usize],
+    pub header:               AccountHeader,
+    pub number_of_products:   u32,
+    pub unused_:              u32,
+    pub next_mapping_account: CPubkey,
+    pub products_list:        [CPubkey; PC_MAP_TABLE_SIZE as usize],
 }
 
 // Unsafe impl because CPubkey is a union

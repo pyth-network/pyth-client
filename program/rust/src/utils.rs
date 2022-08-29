@@ -75,7 +75,7 @@ pub fn check_valid_signable_account(
 pub fn valid_fresh_account(account: &AccountInfo) -> bool {
     let pyth_acc = load_account_as::<AccountHeader>(account);
     match pyth_acc {
-        Ok(pyth_acc) => pyth_acc.magic_ == 0 && pyth_acc.ver_ == 0,
+        Ok(pyth_acc) => pyth_acc.magic_number == 0 && pyth_acc.version == 0,
         Err(_) => false,
     }
 }
