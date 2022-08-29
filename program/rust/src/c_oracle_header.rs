@@ -58,7 +58,6 @@ impl PythAccount for PriceAccount {
 
 impl PythAccount for PermissionAccount {
     const ACCOUNT_TYPE: u32 = PC_ACCTYPE_PERMISSIONS;
-    /// Equal to the offset of `comp_` in `PriceAccount`, see the trait comment for more detail
     const INITIAL_SIZE: u32 = size_of::<PermissionAccount>() as u32;
 }
 
