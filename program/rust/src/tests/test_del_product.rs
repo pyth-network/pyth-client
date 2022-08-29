@@ -73,18 +73,18 @@ async fn test_del_product() {
 /// Returns true if the list of products in `mapping_data` contains the keys in `expected` (in the
 /// same order). Also checks `mapping_data.num_` and `size_`.
 fn mapping_product_list_equals(mapping_data: &MappingAccount, expected: Vec<Pubkey>) -> bool {
-    if mapping_data.num_ != expected.len() as u32 {
+    if mapping_data.number_of_products != expected.len() as u32 {
         return false;
     }
 
-    let expected_size = (size_of::<MappingAccount>() - size_of_val(&mapping_data.prod_)
+    let expected_size = (size_of::<MappingAccount>() - size_of_val(&mapping_data.products_list)
         + expected.len() * size_of::<CPubkey>()) as u32;
-    if mapping_data.size_ != expected_size {
+    if mapping_data.header.size != expected_size {
         return false;
     }
 
     for i in 0..expected.len() {
-        if !pubkey_equal(&mapping_data.prod_[i], &expected[i].to_bytes()) {
+        if !pubkey_equal(&mapping_data.products_list[i], &expected[i].to_bytes()) {
             return false;
         }
     }

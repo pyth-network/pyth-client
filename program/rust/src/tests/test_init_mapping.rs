@@ -43,10 +43,10 @@ fn test_init_mapping() {
     {
         let mapping_data = load_account_as::<MappingAccount>(&mapping_account).unwrap();
 
-        assert_eq!(mapping_data.ver_, PC_VERSION);
-        assert_eq!(mapping_data.magic_, PC_MAGIC);
-        assert_eq!(mapping_data.type_, PC_ACCTYPE_MAPPING);
-        assert_eq!(mapping_data.size_, 56);
+        assert_eq!(mapping_data.header.version, PC_VERSION);
+        assert_eq!(mapping_data.header.magic_number, PC_MAGIC);
+        assert_eq!(mapping_data.header.account_type, PC_ACCTYPE_MAPPING);
+        assert_eq!(mapping_data.header.size, 56);
     }
 
     assert_eq!(

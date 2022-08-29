@@ -52,7 +52,7 @@ fn test_upd_product() {
 
     {
         let product_data = load_checked::<ProductAccount>(&product_account, PC_VERSION).unwrap();
-        assert_eq!(product_data.size_, ProductAccount::INITIAL_SIZE + 9);
+        assert_eq!(product_data.header.size, ProductAccount::INITIAL_SIZE + 9);
     }
 
     // bad size on the 1st string in the key-value pair list
@@ -78,7 +78,7 @@ fn test_upd_product() {
     assert!(account_has_key_values(&product_account, &kvs).unwrap_or(false));
     {
         let product_data = load_checked::<ProductAccount>(&product_account, PC_VERSION).unwrap();
-        assert_eq!(product_data.size_, ProductAccount::INITIAL_SIZE);
+        assert_eq!(product_data.header.size, ProductAccount::INITIAL_SIZE);
     }
 
     // uneven number of keys and values
@@ -125,8 +125,11 @@ fn account_has_key_values(
     product_account: &AccountInfo,
     expected: &[&str],
 ) -> Result<bool, ProgramError> {
-    let account_size: usize =
-        try_convert(load_checked::<ProductAccount>(product_account, PC_VERSION)?.size_)?;
+    let account_size: usize = try_convert(
+        load_checked::<ProductAccount>(product_account, PC_VERSION)?
+            .header
+            .size,
+    )?;
     let mut all_account_data = product_account.try_borrow_mut_data()?;
     let kv_data = &mut all_account_data[size_of::<ProductAccount>()..account_size];
     let mut kv_idx = 0;
