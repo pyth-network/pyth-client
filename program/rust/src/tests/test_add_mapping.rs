@@ -16,10 +16,7 @@ use crate::instruction::{
 use crate::processor::process_instruction;
 use crate::tests::test_utils::AccountSetup;
 use crate::utils::clear_account;
-use bytemuck::{
-    bytes_of,
-    Zeroable,
-};
+use bytemuck::bytes_of;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 
@@ -63,8 +60,8 @@ fn test_add_mapping() {
             load_checked::<MappingAccount>(&cur_mapping, PC_VERSION).unwrap();
 
         assert!(cur_mapping_data.next_mapping_account == *next_mapping.key);
-        assert!(next_mapping_data.next_mapping_account == Pubkey::zeroed());
-        cur_mapping_data.next_mapping_account = Pubkey::zeroed();
+        assert!(next_mapping_data.next_mapping_account == Pubkey::default());
+        cur_mapping_data.next_mapping_account = Pubkey::default();
         cur_mapping_data.number_of_products = 0;
     }
 
@@ -86,7 +83,7 @@ fn test_add_mapping() {
     {
         let mut cur_mapping_data =
             load_checked::<MappingAccount>(&cur_mapping, PC_VERSION).unwrap();
-        assert!(cur_mapping_data.next_mapping_account == Pubkey::zeroed());
+        assert!(cur_mapping_data.next_mapping_account == Pubkey::default());
         cur_mapping_data.number_of_products = PC_MAP_TABLE_SIZE;
         cur_mapping_data.header.magic_number = 0;
     }

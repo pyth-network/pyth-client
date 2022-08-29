@@ -46,10 +46,7 @@ use crate::utils::{
     try_convert,
 };
 use crate::OracleError;
-use bytemuck::{
-    bytes_of_mut,
-    Zeroable,
-};
+use bytemuck::bytes_of_mut;
 use solana_program::account_info::AccountInfo;
 use solana_program::clock::Clock;
 use solana_program::entrypoint::ProgramResult;
@@ -204,7 +201,7 @@ pub fn add_mapping(
     let mut cur_mapping = load_checked::<MappingAccount>(cur_mapping, hdr.version)?;
     pyth_assert(
         cur_mapping.number_of_products == PC_MAP_TABLE_SIZE
-            && cur_mapping.next_mapping_account == Pubkey::zeroed(),
+            && cur_mapping.next_mapping_account == Pubkey::default(),
         ProgramError::InvalidArgument,
     )?;
 
@@ -488,7 +485,7 @@ pub fn add_publisher(
 
     pyth_assert(
         instruction_data.len() == size_of::<AddPublisherArgs>()
-            && cmd_args.publisher != Pubkey::zeroed(),
+            && cmd_args.publisher != Pubkey::default(),
         ProgramError::InvalidArgument,
     )?;
 
@@ -538,7 +535,7 @@ pub fn del_publisher(
 
     pyth_assert(
         instruction_data.len() == size_of::<DelPublisherArgs>()
-            && cmd_args.publisher != Pubkey::zeroed(),
+            && cmd_args.publisher != Pubkey::default(),
         ProgramError::InvalidArgument,
     )?;
 
@@ -731,7 +728,7 @@ pub fn del_product(
             ProgramError::InvalidArgument,
         )?;
         pyth_assert(
-            product_data.first_price_account == Pubkey::zeroed(),
+            product_data.first_price_account == Pubkey::default(),
             ProgramError::InvalidArgument,
         )?;
 
@@ -751,7 +748,7 @@ pub fn del_product(
 
         let last_key_bytes = mapping_data.products_list[num_after_removal];
         mapping_data.products_list[product_index] = last_key_bytes;
-        mapping_data.products_list[num_after_removal] = Pubkey::zeroed();
+        mapping_data.products_list[num_after_removal] = Pubkey::default();
         mapping_data.number_of_products = try_convert::<_, u32>(num_after_removal)?;
         mapping_data.header.size = try_convert::<_, u32>(
             size_of::<MappingAccount>() - size_of_val(&mapping_data.products_list),

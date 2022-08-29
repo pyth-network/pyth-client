@@ -17,7 +17,6 @@ use crate::instruction::{
 };
 use crate::processor::process_instruction;
 use crate::tests::test_utils::AccountSetup;
-use bytemuck::Zeroable;
 use solana_program::pubkey::Pubkey;
 use std::mem::size_of;
 
@@ -77,7 +76,7 @@ fn test_del_publisher() {
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 0);
         assert_eq!(price_data.comp_[0].latest_.corp_act_status_, 0);
         assert_eq!(price_data.header.size, PriceAccount::INITIAL_SIZE);
-        assert!(price_data.comp_[0].pub_ == Pubkey::zeroed());
+        assert!(price_data.comp_[0].pub_ == Pubkey::default());
 
         price_data.num_ = 2;
         price_data.comp_[0].latest_ = p1;
@@ -115,7 +114,7 @@ fn test_del_publisher() {
             PriceAccount::INITIAL_SIZE + (size_of::<PriceComponent>() as u32)
         );
         assert!(price_data.comp_[0].pub_ == publisher2);
-        assert!(price_data.comp_[1].pub_ == Pubkey::zeroed());
+        assert!(price_data.comp_[1].pub_ == Pubkey::default());
 
         price_data.num_ = 2;
         price_data.comp_[0].latest_ = p2;
@@ -153,6 +152,6 @@ fn test_del_publisher() {
             PriceAccount::INITIAL_SIZE + (size_of::<PriceComponent>() as u32)
         );
         assert!(price_data.comp_[0].pub_ == publisher2);
-        assert!(price_data.comp_[1].pub_ == Pubkey::zeroed());
+        assert!(price_data.comp_[1].pub_ == Pubkey::default());
     }
 }

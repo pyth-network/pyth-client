@@ -31,7 +31,7 @@ async fn test_del_price() {
         .get_account_data_as::<ProductAccount>(product1.pubkey())
         .await
         .unwrap();
-    assert!(product1_data.first_price_account == Pubkey::new(&[0u8; 32]));
+    assert!(product1_data.first_price_account == Pubkey::default());
 
 
     // price2_1 is the 2nd item in the linked list since price2_2 got added after t.
@@ -48,5 +48,5 @@ async fn test_del_price() {
         .await
         .unwrap();
 
-    assert!(product2_data.first_price_account == Pubkey::new(&[0u8; 32]));
+    assert!(product2_data.first_price_account == Pubkey::default());
 }
