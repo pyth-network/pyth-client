@@ -131,7 +131,7 @@ fn test_add_product() {
             ],
             instruction_data
         ),
-        Err(OracleError::InvalidSignableAccount.into())
+        Err(OracleError::AccountTooSmall.into())
     );
 
     // test fill up of mapping table

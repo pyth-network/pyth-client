@@ -13,6 +13,7 @@ use crate::c_oracle_header::{
 };
 use crate::error::OracleError;
 use crate::utils::{
+    check_valid_fresh_account,
     clear_account,
     pyth_assert,
 };
@@ -70,6 +71,11 @@ pub fn load_checked<'a, T: PythAccount>(
     account: &'a AccountInfo,
     version: u32,
 ) -> Result<RefMut<'a, T>, ProgramError> {
+    pyth_assert(
+        account.data_len() >= T::minimum_size(),
+        OracleError::AccountTooSmall.into(),
+    )?;
+
     {
         let account_header = load_account_as::<AccountHeader>(account)?;
         pyth_assert(
@@ -87,6 +93,11 @@ pub fn initialize_pyth_account_checked<'a, T: PythAccount>(
     account: &'a AccountInfo,
     version: u32,
 ) -> Result<RefMut<'a, T>, ProgramError> {
+    pyth_assert(
+        account.data_len() >= T::minimum_size(),
+        OracleError::AccountTooSmall.into(),
+    )?;
+    check_valid_fresh_account(account)?;
     clear_account(account)?;
 
     {

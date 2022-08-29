@@ -37,7 +37,6 @@ use crate::instruction::{
 use crate::time_machine_types::PriceAccountWrapper;
 use crate::utils::{
     check_exponent_range,
-    check_valid_fresh_account,
     check_valid_funding_account,
     check_valid_signable_account,
     check_valid_writable_account,
@@ -115,7 +114,7 @@ pub fn resize_price_account(
     }?;
 
     check_valid_funding_account(funding_account_info)?;
-    check_valid_signable_account(program_id, price_account_info, size_of::<PriceAccount>())?;
+    check_valid_signable_account(program_id, price_account_info)?;
     pyth_assert(
         check_id(system_program.key),
         OracleError::InvalidSystemAccount.into(),
@@ -145,11 +144,7 @@ pub fn resize_price_account(
             price_account_info.realloc(size_of::<PriceAccountWrapper>(), false)?;
 
             // Check that everything is ok
-            check_valid_signable_account(
-                program_id,
-                price_account_info,
-                size_of::<PriceAccountWrapper>(),
-            )?;
+            check_valid_signable_account(program_id, price_account_info)?;
             let mut price_account =
                 load_checked::<PriceAccountWrapper>(price_account_info, PC_VERSION)?;
             // Initialize Time Machine
@@ -176,12 +171,7 @@ pub fn init_mapping(
     }?;
 
     check_valid_funding_account(funding_account)?;
-    check_valid_signable_account(
-        program_id,
-        fresh_mapping_account,
-        size_of::<MappingAccount>(),
-    )?;
-    check_valid_fresh_account(fresh_mapping_account)?;
+    check_valid_signable_account(program_id, fresh_mapping_account)?;
 
     // Initialize by setting to zero again (just in case) and populating the account header
     let hdr = load::<CommandHeader>(instruction_data)?;
@@ -201,9 +191,8 @@ pub fn add_mapping(
     }?;
 
     check_valid_funding_account(funding_account)?;
-    check_valid_signable_account(program_id, cur_mapping, size_of::<MappingAccount>())?;
-    check_valid_signable_account(program_id, next_mapping, size_of::<MappingAccount>())?;
-    check_valid_fresh_account(next_mapping)?;
+    check_valid_signable_account(program_id, cur_mapping)?;
+    check_valid_signable_account(program_id, next_mapping)?;
 
     let hdr = load::<CommandHeader>(instruction_data)?;
     let mut cur_mapping = load_checked::<MappingAccount>(cur_mapping, hdr.version)?;
@@ -240,7 +229,7 @@ pub fn upd_price(
     }?;
 
     check_valid_funding_account(funding_account)?;
-    check_valid_writable_account(program_id, price_account, size_of::<PriceAccount>())?;
+    check_valid_writable_account(program_id, price_account)?;
     // Check clock
     let clock = Clock::from_account_info(clock_account)?;
 
@@ -358,9 +347,8 @@ pub fn add_price(
     }?;
 
     check_valid_funding_account(funding_account)?;
-    check_valid_signable_account(program_id, product_account, PC_PROD_ACC_SIZE as usize)?;
-    check_valid_signable_account(program_id, price_account, size_of::<PriceAccount>())?;
-    check_valid_fresh_account(price_account)?;
+    check_valid_signable_account(program_id, product_account)?;
+    check_valid_signable_account(program_id, price_account)?;
 
     let mut product_data =
         load_checked::<ProductAccount>(product_account, cmd_args.header.version)?;
@@ -403,8 +391,8 @@ pub fn del_price(
     }?;
 
     check_valid_funding_account(funding_account)?;
-    check_valid_signable_account(program_id, product_account, PC_PROD_ACC_SIZE as usize)?;
-    check_valid_signable_account(program_id, price_account, size_of::<PriceAccount>())?;
+    check_valid_signable_account(program_id, product_account)?;
+    check_valid_signable_account(program_id, price_account)?;
 
     {
         let cmd_args = load::<CommandHeader>(instruction_data)?;
@@ -454,7 +442,7 @@ pub fn init_price(
     }?;
 
     check_valid_funding_account(funding_account)?;
-    check_valid_signable_account(program_id, price_account, size_of::<PriceAccount>())?;
+    check_valid_signable_account(program_id, price_account)?;
 
     let mut price_data = load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
     pyth_assert(
@@ -524,7 +512,7 @@ pub fn add_publisher(
     }?;
 
     check_valid_funding_account(funding_account)?;
-    check_valid_signable_account(program_id, price_account, size_of::<PriceAccount>())?;
+    check_valid_signable_account(program_id, price_account)?;
 
     let mut price_data = load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
 
@@ -577,7 +565,7 @@ pub fn del_publisher(
     }?;
 
     check_valid_funding_account(funding_account)?;
-    check_valid_signable_account(program_id, price_account, size_of::<PriceAccount>())?;
+    check_valid_signable_account(program_id, price_account)?;
 
     let mut price_data = load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
 
@@ -613,13 +601,8 @@ pub fn add_product(
     }?;
 
     check_valid_funding_account(funding_account)?;
-    check_valid_signable_account(
-        program_id,
-        tail_mapping_account,
-        size_of::<MappingAccount>(),
-    )?;
-    check_valid_signable_account(program_id, new_product_account, PC_PROD_ACC_SIZE as usize)?;
-    check_valid_fresh_account(new_product_account)?;
+    check_valid_signable_account(program_id, tail_mapping_account)?;
+    check_valid_signable_account(program_id, new_product_account)?;
 
     let hdr = load::<CommandHeader>(instruction_data)?;
     let mut mapping_data = load_checked::<MappingAccount>(tail_mapping_account, hdr.version)?;
@@ -658,7 +641,7 @@ pub fn upd_product(
     }?;
 
     check_valid_funding_account(funding_account)?;
-    check_valid_signable_account(program_id, product_account, try_convert(PC_PROD_ACC_SIZE)?)?;
+    check_valid_signable_account(program_id, product_account)?;
 
     let hdr = load::<CommandHeader>(instruction_data)?;
     {
@@ -723,7 +706,7 @@ pub fn set_min_pub(
     }?;
 
     check_valid_funding_account(funding_account)?;
-    check_valid_signable_account(program_id, price_account, size_of::<PriceAccount>())?;
+    check_valid_signable_account(program_id, price_account)?;
 
     let mut price_account_data = load_checked::<PriceAccount>(price_account, cmd.header.version)?;
     price_account_data.min_pub_ = cmd.minimum_publishers;
@@ -749,8 +732,8 @@ pub fn del_product(
     }?;
 
     check_valid_funding_account(funding_account)?;
-    check_valid_signable_account(program_id, mapping_account, size_of::<MappingAccount>())?;
-    check_valid_signable_account(program_id, product_account, PC_PROD_ACC_SIZE as usize)?;
+    check_valid_signable_account(program_id, mapping_account)?;
+    check_valid_signable_account(program_id, product_account)?;
 
     {
         let cmd_args = load::<CommandHeader>(instruction_data)?;
