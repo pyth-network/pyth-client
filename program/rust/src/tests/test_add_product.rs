@@ -69,14 +69,17 @@ fn test_add_product() {
         let product_data = load_account_as::<ProductAccount>(&product_account).unwrap();
         let mapping_data = load_checked::<MappingAccount>(&mapping_account, PC_VERSION).unwrap();
 
-        assert_eq!(product_data.magic_, PC_MAGIC);
-        assert_eq!(product_data.ver_, PC_VERSION);
-        assert_eq!(product_data.type_, PC_ACCTYPE_PRODUCT);
-        assert_eq!(product_data.size_, size_of::<ProductAccount>() as u32);
-        assert_eq!(mapping_data.num_, 1);
-        assert_eq!(mapping_data.size_, (MappingAccount::INITIAL_SIZE + 32));
+        assert_eq!(product_data.header.magic_number, PC_MAGIC);
+        assert_eq!(product_data.header.version, PC_VERSION);
+        assert_eq!(product_data.header.account_type, PC_ACCTYPE_PRODUCT);
+        assert_eq!(product_data.header.size, size_of::<ProductAccount>() as u32);
+        assert_eq!(mapping_data.number_of_products, 1);
+        assert_eq!(
+            mapping_data.header.size,
+            (MappingAccount::INITIAL_SIZE + 32)
+        );
         assert!(pubkey_equal(
-            &mapping_data.prod_[0],
+            &mapping_data.products_list[0],
             &product_account.key.to_bytes()
         ));
     }
@@ -93,10 +96,13 @@ fn test_add_product() {
     .is_ok());
     {
         let mapping_data = load_checked::<MappingAccount>(&mapping_account, PC_VERSION).unwrap();
-        assert_eq!(mapping_data.num_, 2);
-        assert_eq!(mapping_data.size_, (MappingAccount::INITIAL_SIZE + 2 * 32));
+        assert_eq!(mapping_data.number_of_products, 2);
+        assert_eq!(
+            mapping_data.header.size,
+            (MappingAccount::INITIAL_SIZE + 2 * 32)
+        );
         assert!(pubkey_equal(
-            &mapping_data.prod_[1],
+            &mapping_data.products_list[1],
             &product_account_2.key.to_bytes()
         ));
     }
@@ -147,10 +153,10 @@ fn test_add_product() {
         .is_ok());
         let mapping_data = load_checked::<MappingAccount>(&mapping_account, PC_VERSION).unwrap();
         assert_eq!(
-            mapping_data.size_,
+            mapping_data.header.size,
             MappingAccount::INITIAL_SIZE + (i + 1) * 32
         );
-        assert_eq!(mapping_data.num_, i + 1);
+        assert_eq!(mapping_data.number_of_products, i + 1);
     }
 
     clear_account(&product_account).unwrap();
@@ -169,5 +175,5 @@ fn test_add_product() {
     );
 
     let mapping_data = load_checked::<MappingAccount>(&mapping_account, PC_VERSION).unwrap();
-    assert_eq!(mapping_data.num_, PC_MAP_TABLE_SIZE);
+    assert_eq!(mapping_data.number_of_products, PC_MAP_TABLE_SIZE);
 }

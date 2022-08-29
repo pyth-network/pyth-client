@@ -82,7 +82,7 @@ fn test_del_publisher() {
         assert_eq!(price_data.comp_[0].latest_.status_, 0);
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 0);
         assert_eq!(price_data.comp_[0].latest_.corp_act_status_, 0);
-        assert_eq!(price_data.size_, PriceAccount::INITIAL_SIZE);
+        assert_eq!(price_data.header.size, PriceAccount::INITIAL_SIZE);
         assert!(pubkey_is_zero(&price_data.comp_[0].pub_));
 
         price_data.num_ = 2;
@@ -117,7 +117,7 @@ fn test_del_publisher() {
         assert_eq!(price_data.comp_[1].latest_.pub_slot_, 0);
         assert_eq!(price_data.comp_[1].latest_.corp_act_status_, 0);
         assert_eq!(
-            price_data.size_,
+            price_data.header.size,
             PriceAccount::INITIAL_SIZE + (size_of::<PriceComponent>() as u32)
         );
         assert!(pubkey_equal(
@@ -158,7 +158,7 @@ fn test_del_publisher() {
         assert_eq!(price_data.comp_[1].latest_.pub_slot_, 0);
         assert_eq!(price_data.comp_[1].latest_.corp_act_status_, 0);
         assert_eq!(
-            price_data.size_,
+            price_data.header.size,
             PriceAccount::INITIAL_SIZE + (size_of::<PriceComponent>() as u32)
         );
         assert!(pubkey_equal(

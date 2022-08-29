@@ -96,7 +96,7 @@ fn test_offsets() {
     let mapping_data = load_checked::<MappingAccount>(&mapping_account, PC_VERSION).unwrap();
 
     assert_eq!(
-        size_of::<MappingAccount>() - size_of_val(&mapping_data.prod_),
+        size_of::<MappingAccount>() - size_of_val(&mapping_data.products_list),
         try_convert::<_, usize>(MappingAccount::INITIAL_SIZE).unwrap()
     );
 }

@@ -74,7 +74,7 @@ fn test_add_publisher() {
         let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
         assert_eq!(price_data.num_, 1);
         assert_eq!(
-            price_data.size_,
+            price_data.header.size,
             PriceAccount::INITIAL_SIZE + (size_of::<PriceComponent>() as u32)
         );
         assert!(pubkey_equal(
@@ -127,7 +127,7 @@ fn test_add_publisher() {
                 bytes_of(&cmd.publisher)
             ));
             assert_eq!(
-                price_data.size_,
+                price_data.header.size,
                 PriceAccount::INITIAL_SIZE + (size_of::<PriceComponent>() as u32) * (i + 1)
             );
         }
