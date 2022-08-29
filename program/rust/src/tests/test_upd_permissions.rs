@@ -1,24 +1,16 @@
-use std::str::FromStr;
-
 use bytemuck::bytes_of;
-use solana_program::bpf_loader_upgradeable::UpgradeableLoaderState;
-use solana_program::pubkey::Pubkey;
 use solana_sdk::signer::Signer;
 
 use crate::c_oracle_header::{
     CPubkey,
     PermissionAccount,
-    ProductAccount,
 };
 use crate::instruction::{
     OracleCommand,
     UpdPermissionsArgs,
 };
 use crate::tests::pyth_simulator::PythSimulator;
-use crate::utils::{
-    pubkey_equal,
-    pubkey_is_zero,
-};
+use crate::utils::pubkey_equal;
 
 #[tokio::test]
 async fn test_upd_permissions() {
