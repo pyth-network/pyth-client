@@ -8,7 +8,6 @@ mod test_del_product;
 mod test_del_publisher;
 mod test_init_mapping;
 mod test_init_price;
-mod test_resize_account;
 mod test_set_min_pub;
 mod test_sizes;
 mod test_upd_aggregate;

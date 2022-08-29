@@ -1,5 +1,4 @@
 use crate::c_oracle_header::{
-    CPubkey,
     PriceAccount,
     PriceComponent,
     PythAccount,
@@ -16,10 +15,7 @@ use crate::instruction::{
 };
 use crate::processor::process_instruction;
 use crate::tests::test_utils::AccountSetup;
-use crate::utils::{
-    clear_account,
-    pubkey_equal,
-};
+use crate::utils::clear_account;
 use crate::OracleError;
 use bytemuck::bytes_of;
 use solana_program::program_error::ProgramError;
@@ -30,7 +26,7 @@ use std::mem::size_of;
 #[test]
 fn test_add_publisher() {
     let program_id = Pubkey::new_unique();
-    let publisher = CPubkey::new_unique();
+    let publisher = Pubkey::new_unique();
 
     let mut cmd = AddPublisherArgs {
         header: OracleCommand::AddPublisher.into(),
@@ -77,10 +73,7 @@ fn test_add_publisher() {
             price_data.header.size,
             PriceAccount::INITIAL_SIZE + (size_of::<PriceComponent>() as u32)
         );
-        assert!(pubkey_equal(
-            &price_data.comp_[0].pub_,
-            bytes_of(&publisher)
-        ));
+        assert!(price_data.comp_[0].pub_ == publisher);
     }
 
     // Can't add twice
@@ -109,7 +102,7 @@ fn test_add_publisher() {
 
     //Fill up price node
     for i in 0..PC_COMP_SIZE {
-        cmd.publisher = CPubkey::new_unique();
+        cmd.publisher = Pubkey::new_unique();
         instruction_data = bytes_of::<AddPublisherArgs>(&cmd);
         assert!(process_instruction(
             &program_id,
@@ -122,10 +115,7 @@ fn test_add_publisher() {
         {
             let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
             assert_eq!(price_data.num_, i + 1);
-            assert!(pubkey_equal(
-                &price_data.comp_[i as usize].pub_,
-                bytes_of(&cmd.publisher)
-            ));
+            assert!(price_data.comp_[i as usize].pub_ == cmd.publisher);
             assert_eq!(
                 price_data.header.size,
                 PriceAccount::INITIAL_SIZE + (size_of::<PriceComponent>() as u32) * (i + 1)
@@ -133,7 +123,7 @@ fn test_add_publisher() {
         }
     }
 
-    cmd.publisher = CPubkey::new_unique();
+    cmd.publisher = Pubkey::new_unique();
     instruction_data = bytes_of::<AddPublisherArgs>(&cmd);
     assert_eq!(
         process_instruction(

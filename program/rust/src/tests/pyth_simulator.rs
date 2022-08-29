@@ -11,10 +11,7 @@ use solana_program::instruction::{
 };
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
-use solana_program::{
-    system_instruction,
-    system_program,
-};
+use solana_program::system_instruction;
 use solana_program_test::{
     processor,
     BanksClient,
@@ -226,27 +223,6 @@ impl PythSimulator {
         self.process_ix(instruction, &vec![&product_keypair, &price_keypair])
             .await
     }
-
-    /// Resize a price account (using the resize_price_account
-    /// instruction).
-    pub async fn resize_price_account(
-        &mut self,
-        price_keypair: &Keypair,
-    ) -> Result<(), BanksClientError> {
-        let cmd: CommandHeader = OracleCommand::ResizePriceAccount.into();
-        let instruction = Instruction::new_with_bytes(
-            self.program_id,
-            bytes_of(&cmd),
-            vec![
-                AccountMeta::new(self.payer.pubkey(), true),
-                AccountMeta::new(price_keypair.pubkey(), true),
-                AccountMeta::new(system_program::id(), false),
-            ],
-        );
-
-        self.process_ix(instruction, &vec![&price_keypair]).await
-    }
-
 
     /// Get the account at `key`. Returns `None` if no such account exists.
     pub async fn get_account(&mut self, key: Pubkey) -> Option<Account> {

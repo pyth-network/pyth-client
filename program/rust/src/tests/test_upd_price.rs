@@ -23,7 +23,6 @@ use crate::tests::test_utils::{
     update_clock_slot,
     AccountSetup,
 };
-use crate::utils::pubkey_assign;
 #[test]
 fn test_upd_price() {
     let mut instruction_data = [0u8; size_of::<UpdPriceArgs>()];
@@ -42,10 +41,7 @@ fn test_upd_price() {
     {
         let mut price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
         price_data.num_ = 1;
-        pubkey_assign(
-            &mut price_data.comp_[0].pub_,
-            &funding_account.key.to_bytes(),
-        );
+        price_data.comp_[0].pub_ = *funding_account.key;
     }
 
     let mut clock_setup = AccountSetup::new_clock();

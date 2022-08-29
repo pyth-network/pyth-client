@@ -4,7 +4,6 @@ use std::mem::{
 };
 
 use crate::c_oracle_header::{
-    CPubkey,
     MappingAccount,
     PriceAccount,
     PriceComponent,
@@ -42,18 +41,14 @@ use crate::utils::{
     check_valid_signable_account,
     check_valid_writable_account,
     is_component_update,
-    pubkey_assign,
-    pubkey_clear,
-    pubkey_equal,
-    pubkey_is_zero,
     pyth_assert,
     read_pc_str_t,
     try_convert,
 };
 use crate::OracleError;
 use bytemuck::{
-    bytes_of,
     bytes_of_mut,
+    Zeroable,
 };
 use solana_program::account_info::AccountInfo;
 use solana_program::clock::Clock;
@@ -209,15 +204,12 @@ pub fn add_mapping(
     let mut cur_mapping = load_checked::<MappingAccount>(cur_mapping, hdr.version)?;
     pyth_assert(
         cur_mapping.number_of_products == PC_MAP_TABLE_SIZE
-            && pubkey_is_zero(&cur_mapping.next_mapping_account),
+            && cur_mapping.next_mapping_account == Pubkey::zeroed(),
         ProgramError::InvalidArgument,
     )?;
 
     initialize_pyth_account_checked::<MappingAccount>(next_mapping, hdr.version)?;
-    pubkey_assign(
-        &mut cur_mapping.next_mapping_account,
-        &next_mapping.key.to_bytes(),
-    );
+    cur_mapping.next_mapping_account = *next_mapping.key;
 
     Ok(())
 }
@@ -252,10 +244,7 @@ pub fn upd_price(
 
         // Verify that publisher is authorized
         while publisher_index < price_data.num_ as usize {
-            if pubkey_equal(
-                &price_data.comp_[publisher_index].pub_,
-                &funding_account.key.to_bytes(),
-            ) {
+            if price_data.comp_[publisher_index].pub_ == *funding_account.key {
                 break;
             }
             publisher_index += 1;
@@ -369,18 +358,9 @@ pub fn add_price(
         initialize_pyth_account_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
     price_data.exponent = cmd_args.exponent;
     price_data.price_type = cmd_args.price_type;
-    pubkey_assign(
-        &mut price_data.product_account,
-        &product_account.key.to_bytes(),
-    );
-    pubkey_assign(
-        &mut price_data.next_price_account,
-        bytes_of(&product_data.first_price_account),
-    );
-    pubkey_assign(
-        &mut product_data.first_price_account,
-        &price_account.key.to_bytes(),
-    );
+    price_data.product_account = *product_account.key;
+    price_data.next_price_account = product_data.first_price_account;
+    product_data.first_price_account = *price_account.key;
 
     Ok(())
 }
@@ -411,22 +391,16 @@ pub fn del_price(
         let mut product_data = load_checked::<ProductAccount>(product_account, cmd_args.version)?;
         let price_data = load_checked::<PriceAccount>(price_account, cmd_args.version)?;
         pyth_assert(
-            pubkey_equal(
-                &product_data.first_price_account,
-                &price_account.key.to_bytes(),
-            ),
+            product_data.first_price_account == *price_account.key,
             ProgramError::InvalidArgument,
         )?;
 
         pyth_assert(
-            pubkey_equal(&price_data.product_account, &product_account.key.to_bytes()),
+            price_data.product_account == *product_account.key,
             ProgramError::InvalidArgument,
         )?;
 
-        pubkey_assign(
-            &mut product_data.first_price_account,
-            bytes_of(&price_data.next_price_account),
-        );
+        product_data.first_price_account = price_data.next_price_account;
     }
 
     // Zero out the balance of the price account to delete it.
@@ -514,7 +488,7 @@ pub fn add_publisher(
 
     pyth_assert(
         instruction_data.len() == size_of::<AddPublisherArgs>()
-            && !pubkey_is_zero(&cmd_args.publisher),
+            && cmd_args.publisher != Pubkey::zeroed(),
         ProgramError::InvalidArgument,
     )?;
 
@@ -533,7 +507,7 @@ pub fn add_publisher(
     }
 
     for i in 0..(price_data.num_ as usize) {
-        if pubkey_equal(&cmd_args.publisher, bytes_of(&price_data.comp_[i].pub_)) {
+        if cmd_args.publisher == price_data.comp_[i].pub_ {
             return Err(ProgramError::InvalidArgument);
         }
     }
@@ -544,10 +518,7 @@ pub fn add_publisher(
         0,
         size_of::<PriceComponent>(),
     );
-    pubkey_assign(
-        &mut price_data.comp_[current_index].pub_,
-        bytes_of(&cmd_args.publisher),
-    );
+    price_data.comp_[current_index].pub_ = cmd_args.publisher;
     price_data.num_ += 1;
     price_data.header.size =
         try_convert::<_, u32>(size_of::<PriceAccount>() - size_of_val(&price_data.comp_))?
@@ -567,7 +538,7 @@ pub fn del_publisher(
 
     pyth_assert(
         instruction_data.len() == size_of::<DelPublisherArgs>()
-            && !pubkey_is_zero(&cmd_args.publisher),
+            && cmd_args.publisher != Pubkey::zeroed(),
         ProgramError::InvalidArgument,
     )?;
 
@@ -582,7 +553,7 @@ pub fn del_publisher(
     let mut price_data = load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
 
     for i in 0..(price_data.num_ as usize) {
-        if pubkey_equal(&cmd_args.publisher, bytes_of(&price_data.comp_[i].pub_)) {
+        if cmd_args.publisher == price_data.comp_[i].pub_ {
             for j in i + 1..(price_data.num_ as usize) {
                 price_data.comp_[j - 1] = price_data.comp_[j];
             }
@@ -632,15 +603,12 @@ pub fn add_product(
     initialize_pyth_account_checked::<ProductAccount>(new_product_account, hdr.version)?;
 
     let current_index: usize = try_convert(mapping_data.number_of_products)?;
-    pubkey_assign(
-        &mut mapping_data.products_list[current_index],
-        bytes_of(&new_product_account.key.to_bytes()),
-    );
+    mapping_data.products_list[current_index] = *new_product_account.key;
     mapping_data.number_of_products += 1;
     mapping_data.header.size = try_convert::<_, u32>(
         size_of::<MappingAccount>() - size_of_val(&mapping_data.products_list),
     )? + mapping_data.number_of_products
-        * try_convert::<_, u32>(size_of::<CPubkey>())?;
+        * try_convert::<_, u32>(size_of::<Pubkey>())?;
 
     Ok(())
 }
@@ -763,15 +731,15 @@ pub fn del_product(
             ProgramError::InvalidArgument,
         )?;
         pyth_assert(
-            pubkey_is_zero(&product_data.first_price_account),
+            product_data.first_price_account == Pubkey::zeroed(),
             ProgramError::InvalidArgument,
         )?;
 
-        let product_key = product_account.key.to_bytes();
+        let product_key = product_account.key;
         let product_index = mapping_data
             .products_list
             .iter()
-            .position(|x| pubkey_equal(x, &product_key))
+            .position(|x| *x == *product_key)
             .ok_or(ProgramError::InvalidArgument)?;
 
         let num_after_removal: usize = try_convert(
@@ -782,16 +750,13 @@ pub fn del_product(
         )?;
 
         let last_key_bytes = mapping_data.products_list[num_after_removal];
-        pubkey_assign(
-            &mut mapping_data.products_list[product_index],
-            bytes_of(&last_key_bytes),
-        );
-        pubkey_clear(&mut mapping_data.products_list[num_after_removal]);
+        mapping_data.products_list[product_index] = last_key_bytes;
+        mapping_data.products_list[num_after_removal] = Pubkey::zeroed();
         mapping_data.number_of_products = try_convert::<_, u32>(num_after_removal)?;
         mapping_data.header.size = try_convert::<_, u32>(
             size_of::<MappingAccount>() - size_of_val(&mapping_data.products_list),
         )? + mapping_data.number_of_products
-            * try_convert::<_, u32>(size_of::<CPubkey>())?;
+            * try_convert::<_, u32>(size_of::<Pubkey>())?;
     }
 
     // Zero out the balance of the price account to delete it.

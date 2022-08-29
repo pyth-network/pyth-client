@@ -1,6 +1,5 @@
 use crate::c_oracle_header::{
     AccountHeader,
-    CPubkey,
     MappingAccount,
     PriceAccount,
     PriceComponent,
@@ -37,20 +36,20 @@ use std::mem::{
 
 #[test]
 fn test_sizes() {
-    assert_eq!(size_of::<CPubkey>(), 32);
+    assert_eq!(size_of::<Pubkey>(), 32);
     assert_eq!(
         size_of::<MappingAccount>(),
-        24 + (PC_MAP_TABLE_SIZE as usize + 1) * size_of::<CPubkey>()
+        24 + (PC_MAP_TABLE_SIZE as usize + 1) * size_of::<Pubkey>()
     );
     assert_eq!(size_of::<PriceInfo>(), 32);
     assert_eq!(
         size_of::<PriceComponent>(),
-        size_of::<CPubkey>() + 2 * size_of::<PriceInfo>()
+        size_of::<Pubkey>() + 2 * size_of::<PriceInfo>()
     );
     assert_eq!(
         size_of::<PriceAccount>(),
         48 + 8 * size_of::<u64>()
-            + 3 * size_of::<CPubkey>()
+            + 3 * size_of::<Pubkey>()
             + size_of::<PriceInfo>()
             + (PC_COMP_SIZE as usize) * size_of::<PriceComponent>()
     );
@@ -61,7 +60,7 @@ fn test_sizes() {
     assert_eq!(size_of::<AddPublisherArgs>(), 40);
     assert_eq!(size_of::<DelPublisherArgs>(), 40);
     assert_eq!(size_of::<UpdPriceArgs>(), 40);
-    assert_eq!(size_of::<CPubkey>(), 32);
+    assert_eq!(size_of::<Pubkey>(), 32);
     assert_eq!(size_of::<AccountHeader>(), 16);
     assert_eq!(size_of::<MappingAccount>(), 20536);
     assert_eq!(size_of::<ProductAccount>(), 48);
