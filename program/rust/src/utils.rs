@@ -176,7 +176,7 @@ pub fn check_pda(
     let (pda_address, bump) = Pubkey::find_program_address(seeds, program_id);
     pyth_assert(
         pda_address.eq(pda_account.key),
-        OracleError::FailedPDAVerification.into(),
+        OracleError::FailedPdaVerification.into(),
     )?;
     Ok(bump)
 }
@@ -195,10 +195,10 @@ pub fn check_is_valid_upgradeauthority_program_programdata_triplet(
 ) -> Result<(), ProgramError> {
     let program_deserialized: UpgradeableLoaderState =
         bincode::deserialize(&program_account.try_borrow_data()?)
-            .map_err(|_| OracleError::DeserializingError)?;
+            .map_err(|_| OracleError::DeserializationError)?;
     let programdata_deserialized: UpgradeableLoaderState =
         bincode::deserialize(&programdata_account.try_borrow_data()?)
-            .map_err(|_| OracleError::DeserializingError)?;
+            .map_err(|_| OracleError::DeserializationError)?;
 
     // 1. program_account is actually this program's account
     pyth_assert(

@@ -23,7 +23,6 @@ use solana_program::{
 };
 use solana_program_test::{
     find_file,
-    processor,
     read_file,
     BanksClient,
     BanksClientError,
@@ -51,7 +50,7 @@ use crate::instruction::{
     OracleCommand,
     UpdPermissionsArgs,
 };
-use crate::processor::process_instruction;
+
 
 /// Simulator for the state of the pyth program on Solana. You can run solana transactions against
 /// this struct to test how pyth instructions execute in the Solana runtime.
@@ -63,29 +62,12 @@ pub struct PythSimulator {
     /// transaction; otherwise, replayed transactions in different states can return stale
     /// results.
     last_blockhash: Hash,
-    programdata_id: Option<Pubkey>,
+    programdata_id: Pubkey,
 }
 
 impl PythSimulator {
-    /// Deploys the oracle program as immutable
-    pub async fn new() -> PythSimulator {
-        let program_id = Pubkey::new_unique();
-        let (banks_client, payer, recent_blockhash) =
-            ProgramTest::new("pyth_oracle", program_id, processor!(process_instruction))
-                .start()
-                .await;
-
-        PythSimulator {
-            program_id,
-            banks_client,
-            payer,
-            last_blockhash: recent_blockhash,
-            programdata_id: None,
-        }
-    }
-
     /// Deploys the oracle program as upgradable
-    pub async fn new_upgradable() -> PythSimulator {
+    pub async fn new() -> PythSimulator {
         let mut bpf_data = read_file(find_file("pyth_oracle.so").unwrap_or_else(|| {
             panic!("Unable to locate {}", "pyth_oracle.so");
         }));
@@ -161,7 +143,7 @@ impl PythSimulator {
             banks_client,
             payer: upgrade_authority_keypair,
             last_blockhash: recent_blockhash,
-            programdata_id: Some(programdata_key),
+            programdata_id: programdata_key,
         };
     }
 
@@ -337,7 +319,7 @@ impl PythSimulator {
             vec![
                 AccountMeta::new(self.payer.pubkey(), true),
                 AccountMeta::new_readonly(self.program_id, false),
-                AccountMeta::new_readonly(self.programdata_id.unwrap(), false),
+                AccountMeta::new_readonly(self.programdata_id, false),
                 AccountMeta::new(permissions_pubkey, false),
                 AccountMeta::new_readonly(system_program::id(), false),
             ],

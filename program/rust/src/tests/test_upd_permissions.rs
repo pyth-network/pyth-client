@@ -14,7 +14,7 @@ use crate::utils::pubkey_equal;
 
 #[tokio::test]
 async fn test_upd_permissions() {
-    let mut sim = PythSimulator::new_upgradable().await;
+    let mut sim = PythSimulator::new().await;
 
     //Check that the program got deployed properly and can be interacted with
     let mapping_keypair = sim.init_mapping().await.unwrap();
