@@ -16,14 +16,14 @@ use crate::utils::pubkey_equal;
 async fn test_upd_permissions() {
     let mut sim = PythSimulator::new_upgradable().await;
 
-    //Check that the program got deployed properly
+    //Check that the program got deployed properly and can be interacted with
     let mapping_keypair = sim.init_mapping().await.unwrap();
     let product = sim.add_product(&mapping_keypair).await.unwrap();
     let price = sim.add_price(&product, -8).await.unwrap();
     assert!(sim.get_account(price.pubkey()).await.is_some());
 
-    let mut data_curation_authority = CPubkey::new_unique();
     let mut master_authority = CPubkey::new_unique();
+    let mut data_curation_authority = CPubkey::new_unique();
     let mut security_authority = CPubkey::new_unique();
 
     let mut permissions_pubkey = sim
@@ -52,6 +52,8 @@ async fn test_upd_permissions() {
         &security_authority,
         bytes_of(&permission_data.security_authority)
     ));
+    let initialized_bump = permission_data.bump;
+    assert!(initialized_bump != 0);
 
     data_curation_authority = CPubkey::new_unique();
     master_authority = CPubkey::new_unique();
@@ -83,4 +85,5 @@ async fn test_upd_permissions() {
         &security_authority,
         bytes_of(&permission_data.security_authority)
     ));
+    assert_eq!(initialized_bump, permission_data.bump);
 }

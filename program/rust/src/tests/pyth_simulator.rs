@@ -92,30 +92,24 @@ impl PythSimulator {
 
 
         let mut program_test = ProgramTest::default();
-        let programdata_key = Pubkey::new_unique();
         let program_key = Pubkey::new_unique();
+        let programdata_key = Pubkey::new_unique();
 
         let upgrade_authority_keypair = Keypair::new();
 
-        let programdata_data = UpgradeableLoaderState::ProgramData {
+        let program_deserialized = UpgradeableLoaderState::Program {
+            programdata_address: programdata_key,
+        };
+        let programdata_deserialized = UpgradeableLoaderState::ProgramData {
             slot:                      1,
             upgrade_authority_address: Some(upgrade_authority_keypair.pubkey()),
         };
-        let program_data = UpgradeableLoaderState::Program {
-            programdata_address: programdata_key,
-        };
-        let mut programdata_vec = bincode::serialize(&programdata_data).unwrap();
-        let program_vec = bincode::serialize(&program_data).unwrap();
+
+        // Program contains a pointer to progradata
+        let program_vec = bincode::serialize(&program_deserialized).unwrap();
+        // Programdata contains a header and the binary of the program
+        let mut programdata_vec = bincode::serialize(&programdata_deserialized).unwrap();
         programdata_vec.append(&mut bpf_data);
-
-
-        let programdata_account = Account {
-            lamports:   Rent::default().minimum_balance(programdata_vec.len()),
-            data:       programdata_vec,
-            owner:      bpf_loader_upgradeable::ID,
-            executable: false,
-            rent_epoch: Epoch::default(),
-        };
 
         let program_account = Account {
             lamports:   Rent::default().minimum_balance(program_vec.len()),
@@ -124,12 +118,23 @@ impl PythSimulator {
             executable: true,
             rent_epoch: Epoch::default(),
         };
+        let programdata_account = Account {
+            lamports:   Rent::default().minimum_balance(programdata_vec.len()),
+            data:       programdata_vec,
+            owner:      bpf_loader_upgradeable::ID,
+            executable: false,
+            rent_epoch: Epoch::default(),
+        };
+
+        // Add to both accounts to program test, now the program is deploy as upgradable
         program_test.add_account(program_key, program_account);
         program_test.add_account(programdata_key, programdata_account);
 
 
+        // Start validator
         let (mut banks_client, payer, mut recent_blockhash) = program_test.start().await;
 
+        // Transfer money to upgrade_authority so it can call the instructions
         let instruction = system_instruction::transfer(
             &payer.pubkey(),
             &upgrade_authority_keypair.pubkey(),
@@ -149,6 +154,8 @@ impl PythSimulator {
 
         banks_client.process_transaction(transaction).await.unwrap();
 
+        // Same as new() but here we set the payer to be upgrade_authority and program_id to be the
+        // upgradable program
         return PythSimulator {
             program_id: program_key,
             banks_client,
