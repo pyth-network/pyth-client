@@ -23,7 +23,6 @@ use crate::tests::test_utils::{
     update_clock_slot,
     AccountSetup,
 };
-use crate::utils::pubkey_assign;
 #[test]
 fn test_upd_price_no_fail_on_error_no_fail_on_error() {
     let mut instruction_data = [0u8; size_of::<UpdPriceArgs>()];
@@ -92,10 +91,7 @@ fn test_upd_price_no_fail_on_error_no_fail_on_error() {
 
         // Now permission the publish account for the price account.
         price_data.num_ = 1;
-        pubkey_assign(
-            &mut price_data.comp_[0].pub_,
-            &funding_account.key.to_bytes(),
-        );
+        price_data.comp_[0].pub_ = *funding_account.key;
     }
 
     // The update should now succeed, and have an effect.

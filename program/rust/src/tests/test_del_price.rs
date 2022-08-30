@@ -1,8 +1,8 @@
+use solana_program::pubkey::Pubkey;
 use solana_sdk::signer::Signer;
 
 use crate::c_oracle_header::ProductAccount;
 use crate::tests::pyth_simulator::PythSimulator;
-use crate::utils::pubkey_is_zero;
 
 #[tokio::test]
 async fn test_del_price() {
@@ -31,7 +31,7 @@ async fn test_del_price() {
         .get_account_data_as::<ProductAccount>(product1.pubkey())
         .await
         .unwrap();
-    assert!(pubkey_is_zero(&product1_data.first_price_account));
+    assert!(product1_data.first_price_account == Pubkey::default());
 
 
     // price2_1 is the 2nd item in the linked list since price2_2 got added after t.
@@ -48,5 +48,5 @@ async fn test_del_price() {
         .await
         .unwrap();
 
-    assert!(pubkey_is_zero(&product2_data.first_price_account));
+    assert!(product2_data.first_price_account == Pubkey::default());
 }

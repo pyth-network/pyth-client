@@ -1,6 +1,5 @@
 use crate::c_oracle_header::{
     AccountHeader,
-    CPubkey,
     PC_MAX_NUM_DECIMALS,
 };
 use crate::deserialize::load_account_as;
@@ -87,28 +86,6 @@ pub fn check_exponent_range(expo: i32) -> Result<(), ProgramError> {
         expo >= -(PC_MAX_NUM_DECIMALS as i32) && expo <= PC_MAX_NUM_DECIMALS as i32,
         ProgramError::InvalidArgument,
     )
-}
-
-// Assign pubkey bytes from source to target, fails if source is not 32 bytes
-pub fn pubkey_assign(target: &mut CPubkey, source: &[u8]) {
-    unsafe { target.k1_.copy_from_slice(source) }
-}
-
-pub fn pubkey_is_zero(key: &CPubkey) -> bool {
-    return unsafe { key.k8_.iter().all(|x| *x == 0) };
-}
-
-pub fn pubkey_equal(target: &CPubkey, source: &[u8]) -> bool {
-    unsafe { target.k1_ == *source }
-}
-
-/// Zero out the bytes of `key`.
-pub fn pubkey_clear(key: &mut CPubkey) {
-    unsafe {
-        for i in 0..key.k8_.len() {
-            key.k8_[i] = 0;
-        }
-    }
 }
 
 /// Convert `x: T` into a `U`, returning the appropriate `OracleError` if the conversion fails.
