@@ -22,7 +22,6 @@ use crate::c_oracle_header::{
 use crate::deserialize::{
     initialize_pyth_account_checked,
     load,
-    load_account_as_mut,
     load_checked,
 };
 use crate::instruction::{
@@ -280,7 +279,8 @@ pub fn upd_price(
 
     let account_len = price_account.try_data_len()?;
     if aggregate_updated && account_len == PRICE_ACCOUNT_SIZE {
-        let mut price_account = load_account_as_mut::<PriceAccountWrapper>(price_account)?;
+        let mut price_account =
+            load_checked::<PriceAccountWrapper>(price_account, cmd_args.header.version)?;
         price_account.add_price_to_time_machine()?;
     }
 
