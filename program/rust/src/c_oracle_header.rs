@@ -13,6 +13,14 @@ use std::mem::size_of;
 //things defined in bindings.h
 include!("../bindings.rs");
 
+
+/// If ci > price / PC_MAX_CI_DIVISOR, set publisher status to unknown.
+/// (e.g., 20 means ci must be < 5% of price)
+pub const MAX_CI_DIVISOR: i64 = 20;
+/// Bound on the range of the exponent in price accounts. This number is set such that the
+/// PD-based EMA computation does not lose too much precision.
+pub const MAX_NUM_DECIMALS: i32 = 8;
+
 /// The PythAccount trait's purpose is to attach constants to the 3 types of accounts that Pyth has
 /// (mapping, price, product). This allows less duplicated code, because now we can create generic
 /// functions to perform common checks on the accounts and to load and initialize the accounts.

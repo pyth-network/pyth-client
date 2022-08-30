@@ -10,9 +10,9 @@ use crate::c_oracle_header::{
     PriceEma,
     PriceInfo,
     ProductAccount,
+    MAX_CI_DIVISOR,
     PC_COMP_SIZE,
     PC_MAP_TABLE_SIZE,
-    PC_MAX_CI_DIVISOR,
     PC_PROD_ACC_SIZE,
     PC_PTYPE_UNKNOWN,
     PC_STATUS_UNKNOWN,
@@ -273,7 +273,7 @@ pub fn upd_price(
     // Try to update the publisher's price
     if is_component_update(cmd_args)? {
         let mut status: u32 = cmd_args.status;
-        let mut threshold_conf = cmd_args.price / PC_MAX_CI_DIVISOR as i64;
+        let mut threshold_conf = cmd_args.price / MAX_CI_DIVISOR;
 
         if threshold_conf < 0 {
             threshold_conf = -threshold_conf;
