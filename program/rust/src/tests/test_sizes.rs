@@ -108,4 +108,15 @@ fn test_pubkey() {
 
     assert_eq!(default_pubkey, zero_pubkey);
     assert!(unique_pubkey != default_pubkey);
+
+    // Check that current onchain bytes are interpretable as a Solana Pubkey. I manually grabbed the
+    // bytes for BTC/USD price account's product field with `solana account` and check that they
+    // get properly interpreted as the actual base58 product account
+    let onchain_bytes =
+        hex::decode("3515b3861e8fe93e5f540ba4077c216404782b86d5e78077b3cbfd27313ab3bc").unwrap();
+    let onchain_bytes_as_solana_pubkey = Pubkey::new(&onchain_bytes.as_slice());
+    assert_eq!(
+        onchain_bytes_as_solana_pubkey.to_string(),
+        "4aDoSXJ5o3AuvL7QFeR6h44jALQfTmUUCTVGDD6aoJTM"
+    );
 }
