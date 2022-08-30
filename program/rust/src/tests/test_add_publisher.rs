@@ -56,7 +56,7 @@ fn test_add_publisher() {
 
     // Now give the price account enough lamports to be rent exempt
     **price_account.try_borrow_mut_lamports().unwrap() =
-        Rent::minimum_balance(&Rent::default(), PriceAccount::minimum_size());
+        Rent::minimum_balance(&Rent::default(), PriceAccount::MINIMUM_SIZE);
 
 
     assert!(process_instruction(

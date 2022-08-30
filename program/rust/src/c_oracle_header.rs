@@ -29,9 +29,7 @@ pub trait PythAccount: Pod {
     const INITIAL_SIZE: u32;
     /// `minimum_size()` is the minimum size that the solana account holding the struct needs to
     /// have. `INITIAL_SIZE` <= `minimum_size()`
-    fn minimum_size() -> usize {
-        size_of::<Self>()
-    }
+    const MINIMUM_SIZE: usize = size_of::<Self>();
 }
 
 impl PythAccount for MappingAccount {
@@ -43,9 +41,7 @@ impl PythAccount for MappingAccount {
 impl PythAccount for ProductAccount {
     const ACCOUNT_TYPE: u32 = PC_ACCTYPE_PRODUCT;
     const INITIAL_SIZE: u32 = size_of::<ProductAccount>() as u32;
-    fn minimum_size() -> usize {
-        PC_PROD_ACC_SIZE as usize
-    }
+    const MINIMUM_SIZE: usize = PC_PROD_ACC_SIZE as usize;
 }
 
 impl PythAccount for PriceAccount {

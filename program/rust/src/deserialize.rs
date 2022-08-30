@@ -74,7 +74,7 @@ pub fn load_checked<'a, T: PythAccount>(
     version: u32,
 ) -> Result<RefMut<'a, T>, ProgramError> {
     pyth_assert(
-        account.data_len() >= T::minimum_size(),
+        account.data_len() >= T::MINIMUM_SIZE,
         OracleError::AccountTooSmall.into(),
     )?;
 
@@ -96,7 +96,7 @@ pub fn initialize_pyth_account_checked<'a, T: PythAccount>(
     version: u32,
 ) -> Result<RefMut<'a, T>, ProgramError> {
     pyth_assert(
-        account.data_len() >= T::minimum_size(),
+        account.data_len() >= T::MINIMUM_SIZE,
         OracleError::AccountTooSmall.into(),
     )?;
     check_valid_fresh_account(account)?;
