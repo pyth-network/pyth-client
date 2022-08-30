@@ -134,7 +134,7 @@ fn test_init_mapping() {
             &[funding_account.clone(), mapping_account.clone()],
             instruction_data
         ),
-        Err(OracleError::InvalidSignableAccount.into())
+        Err(OracleError::AccountTooSmall.into())
     );
 
     mapping_account.data = prev_data;

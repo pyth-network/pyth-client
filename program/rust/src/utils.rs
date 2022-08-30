@@ -47,25 +47,19 @@ pub fn check_valid_funding_account(account: &AccountInfo) -> Result<(), ProgramE
     )
 }
 
-pub fn valid_signable_account(
-    program_id: &Pubkey,
-    account: &AccountInfo,
-    minimum_size: usize,
-) -> bool {
+pub fn valid_signable_account(program_id: &Pubkey, account: &AccountInfo) -> bool {
     account.is_signer
         && account.is_writable
         && account.owner == program_id
-        && account.data_len() >= minimum_size
         && Rent::default().is_exempt(account.lamports(), account.data_len())
 }
 
 pub fn check_valid_signable_account(
     program_id: &Pubkey,
     account: &AccountInfo,
-    minimum_size: usize,
 ) -> Result<(), ProgramError> {
     pyth_assert(
-        valid_signable_account(program_id, account, minimum_size),
+        valid_signable_account(program_id, account),
         OracleError::InvalidSignableAccount.into(),
     )
 }
@@ -138,20 +132,18 @@ pub fn read_pc_str_t(source: &[u8]) -> Result<&[u8], ProgramError> {
     }
 }
 
-fn valid_writable_account(program_id: &Pubkey, account: &AccountInfo, minimum_size: usize) -> bool {
+fn valid_writable_account(program_id: &Pubkey, account: &AccountInfo) -> bool {
     account.is_writable
         && account.owner == program_id
-        && account.data_len() >= minimum_size
         && Rent::default().is_exempt(account.lamports(), account.data_len())
 }
 
 pub fn check_valid_writable_account(
     program_id: &Pubkey,
     account: &AccountInfo,
-    minimum_size: usize,
 ) -> Result<(), ProgramError> {
     pyth_assert(
-        valid_writable_account(program_id, account, minimum_size),
+        valid_writable_account(program_id, account),
         OracleError::InvalidWritableAccount.into(),
     )
 }

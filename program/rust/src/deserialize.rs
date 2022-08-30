@@ -13,6 +13,7 @@ use crate::c_oracle_header::{
 };
 use crate::error::OracleError;
 use crate::utils::{
+    check_valid_fresh_account,
     clear_account,
     pyth_assert,
 };
@@ -45,7 +46,8 @@ pub fn load_mut<T: Pod>(data: &mut [u8]) -> Result<&mut T, OracleError> {
     .map_err(|_| OracleError::InstructionDataSliceMisaligned)
 }
 
-/// Get the data stored in `account` as a value of type `T`
+/// Get the data stored in `account` as a value of type `T`.
+/// WARNING : Use `load_checked` to load initialized Pyth accounts
 pub fn load_account_as<'a, T: Pod>(account: &'a AccountInfo) -> Result<Ref<'a, T>, ProgramError> {
     let data = account.try_borrow_data()?;
 
@@ -56,6 +58,7 @@ pub fn load_account_as<'a, T: Pod>(account: &'a AccountInfo) -> Result<Ref<'a, T
 
 /// Mutably borrow the data in `account` as a value of type `T`.
 /// Any mutations to the returned value will be reflected in the account data.
+/// WARNING : Use `load_checked` to load initialized Pyth accounts
 pub fn load_account_as_mut<'a, T: Pod>(
     account: &'a AccountInfo,
 ) -> Result<RefMut<'a, T>, ProgramError> {
@@ -70,6 +73,11 @@ pub fn load_checked<'a, T: PythAccount>(
     account: &'a AccountInfo,
     version: u32,
 ) -> Result<RefMut<'a, T>, ProgramError> {
+    pyth_assert(
+        account.data_len() >= T::minimum_size(),
+        OracleError::AccountTooSmall.into(),
+    )?;
+
     {
         let account_header = load_account_as::<AccountHeader>(account)?;
         pyth_assert(
@@ -87,6 +95,11 @@ pub fn initialize_pyth_account_checked<'a, T: PythAccount>(
     account: &'a AccountInfo,
     version: u32,
 ) -> Result<RefMut<'a, T>, ProgramError> {
+    pyth_assert(
+        account.data_len() >= T::minimum_size(),
+        OracleError::AccountTooSmall.into(),
+    )?;
+    check_valid_fresh_account(account)?;
     clear_account(account)?;
 
     {
