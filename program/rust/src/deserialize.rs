@@ -46,7 +46,8 @@ pub fn load_mut<T: Pod>(data: &mut [u8]) -> Result<&mut T, OracleError> {
     .map_err(|_| OracleError::InstructionDataSliceMisaligned)
 }
 
-/// Get the data stored in `account` as a value of type `T`
+/// Get the data stored in `account` as a value of type `T`.
+/// WARNING : Use `load_checked` to load initialized Pyth accounts
 pub fn load_account_as<'a, T: Pod>(account: &'a AccountInfo) -> Result<Ref<'a, T>, ProgramError> {
     let data = account.try_borrow_data()?;
 
@@ -57,6 +58,7 @@ pub fn load_account_as<'a, T: Pod>(account: &'a AccountInfo) -> Result<Ref<'a, T
 
 /// Mutably borrow the data in `account` as a value of type `T`.
 /// Any mutations to the returned value will be reflected in the account data.
+/// WARNING : Use `load_checked` to load initialized Pyth accounts
 pub fn load_account_as_mut<'a, T: Pod>(
     account: &'a AccountInfo,
 ) -> Result<RefMut<'a, T>, ProgramError> {
