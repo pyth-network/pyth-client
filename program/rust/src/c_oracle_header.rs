@@ -67,9 +67,9 @@ pub struct PermissionAccount {
     pub header:                  AccountHeader,
     pub bump:                    u8,
     pub unused_:                 [u8; 7],
-    pub master_authority:        CPubkey,
-    pub data_curation_authority: CPubkey,
-    pub security_authority:      CPubkey,
+    pub master_authority:        Pubkey,
+    pub data_curation_authority: Pubkey,
+    pub security_authority:      Pubkey,
 }
 
 #[repr(C)]
@@ -100,9 +100,9 @@ pub struct PriceAccount {
     pub unused_2_:          i16,
     pub unused_3_:          i32,
     /// Corresponding product account
-    pub product_account:    CPubkey,
+    pub product_account:    Pubkey,
     /// Next price account in the list
-    pub next_price_account: CPubkey,
+    pub next_price_account: Pubkey,
     /// Second to last slot where aggregation was succesful (i.e. status : TRADING)
     pub prev_slot_:         u64,
     /// Aggregate price at prev_slot_
@@ -120,7 +120,7 @@ pub struct PriceAccount {
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]
 pub struct PriceComponent {
-    pub pub_:    CPubkey,
+    pub pub_:    Pubkey,
     pub agg_:    PriceInfo,
     pub latest_: PriceInfo,
 }
@@ -156,7 +156,7 @@ pub struct AccountHeader {
 #[derive(Copy, Clone, Pod, Zeroable)]
 pub struct ProductAccount {
     pub header:              AccountHeader,
-    pub first_price_account: CPubkey,
+    pub first_price_account: Pubkey,
 }
 
 #[repr(C)]
@@ -165,35 +165,12 @@ pub struct MappingAccount {
     pub header:               AccountHeader,
     pub number_of_products:   u32,
     pub unused_:              u32,
-    pub next_mapping_account: CPubkey,
-    pub products_list:        [CPubkey; PC_MAP_TABLE_SIZE as usize],
+    pub next_mapping_account: Pubkey,
+    pub products_list:        [Pubkey; PC_MAP_TABLE_SIZE as usize],
 }
-
-// Unsafe impl because CPubkey is a union
-unsafe impl Pod for CPubkey {
-}
-unsafe impl Zeroable for CPubkey {
-}
-
 
 // Unsafe impl because product_list is of size 640 and there's no derived trait for this size
 unsafe impl Pod for MappingAccount {
 }
 unsafe impl Zeroable for MappingAccount {
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub union CPubkey {
-    pub k1_: [u8; 32usize],
-    pub k8_: [u64; 4usize],
-}
-
-impl CPubkey {
-    pub fn new_unique() -> CPubkey {
-        let solana_unique = Pubkey::new_unique();
-        CPubkey {
-            k1_: solana_unique.to_bytes(),
-        }
-    }
 }

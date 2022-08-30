@@ -3,7 +3,6 @@ use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 
 use crate::c_oracle_header::{
-    CPubkey,
     PriceAccount,
     PC_MAX_NUM_DECIMALS,
     PC_VERSION,
@@ -18,10 +17,6 @@ use crate::instruction::{
 };
 use crate::processor::process_instruction;
 use crate::tests::test_utils::AccountSetup;
-use crate::utils::{
-    pubkey_assign,
-    pubkey_equal,
-};
 use crate::OracleError;
 
 #[test]
@@ -37,10 +32,10 @@ fn test_init_price() {
     let instruction_data = bytes_of::<InitPriceArgs>(&cmd);
 
     let program_id = Pubkey::new_unique();
-    let publisher = CPubkey::new_unique();
-    let publisher2 = CPubkey::new_unique();
-    let product = CPubkey::new_unique();
-    let next_price = CPubkey::new_unique();
+    let publisher = Pubkey::new_unique();
+    let publisher2 = Pubkey::new_unique();
+    let product = Pubkey::new_unique();
+    let next_price = Pubkey::new_unique();
 
     let mut funding_setup = AccountSetup::new_funding();
     let funding_account = funding_setup.to_account_info();
@@ -65,10 +60,10 @@ fn test_init_price() {
         price_data.exponent = 0;
         price_data.min_pub_ = 7;
         price_data.num_ = 4;
-        pubkey_assign(&mut price_data.comp_[0].pub_, bytes_of(&publisher));
-        pubkey_assign(&mut price_data.comp_[3].pub_, bytes_of(&publisher2));
-        pubkey_assign(&mut price_data.product_account, bytes_of(&product));
-        pubkey_assign(&mut price_data.next_price_account, bytes_of(&next_price));
+        price_data.comp_[0].pub_ = publisher;
+        price_data.comp_[3].pub_ = publisher2;
+        price_data.product_account = product;
+        price_data.next_price_account = next_price;
 
         price_data.last_slot_ = 100;
         price_data.valid_slot_ = 100;
@@ -107,22 +102,10 @@ fn test_init_price() {
         assert_eq!(price_data.price_type, ptype);
         assert_eq!(price_data.min_pub_, 7);
         assert_eq!(price_data.num_, 4);
-        assert!(pubkey_equal(
-            &price_data.comp_[0].pub_,
-            bytes_of(&publisher)
-        ));
-        assert!(pubkey_equal(
-            &price_data.comp_[3].pub_,
-            bytes_of(&publisher2)
-        ));
-        assert!(pubkey_equal(
-            &price_data.product_account,
-            bytes_of(&product)
-        ));
-        assert!(pubkey_equal(
-            &price_data.next_price_account,
-            bytes_of(&next_price)
-        ));
+        assert!(price_data.comp_[0].pub_ == publisher);
+        assert!(price_data.comp_[3].pub_ == publisher2);
+        assert!(price_data.product_account == product);
+        assert!(price_data.next_price_account == next_price);
 
         assert_eq!(price_data.last_slot_, 0);
         assert_eq!(price_data.valid_slot_, 0);

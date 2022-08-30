@@ -1,6 +1,5 @@
 use crate::c_oracle_header::{
     AccountHeader,
-    CPubkey,
     PC_MAX_NUM_DECIMALS,
 };
 use crate::deserialize::load_account_as;
@@ -48,25 +47,19 @@ pub fn check_valid_funding_account(account: &AccountInfo) -> Result<(), ProgramE
     )
 }
 
-pub fn valid_signable_account(
-    program_id: &Pubkey,
-    account: &AccountInfo,
-    minimum_size: usize,
-) -> bool {
+pub fn valid_signable_account(program_id: &Pubkey, account: &AccountInfo) -> bool {
     account.is_signer
         && account.is_writable
         && account.owner == program_id
-        && account.data_len() >= minimum_size
         && Rent::default().is_exempt(account.lamports(), account.data_len())
 }
 
 pub fn check_valid_signable_account(
     program_id: &Pubkey,
     account: &AccountInfo,
-    minimum_size: usize,
 ) -> Result<(), ProgramError> {
     pyth_assert(
-        valid_signable_account(program_id, account, minimum_size),
+        valid_signable_account(program_id, account),
         OracleError::InvalidSignableAccount.into(),
     )
 }
@@ -96,28 +89,6 @@ pub fn check_exponent_range(expo: i32) -> Result<(), ProgramError> {
     )
 }
 
-// Assign pubkey bytes from source to target, fails if source is not 32 bytes
-pub fn pubkey_assign(target: &mut CPubkey, source: &[u8]) {
-    unsafe { target.k1_.copy_from_slice(source) }
-}
-
-pub fn pubkey_is_zero(key: &CPubkey) -> bool {
-    return unsafe { key.k8_.iter().all(|x| *x == 0) };
-}
-
-pub fn pubkey_equal(target: &CPubkey, source: &[u8]) -> bool {
-    unsafe { target.k1_ == *source }
-}
-
-/// Zero out the bytes of `key`.
-pub fn pubkey_clear(key: &mut CPubkey) {
-    unsafe {
-        for i in 0..key.k8_.len() {
-            key.k8_[i] = 0;
-        }
-    }
-}
-
 /// Convert `x: T` into a `U`, returning the appropriate `OracleError` if the conversion fails.
 pub fn try_convert<T, U: TryFrom<T>>(x: T) -> Result<U, OracleError> {
     // Note: the error here assumes we're only applying this function to integers right now.
@@ -139,20 +110,18 @@ pub fn read_pc_str_t(source: &[u8]) -> Result<&[u8], ProgramError> {
     }
 }
 
-fn valid_writable_account(program_id: &Pubkey, account: &AccountInfo, minimum_size: usize) -> bool {
+fn valid_writable_account(program_id: &Pubkey, account: &AccountInfo) -> bool {
     account.is_writable
         && account.owner == program_id
-        && account.data_len() >= minimum_size
         && Rent::default().is_exempt(account.lamports(), account.data_len())
 }
 
 pub fn check_valid_writable_account(
     program_id: &Pubkey,
     account: &AccountInfo,
-    minimum_size: usize,
 ) -> Result<(), ProgramError> {
     pyth_assert(
-        valid_writable_account(program_id, account, minimum_size),
+        valid_writable_account(program_id, account),
         OracleError::InvalidWritableAccount.into(),
     )
 }

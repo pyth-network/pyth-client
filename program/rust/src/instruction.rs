@@ -1,7 +1,4 @@
-use crate::c_oracle_header::{
-    CPubkey,
-    PC_VERSION,
-};
+use crate::c_oracle_header::PC_VERSION;
 use crate::deserialize::load;
 use crate::error::OracleError;
 use bytemuck::{
@@ -13,6 +10,7 @@ use num_derive::{
     ToPrimitive,
 };
 use num_traits::FromPrimitive;
+use solana_program::pubkey::Pubkey;
 
 /// WARNING : NEW COMMANDS SHOULD BE ADDED AT THE END OF THE LIST
 #[repr(i32)]
@@ -129,7 +127,7 @@ pub type InitPriceArgs = AddPriceArgs;
 #[derive(Zeroable, Pod, Copy, Clone)]
 pub struct AddPublisherArgs {
     pub header:    CommandHeader,
-    pub publisher: CPubkey,
+    pub publisher: Pubkey,
 }
 
 pub type DelPublisherArgs = AddPublisherArgs;
@@ -157,7 +155,7 @@ pub struct UpdPriceArgs {
 #[derive(Zeroable, Pod, Copy, Clone)]
 pub struct UpdPermissionsArgs {
     pub header:                  CommandHeader,
-    pub master_authority:        CPubkey,
-    pub data_curation_authority: CPubkey,
-    pub security_authority:      CPubkey,
+    pub master_authority:        Pubkey,
+    pub data_curation_authority: Pubkey,
+    pub security_authority:      Pubkey,
 }

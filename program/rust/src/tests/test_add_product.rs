@@ -22,10 +22,7 @@ use crate::instruction::{
 };
 use crate::processor::process_instruction;
 use crate::tests::test_utils::AccountSetup;
-use crate::utils::{
-    clear_account,
-    pubkey_equal,
-};
+use crate::utils::clear_account;
 use bytemuck::bytes_of;
 use solana_program::account_info::AccountInfo;
 use solana_program::clock::Epoch;
@@ -78,10 +75,7 @@ fn test_add_product() {
             mapping_data.header.size,
             (MappingAccount::INITIAL_SIZE + 32)
         );
-        assert!(pubkey_equal(
-            &mapping_data.products_list[0],
-            &product_account.key.to_bytes()
-        ));
+        assert!(mapping_data.products_list[0] == *product_account.key);
     }
 
     assert!(process_instruction(
@@ -101,10 +95,7 @@ fn test_add_product() {
             mapping_data.header.size,
             (MappingAccount::INITIAL_SIZE + 2 * 32)
         );
-        assert!(pubkey_equal(
-            &mapping_data.products_list[1],
-            &product_account_2.key.to_bytes()
-        ));
+        assert!(mapping_data.products_list[1] == *product_account_2.key);
     }
 
     // invalid account size
@@ -131,7 +122,7 @@ fn test_add_product() {
             ],
             instruction_data
         ),
-        Err(OracleError::InvalidSignableAccount.into())
+        Err(OracleError::AccountTooSmall.into())
     );
 
     // test fill up of mapping table

@@ -1,18 +1,13 @@
-use bytemuck::bytes_of;
+use solana_program::pubkey::Pubkey;
 use solana_sdk::signer::Signer;
 
-use crate::c_oracle_header::{
-    CPubkey,
-    PermissionAccount,
-};
+use crate::c_oracle_header::PermissionAccount;
 use crate::error::OracleError;
 use crate::instruction::{
     OracleCommand,
     UpdPermissionsArgs,
 };
 use crate::tests::pyth_simulator::PythSimulator;
-use crate::utils::pubkey_equal;
-
 #[tokio::test]
 async fn test_upd_permissions() {
     let mut sim = PythSimulator::new().await;
@@ -23,9 +18,9 @@ async fn test_upd_permissions() {
     let price = sim.add_price(&product, -8).await.unwrap();
     assert!(sim.get_account(price.pubkey()).await.is_some());
 
-    let mut master_authority = CPubkey::new_unique();
-    let mut data_curation_authority = CPubkey::new_unique();
-    let mut security_authority = CPubkey::new_unique();
+    let mut master_authority = Pubkey::new_unique();
+    let mut data_curation_authority = Pubkey::new_unique();
+    let mut security_authority = Pubkey::new_unique();
 
     sim.set_generic_as_payer();
 
@@ -59,24 +54,18 @@ async fn test_upd_permissions() {
         .await
         .unwrap();
 
-    assert!(pubkey_equal(
-        &master_authority,
-        bytes_of(&permission_data.master_authority)
-    ));
-    assert!(pubkey_equal(
-        &data_curation_authority,
-        bytes_of(&permission_data.data_curation_authority)
-    ));
-    assert!(pubkey_equal(
-        &security_authority,
-        bytes_of(&permission_data.security_authority)
-    ));
+    assert_eq!(master_authority, permission_data.master_authority);
+    assert_eq!(
+        data_curation_authority,
+        permission_data.data_curation_authority
+    );
+    assert_eq!(security_authority, permission_data.security_authority);
     let initialized_bump = permission_data.bump;
     assert!(initialized_bump != 0);
 
-    data_curation_authority = CPubkey::new_unique();
-    master_authority = CPubkey::new_unique();
-    security_authority = CPubkey::new_unique();
+    data_curation_authority = Pubkey::new_unique();
+    master_authority = Pubkey::new_unique();
+    security_authority = Pubkey::new_unique();
 
     sim.set_generic_as_payer();
 
@@ -110,17 +99,11 @@ async fn test_upd_permissions() {
         .await
         .unwrap();
 
-    assert!(pubkey_equal(
-        &master_authority,
-        bytes_of(&permission_data.master_authority)
-    ));
-    assert!(pubkey_equal(
-        &data_curation_authority,
-        bytes_of(&permission_data.data_curation_authority)
-    ));
-    assert!(pubkey_equal(
-        &security_authority,
-        bytes_of(&permission_data.security_authority)
-    ));
+    assert_eq!(master_authority, permission_data.master_authority);
+    assert_eq!(
+        data_curation_authority,
+        permission_data.data_curation_authority
+    );
+    assert_eq!(security_authority, permission_data.security_authority);
     assert_eq!(initialized_bump, permission_data.bump);
 }

@@ -6,12 +6,9 @@ use std::mem::{
 use solana_program::pubkey::Pubkey;
 use solana_sdk::signer::Signer;
 
-use crate::c_oracle_header::{
-    CPubkey,
-    MappingAccount,
-};
+use crate::c_oracle_header::MappingAccount;
 use crate::tests::pyth_simulator::PythSimulator;
-use crate::utils::pubkey_equal;
+
 
 #[tokio::test]
 async fn test_del_product() {
@@ -78,13 +75,13 @@ fn mapping_product_list_equals(mapping_data: &MappingAccount, expected: Vec<Pubk
     }
 
     let expected_size = (size_of::<MappingAccount>() - size_of_val(&mapping_data.products_list)
-        + expected.len() * size_of::<CPubkey>()) as u32;
+        + expected.len() * size_of::<Pubkey>()) as u32;
     if mapping_data.header.size != expected_size {
         return false;
     }
 
     for i in 0..expected.len() {
-        if !pubkey_equal(&mapping_data.products_list[i], &expected[i].to_bytes()) {
+        if mapping_data.products_list[i] != expected[i] {
             return false;
         }
     }
