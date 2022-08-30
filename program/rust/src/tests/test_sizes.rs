@@ -14,6 +14,7 @@ use crate::c_oracle_header::{
 };
 use crate::deserialize::{
     initialize_pyth_account_checked,
+    load,
     load_checked,
 };
 use crate::instruction::{
@@ -114,7 +115,7 @@ fn test_pubkey() {
     // get properly interpreted as the actual base58 product account
     let onchain_bytes =
         hex::decode("3515b3861e8fe93e5f540ba4077c216404782b86d5e78077b3cbfd27313ab3bc").unwrap();
-    let onchain_bytes_as_solana_pubkey = Pubkey::new(&onchain_bytes.as_slice());
+    let onchain_bytes_as_solana_pubkey = load::<Pubkey>(onchain_bytes.as_slice()).unwrap();
     assert_eq!(
         onchain_bytes_as_solana_pubkey.to_string(),
         "4aDoSXJ5o3AuvL7QFeR6h44jALQfTmUUCTVGDD6aoJTM"
