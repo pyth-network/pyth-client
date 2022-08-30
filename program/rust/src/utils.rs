@@ -137,18 +137,6 @@ pub fn is_component_update(cmd_args: &UpdPriceArgs) -> Result<bool, OracleError>
     }
 }
 
-pub fn check_pda(
-    pda_account: &AccountInfo,
-    seeds: &[&[u8]],
-    program_id: &Pubkey,
-) -> Result<u8, ProgramError> {
-    let (pda_address, bump) = Pubkey::find_program_address(seeds, program_id);
-    pyth_assert(
-        pda_address.eq(pda_account.key),
-        OracleError::InvalidPda.into(),
-    )?;
-    Ok(bump)
-}
 
 /// These 3 accounts need to get passed to make sure that the upgrade authority is signing the
 /// transaction

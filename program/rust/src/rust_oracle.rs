@@ -11,7 +11,6 @@ use crate::c_oracle_header::{
     PriceEma,
     PriceInfo,
     ProductAccount,
-    PythAccount,
     PC_COMP_SIZE,
     PC_MAP_TABLE_SIZE,
     PC_MAX_CI_DIVISOR,
@@ -23,6 +22,7 @@ use crate::c_oracle_header::{
 };
 
 use crate::deserialize::{
+    create_pda_if_needed,
     initialize_pyth_account_checked,
     load,
     load_checked,
@@ -41,7 +41,6 @@ use crate::time_machine_types::PriceAccountWrapper;
 use crate::utils::{
     check_exponent_range,
     check_is_valid_upgradeauthority_program_programdata_triplet,
-    check_pda,
     check_valid_funding_account,
     check_valid_signable_account,
     check_valid_writable_account,
@@ -55,10 +54,7 @@ use bytemuck::bytes_of_mut;
 use solana_program::account_info::AccountInfo;
 use solana_program::clock::Clock;
 use solana_program::entrypoint::ProgramResult;
-use solana_program::program::{
-    invoke,
-    invoke_signed,
-};
+use solana_program::program::invoke;
 use solana_program::program_error::ProgramError;
 use solana_program::program_memory::{
     sol_memcpy,
@@ -66,10 +62,7 @@ use solana_program::program_memory::{
 };
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
-use solana_program::system_instruction::{
-    create_account,
-    transfer,
-};
+use solana_program::system_instruction::transfer;
 use solana_program::system_program::check_id;
 use solana_program::sysvar::Sysvar;
 
@@ -102,26 +95,6 @@ fn send_lamports<'a>(
     )?;
     Ok(())
 }
-
-fn create_pda_account<'a>(
-    from: &AccountInfo<'a>,
-    to: &AccountInfo<'a>,
-    system_program: &AccountInfo<'a>,
-    space: usize,
-    program_id: &Pubkey,
-    seeds: &[&[u8]],
-) -> Result<(), ProgramError> {
-    let lamports = Rent::default().minimum_balance(space);
-    let create_instruction =
-        create_account(from.key, to.key, lamports, try_convert(space)?, program_id);
-    invoke_signed(
-        &create_instruction,
-        &[from.clone(), to.clone(), system_program.clone()],
-        &[seeds],
-    )?;
-    Ok(())
-}
-
 
 /// resizes a price account so that it fits the Time Machine
 /// key[0] funding account       [signer writable]
@@ -806,11 +779,14 @@ pub fn upd_permissions(
         programdata_account,
         program_id,
     )?;
-    let bump = check_pda(
-        permissions_account,
-        &[PERMISSIONS_SEED.as_bytes()],
-        program_id,
+
+    let (permission_pda_address, bump_seed) =
+        Pubkey::find_program_address(&[PERMISSIONS_SEED.as_bytes()], program_id);
+    pyth_assert(
+        permission_pda_address == *permissions_account.key,
+        OracleError::InvalidPda.into(),
     )?;
+
     pyth_assert(
         check_id(system_program.key),
         OracleError::InvalidSystemAccount.into(),
@@ -818,26 +794,20 @@ pub fn upd_permissions(
 
 
     // Create permissions account if it doesn't exist
-    if permissions_account.lamports() == 0 {
-        create_pda_account(
-            funding_account,
-            permissions_account,
-            system_program,
-            PermissionAccount::minimum_size(),
-            program_id,
-            &[PERMISSIONS_SEED.as_bytes(), &[bump]],
-        )?;
-        initialize_pyth_account_checked::<PermissionAccount>(
-            permissions_account,
-            cmd_args.header.version,
-        )?;
-    }
+    create_pda_if_needed::<PermissionAccount>(
+        permissions_account,
+        funding_account,
+        system_program,
+        program_id,
+        &[PERMISSIONS_SEED.as_bytes(), &[bump_seed]],
+        cmd_args.header.version,
+    )?;
 
     check_valid_writable_account(program_id, permissions_account)?;
 
     let mut permissions_account_data =
         load_checked::<PermissionAccount>(permissions_account, cmd_args.header.version)?;
-    permissions_account_data.bump_seed = bump;
+    permissions_account_data.bump_seed = bump_seed;
     permissions_account_data.master_authority = cmd_args.master_authority;
 
     permissions_account_data.data_curation_authority = cmd_args.data_curation_authority;
