@@ -228,14 +228,14 @@ pub fn upd_price(
         let price_data = load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
 
         // Verify that publisher is authorized
-        while publisher_index < price_data.num_ as usize {
+        while publisher_index < try_convert::<u32, usize>(price_data.num_)? {
             if price_data.comp_[publisher_index].pub_ == *funding_account.key {
                 break;
             }
             publisher_index += 1;
         }
         pyth_assert(
-            publisher_index < price_data.num_ as usize,
+            publisher_index < try_convert::<u32, usize>(price_data.num_)?,
             ProgramError::InvalidArgument,
         )?;
 
@@ -445,7 +445,7 @@ pub fn init_price(
         0,
         size_of::<PriceInfo>(),
     );
-    for i in 0..(price_data.comp_.len() as usize) {
+    for i in 0..price_data.comp_.len() {
         sol_memset(
             bytes_of_mut(&mut price_data.comp_[i].agg_),
             0,
@@ -491,7 +491,7 @@ pub fn add_publisher(
         return Err(ProgramError::InvalidArgument);
     }
 
-    for i in 0..(price_data.num_ as usize) {
+    for i in 0..(try_convert::<u32, usize>(price_data.num_)?) {
         if cmd_args.publisher == price_data.comp_[i].pub_ {
             return Err(ProgramError::InvalidArgument);
         }
@@ -537,9 +537,9 @@ pub fn del_publisher(
 
     let mut price_data = load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
 
-    for i in 0..(price_data.num_ as usize) {
+    for i in 0..(try_convert::<u32, usize>(price_data.num_)?) {
         if cmd_args.publisher == price_data.comp_[i].pub_ {
-            for j in i + 1..(price_data.num_ as usize) {
+            for j in i + 1..(try_convert::<u32, usize>(price_data.num_)?) {
                 price_data.comp_[j - 1] = price_data.comp_[j];
             }
             price_data.num_ -= 1;
