@@ -55,14 +55,16 @@ use crate::instruction::{
 /// Simulator for the state of the pyth program on Solana. You can run solana transactions against
 /// this struct to test how pyth instructions execute in the Solana runtime.
 pub struct PythSimulator {
-    program_id:     Pubkey,
-    banks_client:   BanksClient,
-    payer:          Keypair,
+    program_id:            Pubkey,
+    banks_client:          BanksClient,
+    payer:                 Keypair,
     /// Hash used to submit the last transaction. The hash must be advanced for each new
     /// transaction; otherwise, replayed transactions in different states can return stale
     /// results.
-    last_blockhash: Hash,
-    programdata_id: Pubkey,
+    last_blockhash:        Hash,
+    programdata_id:        Pubkey,
+    pub upgrade_authority: Keypair,
+    pub genesis_keypair:   Keypair,
 }
 
 impl PythSimulator {
@@ -136,17 +138,29 @@ impl PythSimulator {
 
         banks_client.process_transaction(transaction).await.unwrap();
 
+        let genesis_keypair = Keypair::from_bytes(&payer.to_bytes()).unwrap(); // Hack to duplicate a keypair
+
         // Same as new() but here we set the payer to be upgrade_authority and program_id to be the
         // upgradable program
         return PythSimulator {
             program_id: program_key,
             banks_client,
-            payer: upgrade_authority_keypair,
+            payer,
             last_blockhash: recent_blockhash,
             programdata_id: programdata_key,
+            upgrade_authority: upgrade_authority_keypair,
+            genesis_keypair,
         };
     }
 
+
+    pub fn set_generic_as_payer(&mut self) {
+        self.payer = Keypair::from_bytes(&self.genesis_keypair.to_bytes()).unwrap();
+    }
+
+    pub fn set_upgrade_authority_as_payer(&mut self) {
+        self.payer = Keypair::from_bytes(&self.upgrade_authority.to_bytes()).unwrap();
+    }
 
     /// Process a transaction containing `instruction` signed by `signers`.
     /// The transaction is assumed to require `self.payer` to pay for and sign the transaction.

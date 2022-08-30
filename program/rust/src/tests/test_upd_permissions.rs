@@ -5,6 +5,7 @@ use crate::c_oracle_header::{
     CPubkey,
     PermissionAccount,
 };
+use crate::error::OracleError;
 use crate::instruction::{
     OracleCommand,
     UpdPermissionsArgs,
@@ -25,6 +26,24 @@ async fn test_upd_permissions() {
     let mut master_authority = CPubkey::new_unique();
     let mut data_curation_authority = CPubkey::new_unique();
     let mut security_authority = CPubkey::new_unique();
+
+    sim.set_generic_as_payer();
+
+    // Should fail because payer is not the authority
+    assert_eq!(
+        sim.upd_permissions(UpdPermissionsArgs {
+            header: OracleCommand::UpdPermissions.into(),
+            master_authority,
+            data_curation_authority,
+            security_authority,
+        })
+        .await
+        .unwrap_err()
+        .unwrap(),
+        OracleError::FailedAuthenticatingUpgradeAuthority.into()
+    );
+
+    sim.set_upgrade_authority_as_payer();
 
     let mut permissions_pubkey = sim
         .upd_permissions(UpdPermissionsArgs {
@@ -58,6 +77,24 @@ async fn test_upd_permissions() {
     data_curation_authority = CPubkey::new_unique();
     master_authority = CPubkey::new_unique();
     security_authority = CPubkey::new_unique();
+
+    sim.set_generic_as_payer();
+
+    // Should fail because payer is not the authority
+    assert_eq!(
+        sim.upd_permissions(UpdPermissionsArgs {
+            header: OracleCommand::UpdPermissions.into(),
+            master_authority,
+            data_curation_authority,
+            security_authority,
+        })
+        .await
+        .unwrap_err()
+        .unwrap(),
+        OracleError::FailedAuthenticatingUpgradeAuthority.into()
+    );
+
+    sim.set_upgrade_authority_as_payer();
 
     permissions_pubkey = sim
         .upd_permissions(UpdPermissionsArgs {
