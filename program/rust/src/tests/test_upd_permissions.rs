@@ -35,7 +35,7 @@ async fn test_upd_permissions() {
         .await
         .unwrap_err()
         .unwrap(),
-        OracleError::FailedAuthenticatingUpgradeAuthority.into()
+        OracleError::InvalidUpgradeAuthority.into()
     );
 
     sim.set_upgrade_authority_as_payer();
@@ -60,7 +60,7 @@ async fn test_upd_permissions() {
         permission_data.data_curation_authority
     );
     assert_eq!(security_authority, permission_data.security_authority);
-    let initialized_bump = permission_data.bump;
+    let initialized_bump = permission_data.bump_seed;
     assert!(initialized_bump != 0);
 
     data_curation_authority = Pubkey::new_unique();
@@ -80,7 +80,7 @@ async fn test_upd_permissions() {
         .await
         .unwrap_err()
         .unwrap(),
-        OracleError::FailedAuthenticatingUpgradeAuthority.into()
+        OracleError::InvalidUpgradeAuthority.into()
     );
 
     sim.set_upgrade_authority_as_payer();
@@ -105,5 +105,5 @@ async fn test_upd_permissions() {
         permission_data.data_curation_authority
     );
     assert_eq!(security_authority, permission_data.security_authority);
-    assert_eq!(initialized_bump, permission_data.bump);
+    assert_eq!(initialized_bump, permission_data.bump_seed);
 }

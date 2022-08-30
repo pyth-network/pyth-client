@@ -783,6 +783,9 @@ pub fn del_product(
 }
 
 
+/// Updates permissions for the pyth oracle program
+/// This function can create and update the permissions accounts, which stores
+/// several public keys that can execute administrative instructions in the pyth program
 pub fn upd_permissions(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
@@ -814,7 +817,7 @@ pub fn upd_permissions(
     )?;
 
 
-    // Create account if it doesn't exist
+    // Create permissions account if it doesn't exist
     if permissions_account.lamports() == 0 {
         create_pda_account(
             funding_account,
@@ -834,7 +837,7 @@ pub fn upd_permissions(
 
     let mut permissions_account_data =
         load_checked::<PermissionAccount>(permissions_account, cmd_args.header.version)?;
-    permissions_account_data.bump = bump;
+    permissions_account_data.bump_seed = bump;
     permissions_account_data.master_authority = cmd_args.master_authority;
 
     permissions_account_data.data_curation_authority = cmd_args.data_curation_authority;

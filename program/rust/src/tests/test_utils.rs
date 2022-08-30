@@ -123,7 +123,7 @@ impl Into<TransactionError> for OracleError {
         TransactionError::InstructionError(
             0,
             InstructionError::try_from(u64::from(ProgramError::from(
-                OracleError::FailedAuthenticatingUpgradeAuthority,
+                OracleError::InvalidUpgradeAuthority,
             )))
             .unwrap(),
         )

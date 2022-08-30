@@ -145,7 +145,7 @@ pub fn check_pda(
     let (pda_address, bump) = Pubkey::find_program_address(seeds, program_id);
     pyth_assert(
         pda_address.eq(pda_account.key),
-        OracleError::FailedPdaVerification.into(),
+        OracleError::InvalidPda.into(),
     )?;
     Ok(bump)
 }
@@ -172,7 +172,7 @@ pub fn check_is_valid_upgradeauthority_program_programdata_triplet(
     // 1. program_account is actually this program's account
     pyth_assert(
         program_account.key.eq(program_id) && program_account.executable,
-        OracleError::FailedAuthenticatingUpgradeAuthority.into(),
+        OracleError::InvalidUpgradeAuthority.into(),
     )?;
 
     // 2. programdata_account is actually this program's buffer
@@ -182,10 +182,10 @@ pub fn check_is_valid_upgradeauthority_program_programdata_triplet(
     {
         pyth_assert(
             programdata_address.eq(programdata_account.key),
-            OracleError::FailedAuthenticatingUpgradeAuthority.into(),
+            OracleError::InvalidUpgradeAuthority.into(),
         )?;
     } else {
-        return Err(OracleError::FailedAuthenticatingUpgradeAuthority.into());
+        return Err(OracleError::InvalidUpgradeAuthority.into());
     }
 
     // 3. upgrade_authority_account is actually the authority inside programdata_account
@@ -196,10 +196,10 @@ pub fn check_is_valid_upgradeauthority_program_programdata_triplet(
     {
         pyth_assert(
             upgrade_authority_key.eq(upgrade_authority_account.key),
-            OracleError::FailedAuthenticatingUpgradeAuthority.into(),
+            OracleError::InvalidUpgradeAuthority.into(),
         )?;
     } else {
-        return Err(OracleError::FailedAuthenticatingUpgradeAuthority.into());
+        return Err(OracleError::InvalidUpgradeAuthority.into());
     }
     Ok(())
 }
