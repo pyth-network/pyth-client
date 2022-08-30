@@ -1,4 +1,4 @@
-use crate::c_oracle_header::PC_VERSION;
+use crate::c_oracle_header::PYTH_VERSION;
 use crate::deserialize::load;
 use crate::error::OracleError;
 use bytemuck::{
@@ -101,7 +101,7 @@ pub struct CommandHeader {
 pub fn load_command_header_checked(data: &[u8]) -> Result<OracleCommand, OracleError> {
     let command_header = load::<CommandHeader>(data)?;
 
-    if command_header.version != PC_VERSION {
+    if command_header.version != PYTH_VERSION {
         return Err(OracleError::InvalidInstructionVersion);
     }
     OracleCommand::from_i32(command_header.command).ok_or(OracleError::UnrecognizedInstruction)

@@ -1,8 +1,8 @@
 use crate::c_oracle_header::{
     MappingAccount,
-    PC_ACCTYPE_MAPPING,
-    PC_MAGIC,
-    PC_VERSION,
+    ACCOUNT_TYPE_MAPPING,
+    PYTH_MAGIC_NUMBER,
+    PYTH_VERSION,
 };
 use crate::deserialize::load_account_as;
 use crate::error::OracleError;
@@ -43,9 +43,9 @@ fn test_init_mapping() {
     {
         let mapping_data = load_account_as::<MappingAccount>(&mapping_account).unwrap();
 
-        assert_eq!(mapping_data.header.version, PC_VERSION);
-        assert_eq!(mapping_data.header.magic_number, PC_MAGIC);
-        assert_eq!(mapping_data.header.account_type, PC_ACCTYPE_MAPPING);
+        assert_eq!(mapping_data.header.version, PYTH_VERSION);
+        assert_eq!(mapping_data.header.magic_number, PYTH_MAGIC_NUMBER);
+        assert_eq!(mapping_data.header.account_type, ACCOUNT_TYPE_MAPPING);
         assert_eq!(mapping_data.header.size, 56);
     }
 

@@ -7,10 +7,7 @@ use crate::c_oracle_header::{
     PriceInfo,
     ProductAccount,
     PythAccount,
-    PC_COMP_SIZE,
-    PC_MAP_TABLE_SIZE,
-    PC_VERSION,
-    PRICE_ACCOUNT_SIZE,
+    PYTH_VERSION,
 };
 use crate::deserialize::{
     initialize_pyth_account_checked,
@@ -40,7 +37,7 @@ fn test_sizes() {
     assert_eq!(size_of::<Pubkey>(), 32);
     assert_eq!(
         size_of::<MappingAccount>(),
-        24 + (PC_MAP_TABLE_SIZE as usize + 1) * size_of::<Pubkey>()
+        24 + (MappingAccount::MAX_NUMBER_OF_PRODUCTS as usize + 1) * size_of::<Pubkey>()
     );
     assert_eq!(size_of::<PriceInfo>(), 32);
     assert_eq!(
@@ -52,7 +49,7 @@ fn test_sizes() {
         48 + 8 * size_of::<u64>()
             + 3 * size_of::<Pubkey>()
             + size_of::<PriceInfo>()
-            + (PC_COMP_SIZE as usize) * size_of::<PriceComponent>()
+            + (PriceAccount::MAX_NUMBER_OF_PUBLISHERS as usize) * size_of::<PriceComponent>()
     );
     assert_eq!(size_of::<CommandHeader>(), 8);
     assert_eq!(size_of::<AddPriceArgs>(), 16);
@@ -68,10 +65,7 @@ fn test_sizes() {
     assert_eq!(size_of::<PriceComponent>(), 96);
     assert_eq!(size_of::<PriceEma>(), 24);
     assert_eq!(size_of::<PriceAccount>(), 3312);
-    assert_eq!(
-        size_of::<PriceAccountWrapper>(),
-        try_convert::<_, usize>(PRICE_ACCOUNT_SIZE).unwrap()
-    );
+    assert_eq!(size_of::<PriceAccountWrapper>(), 6176);
 }
 
 #[test]
@@ -81,8 +75,8 @@ fn test_offsets() {
     let mut price_setup = AccountSetup::new::<PriceAccount>(&program_id);
     let price_account = price_setup.to_account_info();
 
-    initialize_pyth_account_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
-    let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+    initialize_pyth_account_checked::<PriceAccount>(&price_account, PYTH_VERSION).unwrap();
+    let price_data = load_checked::<PriceAccount>(&price_account, PYTH_VERSION).unwrap();
 
     assert_eq!(
         size_of::<PriceAccount>() - size_of_val(&price_data.comp_),
@@ -92,8 +86,8 @@ fn test_offsets() {
     let mut mapping_setup = AccountSetup::new::<MappingAccount>(&program_id);
     let mapping_account = mapping_setup.to_account_info();
 
-    initialize_pyth_account_checked::<MappingAccount>(&mapping_account, PC_VERSION).unwrap();
-    let mapping_data = load_checked::<MappingAccount>(&mapping_account, PC_VERSION).unwrap();
+    initialize_pyth_account_checked::<MappingAccount>(&mapping_account, PYTH_VERSION).unwrap();
+    let mapping_data = load_checked::<MappingAccount>(&mapping_account, PYTH_VERSION).unwrap();
 
     assert_eq!(
         size_of::<MappingAccount>() - size_of_val(&mapping_data.products_list),

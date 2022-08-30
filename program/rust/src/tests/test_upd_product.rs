@@ -17,8 +17,7 @@ use solana_program::pubkey::Pubkey;
 use crate::c_oracle_header::{
     ProductAccount,
     PythAccount,
-    PC_PROD_ACC_SIZE,
-    PC_VERSION,
+    PYTH_VERSION,
 };
 use crate::deserialize::{
     initialize_pyth_account_checked,
@@ -28,7 +27,7 @@ use crate::deserialize::{
 
 #[test]
 fn test_upd_product() {
-    let mut instruction_data = [0u8; PC_PROD_ACC_SIZE as usize];
+    let mut instruction_data = [0u8; ProductAccount::MINIMUM_SIZE];
 
     let program_id = Pubkey::new_unique();
 
@@ -38,7 +37,7 @@ fn test_upd_product() {
     let mut product_setup = AccountSetup::new::<ProductAccount>(&program_id);
     let product_account = product_setup.to_account_info();
 
-    initialize_pyth_account_checked::<ProductAccount>(&product_account, PC_VERSION).unwrap();
+    initialize_pyth_account_checked::<ProductAccount>(&product_account, PYTH_VERSION).unwrap();
 
     let kvs = ["foo", "barz"];
     let size = populate_instruction(&mut instruction_data, &kvs);
@@ -51,7 +50,7 @@ fn test_upd_product() {
     assert!(account_has_key_values(&product_account, &kvs).unwrap_or(false));
 
     {
-        let product_data = load_checked::<ProductAccount>(&product_account, PC_VERSION).unwrap();
+        let product_data = load_checked::<ProductAccount>(&product_account, PYTH_VERSION).unwrap();
         assert_eq!(product_data.header.size, ProductAccount::INITIAL_SIZE + 9);
     }
 
@@ -77,7 +76,7 @@ fn test_upd_product() {
     .is_ok());
     assert!(account_has_key_values(&product_account, &kvs).unwrap_or(false));
     {
-        let product_data = load_checked::<ProductAccount>(&product_account, PC_VERSION).unwrap();
+        let product_data = load_checked::<ProductAccount>(&product_account, PYTH_VERSION).unwrap();
         assert_eq!(product_data.header.size, ProductAccount::INITIAL_SIZE);
     }
 
@@ -126,7 +125,7 @@ fn account_has_key_values(
     expected: &[&str],
 ) -> Result<bool, ProgramError> {
     let account_size: usize = try_convert(
-        load_checked::<ProductAccount>(product_account, PC_VERSION)?
+        load_checked::<ProductAccount>(product_account, PYTH_VERSION)?
             .header
             .size,
     )?;

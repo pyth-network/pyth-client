@@ -32,8 +32,9 @@ use solana_sdk::transaction::Transaction;
 use crate::c_oracle_header::{
     MappingAccount,
     PriceAccount,
-    PC_PROD_ACC_SIZE,
-    PC_PTYPE_PRICE,
+    ProductAccount,
+    PythAccount,
+    PRICE_TYPE_PRICE,
 };
 use crate::deserialize::load;
 use crate::instruction::{
@@ -138,7 +139,7 @@ impl PythSimulator {
         &mut self,
         mapping_keypair: &Keypair,
     ) -> Result<Keypair, BanksClientError> {
-        let product_keypair = self.create_pyth_account(PC_PROD_ACC_SIZE as usize).await;
+        let product_keypair = self.create_pyth_account(ProductAccount::MINIMUM_SIZE).await;
 
         let cmd: CommandHeader = OracleCommand::AddProduct.into();
         let instruction = Instruction::new_with_bytes(
@@ -189,7 +190,7 @@ impl PythSimulator {
         let cmd = AddPriceArgs {
             header:     OracleCommand::AddPrice.into(),
             exponent:   expo,
-            price_type: PC_PTYPE_PRICE,
+            price_type: PRICE_TYPE_PRICE,
         };
         let instruction = Instruction::new_with_bytes(
             self.program_id,

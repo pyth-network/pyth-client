@@ -6,7 +6,7 @@ use solana_program::pubkey::Pubkey;
 
 use crate::c_oracle_header::{
     PriceAccount,
-    PC_VERSION,
+    PYTH_VERSION,
 };
 use crate::deserialize::{
     initialize_pyth_account_checked,
@@ -31,7 +31,7 @@ fn test_set_min_pub() {
 
     let mut price_setup = AccountSetup::new::<PriceAccount>(&program_id);
     let price_account = price_setup.to_account_info();
-    initialize_pyth_account_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+    initialize_pyth_account_checked::<PriceAccount>(&price_account, PYTH_VERSION).unwrap();
 
     assert_eq!(get_min_pub(&price_account), Ok(0));
 
@@ -62,5 +62,5 @@ fn populate_instruction(instruction_data: &mut [u8], min_pub: u8) -> () {
 }
 
 fn get_min_pub(account: &AccountInfo) -> Result<u8, ProgramError> {
-    Ok(load_checked::<PriceAccount>(account, PC_VERSION)?.min_pub_)
+    Ok(load_checked::<PriceAccount>(account, PYTH_VERSION)?.min_pub_)
 }

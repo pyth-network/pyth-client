@@ -1,8 +1,7 @@
 use crate::c_oracle_header::{
     MappingAccount,
-    PC_MAGIC,
-    PC_MAP_TABLE_SIZE,
-    PC_VERSION,
+    PYTH_MAGIC_NUMBER,
+    PYTH_VERSION,
 };
 use crate::deserialize::{
     initialize_pyth_account_checked,
@@ -15,7 +14,10 @@ use crate::instruction::{
 };
 use crate::processor::process_instruction;
 use crate::tests::test_utils::AccountSetup;
-use crate::utils::clear_account;
+use crate::utils::{
+    clear_account,
+    try_convert,
+};
 use bytemuck::bytes_of;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
@@ -32,15 +34,16 @@ fn test_add_mapping() {
 
     let mut curr_mapping_setup = AccountSetup::new::<MappingAccount>(&program_id);
     let cur_mapping = curr_mapping_setup.to_account_info();
-    initialize_pyth_account_checked::<MappingAccount>(&cur_mapping, PC_VERSION).unwrap();
+    initialize_pyth_account_checked::<MappingAccount>(&cur_mapping, PYTH_VERSION).unwrap();
 
     let mut next_mapping_setup = AccountSetup::new::<MappingAccount>(&program_id);
     let next_mapping = next_mapping_setup.to_account_info();
 
     {
         let mut cur_mapping_data =
-            load_checked::<MappingAccount>(&cur_mapping, PC_VERSION).unwrap();
-        cur_mapping_data.number_of_products = PC_MAP_TABLE_SIZE;
+            load_checked::<MappingAccount>(&cur_mapping, PYTH_VERSION).unwrap();
+        cur_mapping_data.number_of_products =
+            try_convert(MappingAccount::MAX_NUMBER_OF_PRODUCTS).unwrap();
     }
 
     assert!(process_instruction(
@@ -55,9 +58,10 @@ fn test_add_mapping() {
     .is_ok());
 
     {
-        let next_mapping_data = load_checked::<MappingAccount>(&next_mapping, PC_VERSION).unwrap();
+        let next_mapping_data =
+            load_checked::<MappingAccount>(&next_mapping, PYTH_VERSION).unwrap();
         let mut cur_mapping_data =
-            load_checked::<MappingAccount>(&cur_mapping, PC_VERSION).unwrap();
+            load_checked::<MappingAccount>(&cur_mapping, PYTH_VERSION).unwrap();
 
         assert!(cur_mapping_data.next_mapping_account == *next_mapping.key);
         assert!(next_mapping_data.next_mapping_account == Pubkey::default());
@@ -82,9 +86,10 @@ fn test_add_mapping() {
 
     {
         let mut cur_mapping_data =
-            load_checked::<MappingAccount>(&cur_mapping, PC_VERSION).unwrap();
+            load_checked::<MappingAccount>(&cur_mapping, PYTH_VERSION).unwrap();
         assert!(cur_mapping_data.next_mapping_account == Pubkey::default());
-        cur_mapping_data.number_of_products = PC_MAP_TABLE_SIZE;
+        cur_mapping_data.number_of_products =
+            try_convert(MappingAccount::MAX_NUMBER_OF_PRODUCTS).unwrap();
         cur_mapping_data.header.magic_number = 0;
     }
 
@@ -103,7 +108,7 @@ fn test_add_mapping() {
 
     {
         let mut cur_mapping_data = load_account_as_mut::<MappingAccount>(&cur_mapping).unwrap();
-        cur_mapping_data.header.magic_number = PC_MAGIC;
+        cur_mapping_data.header.magic_number = PYTH_MAGIC_NUMBER;
     }
 
     assert!(process_instruction(

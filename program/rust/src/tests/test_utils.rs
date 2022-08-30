@@ -1,6 +1,6 @@
 use crate::c_oracle_header::{
     PythAccount,
-    PC_VERSION,
+    PYTH_VERSION,
 };
 use crate::instruction::{
     CommandHeader,
@@ -43,8 +43,8 @@ impl AccountSetup {
     pub fn new<T: PythAccount>(owner: &Pubkey) -> Self {
         let key = Pubkey::new_unique();
         let owner = owner.clone();
-        let balance = Rent::minimum_balance(&Rent::default(), T::minimum_size());
-        let size = T::minimum_size();
+        let balance = Rent::minimum_balance(&Rent::default(), T::MINIMUM_SIZE);
+        let size = T::MINIMUM_SIZE;
         let data = [0; UPPER_BOUND_OF_ALL_ACCOUNT_SIZES];
         return AccountSetup {
             key,
@@ -108,7 +108,7 @@ pub fn update_clock_slot(clock_account: &mut AccountInfo, slot: u64) {
 impl Into<CommandHeader> for OracleCommand {
     fn into(self) -> CommandHeader {
         return CommandHeader {
-            version: PC_VERSION,
+            version: PYTH_VERSION,
             command: self.to_i32().unwrap(), // This can never fail and is only used in tests
         };
     }

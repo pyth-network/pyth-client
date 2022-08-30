@@ -4,9 +4,9 @@ use std::mem::size_of;
 
 use crate::c_oracle_header::{
     PriceAccount,
-    PC_STATUS_TRADING,
-    PC_STATUS_UNKNOWN,
-    PC_VERSION,
+    PRICE_STATUS_TRADING,
+    PRICE_STATUS_UNKNOWN,
+    PYTH_VERSION,
 };
 
 use crate::deserialize::{
@@ -35,7 +35,7 @@ fn test_upd_price_no_fail_on_error_no_fail_on_error() {
     let mut price_setup = AccountSetup::new::<PriceAccount>(&program_id);
     let mut price_account = price_setup.to_account_info();
     price_account.is_signer = false;
-    initialize_pyth_account_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+    initialize_pyth_account_checked::<PriceAccount>(&price_account, PYTH_VERSION).unwrap();
 
     let mut clock_setup = AccountSetup::new_clock();
     let mut clock_account = clock_setup.to_account_info();
@@ -79,15 +79,15 @@ fn test_upd_price_no_fail_on_error_no_fail_on_error() {
 
 
     {
-        let mut price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        let mut price_data = load_checked::<PriceAccount>(&price_account, PYTH_VERSION).unwrap();
         assert_eq!(price_data.comp_[0].latest_.price_, 0);
         assert_eq!(price_data.comp_[0].latest_.conf_, 0);
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 0);
-        assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_UNKNOWN);
+        assert_eq!(price_data.comp_[0].latest_.status_, PRICE_STATUS_UNKNOWN);
         assert_eq!(price_data.valid_slot_, 0);
         assert_eq!(price_data.agg_.pub_slot_, 0);
         assert_eq!(price_data.agg_.price_, 0);
-        assert_eq!(price_data.agg_.status_, PC_STATUS_UNKNOWN);
+        assert_eq!(price_data.agg_.status_, PRICE_STATUS_UNKNOWN);
 
         // Now permission the publish account for the price account.
         price_data.num_ = 1;
@@ -107,15 +107,15 @@ fn test_upd_price_no_fail_on_error_no_fail_on_error() {
     .is_ok());
 
     {
-        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<PriceAccount>(&price_account, PYTH_VERSION).unwrap();
         assert_eq!(price_data.comp_[0].latest_.price_, 42);
         assert_eq!(price_data.comp_[0].latest_.conf_, 9);
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 1);
-        assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_UNKNOWN);
+        assert_eq!(price_data.comp_[0].latest_.status_, PRICE_STATUS_UNKNOWN);
         assert_eq!(price_data.valid_slot_, 0);
         assert_eq!(price_data.agg_.pub_slot_, 1);
         assert_eq!(price_data.agg_.price_, 0);
-        assert_eq!(price_data.agg_.status_, PC_STATUS_UNKNOWN);
+        assert_eq!(price_data.agg_.status_, PRICE_STATUS_UNKNOWN);
     }
 
     // Invalid updates, such as publishing an update for the current slot,
@@ -149,15 +149,15 @@ fn test_upd_price_no_fail_on_error_no_fail_on_error() {
     .is_ok());
 
     {
-        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<PriceAccount>(&price_account, PYTH_VERSION).unwrap();
         assert_eq!(price_data.comp_[0].latest_.price_, 42);
         assert_eq!(price_data.comp_[0].latest_.conf_, 9);
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 1);
-        assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_UNKNOWN);
+        assert_eq!(price_data.comp_[0].latest_.status_, PRICE_STATUS_UNKNOWN);
         assert_eq!(price_data.valid_slot_, 0);
         assert_eq!(price_data.agg_.pub_slot_, 1);
         assert_eq!(price_data.agg_.price_, 0);
-        assert_eq!(price_data.agg_.status_, PC_STATUS_UNKNOWN);
+        assert_eq!(price_data.agg_.status_, PRICE_STATUS_UNKNOWN);
     }
 }
 
@@ -176,7 +176,7 @@ fn populate_instruction(
     } else {
         OracleCommand::UpdPriceNoFailOnError.into()
     };
-    cmd.status = PC_STATUS_TRADING;
+    cmd.status = PRICE_STATUS_TRADING;
     cmd.price = price;
     cmd.confidence = conf;
     cmd.publishing_slot = pub_slot;

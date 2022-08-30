@@ -1,9 +1,6 @@
 use crate::c_oracle_header::{
     PriceAccount,
     PythAccount,
-    EXTRA_PUBLISHER_SPACE,
-    PC_ACCTYPE_PRICE,
-    PC_PRICE_T_COMP_OFFSET,
 };
 use crate::error::OracleError;
 use bytemuck::{
@@ -11,6 +8,7 @@ use bytemuck::{
     Zeroable,
 };
 
+const EXTRA_PUBLISHER_SPACE: usize = 1000;
 
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
@@ -28,7 +26,7 @@ pub struct PriceAccountWrapper {
     //an instance of the c price_t type
     pub price_data:            PriceAccount,
     //space for more publishers
-    pub extra_publisher_space: [u8; EXTRA_PUBLISHER_SPACE as usize],
+    pub extra_publisher_space: [u8; EXTRA_PUBLISHER_SPACE],
     //TimeMachine
     pub time_machine:          TimeMachineWrapper,
 }
@@ -53,42 +51,6 @@ unsafe impl Pod for PriceAccountWrapper {
 }
 
 impl PythAccount for PriceAccountWrapper {
-    const ACCOUNT_TYPE: u32 = PC_ACCTYPE_PRICE;
-    const INITIAL_SIZE: u32 = PC_PRICE_T_COMP_OFFSET as u32;
-}
-
-#[cfg(test)]
-pub mod tests {
-    use crate::c_oracle_header::{
-        PRICE_ACCOUNT_SIZE,
-        TIME_MACHINE_STRUCT_SIZE,
-    };
-    use crate::time_machine_types::{
-        PriceAccountWrapper,
-        TimeMachineWrapper,
-    };
-    use std::mem::size_of;
-    #[test]
-    ///test that the size defined in C matches that
-    ///defined in Rust
-    fn c_time_machine_size_is_correct() {
-        assert_eq!(
-        size_of::<TimeMachineWrapper>(),
-        TIME_MACHINE_STRUCT_SIZE as usize,
-        "expected TIME_MACHINE_STRUCT_SIZE ({}) in oracle.h to the same as the size of TimeMachineWrapper ({})",
-        TIME_MACHINE_STRUCT_SIZE,
-        size_of::<TimeMachineWrapper>()
-    );
-    }
-    #[test]
-    ///test that priceAccountWrapper has a correct size
-    fn c_price_account_size_is_correct() {
-        assert_eq!(
-        size_of::<PriceAccountWrapper>(),
-        PRICE_ACCOUNT_SIZE as usize,
-        "expected PRICE_ACCOUNT_SIZE ({}) in oracle.h to the same as the size of PriceAccountWrapper ({})",
-        PRICE_ACCOUNT_SIZE,
-        size_of::<PriceAccountWrapper>()
-    );
-    }
+    const ACCOUNT_TYPE: u32 = PriceAccount::ACCOUNT_TYPE;
+    const INITIAL_SIZE: u32 = PriceAccount::INITIAL_SIZE;
 }

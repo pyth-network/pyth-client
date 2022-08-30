@@ -10,13 +10,11 @@ use crate::c_oracle_header::{
     PriceEma,
     PriceInfo,
     ProductAccount,
-    PC_COMP_SIZE,
-    PC_MAP_TABLE_SIZE,
-    PC_MAX_CI_DIVISOR,
-    PC_PROD_ACC_SIZE,
-    PC_PTYPE_UNKNOWN,
-    PC_STATUS_UNKNOWN,
-    PC_VERSION,
+    PythAccount,
+    MAX_CI_DIVISOR,
+    PRICE_STATUS_UNKNOWN,
+    PRICE_TYPE_UNKNOWN,
+    PYTH_VERSION,
 };
 use crate::deserialize::{
     initialize_pyth_account_checked,
@@ -59,10 +57,6 @@ use solana_program::rent::Rent;
 use solana_program::system_instruction::transfer;
 use solana_program::system_program::check_id;
 use solana_program::sysvar::Sysvar;
-
-const PRICE_T_SIZE: usize = size_of::<PriceAccount>();
-const PRICE_ACCOUNT_SIZE: usize = size_of::<PriceAccountWrapper>();
-
 
 #[cfg(target_arch = "bpf")]
 #[link(name = "cpyth-bpf")]
@@ -112,11 +106,11 @@ pub fn resize_price_account(
     )?;
     // Check that it is a valid initialized price account
     {
-        load_checked::<PriceAccount>(price_account_info, PC_VERSION)?;
+        load_checked::<PriceAccount>(price_account_info, PYTH_VERSION)?;
     }
     let account_len = price_account_info.try_data_len()?;
     match account_len {
-        PRICE_T_SIZE => {
+        PriceAccount::MINIMUM_SIZE => {
             // Ensure account is still rent exempt after resizing
             let rent: Rent = Default::default();
             let lamports_needed: u64 = rent
@@ -137,12 +131,12 @@ pub fn resize_price_account(
             // Check that everything is ok
             check_valid_signable_account(program_id, price_account_info)?;
             let mut price_account =
-                load_checked::<PriceAccountWrapper>(price_account_info, PC_VERSION)?;
+                load_checked::<PriceAccountWrapper>(price_account_info, PYTH_VERSION)?;
             // Initialize Time Machine
             price_account.initialize_time_machine()?;
             Ok(())
         }
-        PRICE_ACCOUNT_SIZE => Ok(()),
+        PriceAccountWrapper::MINIMUM_SIZE => Ok(()),
         _ => Err(ProgramError::InvalidArgument),
     }
 }
@@ -188,7 +182,8 @@ pub fn add_mapping(
     let hdr = load::<CommandHeader>(instruction_data)?;
     let mut cur_mapping = load_checked::<MappingAccount>(cur_mapping, hdr.version)?;
     pyth_assert(
-        cur_mapping.number_of_products == PC_MAP_TABLE_SIZE
+        try_convert::<_, usize>(cur_mapping.number_of_products)?
+            == MappingAccount::MAX_NUMBER_OF_PRODUCTS
             && cur_mapping.next_mapping_account == Pubkey::default(),
         ProgramError::InvalidArgument,
     )?;
@@ -264,7 +259,7 @@ pub fn upd_price(
     }
 
     let account_len = price_account.try_data_len()?;
-    if aggregate_updated && account_len == PRICE_ACCOUNT_SIZE {
+    if aggregate_updated && account_len == PriceAccountWrapper::MINIMUM_SIZE {
         let mut price_account =
             load_checked::<PriceAccountWrapper>(price_account, cmd_args.header.version)?;
         price_account.add_price_to_time_machine()?;
@@ -273,14 +268,14 @@ pub fn upd_price(
     // Try to update the publisher's price
     if is_component_update(cmd_args)? {
         let mut status: u32 = cmd_args.status;
-        let mut threshold_conf = cmd_args.price / PC_MAX_CI_DIVISOR as i64;
+        let mut threshold_conf = cmd_args.price / MAX_CI_DIVISOR as i64;
 
         if threshold_conf < 0 {
             threshold_conf = -threshold_conf;
         }
 
         if cmd_args.confidence > try_convert::<_, u64>(threshold_conf)? {
-            status = PC_STATUS_UNKNOWN
+            status = PRICE_STATUS_UNKNOWN
         }
 
         {
@@ -322,7 +317,7 @@ pub fn add_price(
 
     check_exponent_range(cmd_args.exponent)?;
     pyth_assert(
-        cmd_args.price_type != PC_PTYPE_UNKNOWN,
+        cmd_args.price_type != PRICE_TYPE_UNKNOWN,
         ProgramError::InvalidArgument,
     )?;
 
@@ -487,7 +482,7 @@ pub fn add_publisher(
 
     let mut price_data = load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
 
-    if price_data.num_ >= PC_COMP_SIZE {
+    if try_convert::<_, usize>(price_data.num_)? >= PriceAccount::MAX_NUMBER_OF_PUBLISHERS {
         return Err(ProgramError::InvalidArgument);
     }
 
@@ -576,7 +571,8 @@ pub fn add_product(
     let mut mapping_data = load_checked::<MappingAccount>(tail_mapping_account, hdr.version)?;
     // The mapping account must have free space to add the product account
     pyth_assert(
-        mapping_data.number_of_products < PC_MAP_TABLE_SIZE,
+        try_convert::<_, usize>(mapping_data.number_of_products)?
+            < MappingAccount::MAX_NUMBER_OF_PRODUCTS,
         ProgramError::InvalidArgument,
     )?;
 
@@ -619,7 +615,7 @@ pub fn upd_product(
         ProgramError::InvalidInstructionData,
     )?;
     let new_data_len = instruction_data.len() - size_of::<CommandHeader>();
-    let max_data_len = try_convert::<_, usize>(PC_PROD_ACC_SIZE)? - size_of::<ProductAccount>();
+    let max_data_len = ProductAccount::MINIMUM_SIZE - size_of::<ProductAccount>();
     pyth_assert(new_data_len <= max_data_len, ProgramError::InvalidArgument)?;
 
     let new_data = &instruction_data[size_of::<CommandHeader>()..instruction_data.len()];

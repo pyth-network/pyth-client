@@ -2,7 +2,7 @@ use crate::c_oracle_header::{
     MappingAccount,
     PriceAccount,
     ProductAccount,
-    PC_VERSION,
+    PYTH_VERSION,
 };
 use crate::deserialize::{
     initialize_pyth_account_checked,
@@ -40,7 +40,7 @@ fn test_add_price() {
 
     let mut mapping_setup = AccountSetup::new::<MappingAccount>(&program_id);
     let mapping_account = mapping_setup.to_account_info();
-    initialize_pyth_account_checked::<MappingAccount>(&mapping_account, PC_VERSION).unwrap();
+    initialize_pyth_account_checked::<MappingAccount>(&mapping_account, PYTH_VERSION).unwrap();
 
     let mut product_setup = AccountSetup::new::<ProductAccount>(&program_id);
     let product_account = product_setup.to_account_info();
@@ -74,8 +74,8 @@ fn test_add_price() {
     .is_ok());
 
     {
-        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
-        let product_data = load_checked::<ProductAccount>(&product_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<PriceAccount>(&price_account, PYTH_VERSION).unwrap();
+        let product_data = load_checked::<ProductAccount>(&product_account, PYTH_VERSION).unwrap();
         assert_eq!(price_data.exponent, 1);
         assert_eq!(price_data.price_type, 1);
         assert!(price_data.product_account == *product_account.key);
@@ -95,8 +95,8 @@ fn test_add_price() {
     .is_ok());
 
     {
-        let price_data_2 = load_checked::<PriceAccount>(&price_account_2, PC_VERSION).unwrap();
-        let product_data = load_checked::<ProductAccount>(&product_account, PC_VERSION).unwrap();
+        let price_data_2 = load_checked::<PriceAccount>(&price_account_2, PYTH_VERSION).unwrap();
+        let product_data = load_checked::<ProductAccount>(&product_account, PYTH_VERSION).unwrap();
         assert_eq!(price_data_2.exponent, 1);
         assert_eq!(price_data_2.price_type, 1);
         assert!(price_data_2.product_account == *product_account.key);

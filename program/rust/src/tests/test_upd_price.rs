@@ -4,9 +4,9 @@ use std::mem::size_of;
 
 use crate::c_oracle_header::{
     PriceAccount,
-    PC_STATUS_TRADING,
-    PC_STATUS_UNKNOWN,
-    PC_VERSION,
+    PRICE_STATUS_TRADING,
+    PRICE_STATUS_UNKNOWN,
+    PYTH_VERSION,
 };
 
 use crate::deserialize::{
@@ -36,10 +36,10 @@ fn test_upd_price() {
     let mut price_setup = AccountSetup::new::<PriceAccount>(&program_id);
     let mut price_account = price_setup.to_account_info();
     price_account.is_signer = false;
-    initialize_pyth_account_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+    initialize_pyth_account_checked::<PriceAccount>(&price_account, PYTH_VERSION).unwrap();
 
     {
-        let mut price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        let mut price_data = load_checked::<PriceAccount>(&price_account, PYTH_VERSION).unwrap();
         price_data.num_ = 1;
         price_data.comp_[0].pub_ = *funding_account.key;
     }
@@ -63,15 +63,15 @@ fn test_upd_price() {
     .is_ok());
 
     {
-        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<PriceAccount>(&price_account, PYTH_VERSION).unwrap();
         assert_eq!(price_data.comp_[0].latest_.price_, 42);
         assert_eq!(price_data.comp_[0].latest_.conf_, 2);
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 1);
-        assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_TRADING);
+        assert_eq!(price_data.comp_[0].latest_.status_, PRICE_STATUS_TRADING);
         assert_eq!(price_data.valid_slot_, 0);
         assert_eq!(price_data.agg_.pub_slot_, 1);
         assert_eq!(price_data.agg_.price_, 0);
-        assert_eq!(price_data.agg_.status_, PC_STATUS_UNKNOWN);
+        assert_eq!(price_data.agg_.status_, PRICE_STATUS_UNKNOWN);
     }
 
     // add some prices for current slot - get rejected
@@ -91,15 +91,15 @@ fn test_upd_price() {
     );
 
     {
-        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<PriceAccount>(&price_account, PYTH_VERSION).unwrap();
         assert_eq!(price_data.comp_[0].latest_.price_, 42);
         assert_eq!(price_data.comp_[0].latest_.conf_, 2);
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 1);
-        assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_TRADING);
+        assert_eq!(price_data.comp_[0].latest_.status_, PRICE_STATUS_TRADING);
         assert_eq!(price_data.valid_slot_, 0);
         assert_eq!(price_data.agg_.pub_slot_, 1);
         assert_eq!(price_data.agg_.price_, 0);
-        assert_eq!(price_data.agg_.status_, PC_STATUS_UNKNOWN);
+        assert_eq!(price_data.agg_.status_, PRICE_STATUS_UNKNOWN);
     }
 
     // add next price in new slot triggering snapshot and aggregate calc
@@ -118,15 +118,15 @@ fn test_upd_price() {
     .is_ok());
 
     {
-        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<PriceAccount>(&price_account, PYTH_VERSION).unwrap();
         assert_eq!(price_data.comp_[0].latest_.price_, 81);
         assert_eq!(price_data.comp_[0].latest_.conf_, 2);
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 2);
-        assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_TRADING);
+        assert_eq!(price_data.comp_[0].latest_.status_, PRICE_STATUS_TRADING);
         assert_eq!(price_data.valid_slot_, 1);
         assert_eq!(price_data.agg_.pub_slot_, 3);
         assert_eq!(price_data.agg_.price_, 42);
-        assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
+        assert_eq!(price_data.agg_.status_, PRICE_STATUS_TRADING);
     }
 
     // next price doesnt change but slot does
@@ -144,15 +144,15 @@ fn test_upd_price() {
     .is_ok());
 
     {
-        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<PriceAccount>(&price_account, PYTH_VERSION).unwrap();
         assert_eq!(price_data.comp_[0].latest_.price_, 81);
         assert_eq!(price_data.comp_[0].latest_.conf_, 2);
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 3);
-        assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_TRADING);
+        assert_eq!(price_data.comp_[0].latest_.status_, PRICE_STATUS_TRADING);
         assert_eq!(price_data.valid_slot_, 3);
         assert_eq!(price_data.agg_.pub_slot_, 4);
         assert_eq!(price_data.agg_.price_, 81);
-        assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
+        assert_eq!(price_data.agg_.status_, PRICE_STATUS_TRADING);
     }
 
     // next price doesnt change and neither does aggregate but slot does
@@ -170,15 +170,15 @@ fn test_upd_price() {
     .is_ok());
 
     {
-        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<PriceAccount>(&price_account, PYTH_VERSION).unwrap();
         assert_eq!(price_data.comp_[0].latest_.price_, 81);
         assert_eq!(price_data.comp_[0].latest_.conf_, 2);
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 4);
-        assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_TRADING);
+        assert_eq!(price_data.comp_[0].latest_.status_, PRICE_STATUS_TRADING);
         assert_eq!(price_data.valid_slot_, 4);
         assert_eq!(price_data.agg_.pub_slot_, 5);
         assert_eq!(price_data.agg_.price_, 81);
-        assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
+        assert_eq!(price_data.agg_.status_, PRICE_STATUS_TRADING);
     }
 
     // try to publish back-in-time
@@ -198,15 +198,15 @@ fn test_upd_price() {
     );
 
     {
-        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<PriceAccount>(&price_account, PYTH_VERSION).unwrap();
         assert_eq!(price_data.comp_[0].latest_.price_, 81);
         assert_eq!(price_data.comp_[0].latest_.conf_, 2);
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 4);
-        assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_TRADING);
+        assert_eq!(price_data.comp_[0].latest_.status_, PRICE_STATUS_TRADING);
         assert_eq!(price_data.valid_slot_, 4);
         assert_eq!(price_data.agg_.pub_slot_, 5);
         assert_eq!(price_data.agg_.price_, 81);
-        assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
+        assert_eq!(price_data.agg_.status_, PRICE_STATUS_TRADING);
     }
 
     populate_instruction(&mut instruction_data, 50, 6, 5);
@@ -216,8 +216,8 @@ fn test_upd_price() {
 
     // check that someone doesn't accidentally break the test.
     {
-        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
-        assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_TRADING);
+        let price_data = load_checked::<PriceAccount>(&price_account, PYTH_VERSION).unwrap();
+        assert_eq!(price_data.comp_[0].latest_.status_, PRICE_STATUS_TRADING);
     }
 
     assert!(process_instruction(
@@ -232,15 +232,15 @@ fn test_upd_price() {
     .is_ok());
 
     {
-        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<PriceAccount>(&price_account, PYTH_VERSION).unwrap();
         assert_eq!(price_data.comp_[0].latest_.price_, 50);
         assert_eq!(price_data.comp_[0].latest_.conf_, 6);
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 5);
-        assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_UNKNOWN);
+        assert_eq!(price_data.comp_[0].latest_.status_, PRICE_STATUS_UNKNOWN);
         assert_eq!(price_data.valid_slot_, 5);
         assert_eq!(price_data.agg_.pub_slot_, 6);
         assert_eq!(price_data.agg_.price_, 81);
-        assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
+        assert_eq!(price_data.agg_.status_, PRICE_STATUS_TRADING);
     }
 
     // Crank one more time and aggregate should be unknown
@@ -259,15 +259,15 @@ fn test_upd_price() {
     .is_ok());
 
     {
-        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<PriceAccount>(&price_account, PYTH_VERSION).unwrap();
         assert_eq!(price_data.comp_[0].latest_.price_, 50);
         assert_eq!(price_data.comp_[0].latest_.conf_, 6);
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 6);
-        assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_UNKNOWN);
+        assert_eq!(price_data.comp_[0].latest_.status_, PRICE_STATUS_UNKNOWN);
         assert_eq!(price_data.valid_slot_, 6);
         assert_eq!(price_data.agg_.pub_slot_, 7);
         assert_eq!(price_data.agg_.price_, 81);
-        assert_eq!(price_data.agg_.status_, PC_STATUS_UNKNOWN);
+        assert_eq!(price_data.agg_.status_, PRICE_STATUS_UNKNOWN);
     }
 }
 
@@ -275,7 +275,7 @@ fn test_upd_price() {
 fn populate_instruction(instruction_data: &mut [u8], price: i64, conf: u64, pub_slot: u64) -> () {
     let mut cmd = load_mut::<UpdPriceArgs>(instruction_data).unwrap();
     cmd.header = OracleCommand::UpdPrice.into();
-    cmd.status = PC_STATUS_TRADING;
+    cmd.status = PRICE_STATUS_TRADING;
     cmd.price = price;
     cmd.confidence = conf;
     cmd.publishing_slot = pub_slot;

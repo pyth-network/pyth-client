@@ -9,7 +9,7 @@ use bytemuck::{
 use crate::c_oracle_header::{
     AccountHeader,
     PythAccount,
-    PC_MAGIC,
+    PYTH_MAGIC_NUMBER,
 };
 use crate::error::OracleError;
 use crate::utils::{
@@ -74,14 +74,14 @@ pub fn load_checked<'a, T: PythAccount>(
     version: u32,
 ) -> Result<RefMut<'a, T>, ProgramError> {
     pyth_assert(
-        account.data_len() >= T::minimum_size(),
+        account.data_len() >= T::MINIMUM_SIZE,
         OracleError::AccountTooSmall.into(),
     )?;
 
     {
         let account_header = load_account_as::<AccountHeader>(account)?;
         pyth_assert(
-            account_header.magic_number == PC_MAGIC
+            account_header.magic_number == PYTH_MAGIC_NUMBER
                 && account_header.version == version
                 && account_header.account_type == T::ACCOUNT_TYPE,
             ProgramError::InvalidArgument,
@@ -96,7 +96,7 @@ pub fn initialize_pyth_account_checked<'a, T: PythAccount>(
     version: u32,
 ) -> Result<RefMut<'a, T>, ProgramError> {
     pyth_assert(
-        account.data_len() >= T::minimum_size(),
+        account.data_len() >= T::MINIMUM_SIZE,
         OracleError::AccountTooSmall.into(),
     )?;
     check_valid_fresh_account(account)?;
@@ -104,7 +104,7 @@ pub fn initialize_pyth_account_checked<'a, T: PythAccount>(
 
     {
         let mut account_header = load_account_as_mut::<AccountHeader>(account)?;
-        account_header.magic_number = PC_MAGIC;
+        account_header.magic_number = PYTH_MAGIC_NUMBER;
         account_header.version = version;
         account_header.account_type = T::ACCOUNT_TYPE;
         account_header.size = T::INITIAL_SIZE;

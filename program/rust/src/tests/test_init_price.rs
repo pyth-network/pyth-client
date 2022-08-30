@@ -4,8 +4,8 @@ use solana_program::pubkey::Pubkey;
 
 use crate::c_oracle_header::{
     PriceAccount,
-    PC_MAX_NUM_DECIMALS,
-    PC_VERSION,
+    MAX_NUM_DECIMALS,
+    PYTH_VERSION,
 };
 use crate::deserialize::{
     initialize_pyth_account_checked,
@@ -53,9 +53,9 @@ fn test_init_price() {
         Err(ProgramError::InvalidArgument)
     );
 
-    initialize_pyth_account_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+    initialize_pyth_account_checked::<PriceAccount>(&price_account, PYTH_VERSION).unwrap();
     {
-        let mut price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        let mut price_data = load_checked::<PriceAccount>(&price_account, PYTH_VERSION).unwrap();
         price_data.price_type = ptype;
         price_data.exponent = 0;
         price_data.min_pub_ = 7;
@@ -96,7 +96,7 @@ fn test_init_price() {
     .is_ok());
 
     {
-        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<PriceAccount>(&price_account, PYTH_VERSION).unwrap();
 
         assert_eq!(price_data.exponent, -2);
         assert_eq!(price_data.price_type, ptype);
@@ -143,7 +143,7 @@ fn test_init_price() {
     price_account.is_signer = true;
     let cmd: InitPriceArgs = InitPriceArgs {
         header:     OracleCommand::InitPrice.into(),
-        exponent:   -(PC_MAX_NUM_DECIMALS as i32) - 1,
+        exponent:   -MAX_NUM_DECIMALS - 1,
         price_type: ptype,
     };
     let instruction_data = bytes_of::<InitPriceArgs>(&cmd);

@@ -2,8 +2,7 @@ use crate::c_oracle_header::{
     PriceAccount,
     PriceComponent,
     PythAccount,
-    PC_COMP_SIZE,
-    PC_VERSION,
+    PYTH_VERSION,
 };
 use crate::deserialize::{
     initialize_pyth_account_checked,
@@ -15,7 +14,10 @@ use crate::instruction::{
 };
 use crate::processor::process_instruction;
 use crate::tests::test_utils::AccountSetup;
-use crate::utils::clear_account;
+use crate::utils::{
+    clear_account,
+    try_convert,
+};
 use crate::OracleError;
 use bytemuck::bytes_of;
 use solana_program::program_error::ProgramError;
@@ -39,7 +41,7 @@ fn test_add_publisher() {
 
     let mut price_setup = AccountSetup::new::<PriceAccount>(&program_id);
     let price_account = price_setup.to_account_info();
-    initialize_pyth_account_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+    initialize_pyth_account_checked::<PriceAccount>(&price_account, PYTH_VERSION).unwrap();
 
 
     **price_account.try_borrow_mut_lamports().unwrap() = 100;
@@ -56,7 +58,7 @@ fn test_add_publisher() {
 
     // Now give the price account enough lamports to be rent exempt
     **price_account.try_borrow_mut_lamports().unwrap() =
-        Rent::minimum_balance(&Rent::default(), PriceAccount::minimum_size());
+        Rent::minimum_balance(&Rent::default(), PriceAccount::MINIMUM_SIZE);
 
 
     assert!(process_instruction(
@@ -67,7 +69,7 @@ fn test_add_publisher() {
     .is_ok());
 
     {
-        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<PriceAccount>(&price_account, PYTH_VERSION).unwrap();
         assert_eq!(price_data.num_, 1);
         assert_eq!(
             price_data.header.size,
@@ -98,10 +100,10 @@ fn test_add_publisher() {
         Err(ProgramError::InvalidArgument)
     );
 
-    initialize_pyth_account_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+    initialize_pyth_account_checked::<PriceAccount>(&price_account, PYTH_VERSION).unwrap();
 
     //Fill up price node
-    for i in 0..PC_COMP_SIZE {
+    for i in 0..try_convert::<_, u32>(PriceAccount::MAX_NUMBER_OF_PUBLISHERS).unwrap() {
         cmd.publisher = Pubkey::new_unique();
         instruction_data = bytes_of::<AddPublisherArgs>(&cmd);
         assert!(process_instruction(
@@ -113,7 +115,7 @@ fn test_add_publisher() {
 
 
         {
-            let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+            let price_data = load_checked::<PriceAccount>(&price_account, PYTH_VERSION).unwrap();
             assert_eq!(price_data.num_, i + 1);
             assert!(price_data.comp_[i as usize].pub_ == cmd.publisher);
             assert_eq!(

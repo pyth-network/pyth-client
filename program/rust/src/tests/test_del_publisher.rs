@@ -3,8 +3,8 @@ use crate::c_oracle_header::{
     PriceComponent,
     PriceInfo,
     PythAccount,
-    PC_STATUS_TRADING,
-    PC_VERSION,
+    PRICE_STATUS_TRADING,
+    PYTH_VERSION,
 };
 use crate::deserialize::{
     initialize_pyth_account_checked,
@@ -25,7 +25,7 @@ fn test_del_publisher() {
     let p1: PriceInfo = PriceInfo {
         price_:           100,
         conf_:            10,
-        status_:          PC_STATUS_TRADING,
+        status_:          PRICE_STATUS_TRADING,
         pub_slot_:        42,
         corp_act_status_: 0,
     };
@@ -33,7 +33,7 @@ fn test_del_publisher() {
     let p2: PriceInfo = PriceInfo {
         price_:           200,
         conf_:            20,
-        status_:          PC_STATUS_TRADING,
+        status_:          PRICE_STATUS_TRADING,
         pub_slot_:        42,
         corp_act_status_: 0,
     };
@@ -52,9 +52,9 @@ fn test_del_publisher() {
 
     let mut price_setup = AccountSetup::new::<PriceAccount>(&program_id);
     let price_account = price_setup.to_account_info();
-    initialize_pyth_account_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+    initialize_pyth_account_checked::<PriceAccount>(&price_account, PYTH_VERSION).unwrap();
     {
-        let mut price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        let mut price_data = load_checked::<PriceAccount>(&price_account, PYTH_VERSION).unwrap();
         price_data.num_ = 1;
         price_data.comp_[0].latest_ = p1;
         price_data.comp_[0].pub_ = publisher
@@ -68,7 +68,7 @@ fn test_del_publisher() {
     .is_ok());
 
     {
-        let mut price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        let mut price_data = load_checked::<PriceAccount>(&price_account, PYTH_VERSION).unwrap();
         assert_eq!(price_data.num_, 0);
         assert_eq!(price_data.comp_[0].latest_.price_, 0);
         assert_eq!(price_data.comp_[0].latest_.conf_, 0);
@@ -94,7 +94,7 @@ fn test_del_publisher() {
     .is_ok());
 
     {
-        let mut price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        let mut price_data = load_checked::<PriceAccount>(&price_account, PYTH_VERSION).unwrap();
         assert_eq!(price_data.num_, 1);
         assert_eq!(price_data.comp_[0].latest_.price_, p2.price_);
         assert_eq!(price_data.comp_[0].latest_.conf_, p2.conf_);
@@ -132,7 +132,7 @@ fn test_del_publisher() {
     .is_ok());
 
     {
-        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<PriceAccount>(&price_account, PYTH_VERSION).unwrap();
         assert_eq!(price_data.num_, 1);
         assert_eq!(price_data.comp_[0].latest_.price_, p2.price_);
         assert_eq!(price_data.comp_[0].latest_.conf_, p2.conf_);

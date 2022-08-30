@@ -1,7 +1,7 @@
 use solana_sdk::signer::Signer;
 use std::mem::size_of;
 
-use crate::c_oracle_header::pc_price_t;
+use crate::c_oracle_header::PriceAccount;
 use crate::tests::pyth_simulator::PythSimulator;
 use crate::time_machine_types::PriceAccountWrapper;
 
@@ -16,7 +16,7 @@ async fn test_resize_account() {
 
     // Check size after initialization
     let price1_account = sim.get_account(price1.pubkey()).await.unwrap();
-    assert_eq!(price1_account.data.len(), size_of::<pc_price_t>());
+    assert_eq!(price1_account.data.len(), size_of::<PriceAccount>());
 
     // Run the instruction once
     assert!(sim.resize_price_account(&price1).await.is_ok());
