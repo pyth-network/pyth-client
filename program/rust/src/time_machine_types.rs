@@ -120,7 +120,7 @@ impl<const NUM_ENTRIES: usize>  SmaTracker<NUM_ENTRIES> {
     
         let epoch_gap = self.time_to_entry(last_two_times.1)? - self.time_to_entry(last_two_times.0)?;
 
-        self.current_entry_weighted_price_accumulator = (last_two_slot.1 - last_two_slot.0) as i64 * (last_two_prices.1 + last_two_prices.0) / 2;
+        self.current_entry_weighted_price_accumulator += (last_two_slot.1 - last_two_slot.0) as i64 * (last_two_prices.1 + last_two_prices.0) / 2;
         self.current_entry_slot_accumulator += (last_two_slot.1 - last_two_slot.0);
         if (last_two_slot.1 - last_two_slot.0) > self.threshold {
             self.current_entry_status = Status::Invalid;
@@ -128,7 +128,7 @@ impl<const NUM_ENTRIES: usize>  SmaTracker<NUM_ENTRIES> {
 
         for i in last_two_times.0+1..last_two_times.1 {
             self.initialize_epoch(i);
-            self.current_entry_weighted_price_accumulator = (last_two_slot.1 - last_two_slot.0) as i64 * (last_two_prices.1 + last_two_prices.0) / 2;
+            self.current_entry_weighted_price_accumulator += (last_two_slot.1 - last_two_slot.0) as i64 * (last_two_prices.1 + last_two_prices.0) / 2;
             self.current_entry_slot_accumulator += (last_two_slot.1 - last_two_slot.0);
             if (last_two_slot.1 - last_two_slot.0) > self.threshold {
                 self.current_entry_status = Status::Invalid;
