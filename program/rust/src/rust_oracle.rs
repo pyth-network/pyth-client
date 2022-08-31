@@ -47,6 +47,7 @@ use crate::utils::{
     is_component_update,
     pyth_assert,
     read_pc_str_t,
+    send_lamports,
     try_convert,
 };
 use crate::OracleError;
@@ -54,7 +55,6 @@ use bytemuck::bytes_of_mut;
 use solana_program::account_info::AccountInfo;
 use solana_program::clock::Clock;
 use solana_program::entrypoint::ProgramResult;
-use solana_program::program::invoke;
 use solana_program::program_error::ProgramError;
 use solana_program::program_memory::{
     sol_memcpy,
@@ -62,7 +62,6 @@ use solana_program::program_memory::{
 };
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
-use solana_program::system_instruction::transfer;
 use solana_program::system_program::check_id;
 use solana_program::sysvar::Sysvar;
 
@@ -80,20 +79,6 @@ extern "C" {
 #[link(name = "cpyth-native")]
 extern "C" {
     pub fn c_upd_aggregate(_input: *mut u8, clock_slot: u64, clock_timestamp: i64) -> bool;
-}
-
-fn send_lamports<'a>(
-    from: &AccountInfo<'a>,
-    to: &AccountInfo<'a>,
-    system_program: &AccountInfo<'a>,
-    amount: u64,
-) -> Result<(), ProgramError> {
-    let transfer_instruction = transfer(from.key, to.key, amount);
-    invoke(
-        &transfer_instruction,
-        &[from.clone(), to.clone(), system_program.clone()],
-    )?;
-    Ok(())
 }
 
 /// resizes a price account so that it fits the Time Machine

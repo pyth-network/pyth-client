@@ -11,9 +11,18 @@ use crate::OracleError;
 use num_traits::FromPrimitive;
 use solana_program::account_info::AccountInfo;
 use solana_program::bpf_loader_upgradeable::UpgradeableLoaderState;
+use solana_program::program::{
+    invoke,
+    invoke_signed,
+};
 use solana_program::program_error::ProgramError;
 use solana_program::program_memory::sol_memset;
 use solana_program::pubkey::Pubkey;
+use solana_program::system_instruction::{
+    allocate,
+    assign,
+    transfer,
+};
 use solana_program::sysvar::rent::Rent;
 use std::borrow::BorrowMut;
 
@@ -189,5 +198,49 @@ pub fn check_is_valid_upgradeauthority_program_programdata_triplet(
     } else {
         return Err(OracleError::InvalidUpgradeAuthority.into());
     }
+    Ok(())
+}
+
+pub fn send_lamports<'a>(
+    from: &AccountInfo<'a>,
+    to: &AccountInfo<'a>,
+    system_program: &AccountInfo<'a>,
+    amount: u64,
+) -> Result<(), ProgramError> {
+    let transfer_instruction = transfer(from.key, to.key, amount);
+    invoke(
+        &transfer_instruction,
+        &[from.clone(), to.clone(), system_program.clone()],
+    )?;
+    Ok(())
+}
+
+pub fn allocate_data<'a>(
+    account: &AccountInfo<'a>,
+    system_program: &AccountInfo<'a>,
+    space: usize,
+    seeds: &[&[u8]],
+) -> Result<(), ProgramError> {
+    let allocate_instruction = allocate(account.key, try_convert(space)?);
+    invoke_signed(
+        &allocate_instruction,
+        &[account.clone(), system_program.clone()],
+        &[seeds],
+    )?;
+    Ok(())
+}
+
+pub fn assign_owner<'a>(
+    account: &AccountInfo<'a>,
+    owner: &Pubkey,
+    system_program: &AccountInfo<'a>,
+    seeds: &[&[u8]],
+) -> Result<(), ProgramError> {
+    let assign_instruction = assign(account.key, owner);
+    invoke_signed(
+        &assign_instruction,
+        &[account.clone(), system_program.clone()],
+        &[seeds],
+    )?;
     Ok(())
 }

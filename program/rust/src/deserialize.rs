@@ -5,10 +5,8 @@ use bytemuck::{
     try_from_bytes_mut,
     Pod,
 };
-use solana_program::program::invoke_signed;
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
-use solana_program::system_instruction::create_account;
 
 use crate::c_oracle_header::{
     AccountHeader,
@@ -17,10 +15,12 @@ use crate::c_oracle_header::{
 };
 use crate::error::OracleError;
 use crate::utils::{
+    allocate_data,
+    assign_owner,
     check_valid_fresh_account,
     clear_account,
     pyth_assert,
-    try_convert,
+    send_lamports,
 };
 use solana_program::account_info::AccountInfo;
 use solana_program::program_error::ProgramError;
@@ -118,25 +118,6 @@ pub fn initialize_pyth_account_checked<'a, T: PythAccount>(
     load_account_as_mut::<T>(account)
 }
 
-fn create_pda_account<'a>(
-    from: &AccountInfo<'a>,
-    to: &AccountInfo<'a>,
-    system_program: &AccountInfo<'a>,
-    space: usize,
-    program_id: &Pubkey,
-    seeds: &[&[u8]],
-) -> Result<(), ProgramError> {
-    let lamports = Rent::default().minimum_balance(space);
-    let create_instruction =
-        create_account(from.key, to.key, lamports, try_convert(space)?, program_id);
-    invoke_signed(
-        &create_instruction,
-        &[from.clone(), to.clone(), system_program.clone()],
-        &[seeds],
-    )?;
-    Ok(())
-}
-
 // Creates pda if needed and initializes it as one of the Pyth accounts
 pub fn create_pda_if_needed<'a, T: PythAccount>(
     account: &AccountInfo<'a>,
@@ -146,15 +127,18 @@ pub fn create_pda_if_needed<'a, T: PythAccount>(
     seeds: &[&[u8]],
     version: u32,
 ) -> Result<(), ProgramError> {
-    if account.lamports() == 0 {
-        create_pda_account(
+    let target_rent = Rent::default().minimum_balance(T::minimum_size());
+    if account.lamports() < target_rent {
+        send_lamports(
             funding_account,
             account,
             system_program,
-            T::minimum_size(),
-            program_id,
-            seeds,
+            target_rent - account.lamports(),
         )?;
+    }
+    if account.data_len() == 0 {
+        allocate_data(account, system_program, T::minimum_size(), seeds)?;
+        assign_owner(account, program_id, system_program, seeds)?;
         initialize_pyth_account_checked::<T>(account, version)?;
     }
     Ok(())
