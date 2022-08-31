@@ -4,7 +4,7 @@ use solana_program::pubkey::Pubkey;
 
 use crate::c_oracle_header::{
     PriceAccount,
-    PC_MAX_NUM_DECIMALS,
+    MAX_NUM_DECIMALS,
     PC_VERSION,
 };
 use crate::deserialize::{
@@ -143,7 +143,7 @@ fn test_init_price() {
     price_account.is_signer = true;
     let cmd: InitPriceArgs = InitPriceArgs {
         header:     OracleCommand::InitPrice.into(),
-        exponent:   -(PC_MAX_NUM_DECIMALS as i32) - 1,
+        exponent:   -MAX_NUM_DECIMALS - 1,
         price_type: ptype,
     };
     let instruction_data = bytes_of::<InitPriceArgs>(&cmd);
