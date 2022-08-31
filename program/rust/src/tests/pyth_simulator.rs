@@ -116,33 +116,12 @@ impl PythSimulator {
 
 
         // Start validator
-        let (mut banks_client, payer, mut recent_blockhash) = program_test.start().await;
+        let (banks_client, payer, recent_blockhash) = program_test.start().await;
 
-        // Transfer money to upgrade_authority so it can call the instructions
-        let instruction = system_instruction::transfer(
-            &payer.pubkey(),
-            &upgrade_authority_keypair.pubkey(),
-            1000 * LAMPORTS_PER_SOL,
-        );
+        // Hack to duplicate a keypair
+        let genesis_keypair = Keypair::from_bytes(&payer.to_bytes()).unwrap();
 
-        let mut transaction = Transaction::new_with_payer(&[instruction], Some(&payer.pubkey()));
-
-        let blockhash = banks_client
-            .get_new_latest_blockhash(&recent_blockhash)
-            .await
-            .unwrap();
-
-        recent_blockhash = blockhash;
-
-        transaction.partial_sign(&[&payer], recent_blockhash);
-
-        banks_client.process_transaction(transaction).await.unwrap();
-
-        let genesis_keypair = Keypair::from_bytes(&payer.to_bytes()).unwrap(); // Hack to duplicate a keypair
-
-        // Same as new() but here we set the payer to be upgrade_authority and program_id to be the
-        // upgradable program
-        return PythSimulator {
+        let mut result = PythSimulator {
             program_id: program_key,
             banks_client,
             payer,
@@ -151,6 +130,14 @@ impl PythSimulator {
             upgrade_authority: upgrade_authority_keypair,
             genesis_keypair,
         };
+
+        // Transfer money to upgrade_authority so it can call the instructions
+        result
+            .airdrop(&result.upgrade_authority.pubkey(), 1000 * LAMPORTS_PER_SOL)
+            .await
+            .unwrap();
+
+        return result;
     }
 
 
@@ -383,5 +370,12 @@ impl PythSimulator {
 
     pub fn is_owned_by_oracle(&self, account: &Account) -> bool {
         account.owner == self.program_id
+    }
+
+    pub async fn airdrop(&mut self, to: &Pubkey, lamports: u64) -> Result<(), BanksClientError> {
+        let instruction =
+            system_instruction::transfer(&self.genesis_keypair.pubkey(), to, lamports);
+
+        self.process_ix(instruction, &vec![]).await
     }
 }

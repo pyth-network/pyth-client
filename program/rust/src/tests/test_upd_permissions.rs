@@ -60,7 +60,10 @@ async fn test_upd_permissions() {
         permission_account.data.len(),
         PermissionAccount::minimum_size()
     );
-    assert!(Rent::default().is_exempt(permission_account.lamports, permission_account.data.len()));
+    assert_eq!(
+        Rent::default().minimum_balance(permission_account.data.len()),
+        permission_account.lamports
+    );
     assert!(sim.is_owned_by_oracle(&permission_account));
 
     let mut permission_data = load::<PermissionAccount>(permission_account.data.as_slice())
