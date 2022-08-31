@@ -1,7 +1,12 @@
 use solana_program::pubkey::Pubkey;
+use solana_program::rent::Rent;
 use solana_sdk::signer::Signer;
 
-use crate::c_oracle_header::PermissionAccount;
+use crate::c_oracle_header::{
+    PermissionAccount,
+    PythAccount,
+};
+use crate::deserialize::load;
 use crate::error::OracleError;
 use crate::instruction::{
     OracleCommand,
@@ -49,10 +54,18 @@ async fn test_upd_permissions() {
         })
         .await
         .unwrap();
-    let mut permission_data = sim
-        .get_account_data_as::<PermissionAccount>(permissions_pubkey)
-        .await
-        .unwrap();
+    let permission_account = sim.get_account(permissions_pubkey).await.unwrap();
+
+    assert_eq!(
+        permission_account.data.len(),
+        PermissionAccount::minimum_size()
+    );
+    assert!(Rent::default().is_exempt(permission_account.lamports, permission_account.data.len()));
+    assert!(sim.is_owned_by_oracle(&permission_account));
+
+    let mut permission_data = load::<PermissionAccount>(permission_account.data.as_slice())
+        .unwrap()
+        .clone();
 
     assert_eq!(master_authority, permission_data.master_authority);
     assert_eq!(

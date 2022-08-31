@@ -380,4 +380,8 @@ impl PythSimulator {
             .await
             .map(|x| load::<T>(&x.data).unwrap().clone())
     }
+
+    pub fn is_owned_by_oracle(&self, account: &Account) -> bool {
+        account.owner == self.program_id
+    }
 }
