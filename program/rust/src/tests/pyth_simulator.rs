@@ -332,8 +332,7 @@ impl PythSimulator {
         &mut self,
         cmd_args: UpdPermissionsArgs,
     ) -> Result<Pubkey, BanksClientError> {
-        let (permissions_pubkey, __bump) =
-            Pubkey::find_program_address(&[PERMISSIONS_SEED.as_bytes()], &self.program_id);
+        let permissions_pubkey = self.get_permissions_pubkey();
 
         let instruction = Instruction::new_with_bytes(
             self.program_id,
@@ -373,9 +372,14 @@ impl PythSimulator {
     }
 
     pub async fn airdrop(&mut self, to: &Pubkey, lamports: u64) -> Result<(), BanksClientError> {
-        let instruction =
-            system_instruction::transfer(&self.genesis_keypair.pubkey(), to, lamports);
+        let instruction = system_instruction::transfer(&self.payer.pubkey(), to, lamports);
 
         self.process_ix(instruction, &vec![]).await
+    }
+
+    pub fn get_permissions_pubkey(&self) -> Pubkey {
+        let (permissions_pubkey, __bump) =
+            Pubkey::find_program_address(&[PERMISSIONS_SEED.as_bytes()], &self.program_id);
+        return permissions_pubkey;
     }
 }
