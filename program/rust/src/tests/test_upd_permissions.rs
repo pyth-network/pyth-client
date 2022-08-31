@@ -60,8 +60,6 @@ async fn test_upd_permissions() {
         permission_data.data_curation_authority
     );
     assert_eq!(security_authority, permission_data.security_authority);
-    let initialized_bump = permission_data.bump_seed;
-    assert!(initialized_bump != 0);
 
     data_curation_authority = Pubkey::new_unique();
     master_authority = Pubkey::new_unique();
@@ -105,5 +103,4 @@ async fn test_upd_permissions() {
         permission_data.data_curation_authority
     );
     assert_eq!(security_authority, permission_data.security_authority);
-    assert_eq!(initialized_bump, permission_data.bump_seed);
 }

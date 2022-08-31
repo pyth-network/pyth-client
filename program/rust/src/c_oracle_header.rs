@@ -68,10 +68,6 @@ impl PythAccount for PermissionAccount {
 pub struct PermissionAccount {
     /// pyth account header
     pub header:                  AccountHeader,
-    /// Bump seed for this account (it is a PDA)
-    pub bump_seed:               u8,
-    /// This unused field is needed for memory safety so that there is no padding in the struct
-    pub unused_:                 [u8; 7],
     /// An authority that can do any administrative task
     pub master_authority:        Pubkey,
     /// An authority that can  :

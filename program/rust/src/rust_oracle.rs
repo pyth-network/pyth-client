@@ -807,7 +807,6 @@ pub fn upd_permissions(
 
     let mut permissions_account_data =
         load_checked::<PermissionAccount>(permissions_account, cmd_args.header.version)?;
-    permissions_account_data.bump_seed = bump_seed;
     permissions_account_data.master_authority = cmd_args.master_authority;
 
     permissions_account_data.data_curation_authority = cmd_args.data_curation_authority;
