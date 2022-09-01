@@ -12,7 +12,6 @@ use bytemuck::{
     Zeroable,
 };
 
-
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
 /// this wraps multiple SMA and tick trackers, and includes all the state
@@ -40,7 +39,12 @@ impl PriceAccountWrapper {
     }
 
     pub fn add_price_to_time_machine(&mut self) -> Result<(), OracleError> {
-        // TO DO
+        self.time_machine.add_datapoint(
+            (self.price_data.prev_timestamp_, self.price_data.timestamp_),
+            (self.price_data.prev_slot_, self.price_data.last_slot_),
+            (self.price_data.prev_price_, self.price_data.agg_.price_),
+            (0, 0),
+        )?;
         Ok(())
     }
 }
@@ -49,12 +53,11 @@ const TWENTY_SECONDS: u64 = 20;
 const THIRTY_MINUTES: i64 = 30 * 60;
 
 #[repr(u8)]
-#[derive(Debug, Copy, Clone, PartialEq)]
-enum Status {
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum Status {
     Invalid = 0,
-    Valid   = 1
+    Valid   = 1,
 }
-
 
 #[derive(Debug, Copy, Clone)]
 #[repr(C)]
@@ -65,80 +68,92 @@ enum Status {
 /// Assumes threshold < granularity
 /// Both threshold and granularity are set on initialization
 pub struct SmaTracker<const NUM_ENTRIES: usize> {
-    threshold:                                     u64, /* the maximum slot gap we are willing
-                                                         * to accept */
-    granularity:                                   i64, //the length of the time covered per entry
-    current_entry_slot_accumulator:                u64, /* accumulates the number of slots that
-                                                         * went into the
-                                                         * weights of the current entry, reset
-                                                         * to 0 before
-                                                         * moving to the next one */
-    current_entry_status:                          Status, /* the status of the current entry,
-                                                            * INVALID if an update takes too
-                                                            * long, PENDING if it is still being
-                                                            * updated but the updates have been
-                                                            * consistent so far. */
-    current_entry_weighted_price_accumulator:      i64, /* accumulates
-                                                                             * slot_delta *
-                                                                             * (inflated_p1 +
-                                                                             * inflated_p2) / 2
-                                                                             * to compute
-                                                                             * averages */
-    running_entry_prices:                          [i64; NUM_ENTRIES], /* A running sum of the slot weighted average of each entry. */
-    running_valid_entry_counter:                   [u64; NUM_ENTRIES], /* Each entry
-                                                                        * increment the
-                                                                        * counter of the
-                                                                        * previous one if
-                                                                        * it is valid */
+    pub threshold:                                u64, /* the maximum slot gap we are willing
+                                                        * to accept */
+    pub granularity:                              i64, //the length of the time covered per entry
+    pub current_entry_slot_accumulator:           u64, /* accumulates the number of slots that
+                                                        * went into the
+                                                        * weights of the current entry, reset
+                                                        * to 0 before
+                                                        * moving to the next one */
+    pub current_entry_status:                     Status, /* the status of the current entry,
+                                                           * INVALID if an update takes too
+                                                           * long, PENDING if it is still being
+                                                           * updated but the updates have been
+                                                           * consistent so far. */
+    pub current_entry_weighted_price_accumulator: i128, /* accumulates
+                                                         * slot_delta *
+                                                         * (inflated_p1 +
+                                                         * inflated_p2) / 2
+                                                         * to compute
+                                                         * averages */
+    pub running_entry_prices:                     [i128; NUM_ENTRIES], /* A running sum of the
+                                                                        * slot weighted average
+                                                                        * of each entry. */
+    pub running_valid_entry_counter:              [u64; NUM_ENTRIES], /* Each entry
+                                                                       * increment the
+                                                                       * counter of the
+                                                                       * previous one if
+                                                                       * it is valid */
 }
 
-
-
-impl<const NUM_ENTRIES: usize>  SmaTracker<NUM_ENTRIES> {
-
-    pub fn time_to_entry(&self, time : i64)-> Result<usize, OracleError> {
-        Ok(try_convert::<i64, usize>(time / self.granularity)? % NUM_ENTRIES)
+impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
+    /// Should never fail because time is positive and usize = u64
+    pub fn time_to_epoch(&self, time: i64) -> Result<usize, OracleError> {
+        try_convert::<i64, usize>(time / self.granularity)
     }
 
-    pub fn initialize(&mut self, granularity : i64, threshold : u64){
+    pub fn initialize(&mut self, granularity: i64, threshold: u64) {
         self.threshold = threshold;
         self.granularity = granularity;
     }
 
-    pub fn initialize_epoch(&mut self, epoch : usize){
-        if self.current_entry_status == Status::Valid{
-            self.running_valid_entry_counter[epoch] == self.running_valid_entry_counter[epoch - 1];
-        }
-        self.running_entry_prices[epoch] = self.running_entry_prices[epoch-1] + self.current_entry_weighted_price_accumulator / self.current_entry_slot_accumulator as i64;
-        self.current_entry_slot_accumulator = 0;
-        self.current_entry_weighted_price_accumulator = 0;
-        self.current_entry_status = Status::Valid;
-    }
+    pub fn add_datapoint(
+        &mut self,
+        last_two_times: (i64, i64),
+        last_two_slot: (u64, u64),
+        last_two_prices: (i64, i64),
+        _last_two_confs: (u64, u64),
+    ) -> Result<(), OracleError> {
+        let epoch_0 = self.time_to_epoch(last_two_times.0)?;
+        let epoch_1 = self.time_to_epoch(last_two_times.1)?;
 
-    pub fn add_datapoint(&mut self, last_two_times : (i64,i64) , last_two_slot : (u64, u64), last_two_prices: (i64, i64),
-    last_two_confs: (u64, u64))-> Result<(), OracleError>{
-    
-        let epoch_gap = self.time_to_entry(last_two_times.1)? - self.time_to_entry(last_two_times.0)?;
-
-        self.current_entry_weighted_price_accumulator += (last_two_slot.1 - last_two_slot.0) as i64 * (last_two_prices.1 + last_two_prices.0) / 2;
-        self.current_entry_slot_accumulator += (last_two_slot.1 - last_two_slot.0);
+        self.current_entry_weighted_price_accumulator +=
+            i128::from(last_two_slot.1 - last_two_slot.0)
+                * i128::from(last_two_prices.1 + last_two_prices.0)
+                / 2;
+        self.current_entry_slot_accumulator += last_two_slot.1 - last_two_slot.0;
         if (last_two_slot.1 - last_two_slot.0) > self.threshold {
             self.current_entry_status = Status::Invalid;
         }
 
-        for i in last_two_times.0+1..last_two_times.1 {
+        for i in epoch_0 + 1..epoch_1 {
             self.initialize_epoch(i);
-            self.current_entry_weighted_price_accumulator += (last_two_slot.1 - last_two_slot.0) as i64 * (last_two_prices.1 + last_two_prices.0) / 2;
-            self.current_entry_slot_accumulator += (last_two_slot.1 - last_two_slot.0);
+            self.current_entry_weighted_price_accumulator +=
+                i128::from(last_two_slot.1 - last_two_slot.0)
+                    * (i128::from(last_two_prices.1) + i128::from(last_two_prices.0))
+                    / 2;
+            self.current_entry_slot_accumulator += last_two_slot.1 - last_two_slot.0;
             if (last_two_slot.1 - last_two_slot.0) > self.threshold {
                 self.current_entry_status = Status::Invalid;
             }
         }
-
-
-  
-        
         Ok(())
+    }
+
+    pub fn initialize_epoch(&mut self, epoch: usize) {
+        let index = epoch % NUM_ENTRIES;
+        let prev_index = (epoch - 1) % NUM_ENTRIES;
+        if self.current_entry_status == Status::Valid {
+            self.running_valid_entry_counter[index] =
+                self.running_valid_entry_counter[prev_index] + 1;
+        }
+        self.running_entry_prices[epoch] = self.running_entry_prices[prev_index]
+            + self.current_entry_weighted_price_accumulator
+                / i128::from(self.current_entry_slot_accumulator);
+        self.current_entry_slot_accumulator = 0;
+        self.current_entry_weighted_price_accumulator = 0;
+        self.current_entry_status = Status::Valid;
     }
 }
 
