@@ -107,7 +107,7 @@ fn test_add_and_delete(input: Vec<DataEvent>) -> bool {
         current_epoch_denominator:     0,
         current_epoch_is_valid:        false,
         current_epoch_numerator:       0,
-        running_valid_entry_counter:   [0u64; 10],
+        running_valid_epoch_counter:   [0u64; 10],
         running_sum_of_price_averages: [0i128; 10],
     };
 
@@ -120,7 +120,7 @@ fn test_add_and_delete(input: Vec<DataEvent>) -> bool {
         current_epoch_denominator:     0,
         current_epoch_is_valid:        false,
         current_epoch_numerator:       0,
-        running_valid_entry_counter:   [0u64; 10],
+        running_valid_epoch_counter:   [0u64; 10],
         running_sum_of_price_averages: [0i128; 10],
     };
 
@@ -133,7 +133,7 @@ fn test_add_and_delete(input: Vec<DataEvent>) -> bool {
         current_epoch_denominator:     0,
         current_epoch_is_valid:        false,
         current_epoch_numerator:       0,
-        running_valid_entry_counter:   [0u64; 10],
+        running_valid_epoch_counter:   [0u64; 10],
         running_sum_of_price_averages: [0i128; 10],
     };
 
@@ -145,7 +145,7 @@ fn test_add_and_delete(input: Vec<DataEvent>) -> bool {
         current_epoch_denominator:     0,
         current_epoch_is_valid:        false,
         current_epoch_numerator:       0,
-        running_valid_entry_counter:   [0u64; 10],
+        running_valid_epoch_counter:   [0u64; 10],
         running_sum_of_price_averages: [0i128; 10],
     };
 
@@ -157,7 +157,7 @@ fn test_add_and_delete(input: Vec<DataEvent>) -> bool {
         current_epoch_denominator:     0,
         current_epoch_is_valid:        false,
         current_epoch_numerator:       0,
-        running_valid_entry_counter:   [0u64; 10],
+        running_valid_epoch_counter:   [0u64; 10],
         running_sum_of_price_averages: [0i128; 10],
     };
 

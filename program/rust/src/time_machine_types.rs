@@ -53,7 +53,6 @@ impl PriceAccountWrapper {
 
 pub const THIRTY_MINUTES: i64 = 30 * 60;
 
-
 #[derive(Debug, Copy, Clone)]
 #[repr(C)]
 /// Represents a Simple Moving Average Tracker Tracker that has NUM_ENTRIES entries
@@ -63,37 +62,16 @@ pub const THIRTY_MINUTES: i64 = 30 * 60;
 /// Assumes threshold < granularity
 /// Both threshold and granularity are set on initialization
 pub struct SmaTracker<const NUM_ENTRIES: usize> {
-    pub threshold:                     u64, /* the maximum slot gap we are willing
-                                             * to accept */
-    pub granularity:                   i64, //the length of the time covered per entry
-    pub current_epoch_numerator:       i128, /* accumulates
-                                             * slot_delta *
-                                             * (inflated_p1 +
-                                             * inflated_p2) / 2
-                                             * to compute
-                                             * averages */
-    pub current_epoch_denominator:     u64, /* accumulates the number of slots that
-                                             * went into the
-                                             * weights of the current entry, reset
-                                             * to 0 before
-                                             * moving to the next one */
-    pub current_epoch_is_valid:        bool, /* the status of the current entry,
-                                              *                                                        * INVALID if an update takes too
-                                              *                                                        * long, PENDING if it is still being
-                                              *                                                        * updated but the updates have been
-                                              *                                                        * consistent so far. */
-    pub running_sum_of_price_averages: [i128; NUM_ENTRIES], /* A running sum of the
-                                                             * slot weighted average
-                                                             * of each entry. */
-    pub running_valid_entry_counter:   [u64; NUM_ENTRIES], /* Each entry
-                                                            *                                                                        * increment the
-                                                            *                                                                        * counter of the
-                                                            *                                                                        * previous one if
-                                                            *                                                                        * it is valid */
+    pub threshold:                     u64,
+    pub granularity:                   i64,
+    pub current_epoch_numerator:       i128,
+    pub current_epoch_denominator:     u64,
+    pub current_epoch_is_valid:        bool,
+    pub running_sum_of_price_averages: [i128; NUM_ENTRIES],
+    pub running_valid_epoch_counter:   [u64; NUM_ENTRIES],
 }
 
 impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
-    /// Should never fail because time is positive and usize = u64
     pub fn time_to_epoch(&self, time: i64) -> Result<usize, OracleError> {
         try_convert::<i64, usize>(time / self.granularity)
     }
@@ -114,43 +92,25 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
         let epoch_0 = self.time_to_epoch(last_two_times.0)?;
         let epoch_1 = self.time_to_epoch(last_two_times.1)?;
 
-        let datapoint_numerator = i128::from(slot_gap) * i128::from(price_to_be_added);
+        let datapoint_numerator = i128::from(slot_gap) * i128::from(price_to_be_added); //Can't overflow because u64::MAX * i64::MAX = i28::MAX
         let datapoint_denominator = slot_gap;
 
+        // Can't overflow, it's always smaller than the current solana slot
         self.current_epoch_denominator += datapoint_denominator;
+        // Can't overflow, it's always smaller than u64::MAX * i64::MAX = i28::MAX
         self.current_epoch_numerator += datapoint_numerator;
         self.current_epoch_is_valid =
             self.current_epoch_is_valid && datapoint_denominator <= self.threshold;
 
-        // Next epoch transition
+        // This for loop is highly inefficient, but this is what the behavior should be
+        // It updated all the epochs that got skipped
+        // This will allow unchecked requests to be fullfilled
         for i in epoch_0..epoch_1 {
             self.conclude_epoch_and_initialize_next(i, datapoint_numerator, datapoint_denominator);
             self.current_epoch_is_valid = datapoint_denominator <= self.threshold;
         }
         Ok(())
     }
-
-    // pub fn update_skipped_epochs(&mut self, epoch_0: usize, epoch_1 :usize,
-    // datapoint_average:i128){
-
-    //     for i in epoch_0+1..cmp::min(epoch_0 + NUM_ENTRIES, epoch_1){
-    //         let index = i % NUM_ENTRIES;
-    //         let prev_index = (i + (NUM_ENTRIES - 1)) % NUM_ENTRIES;
-
-    //         self.running_sum_of_price_averages[index] =
-    // self.running_sum_of_price_averages[prev_index] + datapoint_average;     }
-
-    //     if epoch_1 > epoch_0 + NUM_ENTRIES{
-    //         for i in 0..NUM_ENTRIES {
-    //             let times_skipped = self.get_times_skipped(i, epoch_0, epoch_1);
-    //             if times_skipped > 1 {
-    //                 self.running_sum_of_price_averages[i] = self.running_sum_of_price_averages[i]
-    //                 + datapoint_average * (times_skipped as i128 -1);
-    //             }
-    //         }
-    //     }
-    // }
-
 
     pub fn conclude_epoch_and_initialize_next(
         &mut self,
@@ -159,35 +119,23 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
         datapoint_denominator: u64,
     ) {
         let index = epoch % NUM_ENTRIES;
-        let prev_index = (epoch + (NUM_ENTRIES - 1)) % NUM_ENTRIES;
+        let prev_index = (epoch.wrapping_sub(1)) % NUM_ENTRIES;
 
-        self.running_sum_of_price_averages[index] = self.running_sum_of_price_averages[prev_index]
+        self.running_sum_of_price_averages[index] = self.running_sum_of_price_averages[prev_index] // This buffer will be able to support u64::MAX epochs, no one will be alive when it overflows
             + self.current_epoch_numerator / i128::from(self.current_epoch_denominator);
 
         if self.current_epoch_is_valid {
-            self.running_valid_entry_counter[index] =
-                self.running_valid_entry_counter[prev_index] + 1;
+            self.running_valid_epoch_counter[index] =
+                self.running_valid_epoch_counter[prev_index] + 1; // Likewise can support u64::MAX
+                                                                  // epochs
         } else {
-            self.running_valid_entry_counter[index] = self.running_valid_entry_counter[prev_index]
+            self.running_valid_epoch_counter[index] = self.running_valid_epoch_counter[prev_index]
         };
 
         self.current_epoch_denominator = datapoint_denominator;
         self.current_epoch_numerator = datapoint_numerator;
     }
-
-    // pub fn get_times_skipped(&self, i : usize, epoch_0 : usize, epoch_1 : usize) -> usize{
-    //     let base = epoch_1 - epoch_0 / NUM_ENTRIES;
-    //     let remainder_0 = epoch_0 % NUM_ENTRIES;
-    //     let remainder_1 = epoch_1 % NUM_ENTRIES;
-    //     let is_included = (remainder_0 < i && i < remainder_1) || (remainder_0 >= remainder_1) &&
-    // (i < remainder_1 ) && (remainder_0 < i);     if is_included {
-    //         return base;
-    //     } else {
-    //         return base +1;
-    //     }
-    // }
 }
-
 
 #[cfg(target_endian = "little")]
 unsafe impl Zeroable for PriceAccountWrapper {

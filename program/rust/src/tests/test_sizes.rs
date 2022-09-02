@@ -121,3 +121,10 @@ fn test_pubkey() {
         "4aDoSXJ5o3AuvL7QFeR6h44jALQfTmUUCTVGDD6aoJTM"
     );
 }
+#[test]
+fn test_check() {
+    let a = u64::MAX;
+    let b = i64::MAX;
+    let c = i128::MAX / i128::from(i64::MAX);
+    println!("{:?}", c);
+}
