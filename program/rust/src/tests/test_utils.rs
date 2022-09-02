@@ -31,6 +31,7 @@ const UPPER_BOUND_OF_ALL_ACCOUNT_SIZES: usize = 20536;
 /// After instantiating the setup `AccountSetup` with `new` (that line will transfer the fields to
 /// the outer scope),  `to_account_info` gives the user an `AccountInfo` pointing to the fields of
 /// the AccountSetup.
+#[repr(align(16))]
 pub struct AccountSetup {
     key:     Pubkey,
     owner:   Pubkey,
