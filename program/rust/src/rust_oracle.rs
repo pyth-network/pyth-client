@@ -10,6 +10,7 @@ use crate::c_oracle_header::{
     PriceEma,
     PriceInfo,
     ProductAccount,
+    PythAccount,
     MAX_CI_DIVISOR,
     PC_COMP_SIZE,
     PC_MAP_TABLE_SIZE,
@@ -59,9 +60,6 @@ use solana_program::rent::Rent;
 use solana_program::system_instruction::transfer;
 use solana_program::system_program::check_id;
 use solana_program::sysvar::Sysvar;
-
-const PRICE_T_SIZE: usize = size_of::<PriceAccount>();
-const PRICE_ACCOUNT_SIZE: usize = size_of::<PriceAccountExtended>();
 
 
 #[cfg(target_arch = "bpf")]
@@ -116,7 +114,7 @@ pub fn resize_price_account(
     }
     let account_len = price_account_info.try_data_len()?;
     match account_len {
-        PRICE_T_SIZE => {
+        PriceAccount::MINIMUM_SIZE => {
             // Ensure account is still rent exempt after resizing
             let rent: Rent = Default::default();
             let lamports_needed: u64 = rent
@@ -142,7 +140,7 @@ pub fn resize_price_account(
             price_account.initialize()?;
             Ok(())
         }
-        PRICE_ACCOUNT_SIZE => Ok(()),
+        PriceAccountExtended::MINIMUM_SIZE => Ok(()),
         _ => Err(ProgramError::InvalidArgument),
     }
 }
@@ -264,7 +262,7 @@ pub fn upd_price(
     }
 
     let account_len = price_account.try_data_len()?;
-    if aggregate_updated && account_len == PRICE_ACCOUNT_SIZE {
+    if aggregate_updated && account_len == PriceAccountExtended::MINIMUM_SIZE {
         let mut price_account =
             load_checked::<PriceAccountExtended>(price_account, cmd_args.header.version)?;
         price_account.add_datapoint()?;
