@@ -263,6 +263,13 @@ fn test_upd_sma() {
         assert_eq!(price_data.price_data.agg_.pub_slot_, 5);
         assert_eq!(price_data.price_data.agg_.price_, 81);
         assert_eq!(price_data.price_data.agg_.status_, PC_STATUS_TRADING);
+
+        assert_eq!(
+            price_data.time_machine.current_epoch_numerator,
+            42 / 2 * 3 + (81 + 42) / 2 + 81
+        );
+        assert_eq!(price_data.time_machine.current_epoch_is_valid, true);
+        assert_eq!(price_data.time_machine.current_epoch_denominator, 3 + 1 + 1);
     }
 
     populate_instruction(&mut instruction_data, 50, 6, 5);
@@ -303,6 +310,16 @@ fn test_upd_sma() {
         assert_eq!(price_data.price_data.agg_.pub_slot_, 6);
         assert_eq!(price_data.price_data.agg_.price_, 81);
         assert_eq!(price_data.price_data.agg_.status_, PC_STATUS_TRADING);
+
+        assert_eq!(
+            price_data.time_machine.current_epoch_numerator,
+            42 / 2 * 3 + (81 + 42) / 2 + 81 + 81
+        );
+        assert_eq!(price_data.time_machine.current_epoch_is_valid, true);
+        assert_eq!(
+            price_data.time_machine.current_epoch_denominator,
+            3 + 1 + 1 + 1
+        );
     }
 
     // Crank one more time and aggregate should be unknown
@@ -333,6 +350,16 @@ fn test_upd_sma() {
         assert_eq!(price_data.price_data.agg_.pub_slot_, 7);
         assert_eq!(price_data.price_data.agg_.price_, 81);
         assert_eq!(price_data.price_data.agg_.status_, PC_STATUS_UNKNOWN);
+
+        assert_eq!(
+            price_data.time_machine.current_epoch_numerator,
+            42 / 2 * 3 + (81 + 42) / 2 + 81 + 81
+        );
+        assert_eq!(price_data.time_machine.current_epoch_is_valid, true);
+        assert_eq!(
+            price_data.time_machine.current_epoch_denominator,
+            3 + 1 + 1 + 1
+        );
     }
 }
 
