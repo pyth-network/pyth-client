@@ -11,6 +11,7 @@ mod test_init_price;
 mod test_resize_account;
 mod test_set_min_pub;
 mod test_sizes;
+mod test_sma;
 mod test_upd_aggregate;
 mod test_upd_price;
 mod test_upd_price_no_fail_on_error;

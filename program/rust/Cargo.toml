@@ -20,6 +20,8 @@ solana-program-test = "=1.10.29"
 solana-sdk = "=1.10.29"
 tokio = "1.14.1"
 hex = "0.3.1"
+quickcheck = "1"
+quickcheck_macros = "1"
 
 [features]
 debug = []
