@@ -3,7 +3,7 @@ use std::mem::size_of;
 
 use crate::c_oracle_header::pc_price_t;
 use crate::tests::pyth_simulator::PythSimulator;
-use crate::time_machine_types::PriceAccountWrapper;
+use crate::time_machine_types::PriceAccountExtended;
 
 
 /// Warning : This test will fail if you run cargo test instead of cargo test-bpf
@@ -22,10 +22,10 @@ async fn test_resize_account() {
     assert!(sim.resize_price_account(&price1).await.is_ok());
     // Check new size
     let price1_account = sim.get_account(price1.pubkey()).await.unwrap();
-    assert_eq!(price1_account.data.len(), size_of::<PriceAccountWrapper>());
+    assert_eq!(price1_account.data.len(), size_of::<PriceAccountExtended>());
 
     // Future calls don't change the size
     assert!(sim.resize_price_account(&price1).await.is_ok());
     let price1_account = sim.get_account(price1.pubkey()).await.unwrap();
-    assert_eq!(price1_account.data.len(), size_of::<PriceAccountWrapper>());
+    assert_eq!(price1_account.data.len(), size_of::<PriceAccountExtended>());
 }

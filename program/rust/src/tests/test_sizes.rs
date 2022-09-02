@@ -27,7 +27,7 @@ use crate::instruction::{
     UpdPriceArgs,
 };
 use crate::tests::test_utils::AccountSetup;
-use crate::time_machine_types::PriceAccountWrapper;
+use crate::time_machine_types::PriceAccountExtended;
 use crate::utils::try_convert;
 use solana_program::pubkey::Pubkey;
 use std::mem::{
@@ -69,7 +69,7 @@ fn test_sizes() {
     assert_eq!(size_of::<PriceEma>(), 24);
     assert_eq!(size_of::<PriceAccount>(), 3312);
     assert_eq!(
-        size_of::<PriceAccountWrapper>(),
+        size_of::<PriceAccountExtended>(),
         try_convert::<_, usize>(PRICE_ACCOUNT_SIZE).unwrap()
     );
 }

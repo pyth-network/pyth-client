@@ -32,7 +32,7 @@ use crate::instruction::{
     SetMinPubArgs,
     UpdPriceArgs,
 };
-use crate::time_machine_types::PriceAccountWrapper;
+use crate::time_machine_types::PriceAccountExtended;
 use crate::utils::{
     check_exponent_range,
     check_valid_funding_account,
@@ -61,7 +61,7 @@ use solana_program::system_program::check_id;
 use solana_program::sysvar::Sysvar;
 
 const PRICE_T_SIZE: usize = size_of::<PriceAccount>();
-const PRICE_ACCOUNT_SIZE: usize = size_of::<PriceAccountWrapper>();
+const PRICE_ACCOUNT_SIZE: usize = size_of::<PriceAccountExtended>();
 
 
 #[cfg(target_arch = "bpf")]
@@ -120,7 +120,7 @@ pub fn resize_price_account(
             // Ensure account is still rent exempt after resizing
             let rent: Rent = Default::default();
             let lamports_needed: u64 = rent
-                .minimum_balance(size_of::<PriceAccountWrapper>())
+                .minimum_balance(size_of::<PriceAccountExtended>())
                 .saturating_sub(price_account_info.lamports());
             if lamports_needed > 0 {
                 send_lamports(
@@ -132,14 +132,14 @@ pub fn resize_price_account(
             }
             // We do not need to zero allocate because we won't access the data in the same
             // instruction
-            price_account_info.realloc(size_of::<PriceAccountWrapper>(), false)?;
+            price_account_info.realloc(size_of::<PriceAccountExtended>(), false)?;
 
             // Check that everything is ok
             check_valid_signable_account(program_id, price_account_info)?;
             let mut price_account =
-                load_checked::<PriceAccountWrapper>(price_account_info, PC_VERSION)?;
+                load_checked::<PriceAccountExtended>(price_account_info, PC_VERSION)?;
             // Initialize Time Machine
-            price_account.initialize_time_machine()?;
+            price_account.initialize()?;
             Ok(())
         }
         PRICE_ACCOUNT_SIZE => Ok(()),
@@ -266,8 +266,8 @@ pub fn upd_price(
     let account_len = price_account.try_data_len()?;
     if aggregate_updated && account_len == PRICE_ACCOUNT_SIZE {
         let mut price_account =
-            load_checked::<PriceAccountWrapper>(price_account, cmd_args.header.version)?;
-        price_account.add_price_to_time_machine()?;
+            load_checked::<PriceAccountExtended>(price_account, cmd_args.header.version)?;
+        price_account.add_datapoint()?;
     }
 
     // Try to update the publisher's price

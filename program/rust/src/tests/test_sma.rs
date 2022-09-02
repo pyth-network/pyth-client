@@ -9,9 +9,10 @@ use std::mem::{
 
 use crate::c_oracle_header::PriceAccount;
 use crate::time_machine_types::{
-    PriceAccountWrapper,
+    DataPoint,
+    PriceAccountExtended,
     SmaTracker,
-    TimeMachineWrapper,
+    NUM_BUCKETS_THIRTY_MIN,
     THIRTY_MINUTES,
 };
 
@@ -81,13 +82,6 @@ struct DataEvent {
     price:    i64,
 }
 
-#[derive(Debug)]
-pub struct DataPoint {
-    last_two_times: (i64, i64),
-    slot_gap:       u64,
-    price:          i64,
-}
-
 impl Arbitrary for DataEvent {
     fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         DataEvent {
@@ -98,200 +92,144 @@ impl Arbitrary for DataEvent {
     }
 }
 
+
 #[quickcheck]
 fn test_add_and_delete(input: Vec<DataEvent>) -> bool {
     // No gaps, no skipped epochs
-    let mut tracker1 = SmaTracker::<10> {
-        granularity:                   0,
-        threshold:                     0,
-        current_epoch_denominator:     0,
-        current_epoch_is_valid:        false,
-        current_epoch_numerator:       0,
-        running_valid_epoch_counter:   [0u64; 10],
-        running_sum_of_price_averages: [0i128; 10],
-    };
-
+    let mut tracker1 = SmaTracker::<NUM_BUCKETS_THIRTY_MIN>::zero();
     tracker1.initialize(i64::from(u8::MAX), u64::from(u8::MAX));
 
-    // Likely skipped, no gaps
-    let mut tracker2 = SmaTracker::<10> {
-        granularity:                   0,
-        threshold:                     0,
-        current_epoch_denominator:     0,
-        current_epoch_is_valid:        false,
-        current_epoch_numerator:       0,
-        running_valid_epoch_counter:   [0u64; 10],
-        running_sum_of_price_averages: [0i128; 10],
-    };
-
+    // Skipped and gaps
+    let mut tracker2 = SmaTracker::<NUM_BUCKETS_THIRTY_MIN>::zero();
     tracker2.initialize(i64::from(u8::MAX / 5), u64::from(u8::MAX / 5));
 
-    // Gaps
-    let mut tracker3 = SmaTracker::<10> {
-        granularity:                   0,
-        threshold:                     0,
-        current_epoch_denominator:     0,
-        current_epoch_is_valid:        false,
-        current_epoch_numerator:       0,
-        running_valid_epoch_counter:   [0u64; 10],
-        running_sum_of_price_averages: [0i128; 10],
-    };
-
+    // Gaps, no skips
+    let mut tracker3 = SmaTracker::<NUM_BUCKETS_THIRTY_MIN>::zero();
     tracker3.initialize(i64::from(u8::MAX), u64::from(u8::MAX / 5));
 
-    let mut tracker4 = SmaTracker::<10> {
-        granularity:                   0,
-        threshold:                     0,
-        current_epoch_denominator:     0,
-        current_epoch_is_valid:        false,
-        current_epoch_numerator:       0,
-        running_valid_epoch_counter:   [0u64; 10],
-        running_sum_of_price_averages: [0i128; 10],
-    };
+    // No skips, gaps
+    let mut tracker4 = SmaTracker::<NUM_BUCKETS_THIRTY_MIN>::zero();
+    tracker4.initialize(i64::from(u8::MAX), u64::from(u8::MAX / 5) * 4);
 
-    tracker4.initialize(i64::from(u8::MAX / 5), 250);
-
-    let mut tracker5 = SmaTracker::<10> {
-        granularity:                   0,
-        threshold:                     0,
-        current_epoch_denominator:     0,
-        current_epoch_is_valid:        false,
-        current_epoch_numerator:       0,
-        running_valid_epoch_counter:   [0u64; 10],
-        running_sum_of_price_averages: [0i128; 10],
-    };
-
+    // Each epoch is 1 second
+    let mut tracker5 = SmaTracker::<NUM_BUCKETS_THIRTY_MIN>::zero();
     tracker5.initialize(1, u64::from(u8::MAX / 5));
 
     let mut data = Vec::<DataPoint>::new();
 
-    let mut initial_time = 0i64;
+    let mut current_time = 0i64;
     for data_event in input.clone() {
-        tracker1
-            .add_datapoint(
-                (initial_time, initial_time + data_event.timegap),
-                data_event.slot_gap,
-                data_event.price,
-                (0, 0),
-            )
-            .unwrap();
-        tracker2
-            .add_datapoint(
-                (initial_time, initial_time + data_event.timegap),
-                data_event.slot_gap,
-                data_event.price,
-                (0, 0),
-            )
-            .unwrap();
-        tracker3
-            .add_datapoint(
-                (initial_time, initial_time + data_event.timegap),
-                data_event.slot_gap,
-                data_event.price,
-                (0, 0),
-            )
-            .unwrap();
+        let datapoint = DataPoint {
+            last_two_timestamps: (current_time, current_time + data_event.timegap),
+            slot_gap:            data_event.slot_gap,
+            price:               data_event.price,
+        };
 
-        tracker4
-            .add_datapoint(
-                (initial_time, initial_time + data_event.timegap),
-                data_event.slot_gap,
-                data_event.price,
-                (0, 0),
-            )
-            .unwrap();
-        tracker5
-            .add_datapoint(
-                (initial_time, initial_time + data_event.timegap),
-                data_event.slot_gap,
-                data_event.price,
-                (0, 0),
-            )
-            .unwrap();
-        data.push(DataPoint {
-            last_two_times: (initial_time, initial_time + data_event.timegap),
-            slot_gap:       data_event.slot_gap,
-            price:          data_event.price,
-        });
-        initial_time += data_event.timegap;
+        tracker1.add_datapoint(&datapoint).unwrap();
+        tracker2.add_datapoint(&datapoint).unwrap();
+        tracker3.add_datapoint(&datapoint).unwrap();
 
-        check_epoch_fields(&tracker1, &data, initial_time);
-        check_epoch_fields(&tracker2, &data, initial_time);
-        check_epoch_fields(&tracker3, &data, initial_time);
-        check_epoch_fields(&tracker4, &data, initial_time);
-        check_epoch_fields(&tracker5, &data, initial_time);
+        tracker4.add_datapoint(&datapoint).unwrap();
+        tracker5.add_datapoint(&datapoint).unwrap();
+        data.push(datapoint);
+        current_time += data_event.timegap;
 
-        check_all_fields(&tracker1, &data, initial_time);
-        check_all_fields(&tracker2, &data, initial_time);
-        check_all_fields(&tracker3, &data, initial_time);
-        check_all_fields(&tracker4, &data, initial_time);
-        check_all_fields(&tracker5, &data, initial_time);
+        tracker1.check_current_epoch_fields(&data, current_time);
+        tracker2.check_current_epoch_fields(&data, current_time);
+        tracker3.check_current_epoch_fields(&data, current_time);
+        tracker4.check_current_epoch_fields(&data, current_time);
+        tracker5.check_current_epoch_fields(&data, current_time);
+        tracker1.check_array_fields(&data, current_time);
+        tracker2.check_array_fields(&data, current_time);
+        tracker3.check_array_fields(&data, current_time);
+        tracker4.check_array_fields(&data, current_time);
+        tracker5.check_array_fields(&data, current_time);
     }
-
-
-    // println!("{:?}", tracker1);
-
 
     return true;
 }
 
-pub fn check_epoch_fields(tracker: &SmaTracker<10>, data: &Vec<DataPoint>, time: i64) {
-    let last_epoch_1 = tracker.time_to_epoch(time).unwrap();
 
-    let result = compute_epoch_fields(tracker, data, last_epoch_1);
-    assert_eq!(tracker.current_epoch_denominator, result.0);
-    assert_eq!(tracker.current_epoch_numerator, result.1);
-    assert_eq!(tracker.current_epoch_is_valid, result.2);
-}
-pub fn check_all_fields(tracker: &SmaTracker<10>, data: &Vec<DataPoint>, time: i64) {
-    let last_epoch_1 = tracker.time_to_epoch(time).unwrap();
-    let mut values = vec![];
-
-    for i in 0..last_epoch_1 {
-        values.push(compute_epoch_fields(tracker, data, i));
+impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
+    pub fn zero() -> Self {
+        return SmaTracker::<NUM_ENTRIES> {
+            granularity:                   0,
+            threshold:                     0,
+            current_epoch_denominator:     0,
+            current_epoch_is_valid:        false,
+            current_epoch_numerator:       0,
+            running_valid_epoch_counter:   [0u64; NUM_ENTRIES],
+            running_sum_of_price_averages: [0i128; NUM_ENTRIES],
+        };
     }
 
-    let iter = values.iter().scan(0, |state, &y| {
-        *state = *state + y.1.clone() / i128::from(y.0.clone());
-        Some(*state)
-    });
+    pub fn check_current_epoch_fields(&self, data: &Vec<DataPoint>, time: i64) {
+        let curent_epoch = self.time_to_epoch(time).unwrap();
 
-    let mut i = (last_epoch_1 + 9) % 10;
-
-    let collected = iter.collect::<Vec<i128>>();
-    for x in collected.iter().rev().take(9) {
-        assert_eq!(tracker.running_sum_of_price_averages[i], *x);
-        i = (i + 9) % 10;
+        let result = self.compute_epoch_expected_values(data, curent_epoch);
+        assert_eq!(self.current_epoch_denominator, result.0);
+        assert_eq!(self.current_epoch_numerator, result.1);
+        assert_eq!(self.current_epoch_is_valid, result.2);
     }
-}
 
-pub fn compute_epoch_fields(
-    tracker: &SmaTracker<10>,
-    data: &Vec<DataPoint>,
-    epoch_number: usize,
-) -> (u64, i128, bool) {
-    let left_bound = epoch_number
-        .checked_mul(tracker.granularity.try_into().unwrap())
-        .unwrap();
+    pub fn check_array_fields(&self, data: &Vec<DataPoint>, time: i64) {
+        let current_epoch = self.time_to_epoch(time).unwrap();
+        let mut values = vec![];
 
-    let right_bound = (epoch_number + 1)
-        .checked_mul(tracker.granularity.try_into().unwrap())
-        .unwrap();
-
-
-    let result = data.iter().fold((0, 0, true), |x: (u64, i128, bool), y| {
-        if y.last_two_times.0 == y.last_two_times.1 {}
-        if !((left_bound > y.last_two_times.1.try_into().unwrap())
-            || (right_bound <= y.last_two_times.0.try_into().unwrap()))
-        {
-            let is_valid = y.slot_gap <= tracker.threshold;
-            return (
-                x.0 + y.slot_gap,
-                x.1 + i128::from(y.slot_gap) * i128::from(y.price),
-                x.2 && is_valid,
-            );
+        // Compute all epoch averages
+        for i in 0..current_epoch {
+            values.push(self.compute_epoch_expected_values(data, i));
         }
-        return x;
-    });
-    return result;
+
+        // Get running sums
+        let running_sum_price_iter = values.iter().scan((0, 0), |res, &y| {
+            res.0 = res.0 + y.1.clone() / i128::from(y.0.clone());
+            res.1 = res.1 + u64::from(y.2);
+            Some(*res)
+        });
+
+        // Compare to running_sum_of_price_averages
+        let mut i = (current_epoch + NUM_ENTRIES - 1).rem_euclid(NUM_ENTRIES);
+        for x in running_sum_price_iter
+            .collect::<Vec<(i128, u64)>>()
+            .iter()
+            .rev()
+            .take(NUM_ENTRIES)
+        {
+            assert_eq!(self.running_sum_of_price_averages[i], x.0);
+            assert_eq!(self.running_valid_epoch_counter[i], x.1);
+            i = (i + NUM_ENTRIES - 1).rem_euclid(NUM_ENTRIES);
+        }
+    }
+
+    pub fn compute_epoch_expected_values(
+        &self,
+        data: &Vec<DataPoint>,
+        epoch_number: usize,
+    ) -> (u64, i128, bool) {
+        let left_bound = self
+            .granularity
+            .checked_mul(epoch_number.try_into().unwrap())
+            .unwrap();
+
+        let right_bound = self
+            .granularity
+            .checked_mul((epoch_number + 1).try_into().unwrap())
+            .unwrap();
+
+
+        let result = data.iter().fold((0, 0, true), |x: (u64, i128, bool), y| {
+            if !((left_bound > y.last_two_timestamps.1) || (right_bound <= y.last_two_timestamps.0))
+            {
+                let is_valid = y.slot_gap <= self.threshold;
+                return (
+                    x.0 + y.slot_gap,
+                    x.1 + i128::from(y.slot_gap) * i128::from(y.price),
+                    x.2 && is_valid,
+                );
+            }
+            return x;
+        });
+        return result;
+    }
 }
