@@ -1,79 +1,11 @@
 use quickcheck::Arbitrary;
 use quickcheck_macros::quickcheck;
-use solana_program::nonce::state::Data;
-use std::collections::BTreeMap;
-use std::mem::{
-    align_of,
-    size_of,
-};
 
-use crate::c_oracle_header::PriceAccount;
 use crate::time_machine_types::{
     DataPoint,
-    PriceAccountExtended,
     SmaTracker,
     NUM_BUCKETS_THIRTY_MIN,
-    THIRTY_MINUTES,
 };
-
-// #[test]
-// fn unit_tests() {
-//     let mut tracker = SmaTracker::<10> {
-//         granularity  : 10,
-//         threshold : TWENTY_SECONDS,
-//         current_epoch_denominator : 0,
-//         current_epoch_is_valid : false,
-//         current_epoch_numerator : 0,
-//         running_valid_entry_counter: [0u64; 10],
-//         running_sum_of_price_averages : [0i128; 10],
-//     };
-
-//     for i in 0u32..6000 {
-//         tracker.add_datapoint((i64::from(i), i64::from(i+1)), 1 , 20, (0,0)).unwrap();
-//     }
-
-//     println!("{:?}", tracker);
-
-//     tracker.add_datapoint((6000, 6010), 21, 30, (0,0)).unwrap();
-//     println!("{:?}", tracker);
-//     tracker.add_datapoint((6010, 6080), 100, 30, (0,0)).unwrap();
-//     println!("{:?}", tracker);
-
-//     // let mut tracker2 = SmaTracker::<48> {
-//     //     granularity  : THIRTY_MINUTES,
-//     //     threshold : 20,
-//     //     current_epoch_denominator : 0,
-//     //     current_epoch_is_valid : false,
-//     //     current_epoch_numerator : 0,
-//     //     running_valid_entry_counter: [0u64; 48],
-//     //     running_sum_of_price_averages : [0i128; 48],
-//     // };
-
-//     // for i in 0u32..6000 {
-//     //     tracker2.add_datapoint((i64::from(i* 20), i64::from((i+1) * 20)), (u64::from(i* 21),
-// u64::from((i+1) * 21)), (20, 20), (0,0)).unwrap();     // }
-//     // println!("{:?}", tracker2);
-//     // for i in 6000u32..6180 {
-//     //     tracker2.add_datapoint((i64::from(i* 20), i64::from((i+1) * 20)), (u64::from(i) +
-// 126000, u64::from(i+1) + 126000), (20, 20), (0,0)).unwrap();     // }
-
-
-//     // println!("{:?}", tracker2);
-//     // println!("{:?}", tracker2.running_sum_of_price_averages[19]);
-//     // println!("{:?}", tracker2.running_valid_entry_counter[19]);
-
-
-//     // let tracker : & mut SmaTracker<48> =  bytemuck::from_bytes_mut(&mut buffer.as_ptr());
-//     // unsafe{
-//     //     println!("{:?}", buffer.as_ptr() as usize);
-//     //     println!("{:?}", align_of::<SmaTracker<48>>());
-//     //     println!("{:?}", align_of::<PriceAccountWrapper>());
-//     //     println!("{:?}", align_of::<PriceAccount>());
-
-//     //     }
-//     // tracker.initialize(THIRTY_MINUTES, TWENTY_SECONDS);
-
-// }
 
 #[derive(Clone, Debug, Copy)]
 struct DataEvent {

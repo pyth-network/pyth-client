@@ -9,9 +9,9 @@ extern "C" {
 
 // The size of the "time machine" account defined in the
 // Rust portion of the codebase.
-const uint64_t TIME_MACHINE_STRUCT_SIZE = 1864ULL;
+const uint64_t TIME_MACHINE_STRUCT_SIZE = 1200ULL;
 
-const uint64_t EXTRA_PUBLISHER_SPACE = 1000ULL;
+const uint64_t EXTRA_PUBLISHER_SPACE = 3072ULL;
 
 
 // magic number at head of account

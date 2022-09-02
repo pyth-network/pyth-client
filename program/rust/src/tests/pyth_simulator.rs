@@ -98,6 +98,7 @@ impl PythSimulator {
     /// The account will be created with enough lamports to be rent-exempt.
     pub async fn create_pyth_account(&mut self, size: usize) -> Keypair {
         let keypair = Keypair::new();
+
         let rent = Rent::minimum_balance(&Rent::default(), size);
         let instruction = system_instruction::create_account(
             &self.payer.pubkey(),

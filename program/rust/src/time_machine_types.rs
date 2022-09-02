@@ -150,9 +150,25 @@ impl PythAccount for PriceAccountExtended {
 
 #[cfg(test)]
 pub mod tests {
-    use crate::c_oracle_header::PRICE_ACCOUNT_SIZE;
-    use crate::time_machine_types::PriceAccountExtended;
+    use crate::c_oracle_header::{
+        PRICE_ACCOUNT_SIZE,
+        TIME_MACHINE_STRUCT_SIZE,
+    };
+    use crate::time_machine_types::{
+        PriceAccountExtended,
+        SmaTracker,
+        NUM_BUCKETS_THIRTY_MIN,
+    };
     use std::mem::size_of;
+    #[test]
+    ///test that the size defined in C matches that
+    ///defined in Rust
+    fn c_time_machine_size_is_correct() {
+        assert_eq!(
+            TIME_MACHINE_STRUCT_SIZE as usize,
+            size_of::<SmaTracker<NUM_BUCKETS_THIRTY_MIN>>()
+        );
+    }
     #[test]
     ///test that priceAccountWrapper has a correct size
     fn c_price_account_size_is_correct() {
