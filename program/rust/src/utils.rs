@@ -1,6 +1,6 @@
 use crate::c_oracle_header::{
     AccountHeader,
-    PC_MAX_NUM_DECIMALS,
+    MAX_NUM_DECIMALS,
 };
 use crate::deserialize::load_account_as;
 use crate::instruction::{
@@ -93,7 +93,7 @@ pub fn check_valid_fresh_account(account: &AccountInfo) -> Result<(), ProgramErr
 // Check that an exponent is within the range of permitted exponents for price accounts.
 pub fn check_exponent_range(expo: i32) -> Result<(), ProgramError> {
     pyth_assert(
-        expo >= -(PC_MAX_NUM_DECIMALS as i32) && expo <= PC_MAX_NUM_DECIMALS as i32,
+        (-MAX_NUM_DECIMALS..=MAX_NUM_DECIMALS).contains(&expo),
         ProgramError::InvalidArgument,
     )
 }

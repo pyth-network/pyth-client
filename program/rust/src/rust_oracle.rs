@@ -11,9 +11,10 @@ use crate::c_oracle_header::{
     PriceEma,
     PriceInfo,
     ProductAccount,
+    PythAccount,
+    MAX_CI_DIVISOR,
     PC_COMP_SIZE,
     PC_MAP_TABLE_SIZE,
-    PC_MAX_CI_DIVISOR,
     PC_PROD_ACC_SIZE,
     PC_PTYPE_UNKNOWN,
     PC_STATUS_UNKNOWN,
@@ -65,9 +66,6 @@ use solana_program::rent::Rent;
 use solana_program::system_program::check_id;
 use solana_program::sysvar::Sysvar;
 
-const PRICE_T_SIZE: usize = size_of::<PriceAccount>();
-const PRICE_ACCOUNT_SIZE: usize = size_of::<PriceAccountWrapper>();
-
 
 #[cfg(target_arch = "bpf")]
 #[link(name = "cpyth-bpf")]
@@ -107,7 +105,7 @@ pub fn resize_price_account(
     }
     let account_len = price_account_info.try_data_len()?;
     match account_len {
-        PRICE_T_SIZE => {
+        PriceAccount::MINIMUM_SIZE => {
             // Ensure account is still rent exempt after resizing
             let rent: Rent = Default::default();
             let lamports_needed: u64 = rent
@@ -133,7 +131,7 @@ pub fn resize_price_account(
             price_account.initialize_time_machine()?;
             Ok(())
         }
-        PRICE_ACCOUNT_SIZE => Ok(()),
+        PriceAccountWrapper::MINIMUM_SIZE => Ok(()),
         _ => Err(ProgramError::InvalidArgument),
     }
 }
@@ -219,14 +217,14 @@ pub fn upd_price(
         let price_data = load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
 
         // Verify that publisher is authorized
-        while publisher_index < price_data.num_ as usize {
+        while publisher_index < try_convert::<u32, usize>(price_data.num_)? {
             if price_data.comp_[publisher_index].pub_ == *funding_account.key {
                 break;
             }
             publisher_index += 1;
         }
         pyth_assert(
-            publisher_index < price_data.num_ as usize,
+            publisher_index < try_convert::<u32, usize>(price_data.num_)?,
             ProgramError::InvalidArgument,
         )?;
 
@@ -255,7 +253,7 @@ pub fn upd_price(
     }
 
     let account_len = price_account.try_data_len()?;
-    if aggregate_updated && account_len == PRICE_ACCOUNT_SIZE {
+    if aggregate_updated && account_len == PriceAccountWrapper::MINIMUM_SIZE {
         let mut price_account =
             load_checked::<PriceAccountWrapper>(price_account, cmd_args.header.version)?;
         price_account.add_price_to_time_machine()?;
@@ -264,7 +262,7 @@ pub fn upd_price(
     // Try to update the publisher's price
     if is_component_update(cmd_args)? {
         let mut status: u32 = cmd_args.status;
-        let mut threshold_conf = cmd_args.price / PC_MAX_CI_DIVISOR as i64;
+        let mut threshold_conf = cmd_args.price / MAX_CI_DIVISOR;
 
         if threshold_conf < 0 {
             threshold_conf = -threshold_conf;
@@ -436,7 +434,7 @@ pub fn init_price(
         0,
         size_of::<PriceInfo>(),
     );
-    for i in 0..(price_data.comp_.len() as usize) {
+    for i in 0..price_data.comp_.len() {
         sol_memset(
             bytes_of_mut(&mut price_data.comp_[i].agg_),
             0,
@@ -482,7 +480,7 @@ pub fn add_publisher(
         return Err(ProgramError::InvalidArgument);
     }
 
-    for i in 0..(price_data.num_ as usize) {
+    for i in 0..(try_convert::<u32, usize>(price_data.num_)?) {
         if cmd_args.publisher == price_data.comp_[i].pub_ {
             return Err(ProgramError::InvalidArgument);
         }
@@ -528,9 +526,9 @@ pub fn del_publisher(
 
     let mut price_data = load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
 
-    for i in 0..(price_data.num_ as usize) {
+    for i in 0..(try_convert::<u32, usize>(price_data.num_)?) {
         if cmd_args.publisher == price_data.comp_[i].pub_ {
-            for j in i + 1..(price_data.num_ as usize) {
+            for j in i + 1..(try_convert::<u32, usize>(price_data.num_)?) {
                 price_data.comp_[j - 1] = price_data.comp_[j];
             }
             price_data.num_ -= 1;

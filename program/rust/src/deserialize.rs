@@ -79,7 +79,7 @@ pub fn load_checked<'a, T: PythAccount>(
     version: u32,
 ) -> Result<RefMut<'a, T>, ProgramError> {
     pyth_assert(
-        account.data_len() >= T::minimum_size(),
+        account.data_len() >= T::MINIMUM_SIZE,
         OracleError::AccountTooSmall.into(),
     )?;
 
@@ -101,7 +101,7 @@ pub fn initialize_pyth_account_checked<'a, T: PythAccount>(
     version: u32,
 ) -> Result<RefMut<'a, T>, ProgramError> {
     pyth_assert(
-        account.data_len() >= T::minimum_size(),
+        account.data_len() >= T::MINIMUM_SIZE,
         OracleError::AccountTooSmall.into(),
     )?;
     check_valid_fresh_account(account)?;
@@ -127,7 +127,7 @@ pub fn create_pda_if_needed<'a, T: PythAccount>(
     seeds: &[&[u8]],
     version: u32,
 ) -> Result<(), ProgramError> {
-    let target_rent = Rent::default().minimum_balance(T::minimum_size());
+    let target_rent = Rent::default().minimum_balance(T::MINIMUM_SIZE);
     if account.lamports() < target_rent {
         send_lamports(
             funding_account,
@@ -137,7 +137,7 @@ pub fn create_pda_if_needed<'a, T: PythAccount>(
         )?;
     }
     if account.data_len() == 0 {
-        allocate_data(account, system_program, T::minimum_size(), seeds)?;
+        allocate_data(account, system_program, T::MINIMUM_SIZE, seeds)?;
         assign_owner(account, program_id, system_program, seeds)?;
         initialize_pyth_account_checked::<T>(account, version)?;
     }
