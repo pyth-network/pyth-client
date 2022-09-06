@@ -3,7 +3,6 @@ use solana_program::pubkey::Pubkey;
 use std::mem::size_of;
 
 use crate::c_oracle_header::{
-    PriceAccount,
     PC_MAX_SEND_LATENCY,
     PC_STATUS_TRADING,
     PC_STATUS_UNKNOWN,
@@ -29,6 +28,8 @@ use crate::time_machine_types::{
     PriceAccountExtended,
     THIRTY_MINUTES,
 };
+
+/// Clone of test_upd_price that also checks sma fields
 #[test]
 fn test_upd_sma() {
     let mut instruction_data = [0u8; size_of::<UpdPriceArgs>()];

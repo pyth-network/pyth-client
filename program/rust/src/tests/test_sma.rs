@@ -60,7 +60,6 @@ fn test_add_and_delete(input: Vec<DataEvent>) -> bool {
         tracker1.add_datapoint(&datapoint).unwrap();
         tracker2.add_datapoint(&datapoint).unwrap();
         tracker3.add_datapoint(&datapoint).unwrap();
-
         tracker4.add_datapoint(&datapoint).unwrap();
         tracker5.add_datapoint(&datapoint).unwrap();
         data.push(datapoint);
