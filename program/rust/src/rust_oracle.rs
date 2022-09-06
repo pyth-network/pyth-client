@@ -49,6 +49,7 @@ use bytemuck::bytes_of_mut;
 use solana_program::account_info::AccountInfo;
 use solana_program::clock::Clock;
 use solana_program::entrypoint::ProgramResult;
+use solana_program::msg;
 use solana_program::program::invoke;
 use solana_program::program_error::ProgramError;
 use solana_program::program_memory::{
@@ -249,6 +250,8 @@ pub fn upd_price(
         )?;
     }
 
+    msg!("UPD AGGREGATE");
+
     // Try to update the aggregate
     let mut aggregate_updated = false;
     if clock.slot > latest_aggregate_price.pub_slot_ {
@@ -260,6 +263,8 @@ pub fn upd_price(
             );
         }
     }
+
+    msg!("UPD POST");
 
     let account_len = price_account.try_data_len()?;
     if aggregate_updated && account_len == PriceAccountExtended::MINIMUM_SIZE {

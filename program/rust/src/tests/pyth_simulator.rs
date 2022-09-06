@@ -4,6 +4,7 @@ use bytemuck::{
     bytes_of,
     Pod,
 };
+use solana_program::clock::Clock;
 use solana_program::hash::Hash;
 use solana_program::instruction::{
     AccountMeta,
@@ -11,6 +12,7 @@ use solana_program::instruction::{
 };
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
+use solana_program::sysvar::SysvarId;
 use solana_program::{
     system_instruction,
     system_program,
@@ -34,12 +36,15 @@ use crate::c_oracle_header::{
     PriceAccount,
     PC_PROD_ACC_SIZE,
     PC_PTYPE_PRICE,
+    PC_STATUS_TRADING,
 };
 use crate::deserialize::load;
 use crate::instruction::{
     AddPriceArgs,
+    AddPublisherArgs,
     CommandHeader,
     OracleCommand,
+    UpdPriceArgs,
 };
 use crate::processor::process_instruction;
 
@@ -226,6 +231,48 @@ impl PythSimulator {
 
         self.process_ix(instruction, &vec![&product_keypair, &price_keypair])
             .await
+    }
+
+    /// Add oneself as publisher
+    pub async fn add_publisher(&mut self, price_keypair: &Keypair) -> Result<(), BanksClientError> {
+        let cmd = AddPublisherArgs {
+            header:    OracleCommand::AddPublisher.into(),
+            publisher: self.payer.pubkey(),
+        };
+        let instruction = Instruction::new_with_bytes(
+            self.program_id,
+            bytes_of(&cmd),
+            vec![
+                AccountMeta::new(self.payer.pubkey(), true),
+                AccountMeta::new(price_keypair.pubkey(), true),
+            ],
+        );
+
+        self.process_ix(instruction, &vec![&price_keypair]).await
+    }
+
+
+    /// Upd price
+    pub async fn upd_price(&mut self, price: &Pubkey) -> Result<(), BanksClientError> {
+        let cmd = UpdPriceArgs {
+            header:          OracleCommand::UpdPrice.into(),
+            status:          PC_STATUS_TRADING,
+            unused_:         0,
+            price:           40,
+            confidence:      1,
+            publishing_slot: 1,
+        };
+        let instruction = Instruction::new_with_bytes(
+            self.program_id,
+            bytes_of(&cmd),
+            vec![
+                AccountMeta::new(self.payer.pubkey(), true),
+                AccountMeta::new(*price, false),
+                AccountMeta::new_readonly(Clock::id(), false),
+            ],
+        );
+
+        self.process_ix(instruction, &vec![]).await
     }
 
     /// Resize a price account (using the resize_price_account
