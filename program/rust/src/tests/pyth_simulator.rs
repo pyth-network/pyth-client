@@ -55,16 +55,16 @@ use crate::instruction::{
 /// Simulator for the state of the pyth program on Solana. You can run solana transactions against
 /// this struct to test how pyth instructions execute in the Solana runtime.
 pub struct PythSimulator {
-    program_id:            Pubkey,
-    banks_client:          BanksClient,
-    payer:                 Keypair,
+    program_id:        Pubkey,
+    banks_client:      BanksClient,
+    payer:             Keypair,
     /// Hash used to submit the last transaction. The hash must be advanced for each new
     /// transaction; otherwise, replayed transactions in different states can return stale
     /// results.
-    last_blockhash:        Hash,
-    programdata_id:        Pubkey,
-    pub upgrade_authority: Keypair,
-    pub genesis_keypair:   Keypair,
+    last_blockhash:    Hash,
+    programdata_id:    Pubkey,
+    upgrade_authority: Keypair,
+    genesis_keypair:   Keypair,
 }
 
 impl PythSimulator {
