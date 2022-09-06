@@ -66,7 +66,8 @@ pub struct SmaTracker<const NUM_BUCKETS: usize> {
 
 impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
     pub fn time_to_epoch(&self, time: i64) -> Result<usize, OracleError> {
-        try_convert::<i64, usize>(time / self.granularity)
+        try_convert::<i64, usize>(time / self.granularity) // Can never fail because usize is u64
+                                                           // and time is positive
     }
 
     pub fn initialize(&mut self, granularity: i64, threshold: u64) {
@@ -82,10 +83,11 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
         let datapoint_numerator = i128::from(datapoint.slot_gap) * i128::from(datapoint.price); //Can't overflow because u64::MAX * i64::MAX = i28::MAX
         let datapoint_denominator = datapoint.slot_gap;
 
-        // Can't overflow, it's always smaller than the current solana slot
-        self.current_epoch_denominator += datapoint_denominator;
-        // Can't overflow, it's always smaller than u64::MAX * i64::MAX = i28::MAX
-        self.current_epoch_numerator += datapoint_numerator;
+        self.current_epoch_denominator += datapoint_denominator; // Can't overflow, it's always smaller than the current solana slot
+        self.current_epoch_numerator += datapoint_numerator; // Can't overflow, it's always smaller than u64::MAX * i64::MAX = i28::MAX,
+                                                             // self.current_epoch_numerator = slot_gap1 * price1 + slot_gap2 * price2 + slot_gap3 *
+                                                             // price3 <= (slot_gap1 + slot_gap2 + slot_gap3) * i64::MAX <= u64::MAX * i64::MAX
+                                                             // =i128::MAX
         self.current_epoch_is_valid =
             self.current_epoch_is_valid && datapoint_denominator <= self.threshold;
 
@@ -106,18 +108,16 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
         datapoint_denominator: u64,
     ) {
         let index = epoch.rem_euclid(NUM_ENTRIES);
-        let prev_index = (epoch + NUM_ENTRIES - 1).rem_euclid(NUM_ENTRIES);
+        let prev_index = (epoch + NUM_ENTRIES - 1).rem_euclid(NUM_ENTRIES); // epoch <= time <= i64::MAX <= u64::MAX / 2, so this will only overflow if NUM_ENTRIES ~
+                                                                            // u64::MAX / 2
 
-        // This buffer will be able to support u64::MAX epochs, no one will be alive when it
-        // overflows, that's because every epoch we add a number that's smaller than i64::MAX
         self.running_sum_of_price_averages[index] = self.running_sum_of_price_averages[prev_index]
-            + self.current_epoch_numerator / i128::from(self.current_epoch_denominator);
+            + self.current_epoch_numerator / i128::from(self.current_epoch_denominator); // The fraction here is smaller than i64::MAX , so we can support u64::MAX updates
 
-        // Likewise can support u64::MAX
-        // epochs
         if self.current_epoch_is_valid {
             self.running_valid_epoch_counter[index] =
-                self.running_valid_epoch_counter[prev_index] + 1;
+                self.running_valid_epoch_counter[prev_index] + 1; // Likewise can support u64::MAX
+                                                                  // epochs
         } else {
             self.running_valid_epoch_counter[index] = self.running_valid_epoch_counter[prev_index]
         };
