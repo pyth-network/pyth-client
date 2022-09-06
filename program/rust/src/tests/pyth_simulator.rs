@@ -55,16 +55,15 @@ use crate::instruction::{
 /// Simulator for the state of the pyth program on Solana. You can run solana transactions against
 /// this struct to test how pyth instructions execute in the Solana runtime.
 pub struct PythSimulator {
-    program_id:        Pubkey,
-    banks_client:      BanksClient,
-    payer:             Keypair,
+    program_id:            Pubkey,
+    banks_client:          BanksClient,
     /// Hash used to submit the last transaction. The hash must be advanced for each new
     /// transaction; otherwise, replayed transactions in different states can return stale
     /// results.
-    last_blockhash:    Hash,
-    programdata_id:    Pubkey,
-    upgrade_authority: Keypair,
-    genesis_keypair:   Keypair,
+    last_blockhash:        Hash,
+    programdata_id:        Pubkey,
+    pub upgrade_authority: Keypair,
+    pub genesis_keypair:   Keypair,
 }
 
 impl PythSimulator {
@@ -116,15 +115,11 @@ impl PythSimulator {
 
 
         // Start validator
-        let (banks_client, payer, recent_blockhash) = program_test.start().await;
-
-        // Hack to duplicate a keypair
-        let genesis_keypair = Keypair::from_bytes(&payer.to_bytes()).unwrap();
+        let (banks_client, genesis_keypair, recent_blockhash) = program_test.start().await;
 
         let mut result = PythSimulator {
             program_id: program_key,
             banks_client,
-            payer,
             last_blockhash: recent_blockhash,
             programdata_id: programdata_key,
             upgrade_authority: upgrade_authority_keypair,
@@ -141,23 +136,15 @@ impl PythSimulator {
     }
 
 
-    pub fn set_generic_as_payer(&mut self) {
-        self.payer = Keypair::from_bytes(&self.genesis_keypair.to_bytes()).unwrap();
-    }
-
-    pub fn set_upgrade_authority_as_payer(&mut self) {
-        self.payer = Keypair::from_bytes(&self.upgrade_authority.to_bytes()).unwrap();
-    }
-
     /// Process a transaction containing `instruction` signed by `signers`.
-    /// The transaction is assumed to require `self.payer` to pay for and sign the transaction.
+    /// `payer` is used to pay for and sign the transaction.
     async fn process_ix(
         &mut self,
         instruction: Instruction,
         signers: &Vec<&Keypair>,
+        payer: &Keypair,
     ) -> Result<(), BanksClientError> {
-        let mut transaction =
-            Transaction::new_with_payer(&[instruction], Some(&self.payer.pubkey()));
+        let mut transaction = Transaction::new_with_payer(&[instruction], Some(&payer.pubkey()));
 
         let blockhash = self
             .banks_client
@@ -166,7 +153,7 @@ impl PythSimulator {
             .unwrap();
         self.last_blockhash = blockhash;
 
-        transaction.partial_sign(&[&self.payer], self.last_blockhash);
+        transaction.partial_sign(&[payer], self.last_blockhash);
         transaction.partial_sign(signers, self.last_blockhash);
 
         self.banks_client.process_transaction(transaction).await
@@ -178,14 +165,20 @@ impl PythSimulator {
         let keypair = Keypair::new();
         let rent = Rent::minimum_balance(&Rent::default(), size);
         let instruction = system_instruction::create_account(
-            &self.payer.pubkey(),
+            &self.genesis_keypair.pubkey(),
             &keypair.pubkey(),
             rent,
             size as u64,
             &self.program_id,
         );
 
-        self.process_ix(instruction, &vec![&keypair]).await.unwrap();
+        self.process_ix(
+            instruction,
+            &vec![&keypair],
+            &copy_keypair(&self.genesis_keypair),
+        )
+        .await
+        .unwrap();
 
         keypair
     }
@@ -200,14 +193,18 @@ impl PythSimulator {
             self.program_id,
             bytes_of(&cmd),
             vec![
-                AccountMeta::new(self.payer.pubkey(), true),
+                AccountMeta::new(self.genesis_keypair.pubkey(), true),
                 AccountMeta::new(mapping_keypair.pubkey(), true),
             ],
         );
 
-        self.process_ix(instruction, &vec![&mapping_keypair])
-            .await
-            .map(|_| mapping_keypair)
+        self.process_ix(
+            instruction,
+            &vec![&mapping_keypair],
+            &copy_keypair(&self.genesis_keypair),
+        )
+        .await
+        .map(|_| mapping_keypair)
     }
 
     /// Initialize a product account and add it to an existing mapping account (using the
@@ -223,15 +220,19 @@ impl PythSimulator {
             self.program_id,
             bytes_of(&cmd),
             vec![
-                AccountMeta::new(self.payer.pubkey(), true),
+                AccountMeta::new(self.genesis_keypair.pubkey(), true),
                 AccountMeta::new(mapping_keypair.pubkey(), true),
                 AccountMeta::new(product_keypair.pubkey(), true),
             ],
         );
 
-        self.process_ix(instruction, &vec![&mapping_keypair, &product_keypair])
-            .await
-            .map(|_| product_keypair)
+        self.process_ix(
+            instruction,
+            &vec![&mapping_keypair, &product_keypair],
+            &copy_keypair(&self.genesis_keypair),
+        )
+        .await
+        .map(|_| product_keypair)
     }
 
     /// Delete a product account (using the del_product instruction).
@@ -245,14 +246,18 @@ impl PythSimulator {
             self.program_id,
             bytes_of(&cmd),
             vec![
-                AccountMeta::new(self.payer.pubkey(), true),
+                AccountMeta::new(self.genesis_keypair.pubkey(), true),
                 AccountMeta::new(mapping_keypair.pubkey(), true),
                 AccountMeta::new(product_keypair.pubkey(), true),
             ],
         );
 
-        self.process_ix(instruction, &vec![&mapping_keypair, &product_keypair])
-            .await
+        self.process_ix(
+            instruction,
+            &vec![&mapping_keypair, &product_keypair],
+            &copy_keypair(&self.genesis_keypair),
+        )
+        .await
     }
 
     /// Initialize a price account and add it to an existing product account (using the add_price
@@ -273,15 +278,19 @@ impl PythSimulator {
             self.program_id,
             bytes_of(&cmd),
             vec![
-                AccountMeta::new(self.payer.pubkey(), true),
+                AccountMeta::new(self.genesis_keypair.pubkey(), true),
                 AccountMeta::new(product_keypair.pubkey(), true),
                 AccountMeta::new(price_keypair.pubkey(), true),
             ],
         );
 
-        self.process_ix(instruction, &vec![&product_keypair, &price_keypair])
-            .await
-            .map(|_| price_keypair)
+        self.process_ix(
+            instruction,
+            &vec![&product_keypair, &price_keypair],
+            &copy_keypair(&self.genesis_keypair),
+        )
+        .await
+        .map(|_| price_keypair)
     }
 
     /// Delete a price account from an existing product account (using the del_price instruction).
@@ -295,14 +304,18 @@ impl PythSimulator {
             self.program_id,
             bytes_of(&cmd),
             vec![
-                AccountMeta::new(self.payer.pubkey(), true),
+                AccountMeta::new(self.genesis_keypair.pubkey(), true),
                 AccountMeta::new(product_keypair.pubkey(), true),
                 AccountMeta::new(price_keypair.pubkey(), true),
             ],
         );
 
-        self.process_ix(instruction, &vec![&product_keypair, &price_keypair])
-            .await
+        self.process_ix(
+            instruction,
+            &vec![&product_keypair, &price_keypair],
+            &copy_keypair(&self.genesis_keypair),
+        )
+        .await
     }
 
     /// Resize a price account (using the resize_price_account
@@ -316,13 +329,18 @@ impl PythSimulator {
             self.program_id,
             bytes_of(&cmd),
             vec![
-                AccountMeta::new(self.payer.pubkey(), true),
+                AccountMeta::new(self.genesis_keypair.pubkey(), true),
                 AccountMeta::new(price_keypair.pubkey(), true),
                 AccountMeta::new(system_program::id(), false),
             ],
         );
 
-        self.process_ix(instruction, &vec![&price_keypair]).await
+        self.process_ix(
+            instruction,
+            &vec![&price_keypair],
+            &copy_keypair(&self.genesis_keypair),
+        )
+        .await
     }
 
 
@@ -331,6 +349,7 @@ impl PythSimulator {
     pub async fn upd_permissions(
         &mut self,
         cmd_args: UpdPermissionsArgs,
+        payer: &Keypair,
     ) -> Result<Pubkey, BanksClientError> {
         let permissions_pubkey = self.get_permissions_pubkey();
 
@@ -338,7 +357,7 @@ impl PythSimulator {
             self.program_id,
             bytes_of(&cmd_args),
             vec![
-                AccountMeta::new(self.payer.pubkey(), true),
+                AccountMeta::new(payer.pubkey(), true),
                 AccountMeta::new_readonly(self.program_id, false),
                 AccountMeta::new_readonly(self.programdata_id, false),
                 AccountMeta::new(permissions_pubkey, false),
@@ -346,7 +365,7 @@ impl PythSimulator {
             ],
         );
 
-        self.process_ix(instruction, &vec![])
+        self.process_ix(instruction, &vec![], payer)
             .await
             .map(|_| permissions_pubkey)
     }
@@ -372,9 +391,11 @@ impl PythSimulator {
     }
 
     pub async fn airdrop(&mut self, to: &Pubkey, lamports: u64) -> Result<(), BanksClientError> {
-        let instruction = system_instruction::transfer(&self.payer.pubkey(), to, lamports);
+        let instruction =
+            system_instruction::transfer(&self.genesis_keypair.pubkey(), to, lamports);
 
-        self.process_ix(instruction, &vec![]).await
+        self.process_ix(instruction, &vec![], &copy_keypair(&self.genesis_keypair))
+            .await
     }
 
     pub fn get_permissions_pubkey(&self) -> Pubkey {
@@ -382,4 +403,8 @@ impl PythSimulator {
             Pubkey::find_program_address(&[PERMISSIONS_SEED.as_bytes()], &self.program_id);
         return permissions_pubkey;
     }
+}
+
+pub fn copy_keypair(keypair: &Keypair) -> Keypair {
+    return Keypair::from_bytes(&keypair.to_bytes()).unwrap();
 }
