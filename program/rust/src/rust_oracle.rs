@@ -41,7 +41,7 @@ use crate::instruction::{
 use crate::time_machine_types::PriceAccountWrapper;
 use crate::utils::{
     check_exponent_range,
-    check_is_valid_upgradeauthority_program_programdata_triplet,
+    check_is_upgrade_authority_for_program,
     check_valid_funding_account,
     check_valid_signable_account,
     check_valid_writable_account,
@@ -756,7 +756,7 @@ pub fn upd_permissions(
     let cmd_args = load::<UpdPermissionsArgs>(instruction_data)?;
 
     check_valid_funding_account(funding_account)?;
-    check_is_valid_upgradeauthority_program_programdata_triplet(
+    check_is_upgrade_authority_for_program(
         funding_account,
         program_account,
         programdata_account,
