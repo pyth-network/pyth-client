@@ -18,7 +18,8 @@ impl Arbitrary for DataEvent {
     fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         DataEvent {
             timegap:  i64::from(u8::arbitrary(g)),
-            slot_gap: u64::from(u8::arbitrary(g)) + 1,
+            slot_gap: u64::from(u8::arbitrary(g)) + 1, /* Slot gap is always > 1, because there
+                                                        * has been a succesful aggregation */
             price:    i64::arbitrary(g),
         }
     }
@@ -26,7 +27,7 @@ impl Arbitrary for DataEvent {
 
 
 #[quickcheck]
-fn test_add_and_delete(input: Vec<DataEvent>) -> bool {
+fn test_sma(input: Vec<DataEvent>) -> bool {
     // No gaps, no skipped epochs
     let mut tracker1 = SmaTracker::<NUM_BUCKETS_THIRTY_MIN>::zero();
     tracker1.initialize(i64::from(u8::MAX), u64::from(u8::MAX));
@@ -114,7 +115,7 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
 
         // Get running sums
         let running_sum_price_iter = values.iter().scan((0, 0), |res, &y| {
-            res.0 = res.0 + y.1.clone() / i128::from(y.0.clone());
+            res.0 = res.0 + y.1 / i128::from(y.0);
             res.1 = res.1 + u64::from(y.2);
             Some(*res)
         });
@@ -151,6 +152,7 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
 
         let result = data.iter().fold((0, 0, true), |x: (u64, i128, bool), y| {
             if !((left_bound > y.last_two_timestamps.1) || (right_bound <= y.last_two_timestamps.0))
+            //Check interval intersection
             {
                 let is_valid = y.slot_gap <= self.threshold;
                 return (
