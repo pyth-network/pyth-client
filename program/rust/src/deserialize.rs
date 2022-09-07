@@ -6,7 +6,6 @@ use bytemuck::{
     Pod,
 };
 use solana_program::pubkey::Pubkey;
-use solana_program::rent::Rent;
 
 use crate::c_oracle_header::{
     AccountHeader,
@@ -19,6 +18,7 @@ use crate::utils::{
     assign_owner,
     check_valid_fresh_account,
     clear_account,
+    get_rent,
     pyth_assert,
     send_lamports,
 };
@@ -127,7 +127,7 @@ pub fn create_pda_if_needed<'a, T: PythAccount>(
     seeds: &[&[u8]],
     version: u32,
 ) -> Result<(), ProgramError> {
-    let target_rent = Rent::default().minimum_balance(T::MINIMUM_SIZE);
+    let target_rent = get_rent()?.minimum_balance(T::MINIMUM_SIZE);
     if account.lamports() < target_rent {
         send_lamports(
             funding_account,
