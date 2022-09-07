@@ -79,7 +79,7 @@ pub struct SmaTracker<const NUM_BUCKETS: usize> {
     pub running_valid_epoch_counter:   [u64; NUM_BUCKETS],
 }
 
-impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
+impl<const NUM_BUCKETS: usize> SmaTracker<NUM_BUCKETS> {
     pub fn time_to_epoch(&self, time: i64) -> Result<usize, OracleError> {
         try_convert::<i64, usize>(time / self.granularity) // Can never fail because usize is u64
                                                            // and time is positive
@@ -104,12 +104,12 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
         self.current_epoch_is_valid =
             self.current_epoch_is_valid && datapoint_denominator <= self.threshold;
 
-        // If epoch changed,
+        // If epoch changed
         if epoch_0 < epoch_1 {
-            let index = epoch_0.rem_euclid(NUM_ENTRIES);
-            // epoch <= time <= i64::MAX <= u64::MAX / 2, so this will only overflow if
-            // NUM_ENTRIES~u64::MAX / 2
-            let prev_index = (epoch_0 + NUM_ENTRIES - 1).rem_euclid(NUM_ENTRIES);
+            let index = epoch_0.rem_euclid(NUM_BUCKETS);
+
+            // This addition can only overflow if NUM_BUCKETS ~ u64::MAX / 2
+            let prev_index = (epoch_0 + NUM_BUCKETS - 1).rem_euclid(NUM_BUCKETS);
 
             self.running_sum_of_price_averages[index] = self.running_sum_of_price_averages
                 [prev_index]
@@ -135,46 +135,50 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
         if epoch_0 + 1 < epoch_1 {
             let one_point_average = datapoint_numerator / i128::from(datapoint_denominator);
             let mut i = 1;
-            let mut current_bucket = (epoch_0 + 1) % NUM_ENTRIES;
-            let bucket_0 = epoch_0 % NUM_ENTRIES;
-            let bucket_1 = epoch_1 % NUM_ENTRIES;
-            // Number of times
-            let number_of_full_wraparound = (epoch_1 - 1 - epoch_0) / NUM_ENTRIES;
+            let mut current_bucket = (epoch_0 + 1) % NUM_BUCKETS;
+            let bucket_0 = epoch_0 % NUM_BUCKETS;
+            let bucket_1 = epoch_1 % NUM_BUCKETS;
+
+            // Number of times we have wrapped around the buffer
+            let number_of_full_wraparound = (epoch_1 - 1 - epoch_0) / NUM_BUCKETS;
+
+            // These buckets are "inside" (bucket_0, bucket_1)
             while current_bucket != bucket_1 {
                 self.running_sum_of_price_averages[current_bucket] = self
                     .running_sum_of_price_averages[bucket_0]
-                    + ((i + number_of_full_wraparound * NUM_ENTRIES) as i128) * one_point_average;
+                    + ((i + number_of_full_wraparound * NUM_BUCKETS) as i128) * one_point_average;
 
                 if self.current_epoch_is_valid {
                     self.running_valid_epoch_counter[current_bucket] = self
                         .running_valid_epoch_counter[bucket_0]
-                        + ((i + number_of_full_wraparound * NUM_ENTRIES) as u64);
+                        + ((i + number_of_full_wraparound * NUM_BUCKETS) as u64);
                 } else {
                     self.running_valid_epoch_counter[current_bucket] =
                         self.running_valid_epoch_counter[bucket_0];
                 }
 
                 i += 1;
-                current_bucket = (current_bucket + 1) % NUM_ENTRIES;
+                current_bucket = (current_bucket + 1) % NUM_BUCKETS;
             }
 
             if number_of_full_wraparound > 0 {
-                while i != NUM_ENTRIES + 1 {
+                // These buckets are "outside" (bucket_0, bucket_1)
+                while i != NUM_BUCKETS + 1 {
                     self.running_sum_of_price_averages[current_bucket] = self
                         .running_sum_of_price_averages[bucket_0]
-                        + ((i + (number_of_full_wraparound - 1) * NUM_ENTRIES) as i128)
+                        + ((i + (number_of_full_wraparound - 1) * NUM_BUCKETS) as i128)
                             * one_point_average;
 
                     if self.current_epoch_is_valid {
                         self.running_valid_epoch_counter[current_bucket] = self
                             .running_valid_epoch_counter[bucket_0]
-                            + ((i + (number_of_full_wraparound - 1) * NUM_ENTRIES) as u64);
+                            + ((i + (number_of_full_wraparound - 1) * NUM_BUCKETS) as u64);
                     } else {
                         self.running_valid_epoch_counter[current_bucket] =
                             self.running_valid_epoch_counter[bucket_0];
                     }
                     i += 1;
-                    current_bucket = (current_bucket + 1) % NUM_ENTRIES;
+                    current_bucket = (current_bucket + 1) % NUM_BUCKETS;
                 }
             }
         }
