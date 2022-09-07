@@ -1,6 +1,8 @@
 use crate::c_oracle_header::{
+    PermissionAccount,
     PythAccount,
     PC_VERSION,
+    PERMISSIONS_SEED,
 };
 use crate::error::OracleError;
 use crate::instruction::{
@@ -64,6 +66,21 @@ impl AccountSetup {
         let owner = system_program::id();
         let balance = LAMPORTS_PER_SOL;
         let size = 0;
+        let data = [0; UPPER_BOUND_OF_ALL_ACCOUNT_SIZES];
+        return AccountSetup {
+            key,
+            owner,
+            balance,
+            size,
+            data,
+        };
+    }
+
+    pub fn new_permission(owner: &Pubkey) -> Self {
+        let (key, _bump) = Pubkey::find_program_address(&[PERMISSIONS_SEED.as_bytes()], owner);
+        let owner = owner.clone();
+        let balance = Rent::minimum_balance(&Rent::default(), PermissionAccount::MINIMUM_SIZE);
+        let size = PermissionAccount::MINIMUM_SIZE;
         let data = [0; UPPER_BOUND_OF_ALL_ACCOUNT_SIZES];
         return AccountSetup {
             key,

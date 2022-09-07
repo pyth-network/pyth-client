@@ -81,7 +81,7 @@ pub fn check_valid_signable_account(
 pub fn check_valid_signable_account_or_master_authority(
     program_id: &Pubkey,
     account: &AccountInfo,
-    funding_acccount: &AccountInfo,
+    funding_account: &AccountInfo,
     permissions_account_option: Option<&AccountInfo>,
     version: u32,
 ) -> Result<(), ProgramError> {
@@ -89,8 +89,9 @@ pub fn check_valid_signable_account_or_master_authority(
         check_valid_permissions_account(program_id, permissions_account)?;
         let permissions_account_data =
             load_checked::<PermissionAccount>(permissions_account, version)?;
+        check_valid_funding_account(funding_account)?;
         pyth_assert(
-            permissions_account_data.master_authority == *funding_acccount.key,
+            permissions_account_data.master_authority == *funding_account.key,
             OracleError::PermissionViolation.into(),
         )?;
         check_valid_writable_account(program_id, account)
