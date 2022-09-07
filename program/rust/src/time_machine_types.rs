@@ -119,36 +119,52 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
             self.current_epoch_denominator = datapoint_denominator;
             self.current_epoch_numerator = datapoint_numerator;
             self.current_epoch_is_valid = datapoint_denominator <= self.threshold;
+        }
 
+        if epoch_0 + 1 < epoch_1 {
             let one_point_average = datapoint_numerator / i128::from(datapoint_denominator);
+            let mut i = 1;
+            let mut current_bucket = (epoch_0 + 1) % NUM_ENTRIES;
+            let bucket_0 = epoch_0 % NUM_ENTRIES;
+            let bucket_1 = epoch_1 % NUM_ENTRIES;
+            let number_of_full_wraparound = (epoch_1 - 1 - epoch_0) / NUM_ENTRIES;
+            while current_bucket != bucket_1 {
+                self.running_sum_of_price_averages[current_bucket] = self
+                    .running_sum_of_price_averages[bucket_0]
+                    + ((i + number_of_full_wraparound * NUM_ENTRIES) as i128) * one_point_average;
 
-            // If at least one epoch got skipped, check all buckets for updates
-            if epoch_0 + 1 < epoch_1 {
-                for i in 1..NUM_ENTRIES + 1 {
-                    let current_bucket = (epoch_0 + i) % NUM_ENTRIES;
-                    let times_bucket_skipped =
-                        self.get_times_bucket_skipped(current_bucket, epoch_0, epoch_1);
-                    let bucket_0 = (epoch_0) % NUM_ENTRIES;
-                    // If bucket got skipped, we need to update the running sum
-                    if times_bucket_skipped > 0 {
-                        // The running sums are always smaller than epoch_1 * i64::MAX, so it should
-                        // never overflow
-                        self.running_sum_of_price_averages[current_bucket] = self
-                            .running_sum_of_price_averages[bucket_0]
-                            + ((i + (times_bucket_skipped - 1) * NUM_ENTRIES) as i128)
-                                * one_point_average;
+                //             // The running counter is always smaller than epoch_1, so it
+                // should never             // overflow
+                if self.current_epoch_is_valid {
+                    self.running_valid_epoch_counter[current_bucket] = self
+                        .running_valid_epoch_counter[bucket_0]
+                        + ((i + number_of_full_wraparound * NUM_ENTRIES) as u64);
+                } else {
+                    self.running_valid_epoch_counter[current_bucket] =
+                        self.running_valid_epoch_counter[bucket_0];
+                }
 
-                        // The running counter is always smaller than epoch_1, so it should never
-                        // overflow
-                        if self.current_epoch_is_valid {
-                            self.running_valid_epoch_counter[current_bucket] = self
-                                .running_valid_epoch_counter[bucket_0]
-                                + ((i + (times_bucket_skipped - 1) * NUM_ENTRIES) as u64);
-                        } else {
-                            self.running_valid_epoch_counter[current_bucket] =
-                                self.running_valid_epoch_counter[bucket_0];
-                        }
+                i += 1;
+                current_bucket = (current_bucket + 1) % NUM_ENTRIES;
+            }
+
+            if number_of_full_wraparound > 0 {
+                while i != NUM_ENTRIES + 1 {
+                    self.running_sum_of_price_averages[current_bucket] = self
+                        .running_sum_of_price_averages[bucket_0]
+                        + ((i + (number_of_full_wraparound - 1) * NUM_ENTRIES) as i128)
+                            * one_point_average;
+
+                    if self.current_epoch_is_valid {
+                        self.running_valid_epoch_counter[current_bucket] = self
+                            .running_valid_epoch_counter[bucket_0]
+                            + ((i + (number_of_full_wraparound - 1) * NUM_ENTRIES) as u64);
+                    } else {
+                        self.running_valid_epoch_counter[current_bucket] =
+                            self.running_valid_epoch_counter[bucket_0];
                     }
+                    i += 1;
+                    current_bucket = (current_bucket + 1) % NUM_ENTRIES;
                 }
             }
         }
@@ -156,14 +172,14 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
         Ok(())
     }
 
-    /// Counts the times bucket `bucket` was skipped when going from `epoch_0` to `epoch_1`
-    pub fn get_times_bucket_skipped(&self, bucket: usize, epoch_0: usize, epoch_1: usize) -> usize {
-        let bucket_0 = epoch_0 % NUM_ENTRIES;
-        let bucket_1 = epoch_1 % NUM_ENTRIES;
-        let is_between = (bucket_0 < bucket && bucket < bucket_1)
-            || (bucket_1 <= bucket_0) && ((bucket_0 < bucket) || (bucket < bucket_1));
-        (epoch_1 - 1 - epoch_0) / NUM_ENTRIES + usize::from(is_between)
-    }
+    // Counts the times bucket `bucket` was skipped when going from `epoch_0` to `epoch_1`
+    // pub fn get_times_bucket_skipped(&self, bucket: usize, epoch_0: usize, epoch_1: usize) ->
+    // usize {     let bucket_0 = epoch_0 % NUM_ENTRIES;
+    //     let bucket_1 = epoch_1 % NUM_ENTRIES;
+    //     let is_between = (bucket_0 < bucket && bucket < bucket_1)
+    //         || (bucket_1 <= bucket_0) && ((bucket_0 < bucket) || (bucket < bucket_1));
+    //     (epoch_1 - 1 - epoch_0) / NUM_ENTRIES + usize::from(is_between)
+    // }
 }
 
 #[cfg(target_endian = "little")]

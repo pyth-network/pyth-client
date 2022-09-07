@@ -78,6 +78,7 @@ fn test_sma_epoch_transition() {
     {
         let price_data = load_checked::<PriceAccountWrapper>(&price_account, PC_VERSION).unwrap();
 
+        // No successful aggregation yet, so everything is 0
         assert_eq!(
             price_data.time_machine.threshold,
             PC_MAX_SEND_LATENCY as u64
@@ -92,7 +93,7 @@ fn test_sma_epoch_transition() {
         }
     }
 
-    // Same epoch, small slot gap
+    // Same epoch, valid slot gap
     update_clock_slot(&mut clock_account, 2);
     update_clock_timestamp(&mut clock_account, 2);
     populate_instruction(&mut instruction_data, 80, 2, 2);
@@ -110,7 +111,7 @@ fn test_sma_epoch_transition() {
 
     {
         let price_data = load_checked::<PriceAccountWrapper>(&price_account, PC_VERSION).unwrap();
-
+        // successful aggregation, price update is average between 0 and 42
         assert_eq!(
             price_data.time_machine.threshold,
             PC_MAX_SEND_LATENCY as u64
@@ -125,7 +126,7 @@ fn test_sma_epoch_transition() {
         }
     }
 
-    // Next epoch, small slot gap
+    // Next epoch, valid slot gap
     update_clock_slot(&mut clock_account, 3);
     update_clock_timestamp(&mut clock_account, THIRTY_MINUTES);
     populate_instruction(&mut instruction_data, 120, 1, 3);
@@ -144,6 +145,7 @@ fn test_sma_epoch_transition() {
     {
         let price_data = load_checked::<PriceAccountWrapper>(&price_account, PC_VERSION).unwrap();
 
+        // Slot gap is valid, so successful aggregation and 1 epoch transition should happen
         assert_eq!(
             price_data.time_machine.threshold,
             PC_MAX_SEND_LATENCY as u64
@@ -168,12 +170,12 @@ fn test_sma_epoch_transition() {
         assert_eq!(price_data.time_machine.running_valid_epoch_counter[0], 1);
     }
 
-    // Same epoch, big slot gap
+    // Same epoch, invalid slot gap
     update_clock_slot(&mut clock_account, 30);
     update_clock_timestamp(&mut clock_account, THIRTY_MINUTES + 1);
     populate_instruction(&mut instruction_data, 40, 1, 30);
 
-    // Unsuccesful aggregation
+    // Unsuccessful aggregation
     assert!(process_instruction(
         &program_id,
         &[
@@ -187,7 +189,7 @@ fn test_sma_epoch_transition() {
 
     {
         let price_data = load_checked::<PriceAccountWrapper>(&price_account, PC_VERSION).unwrap();
-
+        // Slot gap is invalid, so aggregation didn't take place and smas are not updated
         assert_eq!(
             price_data.time_machine.threshold,
             PC_MAX_SEND_LATENCY as u64
@@ -212,6 +214,7 @@ fn test_sma_epoch_transition() {
         assert_eq!(price_data.time_machine.running_valid_epoch_counter[0], 1);
     }
 
+    // Next epoch, valid slot gap
     update_clock_slot(&mut clock_account, 31);
     update_clock_timestamp(&mut clock_account, 2 * THIRTY_MINUTES + 1);
     populate_instruction(&mut instruction_data, 41, 1, 31);
@@ -230,7 +233,8 @@ fn test_sma_epoch_transition() {
 
     {
         let price_data = load_checked::<PriceAccountWrapper>(&price_account, PC_VERSION).unwrap();
-
+        // Aggregation is successful and sma is computed, update is invalid because slot_gap from
+        // previous successful aggregation is big
         assert_eq!(
             price_data.time_machine.threshold,
             PC_MAX_SEND_LATENCY as u64
@@ -280,7 +284,7 @@ fn test_sma_epoch_transition() {
 
     {
         let price_data = load_checked::<PriceAccountWrapper>(&price_account, PC_VERSION).unwrap();
-
+        // Aggregation was successful, check that all skipped buckets got updated
         assert_eq!(
             price_data.time_machine.threshold,
             PC_MAX_SEND_LATENCY as u64
@@ -334,7 +338,7 @@ fn test_sma_epoch_transition() {
     update_clock_timestamp(&mut clock_account, 100 * THIRTY_MINUTES + 1);
     populate_instruction(&mut instruction_data, 100, 1, 100);
 
-    // Unsuccesful aggregation
+    // Unsuccessful aggregation
     assert!(process_instruction(
         &program_id,
         &[
@@ -348,6 +352,7 @@ fn test_sma_epoch_transition() {
 
     {
         let price_data = load_checked::<PriceAccountWrapper>(&price_account, PC_VERSION).unwrap();
+        // Nothing got updated, since slot gap was too big, so aggregation was not successful
 
         assert_eq!(
             price_data.time_machine.threshold,
@@ -415,7 +420,7 @@ fn test_sma_epoch_transition() {
 
     {
         let price_data = load_checked::<PriceAccountWrapper>(&price_account, PC_VERSION).unwrap();
-
+        // The entire buffer got rewritten
         assert_eq!(
             price_data.time_machine.threshold,
             PC_MAX_SEND_LATENCY as u64
@@ -427,7 +432,6 @@ fn test_sma_epoch_transition() {
         );
         assert_eq!(price_data.time_machine.current_epoch_is_valid, false);
         assert_eq!(price_data.time_machine.current_epoch_denominator, 69);
-
         for i in 0..NUM_BUCKETS_THIRTY_MIN {
             assert_eq!(
                 price_data.time_machine.running_sum_of_price_averages
