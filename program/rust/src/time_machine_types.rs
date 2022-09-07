@@ -55,12 +55,27 @@ impl PriceAccountWrapper {
 #[derive(Debug, Copy, Clone)]
 #[repr(C)]
 pub struct SmaTracker<const NUM_BUCKETS: usize> {
+    /// The maximum gap in slots for an epoch's sma to be valid, we set it to PC_MAX_SEND_LATENCY
     pub threshold:                     u64,
+    /// The legth of one sma epoch.
     pub granularity:                   i64,
+    /// Numerator for the current epoch (ex : slot_gap1 * price_1 + slot_gap2 * price_2 + slot_gap3
+    /// * price_3)
+    /// It can never overflow because :
+    /// slot_gap1 * price_1 + slot_gap2 * price_2 + slot_gap3 * price_3 <= (slot_gap1 + slot_gap2 +
+    /// slot_gap3) * i64::MAX <= clock_slot * i128::MAX
     pub current_epoch_numerator:       i128,
+    /// Denominator for the current epoch (ex : slot_gap1 + slot_gap2 + slot_gap3)
+    /// It can never overflow because : (slot_gap1 + slot_gap2 + slot_gap3) <= clock_slot
     pub current_epoch_denominator:     u64,
+    /// Whether the current epoch is valid (i.e. max slot_gap <= threshold) for all the epochs
+    /// updates
     pub current_epoch_is_valid:        bool,
+    /// Stores the running sum of individual epoch averages, we can support u64::MAX epochs. And
+    /// clock.unix_timestamp <= u64::MAX so the clock will break first.
     pub running_sum_of_price_averages: [i128; NUM_BUCKETS],
+    /// Stores the number of valid epochs since inception, we can support u64::MAX epochs. And
+    /// clock.unix_timestamp <= u64::MAX so the clock will break first.
     pub running_valid_epoch_counter:   [u64; NUM_BUCKETS],
 }
 
@@ -80,17 +95,12 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
         let epoch_0 = self.time_to_epoch(datapoint.last_two_timestamps.0)?;
         let epoch_1 = self.time_to_epoch(datapoint.last_two_timestamps.1)?;
 
-        let datapoint_numerator = i128::from(datapoint.slot_gap) * i128::from(datapoint.price); //Can't overflow because u64::MAX * i64::MAX = i28::MAX
+        let datapoint_numerator = i128::from(datapoint.slot_gap) * i128::from(datapoint.price);
         let datapoint_denominator = datapoint.slot_gap;
 
-        // Can't overflow, it's always smaller than the current solana slot
         self.current_epoch_denominator += datapoint_denominator;
-
-        // Can't overflow, it's always smaller than u64::MAX * i64::MAX = i28::MAX,
-        // self.current_epoch_numerator = slot_gap1 * price1 + slot_gap2 * price2 + slot_gap3 *
-        // price3 <= (slot_gap1 + slot_gap2 + slot_gap3) * i64::MAX <= u64::MAX * i64::MAX
-        // =i128::MAX
         self.current_epoch_numerator += datapoint_numerator;
+
         self.current_epoch_is_valid =
             self.current_epoch_is_valid && datapoint_denominator <= self.threshold;
 
@@ -121,20 +131,20 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
             self.current_epoch_is_valid = datapoint_denominator <= self.threshold;
         }
 
+        // If at least one epoch has been skipped
         if epoch_0 + 1 < epoch_1 {
             let one_point_average = datapoint_numerator / i128::from(datapoint_denominator);
             let mut i = 1;
             let mut current_bucket = (epoch_0 + 1) % NUM_ENTRIES;
             let bucket_0 = epoch_0 % NUM_ENTRIES;
             let bucket_1 = epoch_1 % NUM_ENTRIES;
+            // Number of times
             let number_of_full_wraparound = (epoch_1 - 1 - epoch_0) / NUM_ENTRIES;
             while current_bucket != bucket_1 {
                 self.running_sum_of_price_averages[current_bucket] = self
                     .running_sum_of_price_averages[bucket_0]
                     + ((i + number_of_full_wraparound * NUM_ENTRIES) as i128) * one_point_average;
 
-                //             // The running counter is always smaller than epoch_1, so it
-                // should never             // overflow
                 if self.current_epoch_is_valid {
                     self.running_valid_epoch_counter[current_bucket] = self
                         .running_valid_epoch_counter[bucket_0]
@@ -171,15 +181,6 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
 
         Ok(())
     }
-
-    // Counts the times bucket `bucket` was skipped when going from `epoch_0` to `epoch_1`
-    // pub fn get_times_bucket_skipped(&self, bucket: usize, epoch_0: usize, epoch_1: usize) ->
-    // usize {     let bucket_0 = epoch_0 % NUM_ENTRIES;
-    //     let bucket_1 = epoch_1 % NUM_ENTRIES;
-    //     let is_between = (bucket_0 < bucket && bucket < bucket_1)
-    //         || (bucket_1 <= bucket_0) && ((bucket_0 < bucket) || (bucket < bucket_1));
-    //     (epoch_1 - 1 - epoch_0) / NUM_ENTRIES + usize::from(is_between)
-    // }
 }
 
 #[cfg(target_endian = "little")]
