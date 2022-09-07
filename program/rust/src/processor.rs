@@ -19,6 +19,7 @@ use crate::rust_oracle::{
     init_price,
     resize_price_account,
     set_min_pub,
+    upd_permissions,
     upd_price,
     upd_price_no_fail_on_error,
     upd_product,
@@ -52,5 +53,6 @@ pub fn process_instruction(
         }
         OracleCommand::DelPrice => del_price(program_id, accounts, instruction_data),
         OracleCommand::DelProduct => del_product(program_id, accounts, instruction_data),
+        OracleCommand::UpdPermissions => upd_permissions(program_id, accounts, instruction_data),
     }
 }

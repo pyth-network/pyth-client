@@ -2,6 +2,7 @@ use crate::c_oracle_header::{
     PythAccount,
     PC_VERSION,
 };
+use crate::error::OracleError;
 use crate::instruction::{
     CommandHeader,
     OracleCommand,
@@ -9,7 +10,9 @@ use crate::instruction::{
 use num_traits::ToPrimitive;
 use solana_program::account_info::AccountInfo;
 use solana_program::clock::Epoch;
+use solana_program::instruction::InstructionError;
 use solana_program::native_token::LAMPORTS_PER_SOL;
+use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
 use solana_program::sysvar::{
@@ -21,6 +24,7 @@ use solana_program::{
     system_program,
     sysvar,
 };
+use solana_sdk::transaction::TransactionError;
 const UPPER_BOUND_OF_ALL_ACCOUNT_SIZES: usize = 20536;
 
 /// The goal of this struct is to easily instantiate fresh solana accounts
@@ -118,5 +122,17 @@ impl Into<CommandHeader> for OracleCommand {
             version: PC_VERSION,
             command: self.to_i32().unwrap(), // This can never fail and is only used in tests
         };
+    }
+}
+
+impl Into<TransactionError> for OracleError {
+    fn into(self) -> TransactionError {
+        TransactionError::InstructionError(
+            0,
+            InstructionError::try_from(u64::from(ProgramError::from(
+                OracleError::InvalidUpgradeAuthority,
+            )))
+            .unwrap(),
+        )
     }
 }

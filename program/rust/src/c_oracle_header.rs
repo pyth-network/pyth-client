@@ -13,6 +13,8 @@ use std::mem::size_of;
 //things defined in bindings.h
 include!("../bindings.rs");
 
+pub const PERMISSIONS_SEED: &str = "permissions";
+
 
 /// If ci > price / PC_MAX_CI_DIVISOR, set publisher status to unknown.
 /// (e.g., 20 means ci must be < 5% of price)
@@ -56,6 +58,35 @@ impl PythAccount for PriceAccount {
     const ACCOUNT_TYPE: u32 = PC_ACCTYPE_PRICE;
     /// Equal to the offset of `comp_` in `PriceAccount`, see the trait comment for more detail
     const INITIAL_SIZE: u32 = PC_PRICE_T_COMP_OFFSET as u32;
+}
+
+impl PythAccount for PermissionAccount {
+    const ACCOUNT_TYPE: u32 = PC_ACCTYPE_PERMISSIONS;
+    const INITIAL_SIZE: u32 = size_of::<PermissionAccount>() as u32;
+}
+
+/// This account stores the pubkeys that can execute administrative instructions in the Pyth
+/// program. Only the upgrade authority of the program can update these permissions.
+#[repr(C)]
+#[derive(Copy, Clone, Pod, Zeroable)]
+pub struct PermissionAccount {
+    /// pyth account header
+    pub header:                  AccountHeader,
+    /// An authority that can do any administrative task
+    pub master_authority:        Pubkey,
+    /// An authority that can  :
+    /// - Add mapping accounts
+    /// - Add price accounts
+    /// - Add product accounts
+    /// - Delete price accounts
+    /// - Delete product accounts
+    /// - Update product accounts
+    pub data_curation_authority: Pubkey,
+    /// An authority that can  :
+    /// - Add publishers
+    /// - Delete publishers
+    /// - Set minimum number of publishers
+    pub security_authority:      Pubkey,
 }
 
 #[repr(C)]

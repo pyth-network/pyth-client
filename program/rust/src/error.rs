@@ -34,6 +34,12 @@ pub enum OracleError {
     InstructionDataSliceMisaligned = 611,
     #[error("AccountTooSmall")]
     AccountTooSmall                = 612,
+    #[error("DeserializationError")]
+    DeserializationError           = 613,
+    #[error("FailedAuthenticatingUpgradeAuthority")]
+    InvalidUpgradeAuthority        = 614,
+    #[error("FailedPdaVerification")]
+    InvalidPda                     = 615,
 }
 
 impl From<OracleError> for ProgramError {
