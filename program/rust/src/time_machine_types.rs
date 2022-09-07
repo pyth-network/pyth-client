@@ -83,23 +83,23 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
         let datapoint_numerator = i128::from(datapoint.slot_gap) * i128::from(datapoint.price); //Can't overflow because u64::MAX * i64::MAX = i28::MAX
         let datapoint_denominator = datapoint.slot_gap;
 
-        self.current_epoch_denominator += datapoint_denominator; // Can't overflow, it's always smaller than the current solana slot
-        self.current_epoch_numerator += datapoint_numerator; // Can't overflow, it's always smaller than u64::MAX * i64::MAX = i28::MAX,
-                                                             // self.current_epoch_numerator = slot_gap1 * price1 + slot_gap2 * price2 + slot_gap3 *
-                                                             // price3 <= (slot_gap1 + slot_gap2 + slot_gap3) * i64::MAX <= u64::MAX * i64::MAX
-                                                             // =i128::MAX
+        // Can't overflow, it's always smaller than the current solana slot
+        self.current_epoch_denominator += datapoint_denominator;
+
+        // Can't overflow, it's always smaller than u64::MAX * i64::MAX = i28::MAX,
+        // self.current_epoch_numerator = slot_gap1 * price1 + slot_gap2 * price2 + slot_gap3 *
+        // price3 <= (slot_gap1 + slot_gap2 + slot_gap3) * i64::MAX <= u64::MAX * i64::MAX
+        // =i128::MAX
+        self.current_epoch_numerator += datapoint_numerator;
         self.current_epoch_is_valid =
             self.current_epoch_is_valid && datapoint_denominator <= self.threshold;
 
-        // This for loop is highly inefficient, but this is what the behavior should be
-        // It updates all the epochs that got skipped
-        // This will always yield an estimate of the average, even for invalid epochs
-
+        // If epoch changed,
         if epoch_0 < epoch_1 {
             let index = epoch_0.rem_euclid(NUM_ENTRIES);
-            let prev_index = (epoch_0 + NUM_ENTRIES - 1).rem_euclid(NUM_ENTRIES); // epoch <= time <= i64::MAX <= u64::MAX / 2, so this will only overflow if NUM_ENTRIES
-                                                                                  // ~
-                                                                                  // u64::MAX / 2
+            // epoch <= time <= i64::MAX <= u64::MAX / 2, so this will only overflow if
+            // NUM_ENTRIES~u64::MAX / 2
+            let prev_index = (epoch_0 + NUM_ENTRIES - 1).rem_euclid(NUM_ENTRIES);
 
             self.running_sum_of_price_averages[index] = self.running_sum_of_price_averages
                 [prev_index]
@@ -120,18 +120,26 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
             self.current_epoch_numerator = datapoint_numerator;
             self.current_epoch_is_valid = datapoint_denominator <= self.threshold;
 
-            let fraction = datapoint_numerator / i128::from(datapoint_denominator);
+            let one_point_average = datapoint_numerator / i128::from(datapoint_denominator);
+
+            // If at least one epoch got skipped, check all buckets for updates
             if epoch_0 + 1 < epoch_1 {
                 for i in 1..NUM_ENTRIES + 1 {
                     let current_bucket = (epoch_0 + i) % NUM_ENTRIES;
                     let times_bucket_skipped =
                         self.get_times_bucket_skipped(current_bucket, epoch_0, epoch_1);
                     let bucket_0 = (epoch_0) % NUM_ENTRIES;
+                    // If bucket got skipped, we need to update the running sum
                     if times_bucket_skipped > 0 {
+                        // The running sums are always smaller than epoch_1 * i64::MAX, so it should
+                        // never overflow
                         self.running_sum_of_price_averages[current_bucket] = self
                             .running_sum_of_price_averages[bucket_0]
-                            + ((i + (times_bucket_skipped - 1) * NUM_ENTRIES) as i128) * fraction;
+                            + ((i + (times_bucket_skipped - 1) * NUM_ENTRIES) as i128)
+                                * one_point_average;
 
+                        // The running counter is always smaller than epoch_1, so it should never
+                        // overflow
                         if self.current_epoch_is_valid {
                             self.running_valid_epoch_counter[current_bucket] = self
                                 .running_valid_epoch_counter[bucket_0]
@@ -153,7 +161,7 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
         let bucket_0 = epoch_0 % NUM_ENTRIES;
         let bucket_1 = epoch_1 % NUM_ENTRIES;
         let is_between = (bucket_0 < bucket && bucket < bucket_1)
-            || (bucket_1 <= bucket_0) && ((bucket < bucket_1) || (bucket > bucket_0));
+            || (bucket_1 <= bucket_0) && ((bucket_0 < bucket) || (bucket < bucket_1));
         (epoch_1 - 1 - epoch_0) / NUM_ENTRIES + usize::from(is_between)
     }
 }
