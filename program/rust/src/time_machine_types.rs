@@ -123,23 +123,22 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
             let fraction = datapoint_numerator / i128::from(datapoint_denominator);
             if epoch_0 + 1 < epoch_1 {
                 for i in 1..NUM_ENTRIES + 1 {
-                    let current_index = (epoch_0 + i) % NUM_ENTRIES;
-                    let number_of_time_skipped =
-                        self.number_times_skipped(current_index, epoch_0, epoch_1);
-                    if number_of_time_skipped > 0 {
-                        self.running_sum_of_price_averages[current_index % NUM_ENTRIES] = self
-                            .running_sum_of_price_averages[(epoch_0) % NUM_ENTRIES]
-                            + ((i + (number_of_time_skipped - 1) * NUM_ENTRIES) as i128) * fraction;
+                    let current_bucket = (epoch_0 + i) % NUM_ENTRIES;
+                    let times_bucket_skipped =
+                        self.get_times_bucket_skipped(current_bucket, epoch_0, epoch_1);
+                    let bucket_0 = (epoch_0) % NUM_ENTRIES;
+                    if times_bucket_skipped > 0 {
+                        self.running_sum_of_price_averages[current_bucket] = self
+                            .running_sum_of_price_averages[bucket_0]
+                            + ((i + (times_bucket_skipped - 1) * NUM_ENTRIES) as i128) * fraction;
 
                         if self.current_epoch_is_valid {
-                            self.running_valid_epoch_counter[current_index % NUM_ENTRIES] = self
-                                .running_valid_epoch_counter[(epoch_0) % NUM_ENTRIES]
-                                + (i as u64)
-                                + ((number_of_time_skipped - 1) as u64) * (NUM_ENTRIES as u64);
+                            self.running_valid_epoch_counter[current_bucket] = self
+                                .running_valid_epoch_counter[bucket_0]
+                                + ((i + (times_bucket_skipped - 1) * NUM_ENTRIES) as u64);
                         } else {
-                            self.running_valid_epoch_counter[current_index % NUM_ENTRIES] = self
-                                .running_valid_epoch_counter
-                                [(epoch_0 + i + NUM_ENTRIES - 1) % NUM_ENTRIES];
+                            self.running_valid_epoch_counter[current_bucket] =
+                                self.running_valid_epoch_counter[bucket_0];
                         }
                     }
                 }
@@ -149,10 +148,11 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
         Ok(())
     }
 
-    pub fn number_times_skipped(&self, i: usize, epoch_0: usize, epoch_1: usize) -> usize {
-        let is_between = ((epoch_0 % NUM_ENTRIES) < i && i < (epoch_1 % NUM_ENTRIES))
-            || ((epoch_1 % NUM_ENTRIES) <= (epoch_0 % NUM_ENTRIES))
-                && ((i < (epoch_1 % NUM_ENTRIES)) || (i > (epoch_0 % NUM_ENTRIES)));
+    pub fn get_times_bucket_skipped(&self, bucket: usize, epoch_0: usize, epoch_1: usize) -> usize {
+        let bucket_0 = epoch_0 % NUM_ENTRIES;
+        let bucket_1 = epoch_1 % NUM_ENTRIES;
+        let is_between = (bucket_0 < bucket && bucket < bucket_1)
+            || (bucket_1 <= bucket_0) && ((bucket < bucket_1) || (bucket > bucket_0));
         (epoch_1 - 1 - epoch_0) / NUM_ENTRIES + usize::from(is_between)
     }
 }
