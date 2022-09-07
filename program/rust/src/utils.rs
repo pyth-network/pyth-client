@@ -1,8 +1,13 @@
 use crate::c_oracle_header::{
     AccountHeader,
+    PermissionAccount,
     MAX_NUM_DECIMALS,
+    PERMISSIONS_SEED,
 };
-use crate::deserialize::load_account_as;
+use crate::deserialize::{
+    load_account_as,
+    load_checked,
+};
 use crate::instruction::{
     OracleCommand,
     UpdPriceArgs,
@@ -73,6 +78,27 @@ pub fn check_valid_signable_account(
     )
 }
 
+pub fn check_valid_signable_account_or_master_authority(
+    program_id: &Pubkey,
+    account: &AccountInfo,
+    funding_acccount: &AccountInfo,
+    permissions_account_option: Option<&AccountInfo>,
+    version: u32,
+) -> Result<(), ProgramError> {
+    if let Some(permissions_account) = permissions_account_option {
+        check_valid_permissions_account(program_id, permissions_account)?;
+        let permissions_account_data =
+            load_checked::<PermissionAccount>(permissions_account, version)?;
+        pyth_assert(
+            permissions_account_data.master_authority == *funding_acccount.key,
+            OracleError::PermissionViolation.into(),
+        )?;
+        check_valid_writable_account(program_id, account)
+    } else {
+        check_valid_signable_account(program_id, account)
+    }
+}
+
 /// Returns `true` if the `account` is fresh, i.e., its data can be overwritten.
 /// Use this check to prevent accidentally overwriting accounts whose data is already populated.
 pub fn valid_fresh_account(account: &AccountInfo) -> bool {
@@ -132,6 +158,34 @@ pub fn check_valid_writable_account(
     pyth_assert(
         valid_writable_account(program_id, account),
         OracleError::InvalidWritableAccount.into(),
+    )
+}
+
+
+fn valid_readable_account(program_id: &Pubkey, account: &AccountInfo) -> bool {
+    account.owner == program_id && Rent::default().is_exempt(account.lamports(), account.data_len())
+}
+
+pub fn check_valid_readable_account(
+    program_id: &Pubkey,
+    account: &AccountInfo,
+) -> Result<(), ProgramError> {
+    pyth_assert(
+        valid_readable_account(program_id, account),
+        OracleError::InvalidReadableAccount.into(),
+    )
+}
+
+pub fn check_valid_permissions_account(
+    program_id: &Pubkey,
+    account: &AccountInfo,
+) -> Result<(), ProgramError> {
+    check_valid_readable_account(program_id, account)?;
+    let (permission_pda_address, _bump_seed) =
+        Pubkey::find_program_address(&[PERMISSIONS_SEED.as_bytes()], program_id);
+    pyth_assert(
+        permission_pda_address == *account.key,
+        OracleError::InvalidPda.into(),
     )
 }
 
