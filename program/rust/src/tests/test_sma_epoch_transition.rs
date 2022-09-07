@@ -23,7 +23,7 @@ use crate::tests::test_utils::{
     AccountSetup,
 };
 use crate::time_machine_types::{
-    PriceAccountExtended,
+    PriceAccountWrapper,
     NUM_BUCKETS_THIRTY_MIN,
     THIRTY_MINUTES,
 };
@@ -38,15 +38,15 @@ fn test_sma_epoch_transition() {
     let mut funding_setup = AccountSetup::new_funding();
     let funding_account = funding_setup.to_account_info();
 
-    let mut price_setup = AccountSetup::new::<PriceAccountExtended>(&program_id);
+    let mut price_setup = AccountSetup::new::<PriceAccountWrapper>(&program_id);
     let mut price_account = price_setup.to_account_info();
     price_account.is_signer = false;
-    initialize_pyth_account_checked::<PriceAccountExtended>(&price_account, PC_VERSION).unwrap();
+    initialize_pyth_account_checked::<PriceAccountWrapper>(&price_account, PC_VERSION).unwrap();
 
 
     {
         let mut price_data =
-            load_checked::<PriceAccountExtended>(&price_account, PC_VERSION).unwrap();
+            load_checked::<PriceAccountWrapper>(&price_account, PC_VERSION).unwrap();
         price_data
             .time_machine
             .initialize(THIRTY_MINUTES, PC_MAX_SEND_LATENCY as u64);
@@ -76,7 +76,7 @@ fn test_sma_epoch_transition() {
     .is_ok());
 
     {
-        let price_data = load_checked::<PriceAccountExtended>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<PriceAccountWrapper>(&price_account, PC_VERSION).unwrap();
 
         assert_eq!(
             price_data.time_machine.threshold,
@@ -109,7 +109,7 @@ fn test_sma_epoch_transition() {
     .is_ok());
 
     {
-        let price_data = load_checked::<PriceAccountExtended>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<PriceAccountWrapper>(&price_account, PC_VERSION).unwrap();
 
         assert_eq!(
             price_data.time_machine.threshold,
@@ -142,7 +142,7 @@ fn test_sma_epoch_transition() {
     .is_ok());
 
     {
-        let price_data = load_checked::<PriceAccountExtended>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<PriceAccountWrapper>(&price_account, PC_VERSION).unwrap();
 
         assert_eq!(
             price_data.time_machine.threshold,
@@ -186,7 +186,7 @@ fn test_sma_epoch_transition() {
     .is_ok());
 
     {
-        let price_data = load_checked::<PriceAccountExtended>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<PriceAccountWrapper>(&price_account, PC_VERSION).unwrap();
 
         assert_eq!(
             price_data.time_machine.threshold,
@@ -229,7 +229,7 @@ fn test_sma_epoch_transition() {
     .is_ok());
 
     {
-        let price_data = load_checked::<PriceAccountExtended>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<PriceAccountWrapper>(&price_account, PC_VERSION).unwrap();
 
         assert_eq!(
             price_data.time_machine.threshold,
@@ -279,7 +279,7 @@ fn test_sma_epoch_transition() {
     .is_ok());
 
     {
-        let price_data = load_checked::<PriceAccountExtended>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<PriceAccountWrapper>(&price_account, PC_VERSION).unwrap();
 
         assert_eq!(
             price_data.time_machine.threshold,
@@ -347,7 +347,7 @@ fn test_sma_epoch_transition() {
     .is_ok());
 
     {
-        let price_data = load_checked::<PriceAccountExtended>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<PriceAccountWrapper>(&price_account, PC_VERSION).unwrap();
 
         assert_eq!(
             price_data.time_machine.threshold,
@@ -414,7 +414,7 @@ fn test_sma_epoch_transition() {
     .is_ok());
 
     {
-        let price_data = load_checked::<PriceAccountExtended>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<PriceAccountWrapper>(&price_account, PC_VERSION).unwrap();
 
         assert_eq!(
             price_data.time_machine.threshold,

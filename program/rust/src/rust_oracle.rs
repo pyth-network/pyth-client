@@ -38,7 +38,7 @@ use crate::instruction::{
     UpdPermissionsArgs,
     UpdPriceArgs,
 };
-use crate::time_machine_types::PriceAccountExtended;
+use crate::time_machine_types::PriceAccountWrapper;
 use crate::utils::{
     check_exponent_range,
     check_is_upgrade_authority_for_program,
@@ -109,7 +109,7 @@ pub fn resize_price_account(
             // Ensure account is still rent exempt after resizing
             let rent: Rent = Default::default();
             let lamports_needed: u64 = rent
-                .minimum_balance(size_of::<PriceAccountExtended>())
+                .minimum_balance(size_of::<PriceAccountWrapper>())
                 .saturating_sub(price_account_info.lamports());
             if lamports_needed > 0 {
                 send_lamports(
@@ -121,17 +121,17 @@ pub fn resize_price_account(
             }
             // We do not need to zero allocate because we won't access the data in the same
             // instruction
-            price_account_info.realloc(size_of::<PriceAccountExtended>(), false)?;
+            price_account_info.realloc(size_of::<PriceAccountWrapper>(), false)?;
 
             // Check that everything is ok
             check_valid_signable_account(program_id, price_account_info)?;
             let mut price_account =
-                load_checked::<PriceAccountExtended>(price_account_info, PC_VERSION)?;
+                load_checked::<PriceAccountWrapper>(price_account_info, PC_VERSION)?;
             // Initialize Time Machine
-            price_account.initialize()?;
+            price_account.initialize_time_machine()?;
             Ok(())
         }
-        PriceAccountExtended::MINIMUM_SIZE => Ok(()),
+        PriceAccountWrapper::MINIMUM_SIZE => Ok(()),
         _ => Err(ProgramError::InvalidArgument),
     }
 }
@@ -253,10 +253,10 @@ pub fn upd_price(
     }
 
     let account_len = price_account.try_data_len()?;
-    if aggregate_updated && account_len == PriceAccountExtended::MINIMUM_SIZE {
+    if aggregate_updated && account_len == PriceAccountWrapper::MINIMUM_SIZE {
         let mut price_account =
-            load_checked::<PriceAccountExtended>(price_account, cmd_args.header.version)?;
-        price_account.add_datapoint()?;
+            load_checked::<PriceAccountWrapper>(price_account, cmd_args.header.version)?;
+        price_account.add_price_to_time_machine()?;
     }
 
     // Try to update the publisher's price

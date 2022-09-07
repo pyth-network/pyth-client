@@ -7,7 +7,7 @@ use crate::c_oracle_header::{
 };
 use crate::tests::pyth_simulator::PythSimulator;
 use crate::time_machine_types::{
-    PriceAccountExtended,
+    PriceAccountWrapper,
     THIRTY_MINUTES,
 };
 
@@ -28,14 +28,14 @@ async fn test_resize_account() {
     assert!(sim.resize_price_account(&price1).await.is_ok());
     // Check new size
     let price1_account = sim.get_account(price1.pubkey()).await.unwrap();
-    assert_eq!(price1_account.data.len(), size_of::<PriceAccountExtended>());
+    assert_eq!(price1_account.data.len(), size_of::<PriceAccountWrapper>());
 
     // Future calls don't change the size
     assert!(sim.resize_price_account(&price1).await.is_ok());
     let price1_account = sim.get_account(price1.pubkey()).await.unwrap();
-    assert_eq!(price1_account.data.len(), size_of::<PriceAccountExtended>());
+    assert_eq!(price1_account.data.len(), size_of::<PriceAccountWrapper>());
     let price1_account_data = sim
-        .get_account_data_as::<PriceAccountExtended>(price1.pubkey())
+        .get_account_data_as::<PriceAccountWrapper>(price1.pubkey())
         .await
         .unwrap();
     assert_eq!(price1_account_data.time_machine.granularity, THIRTY_MINUTES);

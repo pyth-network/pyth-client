@@ -17,7 +17,7 @@ pub const THIRTY_MINUTES: i64 = 30 * 60;
 pub const NUM_BUCKETS_THIRTY_MIN: usize = 48;
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct PriceAccountExtended {
+pub struct PriceAccountWrapper {
     // An instance of price account
     pub price_data:            PriceAccount,
     /// Space for more publishers
@@ -34,14 +34,14 @@ pub struct DataPoint {
     pub price:               i64,
 }
 
-impl PriceAccountExtended {
-    pub fn initialize(&mut self) -> Result<(), OracleError> {
+impl PriceAccountWrapper {
+    pub fn initialize_time_machine(&mut self) -> Result<(), OracleError> {
         self.time_machine
             .initialize(THIRTY_MINUTES, PC_MAX_SEND_LATENCY.into());
         Ok(())
     }
 
-    pub fn add_datapoint(&mut self) -> Result<(), OracleError> {
+    pub fn add_price_to_time_machine(&mut self) -> Result<(), OracleError> {
         self.time_machine.add_datapoint( &DataPoint{
             last_two_timestamps : (self.price_data.prev_timestamp_, self.price_data.timestamp_),
             slot_gap : (self.price_data.last_slot_ - self.price_data.prev_slot_),
@@ -159,11 +159,11 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
 }
 
 #[cfg(target_endian = "little")]
-unsafe impl Zeroable for PriceAccountExtended {
+unsafe impl Zeroable for PriceAccountWrapper {
 }
 
 #[cfg(target_endian = "little")]
-unsafe impl Pod for PriceAccountExtended {
+unsafe impl Pod for PriceAccountWrapper {
 }
 
 #[cfg(target_endian = "little")]
@@ -174,7 +174,7 @@ unsafe impl Zeroable for SmaTracker<NUM_BUCKETS_THIRTY_MIN> {
 unsafe impl Pod for SmaTracker<NUM_BUCKETS_THIRTY_MIN> {
 }
 
-impl PythAccount for PriceAccountExtended {
+impl PythAccount for PriceAccountWrapper {
     const ACCOUNT_TYPE: u32 = PC_ACCTYPE_PRICE;
     const INITIAL_SIZE: u32 = PC_PRICE_T_COMP_OFFSET as u32;
 }
@@ -186,7 +186,7 @@ pub mod tests {
         TIME_MACHINE_STRUCT_SIZE,
     };
     use crate::time_machine_types::{
-        PriceAccountExtended,
+        PriceAccountWrapper,
         SmaTracker,
         NUM_BUCKETS_THIRTY_MIN,
     };
@@ -204,11 +204,11 @@ pub mod tests {
     ///test that priceAccountWrapper has a correct size
     fn c_price_account_size_is_correct() {
         assert_eq!(
-        size_of::<PriceAccountExtended>(),
+        size_of::<PriceAccountWrapper>(),
         PRICE_ACCOUNT_SIZE as usize,
         "expected PRICE_ACCOUNT_SIZE ({}) in oracle.h to the same as the size of PriceAccountWrapper ({})",
         PRICE_ACCOUNT_SIZE,
-        size_of::<PriceAccountExtended>()
+        size_of::<PriceAccountWrapper>()
     );
     }
 }
