@@ -1,15 +1,9 @@
 use solana_sdk::signer::Signer;
 use std::mem::size_of;
 
-use crate::c_oracle_header::{
-    pc_price_t,
-    PC_MAX_SEND_LATENCY,
-};
+use crate::c_oracle_header::pc_price_t;
 use crate::tests::pyth_simulator::PythSimulator;
-use crate::time_machine_types::{
-    PriceAccountWrapper,
-    THIRTY_MINUTES,
-};
+use crate::time_machine_types::PriceAccountWrapper;
 
 
 /// Warning : This test will fail if you run cargo test instead of cargo test-bpf
@@ -38,9 +32,6 @@ async fn test_resize_account() {
         .get_account_data_as::<PriceAccountWrapper>(price1.pubkey())
         .await
         .unwrap();
-    assert_eq!(price1_account_data.time_machine.granularity, THIRTY_MINUTES);
-    assert_eq!(
-        price1_account_data.time_machine.threshold,
-        PC_MAX_SEND_LATENCY as u64
-    );
+    assert_eq!(price1_account_data.time_machine.granularity, 0);
+    assert_eq!(price1_account_data.time_machine.threshold, 0);
 }

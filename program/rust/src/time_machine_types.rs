@@ -1,3 +1,5 @@
+#![allow(unused_imports)]
+#![allow(dead_code)]
 use crate::c_oracle_header::{
     PriceAccount,
     PythAccount,
@@ -36,12 +38,14 @@ pub struct DataPoint {
 
 impl PriceAccountWrapper {
     pub fn initialize_time_machine(&mut self) -> Result<(), OracleError> {
+        #[cfg(test)]
         self.time_machine
             .initialize(THIRTY_MINUTES, PC_MAX_SEND_LATENCY.into());
         Ok(())
     }
 
     pub fn add_price_to_time_machine(&mut self) -> Result<(), OracleError> {
+        #[cfg(test)]
         self.time_machine.add_datapoint( &DataPoint{
             last_two_timestamps : (self.price_data.prev_timestamp_, self.price_data.timestamp_),
             slot_gap : (self.price_data.last_slot_ - self.price_data.prev_slot_),
