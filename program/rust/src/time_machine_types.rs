@@ -166,14 +166,6 @@ unsafe impl Zeroable for PriceAccountWrapper {
 unsafe impl Pod for PriceAccountWrapper {
 }
 
-#[cfg(target_endian = "little")]
-unsafe impl Zeroable for SmaTracker<NUM_BUCKETS_THIRTY_MIN> {
-}
-
-#[cfg(target_endian = "little")]
-unsafe impl Pod for SmaTracker<NUM_BUCKETS_THIRTY_MIN> {
-}
-
 impl PythAccount for PriceAccountWrapper {
     const ACCOUNT_TYPE: u32 = PC_ACCTYPE_PRICE;
     const INITIAL_SIZE: u32 = PC_PRICE_T_COMP_OFFSET as u32;
