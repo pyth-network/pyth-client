@@ -148,6 +148,7 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
         Ok(())
     }
 
+    /// Counts the times bucket `bucket` was skipped when going from `epoch_0` to `epoch_1`
     pub fn get_times_bucket_skipped(&self, bucket: usize, epoch_0: usize, epoch_1: usize) -> usize {
         let bucket_0 = epoch_0 % NUM_ENTRIES;
         let bucket_1 = epoch_1 % NUM_ENTRIES;
