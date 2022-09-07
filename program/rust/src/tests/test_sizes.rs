@@ -1,6 +1,7 @@
 use crate::c_oracle_header::{
     AccountHeader,
     MappingAccount,
+    PermissionAccount,
     PriceAccount,
     PriceComponent,
     PriceEma,
@@ -72,6 +73,7 @@ fn test_sizes() {
         size_of::<PriceAccountWrapper>(),
         try_convert::<_, usize>(PRICE_ACCOUNT_SIZE).unwrap()
     );
+    assert_eq!(size_of::<PermissionAccount>(), 112);
 }
 
 #[test]

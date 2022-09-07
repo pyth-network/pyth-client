@@ -89,6 +89,13 @@ pub enum OracleCommand {
     // key[1] mapping account       [signer writable]
     // key[2] product account       [signer writable]
     DelProduct            = 16,
+    // Update authorities
+    // key[0] upgrade authority         [signer writable]
+    // key[1] program account           []
+    // key[2] programdata account       []
+    // key[3] permissions account       [writable]
+    // key[4] system program            []
+    UpdPermissions        = 17,
 }
 
 #[repr(C)]
@@ -142,4 +149,13 @@ pub struct UpdPriceArgs {
     pub price:           i64,
     pub confidence:      u64,
     pub publishing_slot: u64,
+}
+
+#[repr(C)]
+#[derive(Zeroable, Pod, Copy, Clone)]
+pub struct UpdPermissionsArgs {
+    pub header:                  CommandHeader,
+    pub master_authority:        Pubkey,
+    pub data_curation_authority: Pubkey,
+    pub security_authority:      Pubkey,
 }

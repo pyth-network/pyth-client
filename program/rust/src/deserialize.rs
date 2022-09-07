@@ -5,6 +5,8 @@ use bytemuck::{
     try_from_bytes_mut,
     Pod,
 };
+use solana_program::pubkey::Pubkey;
+use solana_program::rent::Rent;
 
 use crate::c_oracle_header::{
     AccountHeader,
@@ -13,9 +15,12 @@ use crate::c_oracle_header::{
 };
 use crate::error::OracleError;
 use crate::utils::{
+    allocate_data,
+    assign_owner,
     check_valid_fresh_account,
     clear_account,
     pyth_assert,
+    send_lamports,
 };
 use solana_program::account_info::AccountInfo;
 use solana_program::program_error::ProgramError;
@@ -111,4 +116,30 @@ pub fn initialize_pyth_account_checked<'a, T: PythAccount>(
     }
 
     load_account_as_mut::<T>(account)
+}
+
+// Creates pda if needed and initializes it as one of the Pyth accounts
+pub fn create_pda_if_needed<'a, T: PythAccount>(
+    account: &AccountInfo<'a>,
+    funding_account: &AccountInfo<'a>,
+    system_program: &AccountInfo<'a>,
+    program_id: &Pubkey,
+    seeds: &[&[u8]],
+    version: u32,
+) -> Result<(), ProgramError> {
+    let target_rent = Rent::default().minimum_balance(T::MINIMUM_SIZE);
+    if account.lamports() < target_rent {
+        send_lamports(
+            funding_account,
+            account,
+            system_program,
+            target_rent - account.lamports(),
+        )?;
+    }
+    if account.data_len() == 0 {
+        allocate_data(account, system_program, T::MINIMUM_SIZE, seeds)?;
+        assign_owner(account, program_id, system_program, seeds)?;
+        initialize_pyth_account_checked::<T>(account, version)?;
+    }
+    Ok(())
 }

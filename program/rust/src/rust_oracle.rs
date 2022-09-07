@@ -5,6 +5,7 @@ use std::mem::{
 
 use crate::c_oracle_header::{
     MappingAccount,
+    PermissionAccount,
     PriceAccount,
     PriceComponent,
     PriceEma,
@@ -18,8 +19,11 @@ use crate::c_oracle_header::{
     PC_PTYPE_UNKNOWN,
     PC_STATUS_UNKNOWN,
     PC_VERSION,
+    PERMISSIONS_SEED,
 };
+
 use crate::deserialize::{
+    create_pda_if_needed,
     initialize_pyth_account_checked,
     load,
     load_checked,
@@ -31,17 +35,20 @@ use crate::instruction::{
     DelPublisherArgs,
     InitPriceArgs,
     SetMinPubArgs,
+    UpdPermissionsArgs,
     UpdPriceArgs,
 };
 use crate::time_machine_types::PriceAccountWrapper;
 use crate::utils::{
     check_exponent_range,
+    check_is_upgrade_authority_for_program,
     check_valid_funding_account,
     check_valid_signable_account,
     check_valid_writable_account,
     is_component_update,
     pyth_assert,
     read_pc_str_t,
+    send_lamports,
     try_convert,
 };
 use crate::OracleError;
@@ -49,7 +56,6 @@ use bytemuck::bytes_of_mut;
 use solana_program::account_info::AccountInfo;
 use solana_program::clock::Clock;
 use solana_program::entrypoint::ProgramResult;
-use solana_program::program::invoke;
 use solana_program::program_error::ProgramError;
 use solana_program::program_memory::{
     sol_memcpy,
@@ -57,7 +63,6 @@ use solana_program::program_memory::{
 };
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
-use solana_program::system_instruction::transfer;
 use solana_program::system_program::check_id;
 use solana_program::sysvar::Sysvar;
 
@@ -72,20 +77,6 @@ extern "C" {
 #[link(name = "cpyth-native")]
 extern "C" {
     pub fn c_upd_aggregate(_input: *mut u8, clock_slot: u64, clock_timestamp: i64) -> bool;
-}
-
-fn send_lamports<'a>(
-    from: &AccountInfo<'a>,
-    to: &AccountInfo<'a>,
-    system_program: &AccountInfo<'a>,
-    amount: u64,
-) -> Result<(), ProgramError> {
-    let transfer_instruction = transfer(from.key, to.key, amount);
-    invoke(
-        &transfer_instruction,
-        &[from.clone(), to.clone(), system_program.clone()],
-    )?;
-    Ok(())
 }
 
 /// resizes a price account so that it fits the Time Machine
@@ -743,6 +734,66 @@ pub fn del_product(
     let lamports = product_account.lamports();
     **product_account.lamports.borrow_mut() = 0;
     **funding_account.lamports.borrow_mut() += lamports;
+
+    Ok(())
+}
+
+
+/// Updates permissions for the pyth oracle program
+/// This function can create and update the permissions accounts, which stores
+/// several public keys that can execute administrative instructions in the pyth program
+pub fn upd_permissions(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
+    instruction_data: &[u8],
+) -> ProgramResult {
+    let [funding_account, program_account, programdata_account, permissions_account, system_program] =
+        match accounts {
+            [v, w, x, y, z] => Ok([v, w, x, y, z]),
+            _ => Err(ProgramError::InvalidArgument),
+        }?;
+
+    let cmd_args = load::<UpdPermissionsArgs>(instruction_data)?;
+
+    check_valid_funding_account(funding_account)?;
+    check_is_upgrade_authority_for_program(
+        funding_account,
+        program_account,
+        programdata_account,
+        program_id,
+    )?;
+
+    let (permission_pda_address, bump_seed) =
+        Pubkey::find_program_address(&[PERMISSIONS_SEED.as_bytes()], program_id);
+    pyth_assert(
+        permission_pda_address == *permissions_account.key,
+        OracleError::InvalidPda.into(),
+    )?;
+
+    pyth_assert(
+        check_id(system_program.key),
+        OracleError::InvalidSystemAccount.into(),
+    )?;
+
+
+    // Create permissions account if it doesn't exist
+    create_pda_if_needed::<PermissionAccount>(
+        permissions_account,
+        funding_account,
+        system_program,
+        program_id,
+        &[PERMISSIONS_SEED.as_bytes(), &[bump_seed]],
+        cmd_args.header.version,
+    )?;
+
+    check_valid_writable_account(program_id, permissions_account)?;
+
+    let mut permissions_account_data =
+        load_checked::<PermissionAccount>(permissions_account, cmd_args.header.version)?;
+    permissions_account_data.master_authority = cmd_args.master_authority;
+
+    permissions_account_data.data_curation_authority = cmd_args.data_curation_authority;
+    permissions_account_data.security_authority = cmd_args.security_authority;
 
     Ok(())
 }
