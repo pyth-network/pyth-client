@@ -94,36 +94,66 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
         // This for loop is highly inefficient, but this is what the behavior should be
         // It updates all the epochs that got skipped
         // This will always yield an estimate of the average, even for invalid epochs
-        for i in epoch_0..epoch_1 {
-            self.conclude_epoch_and_initialize_next(i, datapoint_numerator, datapoint_denominator);
+
+        if epoch_0 < epoch_1 {
+            let index = epoch_0.rem_euclid(NUM_ENTRIES);
+            let prev_index = (epoch_0 + NUM_ENTRIES - 1).rem_euclid(NUM_ENTRIES); // epoch <= time <= i64::MAX <= u64::MAX / 2, so this will only overflow if NUM_ENTRIES
+                                                                                  // ~
+                                                                                  // u64::MAX / 2
+
+            self.running_sum_of_price_averages[index] = self.running_sum_of_price_averages
+                [prev_index]
+                + self.current_epoch_numerator / i128::from(self.current_epoch_denominator);
+            // The fraction here is smaller than i64::MAX , so we can support u64::MAX updates
+
+            if self.current_epoch_is_valid {
+                self.running_valid_epoch_counter[index] =
+                    self.running_valid_epoch_counter[prev_index] + 1; // Likewise can support
+                                                                      // u64::MAX
+                                                                      // epochs
+            } else {
+                self.running_valid_epoch_counter[index] =
+                    self.running_valid_epoch_counter[prev_index]
+            };
+
+            self.current_epoch_denominator = datapoint_denominator;
+            self.current_epoch_numerator = datapoint_numerator;
             self.current_epoch_is_valid = datapoint_denominator <= self.threshold;
+
+            let fraction = datapoint_numerator / i128::from(datapoint_denominator);
+            if epoch_0 + 1 < epoch_1 {
+                for i in 1..NUM_ENTRIES + 1 {
+                    let current_index = (epoch_0 + i) % NUM_ENTRIES;
+                    let number_of_time_skipped =
+                        self.number_times_skipped(current_index, epoch_0, epoch_1);
+                    if number_of_time_skipped > 0 {
+                        self.running_sum_of_price_averages[current_index % NUM_ENTRIES] = self
+                            .running_sum_of_price_averages[(epoch_0) % NUM_ENTRIES]
+                            + ((i + (number_of_time_skipped - 1) * NUM_ENTRIES) as i128) * fraction;
+
+                        if self.current_epoch_is_valid {
+                            self.running_valid_epoch_counter[current_index % NUM_ENTRIES] = self
+                                .running_valid_epoch_counter[(epoch_0) % NUM_ENTRIES]
+                                + (i as u64)
+                                + ((number_of_time_skipped - 1) as u64) * (NUM_ENTRIES as u64);
+                        } else {
+                            self.running_valid_epoch_counter[current_index % NUM_ENTRIES] = self
+                                .running_valid_epoch_counter
+                                [(epoch_0 + i + NUM_ENTRIES - 1) % NUM_ENTRIES];
+                        }
+                    }
+                }
+            }
         }
+
         Ok(())
     }
 
-    pub fn conclude_epoch_and_initialize_next(
-        &mut self,
-        epoch: usize,
-        datapoint_numerator: i128,
-        datapoint_denominator: u64,
-    ) {
-        let index = epoch.rem_euclid(NUM_ENTRIES);
-        let prev_index = (epoch + NUM_ENTRIES - 1).rem_euclid(NUM_ENTRIES); // epoch <= time <= i64::MAX <= u64::MAX / 2, so this will only overflow if NUM_ENTRIES ~
-                                                                            // u64::MAX / 2
-
-        self.running_sum_of_price_averages[index] = self.running_sum_of_price_averages[prev_index]
-            + self.current_epoch_numerator / i128::from(self.current_epoch_denominator); // The fraction here is smaller than i64::MAX , so we can support u64::MAX updates
-
-        if self.current_epoch_is_valid {
-            self.running_valid_epoch_counter[index] =
-                self.running_valid_epoch_counter[prev_index] + 1; // Likewise can support u64::MAX
-                                                                  // epochs
-        } else {
-            self.running_valid_epoch_counter[index] = self.running_valid_epoch_counter[prev_index]
-        };
-
-        self.current_epoch_denominator = datapoint_denominator;
-        self.current_epoch_numerator = datapoint_numerator;
+    pub fn number_times_skipped(&self, i: usize, epoch_0: usize, epoch_1: usize) -> usize {
+        let is_between = ((epoch_0 % NUM_ENTRIES) < i && i < (epoch_1 % NUM_ENTRIES))
+            || ((epoch_1 % NUM_ENTRIES) <= (epoch_0 % NUM_ENTRIES))
+                && ((i < (epoch_1 % NUM_ENTRIES)) || (i > (epoch_0 % NUM_ENTRIES)));
+        (epoch_1 - 1 - epoch_0) / NUM_ENTRIES + usize::from(is_between)
     }
 }
 
