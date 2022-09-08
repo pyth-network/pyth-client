@@ -154,6 +154,7 @@ fn test_init_mapping() {
     .is_ok());
 
     clear_account(&mapping_account).unwrap();
+    mapping_account.is_signer = false;
 
     let mut permissions_setup = AccountSetup::new_permission(&program_id);
     let permissions_account = permissions_setup.to_account_info();
