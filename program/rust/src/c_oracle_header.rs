@@ -94,14 +94,10 @@ pub struct PermissionAccount {
 
 impl PermissionAccount {
     pub fn is_authorized(&self, funding_account: &AccountInfo, command: OracleCommand) -> bool {
-        if self.master_authority == *funding_account.key {
-            #[allow(clippy::match_like_matches_macro)]
-            match command {
-                OracleCommand::InitMapping => true,
-                _ => false,
-            }
-        } else {
-            false
+        #[allow(clippy::match_like_matches_macro)]
+        match (*funding_account.key, command) {
+            (pubkey, OracleCommand::InitMapping) if pubkey == self.master_authority => true,
+            _ => false,
         }
     }
 }
