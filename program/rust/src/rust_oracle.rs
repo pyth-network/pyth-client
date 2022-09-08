@@ -44,7 +44,7 @@ use crate::utils::{
     check_is_upgrade_authority_for_program,
     check_valid_funding_account,
     check_valid_signable_account,
-    check_valid_signable_account_or_master_authority,
+    check_valid_signable_account_or_permissioned_funding_account,
     check_valid_writable_account,
     is_component_update,
     pyth_assert,
@@ -155,12 +155,12 @@ pub fn init_mapping(
     let hdr = load::<CommandHeader>(instruction_data)?;
 
     check_valid_funding_account(funding_account)?;
-    check_valid_signable_account_or_master_authority(
+    check_valid_signable_account_or_permissioned_funding_account(
         program_id,
         fresh_mapping_account,
         funding_account,
         permissions_account_option,
-        hdr.version,
+        hdr,
     )?;
 
     // Initialize by setting to zero again (just in case) and populating the account header

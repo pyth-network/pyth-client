@@ -9,6 +9,7 @@ use crate::deserialize::{
     load_checked,
 };
 use crate::instruction::{
+    CommandHeader,
     OracleCommand,
     UpdPriceArgs,
 };
@@ -78,20 +79,24 @@ pub fn check_valid_signable_account(
     )
 }
 
-pub fn check_valid_signable_account_or_master_authority(
+pub fn check_valid_signable_account_or_permissioned_funding_account(
     program_id: &Pubkey,
     account: &AccountInfo,
     funding_account: &AccountInfo,
     permissions_account_option: Option<&AccountInfo>,
-    version: u32,
+    cmd_hdr: &CommandHeader,
 ) -> Result<(), ProgramError> {
     if let Some(permissions_account) = permissions_account_option {
         check_valid_permissions_account(program_id, permissions_account)?;
         let permissions_account_data =
-            load_checked::<PermissionAccount>(permissions_account, version)?;
+            load_checked::<PermissionAccount>(permissions_account, cmd_hdr.version)?;
         check_valid_funding_account(funding_account)?;
         pyth_assert(
-            permissions_account_data.master_authority == *funding_account.key,
+            permissions_account_data.is_authorized(
+                funding_account,
+                OracleCommand::from_i32(cmd_hdr.command)
+                    .ok_or(OracleError::UnrecognizedInstruction)?,
+            ),
             OracleError::PermissionViolation.into(),
         )?;
         check_valid_writable_account(program_id, account)
