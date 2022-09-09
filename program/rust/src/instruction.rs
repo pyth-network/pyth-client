@@ -99,16 +99,17 @@ pub enum OracleCommand {
     // Upgrade the program
     // key[0] funding account           [signer writable]
     // key[1] permissions account       []
-    // key[2] governance_vaa            []
-    // key[3] upgrade_pda               []
-    // All these accounts are checked by the CPI to bpf-upgradable-loader
-    // key[4] new_buffer                [writable]
-    // key[5] old_buffer                [writable]
-    // key[6] program_account           [writable]
-    // key[7] rent                      []
-    // key[8] clock                     []
-    // key[9] bpf-upgradable-loader     []
-    // key[10] system program           []
+    // key[2] vaa                       []
+    // key[3] claim                     [writable]
+    // The accounts after are checked by the bpf-upgradable loader
+    // key[4] upgrade_pda               []
+    // key[5] new_buffer                [writable]
+    // key[6] old_buffer                [writable]
+    // key[7] program_account           [writable]
+    // key[8] rent                      []
+    // key[9] clock                     []
+    // key[10] bpf-upgradable-loader    []
+    // key[11] system program           []
     UpgProgram            = 18,
 }
 
