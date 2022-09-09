@@ -16,21 +16,27 @@ use bridge::{
 };
 use byteorder::ReadBytesExt;
 use solana_program::account_info::AccountInfo;
+use solana_program::clock::Clock;
 use solana_program::entrypoint::ProgramResult;
 use solana_program::program::invoke_signed;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
+use solana_program::rent::Rent;
 use solitaire::{
+    Derive,
     ExecutionContext,
     FromAccounts,
     Info,
     Mut,
     Peel,
+    Signer,
     SolitaireError,
+    Sysvar,
 };
 
 use crate::c_oracle_header::{
     PermissionAccount,
+    PERMISSIONS_SEED,
     UPGRADE_AUTHORITY_SEED,
 };
 use crate::deserialize::{
@@ -46,10 +52,10 @@ use crate::utils::{
 
 #[derive(FromAccounts)]
 pub struct UpgradeContract<'b> {
-    pub funding_account: Info<'b>,
+    pub funding_account: Mut<Signer<Info<'b>>>,
 
     /// This account is checked by the Pyth checks
-    pub permissions_account: Info<'b>,
+    pub permissions_account: Derive<Info<'b>, PERMISSIONS_SEED>,
 
     /// Pyth governance payload
     pub vaa: PayloadMessage<'b, PythGovernancePayloadUpgrade>,
@@ -58,12 +64,12 @@ pub struct UpgradeContract<'b> {
     pub claim: Mut<Claim<'b>>,
 
     /// All these accounts are passed down and checked by the BPF loader
-    pub upgrade_authority: Info<'b>,
-    pub new_buffer:        Info<'b>,
-    pub old_buffer:        Info<'b>,
-    pub own_address:       Info<'b>,
-    pub rent:              Info<'b>,
-    pub clock:             Info<'b>,
+    pub upgrade_authority: Derive<Info<'b>, UPGRADE_AUTHORITY_SEED>,
+    pub new_buffer:        Mut<Info<'b>>,
+    pub old_buffer:        Mut<Info<'b>>,
+    pub own_address:       Mut<Info<'b>>,
+    pub rent:              Sysvar<'b, Rent>,
+    pub clock:             Sysvar<'b, Clock>,
     pub bpf_loader:        Info<'b>,
     pub system:            Info<'b>,
 }
