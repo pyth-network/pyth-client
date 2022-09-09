@@ -7,6 +7,7 @@
 mod c_oracle_header;
 mod deserialize;
 mod error;
+mod governance;
 mod instruction;
 mod processor;
 mod rust_oracle;

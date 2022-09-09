@@ -17,6 +17,7 @@ use crate::instruction::OracleCommand;
 include!("../bindings.rs");
 
 pub const PERMISSIONS_SEED: &str = "permissions";
+pub const UPGRADE_AUTHORITY_SEED: &str = "upgrade";
 
 
 /// If ci > price / PC_MAX_CI_DIVISOR, set publisher status to unknown.

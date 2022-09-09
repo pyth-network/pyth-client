@@ -21,13 +21,13 @@ use crate::c_oracle_header::{
     PC_VERSION,
     PERMISSIONS_SEED,
 };
+
 use crate::deserialize::{
     create_pda_if_needed,
     initialize_pyth_account_checked,
     load,
     load_checked,
 };
-// use wormhole_bridge_solana::PayloadMessage;
 use crate::instruction::{
     AddPriceArgs,
     AddPublisherArgs,
@@ -43,7 +43,6 @@ use crate::utils::{
     check_exponent_range,
     check_is_upgrade_authority_for_program,
     check_valid_funding_account,
-    check_valid_permissions_account,
     check_valid_signable_account,
     check_valid_signable_account_or_permissioned_funding_account,
     check_valid_writable_account,
@@ -806,21 +805,4 @@ pub fn upd_permissions(
     permissions_account_data.security_authority = cmd_args.security_authority;
 
     Ok(())
-}
-
-pub fn upg_program(
-    program_id: &Pubkey,
-    accounts: &[AccountInfo],
-    instruction_data: &[u8],
-) -> ProgramResult {
-    let [funding_account, permissions_account, governance_vaa, upgrade_pda] = match accounts {
-        [v, w, x, y, ..] => Ok([v, w, x, y]),
-        _ => Err(ProgramError::InvalidArgument),
-    }?;
-
-    check_valid_funding_account(funding_account)?;
-    check_valid_permissions_account(program_id, permissions_account)?;
-    Ok(())
-    // PayloadMessage::peel()
-    // let checked_governance_vaa = PayloadMessage::peel();
 }

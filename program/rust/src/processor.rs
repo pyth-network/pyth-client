@@ -7,6 +7,7 @@ use solana_program::entrypoint::ProgramResult;
 use solana_program::pubkey::Pubkey;
 use solana_program::sysvar::slot_history::AccountInfo;
 
+use crate::governance::upg_program;
 use crate::rust_oracle::{
     add_mapping,
     add_price,
@@ -23,7 +24,6 @@ use crate::rust_oracle::{
     upd_price,
     upd_price_no_fail_on_error,
     upd_product,
-    upg_program,
 };
 
 ///dispatch to the right instruction in the oracle

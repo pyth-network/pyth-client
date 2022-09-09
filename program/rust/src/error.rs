@@ -44,6 +44,8 @@ pub enum OracleError {
     InvalidReadableAccount         = 616,
     #[error("PermissionViolation")]
     PermissionViolation            = 617,
+    #[error("InvalidGovernanceVaa")]
+    InvalidGovernanceVaa           = 618,
 }
 
 impl From<OracleError> for ProgramError {
