@@ -23,6 +23,7 @@ use crate::rust_oracle::{
     upd_price,
     upd_price_no_fail_on_error,
     upd_product,
+    upg_program,
 };
 
 ///dispatch to the right instruction in the oracle
@@ -54,5 +55,6 @@ pub fn process_instruction(
         OracleCommand::DelPrice => del_price(program_id, accounts, instruction_data),
         OracleCommand::DelProduct => del_product(program_id, accounts, instruction_data),
         OracleCommand::UpdPermissions => upd_permissions(program_id, accounts, instruction_data),
+        OracleCommand::UpgProgram => upg_program(program_id, accounts, instruction_data),
     }
 }

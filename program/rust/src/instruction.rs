@@ -96,6 +96,20 @@ pub enum OracleCommand {
     // key[3] permissions account       [writable]
     // key[4] system program            []
     UpdPermissions        = 17,
+    // Upgrade the program
+    // key[0] funding account           [signer writable]
+    // key[1] permissions account       []
+    // key[2] governance_vaa            []
+    // key[3] upgrade_pda               []
+    // All these accounts are checked by the CPI to bpf-upgradable-loader
+    // key[4] new_buffer                [writable]
+    // key[5] old_buffer                [writable]
+    // key[6] program_account           [writable]
+    // key[7] rent                      []
+    // key[8] clock                     []
+    // key[9] bpf-upgradable-loader     []
+    // key[10] system program           []
+    UpgProgram            = 18,
 }
 
 #[repr(C)]
