@@ -85,7 +85,7 @@ fn test_sma_epoch_transition() {
         );
         assert_eq!(price_data.time_machine.granularity, THIRTY_MINUTES);
         assert_eq!(price_data.time_machine.current_epoch_numerator, 0);
-        assert_eq!(price_data.time_machine.current_epoch_is_valid, true);
+        assert_eq!(price_data.time_machine.current_epoch_is_valid, false);
         assert_eq!(price_data.time_machine.current_epoch_denominator, 0);
         for i in 0..NUM_BUCKETS_THIRTY_MIN {
             assert_eq!(price_data.time_machine.running_sum_of_price_averages[i], 0);
@@ -118,7 +118,7 @@ fn test_sma_epoch_transition() {
         );
         assert_eq!(price_data.time_machine.granularity, THIRTY_MINUTES);
         assert_eq!(price_data.time_machine.current_epoch_numerator, 42 / 2 * 2);
-        assert_eq!(price_data.time_machine.current_epoch_is_valid, true);
+        assert_eq!(price_data.time_machine.current_epoch_is_valid, false);
         assert_eq!(price_data.time_machine.current_epoch_denominator, 2);
         for i in 0..NUM_BUCKETS_THIRTY_MIN {
             assert_eq!(price_data.time_machine.running_sum_of_price_averages[i], 0);
@@ -167,7 +167,7 @@ fn test_sma_epoch_transition() {
             price_data.time_machine.running_sum_of_price_averages[0],
             ((42 + (80 + 42) / 2) / 3)
         );
-        assert_eq!(price_data.time_machine.running_valid_epoch_counter[0], 1);
+        assert_eq!(price_data.time_machine.running_valid_epoch_counter[0], 0);
     }
 
     // Same epoch, invalid slot gap
@@ -211,7 +211,7 @@ fn test_sma_epoch_transition() {
             price_data.time_machine.running_sum_of_price_averages[0],
             ((42 + (80 + 42) / 2) / 3)
         );
-        assert_eq!(price_data.time_machine.running_valid_epoch_counter[0], 1);
+        assert_eq!(price_data.time_machine.running_valid_epoch_counter[0], 0);
     }
 
     // Next epoch, valid slot gap
@@ -256,13 +256,13 @@ fn test_sma_epoch_transition() {
             price_data.time_machine.running_sum_of_price_averages[0],
             ((42 + (80 + 42) / 2) / 3)
         );
-        assert_eq!(price_data.time_machine.running_valid_epoch_counter[0], 1);
+        assert_eq!(price_data.time_machine.running_valid_epoch_counter[0], 0);
 
         assert_eq!(
             price_data.time_machine.running_sum_of_price_averages[1],
             price_data.time_machine.running_sum_of_price_averages[0] + 60
         );
-        assert_eq!(price_data.time_machine.running_valid_epoch_counter[1], 1);
+        assert_eq!(price_data.time_machine.running_valid_epoch_counter[1], 0);
     }
 
     // A big gap in time (more than 1 epoch) but not in slots, all skipped epochs are "valid"
@@ -306,31 +306,31 @@ fn test_sma_epoch_transition() {
             price_data.time_machine.running_sum_of_price_averages[0],
             ((42 + (80 + 42) / 2) / 3)
         );
-        assert_eq!(price_data.time_machine.running_valid_epoch_counter[0], 1);
+        assert_eq!(price_data.time_machine.running_valid_epoch_counter[0], 0);
 
         assert_eq!(
             price_data.time_machine.running_sum_of_price_averages[1],
             price_data.time_machine.running_sum_of_price_averages[0] + 60
         );
-        assert_eq!(price_data.time_machine.running_valid_epoch_counter[1], 1);
+        assert_eq!(price_data.time_machine.running_valid_epoch_counter[1], 0);
 
         assert_eq!(
             price_data.time_machine.running_sum_of_price_averages[2],
             price_data.time_machine.running_sum_of_price_averages[1] + (60 * 28 + 1 * 41) / 29
         );
-        assert_eq!(price_data.time_machine.running_valid_epoch_counter[2], 1);
+        assert_eq!(price_data.time_machine.running_valid_epoch_counter[2], 0);
 
         assert_eq!(
             price_data.time_machine.running_sum_of_price_averages[3],
             price_data.time_machine.running_sum_of_price_averages[2] + 40
         );
-        assert_eq!(price_data.time_machine.running_valid_epoch_counter[3], 2);
+        assert_eq!(price_data.time_machine.running_valid_epoch_counter[3], 1);
 
         assert_eq!(
             price_data.time_machine.running_sum_of_price_averages[4],
             price_data.time_machine.running_sum_of_price_averages[3] + 40
         );
-        assert_eq!(price_data.time_machine.running_valid_epoch_counter[4], 3);
+        assert_eq!(price_data.time_machine.running_valid_epoch_counter[4], 2);
     }
 
     // Really big gap both in slots and epochs (the entire buffers gets rewritten)
@@ -375,31 +375,31 @@ fn test_sma_epoch_transition() {
             price_data.time_machine.running_sum_of_price_averages[0],
             ((42 + (80 + 42) / 2) / 3)
         );
-        assert_eq!(price_data.time_machine.running_valid_epoch_counter[0], 1);
+        assert_eq!(price_data.time_machine.running_valid_epoch_counter[0], 0);
 
         assert_eq!(
             price_data.time_machine.running_sum_of_price_averages[1],
             price_data.time_machine.running_sum_of_price_averages[0] + 60
         );
-        assert_eq!(price_data.time_machine.running_valid_epoch_counter[1], 1);
+        assert_eq!(price_data.time_machine.running_valid_epoch_counter[1], 0);
 
         assert_eq!(
             price_data.time_machine.running_sum_of_price_averages[2],
             price_data.time_machine.running_sum_of_price_averages[1] + (60 * 28 + 1 * 41) / 29
         );
-        assert_eq!(price_data.time_machine.running_valid_epoch_counter[2], 1);
+        assert_eq!(price_data.time_machine.running_valid_epoch_counter[2], 0);
 
         assert_eq!(
             price_data.time_machine.running_sum_of_price_averages[3],
             price_data.time_machine.running_sum_of_price_averages[2] + 40
         );
-        assert_eq!(price_data.time_machine.running_valid_epoch_counter[3], 2);
+        assert_eq!(price_data.time_machine.running_valid_epoch_counter[3], 1);
 
         assert_eq!(
             price_data.time_machine.running_sum_of_price_averages[4],
             price_data.time_machine.running_sum_of_price_averages[3] + 40
         );
-        assert_eq!(price_data.time_machine.running_valid_epoch_counter[4], 3);
+        assert_eq!(price_data.time_machine.running_valid_epoch_counter[4], 2);
     }
 
     update_clock_slot(&mut clock_account, 101);
@@ -441,7 +441,7 @@ fn test_sma_epoch_transition() {
             assert_eq!(
                 price_data.time_machine.running_valid_epoch_counter
                     [(i + 4) % NUM_BUCKETS_THIRTY_MIN],
-                3
+                2
             );
         }
     }

@@ -157,7 +157,7 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
             .unwrap();
 
 
-        let result = data.iter().fold((0, 0, true), |x: (u64, i128, bool), y| {
+        let mut result = data.iter().fold((0, 0, true), |x: (u64, i128, bool), y| {
             if !((left_bound > y.current_timestamp) || (right_bound <= y.previous_timestamp))
             //Check interval intersection
             {
@@ -170,6 +170,10 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
             }
             return x;
         });
+
+        if epoch_number == 0 {
+            result.2 = false;
+        }
         return result;
     }
 }

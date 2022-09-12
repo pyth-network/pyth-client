@@ -98,7 +98,7 @@ impl<const NUM_BUCKETS: usize> SmaTracker<NUM_BUCKETS> {
     pub fn initialize(&mut self, granularity: i64, threshold: u64) {
         self.threshold = threshold;
         self.granularity = granularity;
-        self.current_epoch_is_valid = true;
+        self.current_epoch_is_valid = false;
     }
 
     pub fn add_datapoint(&mut self, datapoint: &DataPoint) -> Result<(), OracleError> {
