@@ -9,7 +9,7 @@ use crate::time_machine_types::{
 
 #[derive(Clone, Debug, Copy)]
 struct DataEvent {
-    timegap:  i64,
+    time_gap: i64,
     slot_gap: u64,
     price:    i64,
 }
@@ -17,7 +17,7 @@ struct DataEvent {
 impl Arbitrary for DataEvent {
     fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         DataEvent {
-            timegap:  i64::from(u8::arbitrary(g)),
+            time_gap: i64::from(u8::arbitrary(g)),
             slot_gap: u64::from(u8::arbitrary(g)) + 1, /* Slot gap is always > 1, because there
                                                         * has been a succesful aggregation */
             price:    i64::arbitrary(g),
@@ -54,7 +54,7 @@ fn test_sma(input: Vec<DataEvent>) -> bool {
     for data_event in input.clone() {
         let datapoint = DataPoint {
             previous_timestamp: current_time,
-            current_timestamp:  current_time + data_event.timegap,
+            current_timestamp:  current_time + data_event.time_gap,
             slot_gap:           data_event.slot_gap,
             price:              data_event.price,
         };
@@ -65,7 +65,7 @@ fn test_sma(input: Vec<DataEvent>) -> bool {
         tracker4.add_datapoint(&datapoint).unwrap();
         tracker5.add_datapoint(&datapoint).unwrap();
         data.push(datapoint);
-        current_time += data_event.timegap;
+        current_time += data_event.time_gap;
 
         tracker1.check_current_epoch_fields(&data, current_time);
         tracker2.check_current_epoch_fields(&data, current_time);
