@@ -31,9 +31,10 @@ pub struct PriceAccountWrapper {
 
 #[derive(Debug)]
 pub struct DataPoint {
-    pub last_two_timestamps: (i64, i64),
-    pub slot_gap:            u64,
-    pub price:               i64,
+    pub previous_timestamp: i64,
+    pub current_timestamp:  i64,
+    pub slot_gap:           u64,
+    pub price:              i64,
 }
 
 impl PriceAccountWrapper {
@@ -47,9 +48,10 @@ impl PriceAccountWrapper {
     pub fn add_price_to_time_machine(&mut self) -> Result<(), OracleError> {
         #[cfg(test)]
         self.time_machine.add_datapoint( &DataPoint{
-            last_two_timestamps : (self.price_data.prev_timestamp_, self.price_data.timestamp_),
+            previous_timestamp : self.price_data.prev_timestamp_,
+            current_timestamp: self.price_data.timestamp_,
             slot_gap : (self.price_data.last_slot_ - self.price_data.prev_slot_),
-            price: self.price_data.prev_price_ /2  + self.price_data.agg_.price_ / 2 + (self.price_data.prev_price_ % 2) * (self.price_data.agg_.price_ % 2), // Hack to avoid overflow?
+            price: self.price_data.prev_price_ /2  + self.price_data.agg_.price_ / 2 + (self.price_data.prev_price_ % 2) * (self.price_data.agg_.price_ % 2), // Hack to avoid overflow
         }
         )?;
         Ok(())
@@ -59,15 +61,15 @@ impl PriceAccountWrapper {
 #[derive(Debug, Copy, Clone)]
 #[repr(C)]
 pub struct SmaTracker<const NUM_BUCKETS: usize> {
-    /// The maximum gap in slots for an epoch's sma to be valid, we set it to PC_MAX_SEND_LATENCY
+    /// The maximum gap in slots for an epoch's sma to be valid
     pub threshold:                     u64,
-    /// The legth of one sma epoch.
+    /// The length of one sma epoch.
     pub granularity:                   i64,
     /// Numerator for the current epoch (ex : slot_gap1 * price_1 + slot_gap2 * price_2 + slot_gap3
     /// * price_3)
     /// It can never overflow because :
     /// slot_gap1 * price_1 + slot_gap2 * price_2 + slot_gap3 * price_3 <= (slot_gap1 + slot_gap2 +
-    /// slot_gap3) * i64::MAX <= clock_slot * i128::MAX
+    /// slot_gap3) * i64::MAX <= clock_slot * i64::MAX <= i128::MAX
     pub current_epoch_numerator:       i128,
     /// Denominator for the current epoch (ex : slot_gap1 + slot_gap2 + slot_gap3)
     /// It can never overflow because : (slot_gap1 + slot_gap2 + slot_gap3) <= clock_slot
@@ -96,8 +98,8 @@ impl<const NUM_BUCKETS: usize> SmaTracker<NUM_BUCKETS> {
     }
 
     pub fn add_datapoint(&mut self, datapoint: &DataPoint) -> Result<(), OracleError> {
-        let epoch_0 = self.time_to_epoch(datapoint.last_two_timestamps.0)?;
-        let epoch_1 = self.time_to_epoch(datapoint.last_two_timestamps.1)?;
+        let epoch_0 = self.time_to_epoch(datapoint.previous_timestamp)?;
+        let epoch_1 = self.time_to_epoch(datapoint.current_timestamp)?;
 
         let datapoint_numerator = i128::from(datapoint.slot_gap) * i128::from(datapoint.price);
         let datapoint_denominator = datapoint.slot_gap;

@@ -53,9 +53,10 @@ fn test_sma(input: Vec<DataEvent>) -> bool {
     let mut current_time = 0i64;
     for data_event in input.clone() {
         let datapoint = DataPoint {
-            last_two_timestamps: (current_time, current_time + data_event.timegap),
-            slot_gap:            data_event.slot_gap,
-            price:               data_event.price,
+            previous_timestamp: current_time,
+            current_timestamp:  current_time + data_event.timegap,
+            slot_gap:           data_event.slot_gap,
+            price:              data_event.price,
         };
 
         tracker1.add_datapoint(&datapoint).unwrap();
@@ -151,7 +152,7 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
 
 
         let result = data.iter().fold((0, 0, true), |x: (u64, i128, bool), y| {
-            if !((left_bound > y.last_two_timestamps.1) || (right_bound <= y.last_two_timestamps.0))
+            if !((left_bound > y.current_timestamp) || (right_bound <= y.previous_timestamp))
             //Check interval intersection
             {
                 let is_valid = y.slot_gap <= self.threshold;
