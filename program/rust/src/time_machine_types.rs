@@ -77,11 +77,15 @@ pub struct SmaTracker<const NUM_BUCKETS: usize> {
     /// Whether the current epoch is valid (i.e. max slot_gap <= threshold) for all the epochs
     /// updates
     pub current_epoch_is_valid:        bool,
-    /// Stores the running sum of individual epoch averages, we can support u64::MAX epochs. And
-    /// clock.unix_timestamp <= u64::MAX so the clock will break first.
+    /// Stores the running sum of individual epoch averages ( = current_epoch_numerator /
+    /// current_epoch_denominator). Each term of the running sum is an average price, at most
+    /// i64::MAX. If N is the number of epochs elapsed, as long as N <= u64::MAX we have
+    /// running_sum_of_price_averages[i] <= N * i64::MAX <= u64::MAX * i64::MAX <= i128::MAX.
+    /// Therefore we can support at least u64::MAX epochs.
     pub running_sum_of_price_averages: [i128; NUM_BUCKETS],
-    /// Stores the number of valid epochs since inception, we can support u64::MAX epochs. And
-    /// clock.unix_timestamp <= u64::MAX so the clock will break first.
+    /// Stores the number of valid epochs since inception.
+    /// Each time, at most 1 is added to the sum, therefore we can support at least u64::MAX epochs
+    /// without overflow.
     pub running_valid_epoch_counter:   [u64; NUM_BUCKETS],
 }
 
@@ -120,13 +124,10 @@ impl<const NUM_BUCKETS: usize> SmaTracker<NUM_BUCKETS> {
             self.running_sum_of_price_averages[index] = self.running_sum_of_price_averages
                 [prev_index]
                 + self.current_epoch_numerator / i128::from(self.current_epoch_denominator);
-            // The fraction here is smaller than i64::MAX , so we can support u64::MAX updates
 
             if self.current_epoch_is_valid {
                 self.running_valid_epoch_counter[index] =
-                    self.running_valid_epoch_counter[prev_index] + 1; // Likewise can support
-                                                                      // u64::MAX
-                                                                      // epochs
+                    self.running_valid_epoch_counter[prev_index] + 1;
             } else {
                 self.running_valid_epoch_counter[index] =
                     self.running_valid_epoch_counter[prev_index]
