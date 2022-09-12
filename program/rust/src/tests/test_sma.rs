@@ -25,7 +25,13 @@ impl Arbitrary for DataEvent {
     }
 }
 
-
+/// This is a generative test for the sma struct. quickcheck will generate a series of
+/// vectors of DataEvents of different length. The generation is based on the arbitrary trait
+/// above.
+/// For each DataEvent :
+/// - time_gap is a random number between 0 and u8::MAX (255)
+/// - slot_gap is a random number between 1 and u8::MAX + 1 (256)
+/// - price is a random i64
 #[quickcheck]
 fn test_sma(input: Vec<DataEvent>) -> bool {
     // No gaps, no skipped epochs
