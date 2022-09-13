@@ -273,7 +273,12 @@ void user::parse_sub_price_sched( uint32_t tok, uint32_t itok )
     if ( 0 == (ntok = jp_.find_val( ptok, "account" ) ) ) break;
     pub_key pkey;
     pkey.init_from_text( jp_.get_str( ntok ) );
+
+    // Check to see if the price exists in either the primary or the secondary manager
     price *sptr = sptr_->get_price( pkey );
+    if ( !sptr && sptr_->has_secondary() ) {
+      sptr = sptr_->get_secondary()->get_price( pkey );
+    };
     if ( PC_UNLIKELY( !sptr ) ) { add_unknown_symbol(itok); return; }
 
     // add subscription
