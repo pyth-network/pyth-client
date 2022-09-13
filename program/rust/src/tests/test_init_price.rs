@@ -50,7 +50,7 @@ fn test_init_price() {
             &[funding_account.clone(), price_account.clone()],
             instruction_data
         ),
-        Err(ProgramError::InvalidArgument)
+        Err(OracleError::InvalidAccountHeader.into())
     );
 
     initialize_pyth_account_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
