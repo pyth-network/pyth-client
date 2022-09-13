@@ -82,6 +82,8 @@ pub fn check_valid_signable_account(
     )
 }
 
+/// Check that `account` is a valid signable pyth account or
+/// that `funding_account` is a signer and is permissioned by the `permission_account`
 pub fn check_valid_signable_account_or_permissioned_funding_account(
     program_id: &Pubkey,
     account: &AccountInfo,
@@ -199,7 +201,7 @@ pub fn check_valid_permissions_account(
     account: &AccountInfo,
 ) -> Result<(), ProgramError> {
     check_valid_readable_account(program_id, account)?;
-    let (permission_pda_address, _bump_seed) =
+    let (permission_pda_address, _) =
         Pubkey::find_program_address(&[PERMISSIONS_SEED.as_bytes()], program_id);
     pyth_assert(
         permission_pda_address == *account.key,
