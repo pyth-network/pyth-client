@@ -96,7 +96,7 @@ pub fn check_valid_signable_account_or_permissioned_funding_account(
         check_valid_funding_account(funding_account)?;
         pyth_assert(
             permissions_account_data.is_authorized(
-                funding_account,
+                funding_account.key,
                 OracleCommand::from_i32(cmd_hdr.command)
                     .ok_or(OracleError::UnrecognizedInstruction)?,
             ),

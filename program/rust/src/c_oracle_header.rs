@@ -7,7 +7,6 @@ use bytemuck::{
     Pod,
     Zeroable,
 };
-use solana_program::account_info::AccountInfo;
 use solana_program::pubkey::Pubkey;
 use std::mem::size_of;
 
@@ -93,9 +92,9 @@ pub struct PermissionAccount {
 }
 
 impl PermissionAccount {
-    pub fn is_authorized(&self, funding_account: &AccountInfo, command: OracleCommand) -> bool {
+    pub fn is_authorized(&self, key: &Pubkey, command: OracleCommand) -> bool {
         #[allow(clippy::match_like_matches_macro)]
-        match (*funding_account.key, command) {
+        match (*key, command) {
             (pubkey, OracleCommand::InitMapping) if pubkey == self.master_authority => true,
             _ => false,
         }
