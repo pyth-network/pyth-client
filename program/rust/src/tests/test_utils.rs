@@ -37,6 +37,7 @@ const UPPER_BOUND_OF_ALL_ACCOUNT_SIZES: usize = 20536;
 /// After instantiating the setup `AccountSetup` with `new` (that line will transfer the fields to
 /// the outer scope),  `to_account_info` gives the user an `AccountInfo` pointing to the fields of
 /// the AccountSetup.
+#[repr(align(16))] // On Apple systems this is needed to support u128 in the struct
 pub struct AccountSetup {
     key:     Pubkey,
     owner:   Pubkey,
@@ -123,6 +124,12 @@ impl AccountSetup {
 pub fn update_clock_slot(clock_account: &mut AccountInfo, slot: u64) {
     let mut clock_data = clock::Clock::from_account_info(clock_account).unwrap();
     clock_data.slot = slot;
+    clock_data.to_account_info(clock_account);
+}
+
+pub fn update_clock_timestamp(clock_account: &mut AccountInfo, timestamp: i64) {
+    let mut clock_data = clock::Clock::from_account_info(clock_account).unwrap();
+    clock_data.unix_timestamp = timestamp;
     clock_data.to_account_info(clock_account);
 }
 

@@ -46,6 +46,7 @@ use crate::utils::{
     check_valid_signable_account,
     check_valid_signable_account_or_permissioned_funding_account,
     check_valid_writable_account,
+    get_rent,
     is_component_update,
     pyth_assert,
     read_pc_str_t,
@@ -108,7 +109,7 @@ pub fn resize_price_account(
     match account_len {
         PriceAccount::MINIMUM_SIZE => {
             // Ensure account is still rent exempt after resizing
-            let rent: Rent = Default::default();
+            let rent: Rent = get_rent()?;
             let lamports_needed: u64 = rent
                 .minimum_balance(size_of::<PriceAccountWrapper>())
                 .saturating_sub(price_account_info.lamports());

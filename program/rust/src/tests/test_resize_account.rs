@@ -28,4 +28,10 @@ async fn test_resize_account() {
     assert!(sim.resize_price_account(&price1).await.is_ok());
     let price1_account = sim.get_account(price1.pubkey()).await.unwrap();
     assert_eq!(price1_account.data.len(), size_of::<PriceAccountWrapper>());
+    let price1_account_data = sim
+        .get_account_data_as::<PriceAccountWrapper>(price1.pubkey())
+        .await
+        .unwrap();
+    assert_eq!(price1_account_data.time_machine.granularity, 0);
+    assert_eq!(price1_account_data.time_machine.threshold, 0);
 }

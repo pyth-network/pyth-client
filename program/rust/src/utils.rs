@@ -62,11 +62,14 @@ pub fn check_valid_funding_account(account: &AccountInfo) -> Result<(), ProgramE
     )
 }
 
-pub fn valid_signable_account(program_id: &Pubkey, account: &AccountInfo) -> bool {
-    account.is_signer
+pub fn valid_signable_account(
+    program_id: &Pubkey,
+    account: &AccountInfo,
+) -> Result<bool, ProgramError> {
+    Ok(account.is_signer
         && account.is_writable
         && account.owner == program_id
-        && Rent::default().is_exempt(account.lamports(), account.data_len())
+        && get_rent()?.is_exempt(account.lamports(), account.data_len()))
 }
 
 pub fn check_valid_signable_account(
@@ -74,7 +77,7 @@ pub fn check_valid_signable_account(
     account: &AccountInfo,
 ) -> Result<(), ProgramError> {
     pyth_assert(
-        valid_signable_account(program_id, account),
+        valid_signable_account(program_id, account)?,
         OracleError::InvalidSignableAccount.into(),
     )
 }
@@ -151,10 +154,13 @@ pub fn read_pc_str_t(source: &[u8]) -> Result<&[u8], ProgramError> {
     }
 }
 
-fn valid_writable_account(program_id: &Pubkey, account: &AccountInfo) -> bool {
-    account.is_writable
+fn valid_writable_account(
+    program_id: &Pubkey,
+    account: &AccountInfo,
+) -> Result<bool, ProgramError> {
+    Ok(account.is_writable
         && account.owner == program_id
-        && Rent::default().is_exempt(account.lamports(), account.data_len())
+        && get_rent()?.is_exempt(account.lamports(), account.data_len()))
 }
 
 pub fn check_valid_writable_account(
@@ -162,7 +168,7 @@ pub fn check_valid_writable_account(
     account: &AccountInfo,
 ) -> Result<(), ProgramError> {
     pyth_assert(
-        valid_writable_account(program_id, account),
+        valid_writable_account(program_id, account)?,
         OracleError::InvalidWritableAccount.into(),
     )
 }
@@ -303,4 +309,15 @@ pub fn assign_owner<'a>(
         &[seeds],
     )?;
     Ok(())
+}
+
+#[cfg(not(test))]
+pub fn get_rent() -> Result<Rent, ProgramError> {
+    use solana_program::sysvar::Sysvar;
+    Rent::get()
+}
+
+#[cfg(test)]
+pub fn get_rent() -> Result<Rent, ProgramError> {
+    Ok(Rent::default())
 }
