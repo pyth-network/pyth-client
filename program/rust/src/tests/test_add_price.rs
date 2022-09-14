@@ -111,7 +111,7 @@ fn test_add_price() {
             &[funding_account.clone(), product_account.clone()],
             instruction_data_add_price
         ),
-        Err(ProgramError::InvalidArgument)
+        Err(OracleError::InvalidNumberOfAccounts.into())
     );
 
     // Price account is already initialized
@@ -191,6 +191,6 @@ fn test_add_price() {
             ],
             instruction_data_add_price
         ),
-        Err(ProgramError::InvalidArgument)
+        Err(OracleError::InvalidAccountHeader.into())
     );
 }

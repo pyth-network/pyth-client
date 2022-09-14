@@ -9,6 +9,7 @@ use crate::deserialize::{
     load_account_as_mut,
     load_checked,
 };
+use crate::error::OracleError;
 use crate::instruction::{
     CommandHeader,
     OracleCommand,
@@ -98,7 +99,7 @@ fn test_add_mapping() {
             ],
             instruction_data
         ),
-        Err(ProgramError::InvalidArgument)
+        Err(OracleError::InvalidAccountHeader.into())
     );
 
     {
