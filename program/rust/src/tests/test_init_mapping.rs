@@ -169,7 +169,7 @@ fn test_init_mapping() {
             ],
             instruction_data
         ),
-        Err(ProgramError::InvalidArgument)
+        Err(OracleError::InvalidAccountHeader.into())
     );
 
     {
