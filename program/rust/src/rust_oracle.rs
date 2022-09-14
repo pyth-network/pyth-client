@@ -92,7 +92,7 @@ pub fn resize_price_account(
 ) -> ProgramResult {
     let [funding_account_info, price_account_info, system_program] = match accounts {
         [x, y, z] => Ok([x, y, z]),
-        _ => Err(ProgramError::InvalidArgument),
+        _ => Err(OracleError::InvalidNumberOfAccounts),
     }?;
 
     check_valid_funding_account(funding_account_info)?;
@@ -150,7 +150,7 @@ pub fn init_mapping(
     let (funding_account, fresh_mapping_account, permissions_account_option) = match accounts {
         [x, y] => Ok((x, y, None)),
         [x, y, p] => Ok((x, y, Some(p))),
-        _ => Err(ProgramError::InvalidArgument),
+        _ => Err(OracleError::InvalidNumberOfAccounts),
     }?;
 
     let hdr = load::<CommandHeader>(instruction_data)?;
@@ -177,7 +177,7 @@ pub fn add_mapping(
 ) -> ProgramResult {
     let [funding_account, cur_mapping, next_mapping] = match accounts {
         [x, y, z] => Ok([x, y, z]),
-        _ => Err(ProgramError::InvalidArgument),
+        _ => Err(OracleError::InvalidNumberOfAccounts),
     }?;
 
     check_valid_funding_account(funding_account)?;
@@ -212,7 +212,7 @@ pub fn upd_price(
     let [funding_account, price_account, clock_account] = match accounts {
         [x, y, z] => Ok([x, y, z]),
         [x, y, _, z] => Ok([x, y, z]),
-        _ => Err(ProgramError::InvalidArgument),
+        _ => Err(OracleError::InvalidNumberOfAccounts),
     }?;
 
     check_valid_funding_account(funding_account)?;
@@ -328,7 +328,7 @@ pub fn add_price(
 
     let [funding_account, product_account, price_account] = match accounts {
         [x, y, z] => Ok([x, y, z]),
-        _ => Err(ProgramError::InvalidArgument),
+        _ => Err(OracleError::InvalidNumberOfAccounts),
     }?;
 
     check_valid_funding_account(funding_account)?;
@@ -363,7 +363,7 @@ pub fn del_price(
 ) -> ProgramResult {
     let [funding_account, product_account, price_account] = match accounts {
         [w, x, y] => Ok([w, x, y]),
-        _ => Err(ProgramError::InvalidArgument),
+        _ => Err(OracleError::InvalidNumberOfAccounts),
     }?;
 
     check_valid_funding_account(funding_account)?;
@@ -408,7 +408,7 @@ pub fn init_price(
 
     let [funding_account, price_account] = match accounts {
         [x, y] => Ok([x, y]),
-        _ => Err(ProgramError::InvalidArgument),
+        _ => Err(OracleError::InvalidNumberOfAccounts),
     }?;
 
     check_valid_funding_account(funding_account)?;
@@ -478,7 +478,7 @@ pub fn add_publisher(
 
     let [funding_account, price_account] = match accounts {
         [x, y] => Ok([x, y]),
-        _ => Err(ProgramError::InvalidArgument),
+        _ => Err(OracleError::InvalidNumberOfAccounts),
     }?;
 
     check_valid_funding_account(funding_account)?;
@@ -528,7 +528,7 @@ pub fn del_publisher(
 
     let [funding_account, price_account] = match accounts {
         [x, y] => Ok([x, y]),
-        _ => Err(ProgramError::InvalidArgument),
+        _ => Err(OracleError::InvalidNumberOfAccounts),
     }?;
 
     check_valid_funding_account(funding_account)?;
@@ -564,7 +564,7 @@ pub fn add_product(
 ) -> ProgramResult {
     let [funding_account, tail_mapping_account, new_product_account] = match accounts {
         [x, y, z] => Ok([x, y, z]),
-        _ => Err(ProgramError::InvalidArgument),
+        _ => Err(OracleError::InvalidNumberOfAccounts),
     }?;
 
     check_valid_funding_account(funding_account)?;
@@ -601,7 +601,7 @@ pub fn upd_product(
 ) -> ProgramResult {
     let [funding_account, product_account] = match accounts {
         [x, y] => Ok([x, y]),
-        _ => Err(ProgramError::InvalidArgument),
+        _ => Err(OracleError::InvalidNumberOfAccounts),
     }?;
 
     check_valid_funding_account(funding_account)?;
@@ -666,7 +666,7 @@ pub fn set_min_pub(
 
     let [funding_account, price_account] = match accounts {
         [x, y] => Ok([x, y]),
-        _ => Err(ProgramError::InvalidArgument),
+        _ => Err(OracleError::InvalidNumberOfAccounts),
     }?;
 
     check_valid_funding_account(funding_account)?;
@@ -692,7 +692,7 @@ pub fn del_product(
 ) -> ProgramResult {
     let [funding_account, mapping_account, product_account] = match accounts {
         [w, x, y] => Ok([w, x, y]),
-        _ => Err(ProgramError::InvalidArgument),
+        _ => Err(OracleError::InvalidNumberOfAccounts),
     }?;
 
     check_valid_funding_account(funding_account)?;
@@ -760,7 +760,7 @@ pub fn upd_permissions(
     let [funding_account, program_account, programdata_account, permissions_account, system_program] =
         match accounts {
             [v, w, x, y, z] => Ok([v, w, x, y, z]),
-            _ => Err(ProgramError::InvalidArgument),
+            _ => Err(OracleError::InvalidNumberOfAccounts),
         }?;
 
     let cmd_args = load::<UpdPermissionsArgs>(instruction_data)?;

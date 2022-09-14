@@ -40,10 +40,14 @@ pub enum OracleError {
     InvalidUpgradeAuthority        = 614,
     #[error("FailedPdaVerification")]
     InvalidPda                     = 615,
+    #[error("InvalidAccountHeader")]
+    InvalidAccountHeader           = 616,
+    #[error("InvalidNumberOfAccounts")]
+    InvalidNumberOfAccounts        = 617,
     #[error("InvalidReadableAccount")]
-    InvalidReadableAccount         = 616,
+    InvalidReadableAccount         = 618,
     #[error("PermissionViolation")]
-    PermissionViolation            = 617,
+    PermissionViolation            = 619,
 }
 
 impl From<OracleError> for ProgramError {

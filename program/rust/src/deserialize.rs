@@ -89,7 +89,7 @@ pub fn load_checked<'a, T: PythAccount>(
             account_header.magic_number == PC_MAGIC
                 && account_header.version == version
                 && account_header.account_type == T::ACCOUNT_TYPE,
-            ProgramError::InvalidArgument,
+            OracleError::InvalidAccountHeader.into(),
         )?;
     }
 

@@ -18,7 +18,6 @@ use crate::processor::process_instruction;
 use crate::tests::test_utils::AccountSetup;
 use crate::utils::clear_account;
 use bytemuck::bytes_of;
-use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -69,7 +68,7 @@ fn test_init_mapping() {
 
     assert_eq!(
         process_instruction(&program_id, &[funding_account.clone()], instruction_data),
-        Err(ProgramError::InvalidArgument)
+        Err(OracleError::InvalidNumberOfAccounts.into())
     );
 
     funding_account.is_signer = false;
