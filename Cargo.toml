@@ -1,4 +1,6 @@
 [workspace]
 members = [
+  "program/remote-governor",
   "program/rust"
 ]
+exclude = []
