@@ -44,6 +44,10 @@ pub enum OracleError {
     InvalidAccountHeader           = 616,
     #[error("InvalidNumberOfAccounts")]
     InvalidNumberOfAccounts        = 617,
+    #[error("InvalidReadableAccount")]
+    InvalidReadableAccount         = 618,
+    #[error("PermissionViolation")]
+    PermissionViolation            = 619,
 }
 
 impl From<OracleError> for ProgramError {

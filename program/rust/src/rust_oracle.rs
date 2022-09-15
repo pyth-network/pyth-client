@@ -44,6 +44,7 @@ use crate::utils::{
     check_is_upgrade_authority_for_program,
     check_valid_funding_account,
     check_valid_signable_account,
+    check_valid_signable_account_or_permissioned_funding_account,
     check_valid_writable_account,
     get_rent,
     is_component_update,
@@ -146,16 +147,24 @@ pub fn init_mapping(
     accounts: &[AccountInfo],
     instruction_data: &[u8],
 ) -> ProgramResult {
-    let [funding_account, fresh_mapping_account] = match accounts {
-        [x, y] => Ok([x, y]),
+    let (funding_account, fresh_mapping_account, permissions_account_option) = match accounts {
+        [x, y] => Ok((x, y, None)),
+        [x, y, p] => Ok((x, y, Some(p))),
         _ => Err(OracleError::InvalidNumberOfAccounts),
     }?;
 
+    let hdr = load::<CommandHeader>(instruction_data)?;
+
     check_valid_funding_account(funding_account)?;
-    check_valid_signable_account(program_id, fresh_mapping_account)?;
+    check_valid_signable_account_or_permissioned_funding_account(
+        program_id,
+        fresh_mapping_account,
+        funding_account,
+        permissions_account_option,
+        hdr,
+    )?;
 
     // Initialize by setting to zero again (just in case) and populating the account header
-    let hdr = load::<CommandHeader>(instruction_data)?;
     initialize_pyth_account_checked::<MappingAccount>(fresh_mapping_account, hdr.version)?;
 
     Ok(())
