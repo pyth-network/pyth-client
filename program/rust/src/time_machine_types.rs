@@ -39,12 +39,16 @@ pub struct DataPoint {
 
 impl PriceAccountWrapper {
     pub fn initialize_time_machine(&mut self) -> Result<(), OracleError> {
+        // This is only enabled in tests while in development
+        #[cfg(test)]
         self.time_machine
             .initialize(THIRTY_MINUTES, PC_MAX_SEND_LATENCY.into());
         Ok(())
     }
 
     pub fn add_price_to_time_machine(&mut self) -> Result<(), OracleError> {
+        // This is only enabled in tests while in development
+        #[cfg(test)]
         self.time_machine.add_datapoint( &DataPoint{
             previous_timestamp : self.price_data.prev_timestamp_,
             current_timestamp: self.price_data.timestamp_,
