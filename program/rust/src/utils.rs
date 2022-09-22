@@ -29,6 +29,7 @@ use solana_program::system_instruction::{
     assign,
     transfer,
 };
+use solana_program::system_program;
 use solana_program::sysvar::rent::Rent;
 use std::borrow::BorrowMut;
 
@@ -52,7 +53,7 @@ pub fn clear_account(account: &AccountInfo) -> Result<(), ProgramError> {
 }
 
 pub fn valid_funding_account(account: &AccountInfo) -> bool {
-    account.is_signer && account.is_writable
+    account.is_signer && account.is_writable && *account.owner == system_program::id()
 }
 
 pub fn check_valid_funding_account(account: &AccountInfo) -> Result<(), ProgramError> {
