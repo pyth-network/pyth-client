@@ -127,10 +127,16 @@ pub fn resize_price_account(
 
             // Check that everything is ok
             check_valid_signable_account(program_id, price_account_info)?;
-            let mut price_account =
-                load_checked::<PriceAccountWrapper>(price_account_info, PC_VERSION)?;
-            // Initialize Time Machine
-            price_account.initialize_time_machine()?;
+
+            #[cfg(test)]
+            // Sma feature disabled except in tests
+            {
+                let mut price_account =
+                    load_checked::<PriceAccountWrapper>(price_account_info, PC_VERSION)?;
+                // Initialize Time Machine
+                price_account.initialize_time_machine()?;
+            }
+
             Ok(())
         }
         PriceAccountWrapper::MINIMUM_SIZE => Ok(()),
@@ -251,8 +257,10 @@ pub fn upd_price(
     }
 
     // Try to update the aggregate
+    #[allow(unused_variables)]
     let mut aggregate_updated = false;
     if clock.slot > latest_aggregate_price.pub_slot_ {
+        #[allow(unused_assignments)]
         unsafe {
             aggregate_updated = c_upd_aggregate(
                 price_account.try_borrow_mut_data()?.as_mut_ptr(),
@@ -262,11 +270,15 @@ pub fn upd_price(
         }
     }
 
-    let account_len = price_account.try_data_len()?;
-    if aggregate_updated && account_len == PriceAccountWrapper::MINIMUM_SIZE {
-        let mut price_account =
-            load_checked::<PriceAccountWrapper>(price_account, cmd_args.header.version)?;
-        price_account.add_price_to_time_machine()?;
+    #[cfg(test)]
+    // Sma feature disabled in production for now
+    {
+        let account_len = price_account.try_data_len()?;
+        if aggregate_updated && account_len == PriceAccountWrapper::MINIMUM_SIZE {
+            let mut price_account =
+                load_checked::<PriceAccountWrapper>(price_account, cmd_args.header.version)?;
+            price_account.add_price_to_time_machine()?;
+        }
     }
 
     // Try to update the publisher's price
