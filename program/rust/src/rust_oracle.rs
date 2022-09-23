@@ -43,7 +43,6 @@ use crate::utils::{
     check_exponent_range,
     check_is_upgrade_authority_for_program,
     check_valid_funding_account,
-    check_valid_signable_account,
     check_valid_signable_account_or_permissioned_funding_account,
     check_valid_writable_account,
     get_rent,
