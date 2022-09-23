@@ -90,11 +90,12 @@ pub fn resize_price_account(
     accounts: &[AccountInfo],
     instruction_data: &[u8],
 ) -> ProgramResult {
-    let (funding_account, price_account, system_program, permissions_account_option) = match accounts {
-        [x, y, z] => Ok((x, y, z, None)),
-        [x, y, z, p] => Ok((x, y, z, Some(p))),
-        _ => Err(OracleError::InvalidNumberOfAccounts),
-    }?;
+    let (funding_account, price_account, system_program, permissions_account_option) =
+        match accounts {
+            [x, y, z] => Ok((x, y, z, None)),
+            [x, y, z, p] => Ok((x, y, z, Some(p))),
+            _ => Err(OracleError::InvalidNumberOfAccounts),
+        }?;
 
     let hdr = load::<CommandHeader>(instruction_data)?;
 
@@ -219,7 +220,7 @@ pub fn add_mapping(
         permissions_account_option,
         hdr,
     )?;
-    
+
     let mut cur_mapping = load_checked::<MappingAccount>(cur_mapping, hdr.version)?;
     pyth_assert(
         cur_mapping.number_of_products == PC_MAP_TABLE_SIZE
@@ -367,11 +368,12 @@ pub fn add_price(
     )?;
 
 
-    let (funding_account, product_account, price_account, permissions_account_option) = match accounts {
-        [x, y, z] => Ok((x, y, z, None)),
-        [x, y, z, p] => Ok((x, y, z, Some(p))),
-        _ => Err(OracleError::InvalidNumberOfAccounts),
-    }?;
+    let (funding_account, product_account, price_account, permissions_account_option) =
+        match accounts {
+            [x, y, z] => Ok((x, y, z, None)),
+            [x, y, z, p] => Ok((x, y, z, Some(p))),
+            _ => Err(OracleError::InvalidNumberOfAccounts),
+        }?;
 
     check_valid_funding_account(funding_account)?;
     check_valid_signable_account_or_permissioned_funding_account(
@@ -415,11 +417,12 @@ pub fn del_price(
     accounts: &[AccountInfo],
     instruction_data: &[u8],
 ) -> ProgramResult {
-    let (funding_account, product_account, price_account, permissions_account_option) = match accounts {
-        [w, x, y] => Ok((w, x, y, None)),
-        [w, x, y, p] => Ok((w, x, y, Some(p))),
-        _ => Err(OracleError::InvalidNumberOfAccounts),
-    }?;
+    let (funding_account, product_account, price_account, permissions_account_option) =
+        match accounts {
+            [w, x, y] => Ok((w, x, y, None)),
+            [w, x, y, p] => Ok((w, x, y, Some(p))),
+            _ => Err(OracleError::InvalidNumberOfAccounts),
+        }?;
 
     let cmd_args = load::<CommandHeader>(instruction_data)?;
 
@@ -429,18 +432,17 @@ pub fn del_price(
         product_account,
         funding_account,
         permissions_account_option,
-        &cmd_args,
+        cmd_args,
     )?;
     check_valid_signable_account_or_permissioned_funding_account(
         program_id,
         price_account,
         funding_account,
         permissions_account_option,
-        &cmd_args,
+        cmd_args,
     )?;
 
     {
-        
         let mut product_data = load_checked::<ProductAccount>(product_account, cmd_args.version)?;
         let price_data = load_checked::<PriceAccount>(price_account, cmd_args.version)?;
         pyth_assert(
@@ -654,11 +656,12 @@ pub fn add_product(
     accounts: &[AccountInfo],
     instruction_data: &[u8],
 ) -> ProgramResult {
-    let (funding_account, tail_mapping_account, new_product_account, permissions_account_option) = match accounts {
-        [x, y, z] => Ok((x, y, z, None)),
-        [x, y, z, p] => Ok((x, y, z, Some(p))),
-        _ => Err(OracleError::InvalidNumberOfAccounts),
-    }?;
+    let (funding_account, tail_mapping_account, new_product_account, permissions_account_option) =
+        match accounts {
+            [x, y, z] => Ok((x, y, z, None)),
+            [x, y, z, p] => Ok((x, y, z, Some(p))),
+            _ => Err(OracleError::InvalidNumberOfAccounts),
+        }?;
 
     let hdr = load::<CommandHeader>(instruction_data)?;
 
@@ -668,17 +671,17 @@ pub fn add_product(
         tail_mapping_account,
         funding_account,
         permissions_account_option,
-        &hdr,
+        hdr,
     )?;
     check_valid_signable_account_or_permissioned_funding_account(
         program_id,
         new_product_account,
         funding_account,
         permissions_account_option,
-        &hdr,
+        hdr,
     )?;
 
-   
+
     let mut mapping_data = load_checked::<MappingAccount>(tail_mapping_account, hdr.version)?;
     // The mapping account must have free space to add the product account
     pyth_assert(
@@ -720,10 +723,10 @@ pub fn upd_product(
         product_account,
         funding_account,
         permissions_account_option,
-        &hdr,
+        hdr,
     )?;
 
-    
+
     {
         // Validate that product_account contains the appropriate account header
         let mut _product_data = load_checked::<ProductAccount>(product_account, hdr.version)?;
@@ -814,11 +817,12 @@ pub fn del_product(
     accounts: &[AccountInfo],
     instruction_data: &[u8],
 ) -> ProgramResult {
-    let (funding_account, mapping_account, product_account, permissions_account_option) = match accounts {
-        [w, x, y] => Ok((w, x, y, None)),
-        [w, x, y, p] => Ok((w, x, y, Some(p))),
-        _ => Err(OracleError::InvalidNumberOfAccounts),
-    }?;
+    let (funding_account, mapping_account, product_account, permissions_account_option) =
+        match accounts {
+            [w, x, y] => Ok((w, x, y, None)),
+            [w, x, y, p] => Ok((w, x, y, Some(p))),
+            _ => Err(OracleError::InvalidNumberOfAccounts),
+        }?;
 
     let cmd_args = load::<CommandHeader>(instruction_data)?;
 
@@ -828,7 +832,7 @@ pub fn del_product(
         mapping_account,
         funding_account,
         permissions_account_option,
-        &cmd_args,
+        cmd_args,
     )?;
 
     check_valid_signable_account_or_permissioned_funding_account(
@@ -836,12 +840,11 @@ pub fn del_product(
         product_account,
         funding_account,
         permissions_account_option,
-        &cmd_args,
+        cmd_args,
     )?;
 
 
     {
-        
         let mut mapping_data = load_checked::<MappingAccount>(mapping_account, cmd_args.version)?;
         let product_data = load_checked::<ProductAccount>(product_account, cmd_args.version)?;
 
