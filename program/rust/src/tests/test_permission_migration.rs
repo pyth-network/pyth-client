@@ -3,14 +3,9 @@ use crate::c_oracle_header::{
     PermissionAccount,
     PriceAccount,
     ProductAccount,
-    PC_ACCTYPE_MAPPING,
-    PC_MAGIC,
     PC_VERSION,
 };
-use crate::deserialize::{
-    initialize_pyth_account_checked,
-    load_account_as,
-};
+use crate::deserialize::initialize_pyth_account_checked;
 use crate::error::OracleError;
 use crate::instruction::OracleCommand::{
     AddMapping,
@@ -36,11 +31,8 @@ use crate::instruction::{
 };
 use crate::processor::process_instruction;
 use crate::tests::test_utils::AccountSetup;
-use crate::utils::clear_account;
 use bytemuck::bytes_of;
 use solana_program::pubkey::Pubkey;
-use std::cell::RefCell;
-use std::rc::Rc;
 
 #[test]
 fn test_permission_migration() {
@@ -238,6 +230,7 @@ fn test_permission_migration() {
             &[
                 funding_account.clone(),
                 price_account.clone(),
+                price_account.clone(), // Mock system program
                 permissions_account.clone()
             ],
             bytes_of::<CommandHeader>(&ResizePriceAccount.into())
