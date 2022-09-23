@@ -1,8 +1,6 @@
 #![deny(warnings)]
 // Allow non upper case globals from C
 #![allow(non_upper_case_globals)]
-// Allow using the solana_program::entrypoint::deserialize function
-#![allow(clippy::not_unsafe_ptr_arg_deref)]
 
 mod c_oracle_header;
 mod deserialize;
