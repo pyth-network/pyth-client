@@ -1,15 +1,14 @@
 use {
     crate::{
-        c_oracle_header::{
+        accounts::{
+            clear_account,
             MappingAccount,
             PriceAccount,
             ProductAccount,
-            PC_VERSION,
+            PythAccount,
         },
-        deserialize::{
-            initialize_pyth_account_checked,
-            load_checked,
-        },
+        c_oracle_header::PC_VERSION,
+        deserialize::load_checked,
         error::OracleError,
         instruction::{
             AddPriceArgs,
@@ -18,7 +17,6 @@ use {
         },
         processor::process_instruction,
         tests::test_utils::AccountSetup,
-        utils::clear_account,
     },
     bytemuck::bytes_of,
     solana_program::{
@@ -46,7 +44,7 @@ fn test_add_price() {
 
     let mut mapping_setup = AccountSetup::new::<MappingAccount>(&program_id);
     let mapping_account = mapping_setup.as_account_info();
-    initialize_pyth_account_checked::<MappingAccount>(&mapping_account, PC_VERSION).unwrap();
+    MappingAccount::initialize(&mapping_account, PC_VERSION).unwrap();
 
     let mut product_setup = AccountSetup::new::<ProductAccount>(&program_id);
     let product_account = product_setup.as_account_info();

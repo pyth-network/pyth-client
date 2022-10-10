@@ -1,11 +1,11 @@
 use {
     crate::{
-        c_oracle_header::{
+        accounts::{
             AccountHeader,
             PermissionAccount,
-            MAX_NUM_DECIMALS,
             PERMISSIONS_SEED,
         },
+        c_oracle_header::MAX_NUM_DECIMALS,
         deserialize::{
             load_account_as,
             load_checked,
@@ -21,21 +21,12 @@ use {
     solana_program::{
         account_info::AccountInfo,
         bpf_loader_upgradeable::UpgradeableLoaderState,
-        program::{
-            invoke,
-            invoke_signed,
-        },
+        program::invoke,
         program_error::ProgramError,
-        program_memory::sol_memset,
         pubkey::Pubkey,
-        system_instruction::{
-            allocate,
-            assign,
-            transfer,
-        },
+        system_instruction::transfer,
         sysvar::rent::Rent,
     },
-    std::borrow::BorrowMut,
 };
 
 
@@ -45,16 +36,6 @@ pub fn pyth_assert(condition: bool, error_code: ProgramError) -> Result<(), Prog
     } else {
         Result::Ok(())
     }
-}
-
-/// Sets the data of account to all-zero
-pub fn clear_account(account: &AccountInfo) -> Result<(), ProgramError> {
-    let mut data = account
-        .try_borrow_mut_data()
-        .map_err(|_| ProgramError::InvalidArgument)?;
-    let length = data.len();
-    sol_memset(data.borrow_mut(), 0, length);
-    Ok(())
 }
 
 pub fn valid_funding_account(account: &AccountInfo) -> bool {
@@ -291,36 +272,6 @@ pub fn send_lamports<'a>(
     invoke(
         &transfer_instruction,
         &[from.clone(), to.clone(), system_program.clone()],
-    )?;
-    Ok(())
-}
-
-pub fn allocate_data<'a>(
-    account: &AccountInfo<'a>,
-    system_program: &AccountInfo<'a>,
-    space: usize,
-    seeds: &[&[u8]],
-) -> Result<(), ProgramError> {
-    let allocate_instruction = allocate(account.key, try_convert(space)?);
-    invoke_signed(
-        &allocate_instruction,
-        &[account.clone(), system_program.clone()],
-        &[seeds],
-    )?;
-    Ok(())
-}
-
-pub fn assign_owner<'a>(
-    account: &AccountInfo<'a>,
-    owner: &Pubkey,
-    system_program: &AccountInfo<'a>,
-    seeds: &[&[u8]],
-) -> Result<(), ProgramError> {
-    let assign_instruction = assign(account.key, owner);
-    invoke_signed(
-        &assign_instruction,
-        &[account.clone(), system_program.clone()],
-        &[seeds],
     )?;
     Ok(())
 }

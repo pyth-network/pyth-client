@@ -1,12 +1,12 @@
 use {
     crate::{
+        accounts::PythAccount,
         c_oracle_header::{
             PC_MAX_SEND_LATENCY,
             PC_STATUS_TRADING,
             PC_VERSION,
         },
         deserialize::{
-            initialize_pyth_account_checked,
             load_checked,
             load_mut,
         },
@@ -43,7 +43,7 @@ fn test_sma_epoch_transition() {
     let mut price_setup = AccountSetup::new::<PriceAccountWrapper>(&program_id);
     let mut price_account = price_setup.as_account_info();
     price_account.is_signer = false;
-    initialize_pyth_account_checked::<PriceAccountWrapper>(&price_account, PC_VERSION).unwrap();
+    PriceAccountWrapper::initialize(&price_account, PC_VERSION).unwrap();
 
 
     {

@@ -18,7 +18,7 @@ use {
 
 /// WARNING : NEW COMMANDS SHOULD BE ADDED AT THE END OF THE LIST
 #[repr(i32)]
-#[derive(FromPrimitive, ToPrimitive)]
+#[derive(PartialEq, Eq, FromPrimitive, ToPrimitive)]
 pub enum OracleCommand {
     // initialize first mapping list account
     // account[0] funding account       [signer writable]

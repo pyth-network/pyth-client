@@ -1,6 +1,6 @@
 use {
     crate::{
-        c_oracle_header::{
+        accounts::{
             AccountHeader,
             MappingAccount,
             PermissionAccount,
@@ -10,13 +10,14 @@ use {
             PriceInfo,
             ProductAccount,
             PythAccount,
+        },
+        c_oracle_header::{
             PC_COMP_SIZE,
             PC_MAP_TABLE_SIZE,
             PC_VERSION,
             PRICE_ACCOUNT_SIZE,
         },
         deserialize::{
-            initialize_pyth_account_checked,
             load,
             load_checked,
         },
@@ -87,7 +88,7 @@ fn test_offsets() {
     let mut price_setup = AccountSetup::new::<PriceAccount>(&program_id);
     let price_account = price_setup.as_account_info();
 
-    initialize_pyth_account_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+    PriceAccount::initialize(&price_account, PC_VERSION).unwrap();
     let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
 
     assert_eq!(
@@ -98,7 +99,7 @@ fn test_offsets() {
     let mut mapping_setup = AccountSetup::new::<MappingAccount>(&program_id);
     let mapping_account = mapping_setup.as_account_info();
 
-    initialize_pyth_account_checked::<MappingAccount>(&mapping_account, PC_VERSION).unwrap();
+    MappingAccount::initialize(&mapping_account, PC_VERSION).unwrap();
     let mapping_data = load_checked::<MappingAccount>(&mapping_account, PC_VERSION).unwrap();
 
     assert_eq!(

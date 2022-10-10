@@ -1,6 +1,6 @@
 use {
     crate::{
-        c_oracle_header::{
+        accounts::{
             MappingAccount,
             PermissionAccount,
             PriceAccount,
@@ -9,6 +9,9 @@ use {
             PriceInfo,
             ProductAccount,
             PythAccount,
+            PERMISSIONS_SEED,
+        },
+        c_oracle_header::{
             MAX_CI_DIVISOR,
             PC_COMP_SIZE,
             PC_MAP_TABLE_SIZE,
@@ -16,11 +19,8 @@ use {
             PC_PTYPE_UNKNOWN,
             PC_STATUS_UNKNOWN,
             PC_VERSION,
-            PERMISSIONS_SEED,
         },
         deserialize::{
-            create_pda_if_needed,
-            initialize_pyth_account_checked,
             load,
             load_checked,
         },
@@ -190,7 +190,7 @@ pub fn init_mapping(
     )?;
 
     // Initialize by setting to zero again (just in case) and populating the account header
-    initialize_pyth_account_checked::<MappingAccount>(fresh_mapping_account, hdr.version)?;
+    MappingAccount::initialize(fresh_mapping_account, hdr.version)?;
 
     Ok(())
 }
@@ -231,7 +231,7 @@ pub fn add_mapping(
         ProgramError::InvalidArgument,
     )?;
 
-    initialize_pyth_account_checked::<MappingAccount>(next_mapping, hdr.version)?;
+    MappingAccount::initialize(next_mapping, hdr.version)?;
     cur_mapping.next_mapping_account = *next_mapping.key;
 
     Ok(())
@@ -397,8 +397,7 @@ pub fn add_price(
     let mut product_data =
         load_checked::<ProductAccount>(product_account, cmd_args.header.version)?;
 
-    let mut price_data =
-        initialize_pyth_account_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
+    let mut price_data = PriceAccount::initialize(price_account, cmd_args.header.version)?;
     price_data.exponent = cmd_args.exponent;
     price_data.price_type = cmd_args.price_type;
     price_data.product_account = *product_account.key;
@@ -692,7 +691,7 @@ pub fn add_product(
         ProgramError::InvalidArgument,
     )?;
 
-    initialize_pyth_account_checked::<ProductAccount>(new_product_account, hdr.version)?;
+    ProductAccount::initialize(new_product_account, hdr.version)?;
 
     let current_index: usize = try_convert(mapping_data.number_of_products)?;
     mapping_data.products_list[current_index] = *new_product_account.key;
@@ -933,8 +932,8 @@ pub fn upd_permissions(
     )?;
 
 
-    // Create permissions account if it doesn't exist
-    create_pda_if_needed::<PermissionAccount>(
+    // Create PermissionAccount if it doesn't exist
+    PermissionAccount::initialize_pda(
         permissions_account,
         funding_account,
         system_program,

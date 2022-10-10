@@ -1,16 +1,17 @@
 use {
     crate::{
-        c_oracle_header::{
+        accounts::{
+            clear_account,
             MappingAccount,
             PermissionAccount,
+            PythAccount,
+        },
+        c_oracle_header::{
             PC_ACCTYPE_MAPPING,
             PC_MAGIC,
             PC_VERSION,
         },
-        deserialize::{
-            initialize_pyth_account_checked,
-            load_account_as,
-        },
+        deserialize::load_account_as,
         error::OracleError,
         instruction::{
             CommandHeader,
@@ -18,7 +19,6 @@ use {
         },
         processor::process_instruction,
         tests::test_utils::AccountSetup,
-        utils::clear_account,
     },
     bytemuck::bytes_of,
     solana_program::pubkey::Pubkey,
@@ -180,8 +180,7 @@ fn test_init_mapping() {
 
     {
         let mut permissions_account_data =
-            initialize_pyth_account_checked::<PermissionAccount>(&permissions_account, PC_VERSION)
-                .unwrap();
+            PermissionAccount::initialize(&permissions_account, PC_VERSION).unwrap();
         permissions_account_data.master_authority = *funding_account.key;
     }
 
@@ -205,11 +204,7 @@ fn test_init_mapping() {
 
     {
         let mut impersonating_permission_account_data =
-            initialize_pyth_account_checked::<PermissionAccount>(
-                &impersonating_permission_account,
-                PC_VERSION,
-            )
-            .unwrap();
+            PermissionAccount::initialize(&impersonating_permission_account, PC_VERSION).unwrap();
         impersonating_permission_account_data.master_authority = *attacker_account.key;
     }
 

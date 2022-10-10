@@ -1,13 +1,13 @@
 use {
     crate::{
-        c_oracle_header::{
+        accounts::{
             MappingAccount,
             PermissionAccount,
             PriceAccount,
             ProductAccount,
-            PC_VERSION,
+            PythAccount,
         },
-        deserialize::initialize_pyth_account_checked,
+        c_oracle_header::PC_VERSION,
         error::OracleError,
         instruction::{
             AddPriceArgs,
@@ -72,8 +72,7 @@ fn test_permission_migration() {
 
     {
         let mut permissions_account_data =
-            initialize_pyth_account_checked::<PermissionAccount>(&permissions_account, PC_VERSION)
-                .unwrap();
+            PermissionAccount::initialize(&permissions_account, PC_VERSION).unwrap();
         permissions_account_data.master_authority = *funding_account.key;
     }
 

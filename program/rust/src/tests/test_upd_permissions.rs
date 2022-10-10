@@ -1,9 +1,6 @@
+use crate::accounts::{PermissionAccount, PythAccount};
 use {
     crate::{
-        c_oracle_header::{
-            PermissionAccount,
-            PythAccount,
-        },
         deserialize::load,
         error::OracleError,
         instruction::{

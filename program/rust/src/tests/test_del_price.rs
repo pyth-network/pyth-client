@@ -1,8 +1,7 @@
+use crate::accounts::ProductAccount;
+
 use {
-    crate::{
-        c_oracle_header::ProductAccount,
-        tests::pyth_simulator::PythSimulator,
-    },
+    crate::tests::pyth_simulator::PythSimulator,
     solana_program::pubkey::Pubkey,
     solana_sdk::signer::Signer,
 };

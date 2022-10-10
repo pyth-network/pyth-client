@@ -1,14 +1,14 @@
 use {
     crate::{
-        c_oracle_header::{
+        accounts::{
             PriceAccount,
+            PythAccount,
+        },
+        c_oracle_header::{
             MAX_NUM_DECIMALS,
             PC_VERSION,
         },
-        deserialize::{
-            initialize_pyth_account_checked,
-            load_checked,
-        },
+        deserialize::load_checked,
         instruction::{
             InitPriceArgs,
             OracleCommand,
@@ -58,7 +58,7 @@ fn test_init_price() {
         Err(OracleError::InvalidAccountHeader.into())
     );
 
-    initialize_pyth_account_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+    PriceAccount::initialize(&price_account, PC_VERSION).unwrap();
     {
         let mut price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
         price_data.price_type = ptype;

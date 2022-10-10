@@ -1,23 +1,22 @@
 use {
     crate::{
-        c_oracle_header::{
+        accounts::{
+            clear_account,
             PriceAccount,
             PriceComponent,
             PythAccount,
+        },
+        c_oracle_header::{
             PC_COMP_SIZE,
             PC_VERSION,
         },
-        deserialize::{
-            initialize_pyth_account_checked,
-            load_checked,
-        },
+        deserialize::load_checked,
         instruction::{
             AddPublisherArgs,
             OracleCommand,
         },
         processor::process_instruction,
         tests::test_utils::AccountSetup,
-        utils::clear_account,
         OracleError,
     },
     bytemuck::bytes_of,
@@ -45,7 +44,7 @@ fn test_add_publisher() {
 
     let mut price_setup = AccountSetup::new::<PriceAccount>(&program_id);
     let price_account = price_setup.as_account_info();
-    initialize_pyth_account_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+    PriceAccount::initialize(&price_account, PC_VERSION).unwrap();
 
 
     **price_account.try_borrow_mut_lamports().unwrap() = 100;
@@ -104,7 +103,7 @@ fn test_add_publisher() {
         Err(OracleError::InvalidAccountHeader.into())
     );
 
-    initialize_pyth_account_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+    PriceAccount::initialize(&price_account, PC_VERSION).unwrap();
 
     // Fill up price node
     for i in 0..PC_COMP_SIZE {

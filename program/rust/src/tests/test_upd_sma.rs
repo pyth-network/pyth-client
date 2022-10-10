@@ -1,3 +1,4 @@
+use crate::accounts::PythAccount;
 // use crate::processor::process_instruction;
 use {
     crate::{
@@ -8,7 +9,6 @@ use {
             PC_VERSION,
         },
         deserialize::{
-            initialize_pyth_account_checked,
             load_checked,
             load_mut,
         },
@@ -47,7 +47,7 @@ fn test_upd_sma() {
     let mut price_setup = AccountSetup::new::<PriceAccountWrapper>(&program_id);
     let mut price_account = price_setup.as_account_info();
     price_account.is_signer = false;
-    initialize_pyth_account_checked::<PriceAccountWrapper>(&price_account, PC_VERSION).unwrap();
+    PriceAccountWrapper::initialize(&price_account, PC_VERSION).unwrap();
 
 
     {

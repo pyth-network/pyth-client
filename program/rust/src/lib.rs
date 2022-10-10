@@ -5,6 +5,7 @@
 #![allow(clippy::bool_assert_comparison)]
 #![feature(adt_const_params)]
 
+mod accounts;
 mod c_oracle_header;
 mod deserialize;
 mod error;

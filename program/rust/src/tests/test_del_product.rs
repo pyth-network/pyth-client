@@ -1,8 +1,7 @@
+use crate::accounts::MappingAccount;
+
 use {
-    crate::{
-        c_oracle_header::MappingAccount,
-        tests::pyth_simulator::PythSimulator,
-    },
+    crate::tests::pyth_simulator::PythSimulator,
     solana_program::pubkey::Pubkey,
     solana_sdk::signer::Signer,
     std::mem::{

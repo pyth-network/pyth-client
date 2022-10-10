@@ -1,13 +1,14 @@
 use {
     crate::{
-        c_oracle_header::{
+        accounts::{
             ProductAccount,
             PythAccount,
+        },
+        c_oracle_header::{
             PC_PROD_ACC_SIZE,
             PC_VERSION,
         },
         deserialize::{
-            initialize_pyth_account_checked,
             load_checked,
             load_mut,
         },
@@ -42,7 +43,7 @@ fn test_upd_product() {
     let mut product_setup = AccountSetup::new::<ProductAccount>(&program_id);
     let product_account = product_setup.as_account_info();
 
-    initialize_pyth_account_checked::<ProductAccount>(&product_account, PC_VERSION).unwrap();
+    ProductAccount::initialize(&product_account, PC_VERSION).unwrap();
 
     let kvs = ["foo", "barz"];
     let size = populate_instruction(&mut instruction_data, &kvs);
