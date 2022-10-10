@@ -1,6 +1,8 @@
 #![deny(warnings)]
 // Allow non upper case globals from C
 #![allow(non_upper_case_globals)]
+#![allow(incomplete_features)]
+// #![feature(adt_const_params)]
 
 mod c_oracle_header;
 mod deserialize;
