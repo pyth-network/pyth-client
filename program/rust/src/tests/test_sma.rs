@@ -1,10 +1,11 @@
-use quickcheck::Arbitrary;
-use quickcheck_macros::quickcheck;
-
-use crate::time_machine_types::{
-    DataPoint,
-    SmaTracker,
-    NUM_BUCKETS_THIRTY_MIN,
+use {
+    crate::time_machine_types::{
+        DataPoint,
+        SmaTracker,
+        NUM_BUCKETS_THIRTY_MIN,
+    },
+    quickcheck::Arbitrary,
+    quickcheck_macros::quickcheck,
 };
 
 #[derive(Clone, Debug, Copy)]
@@ -159,7 +160,7 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
 
         let mut result = data.iter().fold((0, 0, true), |x: (u64, i128, bool), y| {
             if !((left_bound > y.current_timestamp) || (right_bound <= y.previous_timestamp))
-            //Check interval intersection
+            // Check interval intersection
             {
                 let is_valid = y.slot_gap <= self.threshold;
                 return (

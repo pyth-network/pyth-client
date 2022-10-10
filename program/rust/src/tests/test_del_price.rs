@@ -1,8 +1,11 @@
-use solana_program::pubkey::Pubkey;
-use solana_sdk::signer::Signer;
-
-use crate::c_oracle_header::ProductAccount;
-use crate::tests::pyth_simulator::PythSimulator;
+use {
+    crate::{
+        c_oracle_header::ProductAccount,
+        tests::pyth_simulator::PythSimulator,
+    },
+    solana_program::pubkey::Pubkey,
+    solana_sdk::signer::Signer,
+};
 
 #[tokio::test]
 async fn test_del_price() {

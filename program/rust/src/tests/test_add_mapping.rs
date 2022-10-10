@@ -1,25 +1,31 @@
-use crate::c_oracle_header::{
-    MappingAccount,
-    PC_MAGIC,
-    PC_MAP_TABLE_SIZE,
-    PC_VERSION,
+use {
+    crate::{
+        c_oracle_header::{
+            MappingAccount,
+            PC_MAGIC,
+            PC_MAP_TABLE_SIZE,
+            PC_VERSION,
+        },
+        deserialize::{
+            initialize_pyth_account_checked,
+            load_account_as_mut,
+            load_checked,
+        },
+        error::OracleError,
+        instruction::{
+            CommandHeader,
+            OracleCommand,
+        },
+        processor::process_instruction,
+        tests::test_utils::AccountSetup,
+        utils::clear_account,
+    },
+    bytemuck::bytes_of,
+    solana_program::{
+        program_error::ProgramError,
+        pubkey::Pubkey,
+    },
 };
-use crate::deserialize::{
-    initialize_pyth_account_checked,
-    load_account_as_mut,
-    load_checked,
-};
-use crate::error::OracleError;
-use crate::instruction::{
-    CommandHeader,
-    OracleCommand,
-};
-use crate::processor::process_instruction;
-use crate::tests::test_utils::AccountSetup;
-use crate::utils::clear_account;
-use bytemuck::bytes_of;
-use solana_program::program_error::ProgramError;
-use solana_program::pubkey::Pubkey;
 
 #[test]
 fn test_add_mapping() {

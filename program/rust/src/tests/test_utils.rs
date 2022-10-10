@@ -1,32 +1,39 @@
-use crate::c_oracle_header::{
-    PermissionAccount,
-    PythAccount,
-    PC_VERSION,
-    PERMISSIONS_SEED,
+use {
+    crate::{
+        c_oracle_header::{
+            PermissionAccount,
+            PythAccount,
+            PC_VERSION,
+            PERMISSIONS_SEED,
+        },
+        error::OracleError,
+        instruction::{
+            CommandHeader,
+            OracleCommand,
+        },
+    },
+    num_traits::ToPrimitive,
+    solana_program::{
+        account_info::AccountInfo,
+        clock::{
+            self,
+            Epoch,
+        },
+        instruction::InstructionError,
+        native_token::LAMPORTS_PER_SOL,
+        program_error::ProgramError,
+        pubkey::Pubkey,
+        rent::Rent,
+        system_program,
+        sysvar::{
+            self,
+            Sysvar,
+            SysvarId,
+        },
+    },
+    solana_sdk::transaction::TransactionError,
 };
-use crate::error::OracleError;
-use crate::instruction::{
-    CommandHeader,
-    OracleCommand,
-};
-use num_traits::ToPrimitive;
-use solana_program::account_info::AccountInfo;
-use solana_program::clock::Epoch;
-use solana_program::instruction::InstructionError;
-use solana_program::native_token::LAMPORTS_PER_SOL;
-use solana_program::program_error::ProgramError;
-use solana_program::pubkey::Pubkey;
-use solana_program::rent::Rent;
-use solana_program::sysvar::{
-    Sysvar,
-    SysvarId,
-};
-use solana_program::{
-    clock,
-    system_program,
-    sysvar,
-};
-use solana_sdk::transaction::TransactionError;
+
 const UPPER_BOUND_OF_ALL_ACCOUNT_SIZES: usize = 20536;
 
 /// The goal of this struct is to easily instantiate fresh solana accounts

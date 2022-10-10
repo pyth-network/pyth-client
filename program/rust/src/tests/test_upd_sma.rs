@@ -1,32 +1,36 @@
-use solana_program::program_error::ProgramError;
-use solana_program::pubkey::Pubkey;
-use std::mem::size_of;
-
-use crate::c_oracle_header::{
-    PC_MAX_SEND_LATENCY,
-    PC_STATUS_TRADING,
-    PC_STATUS_UNKNOWN,
-    PC_VERSION,
-};
-
-use crate::deserialize::{
-    initialize_pyth_account_checked,
-    load_checked,
-    load_mut,
-};
-use crate::instruction::{
-    OracleCommand,
-    UpdPriceArgs,
-};
-use crate::processor::process_instruction;
 // use crate::processor::process_instruction;
-use crate::tests::test_utils::{
-    update_clock_slot,
-    AccountSetup,
-};
-use crate::time_machine_types::{
-    PriceAccountWrapper,
-    THIRTY_MINUTES,
+use {
+    crate::{
+        c_oracle_header::{
+            PC_MAX_SEND_LATENCY,
+            PC_STATUS_TRADING,
+            PC_STATUS_UNKNOWN,
+            PC_VERSION,
+        },
+        deserialize::{
+            initialize_pyth_account_checked,
+            load_checked,
+            load_mut,
+        },
+        instruction::{
+            OracleCommand,
+            UpdPriceArgs,
+        },
+        processor::process_instruction,
+        tests::test_utils::{
+            update_clock_slot,
+            AccountSetup,
+        },
+        time_machine_types::{
+            PriceAccountWrapper,
+            THIRTY_MINUTES,
+        },
+    },
+    solana_program::{
+        program_error::ProgramError,
+        pubkey::Pubkey,
+    },
+    std::mem::size_of,
 };
 
 /// Clone of test_upd_price that also checks sma fields

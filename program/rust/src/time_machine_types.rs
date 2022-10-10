@@ -1,18 +1,22 @@
 #![allow(unused_imports)]
 #![allow(dead_code)]
-use crate::c_oracle_header::{
-    PriceAccount,
-    PythAccount,
-    EXTRA_PUBLISHER_SPACE,
-    PC_ACCTYPE_PRICE,
-    PC_MAX_SEND_LATENCY,
-    PC_PRICE_T_COMP_OFFSET,
-};
-use crate::error::OracleError;
-use crate::utils::try_convert;
-use bytemuck::{
-    Pod,
-    Zeroable,
+use {
+    crate::{
+        c_oracle_header::{
+            PriceAccount,
+            PythAccount,
+            EXTRA_PUBLISHER_SPACE,
+            PC_ACCTYPE_PRICE,
+            PC_MAX_SEND_LATENCY,
+            PC_PRICE_T_COMP_OFFSET,
+        },
+        error::OracleError,
+        utils::try_convert,
+    },
+    bytemuck::{
+        Pod,
+        Zeroable,
+    },
 };
 
 pub const THIRTY_MINUTES: i64 = 30 * 60;
@@ -49,13 +53,14 @@ impl PriceAccountWrapper {
     pub fn add_price_to_time_machine(&mut self) -> Result<(), OracleError> {
         // This is only enabled in tests while in development
         #[cfg(test)]
-        self.time_machine.add_datapoint( &DataPoint{
-            previous_timestamp : self.price_data.prev_timestamp_,
-            current_timestamp: self.price_data.timestamp_,
-            slot_gap : (self.price_data.last_slot_ - self.price_data.prev_slot_),
-            price: self.price_data.prev_price_ /2  + self.price_data.agg_.price_ / 2 + (self.price_data.prev_price_ % 2) * (self.price_data.agg_.price_ % 2), // Hack to avoid overflow
-        }
-        )?;
+        self.time_machine.add_datapoint(&DataPoint {
+            previous_timestamp: self.price_data.prev_timestamp_,
+            current_timestamp:  self.price_data.timestamp_,
+            slot_gap:           (self.price_data.last_slot_ - self.price_data.prev_slot_),
+            price:              self.price_data.prev_price_ / 2
+                + self.price_data.agg_.price_ / 2
+                + (self.price_data.prev_price_ % 2) * (self.price_data.agg_.price_ % 2), // Hack to avoid overflow
+        })?;
         Ok(())
     }
 }
@@ -211,27 +216,32 @@ impl PythAccount for PriceAccountWrapper {
 
 #[cfg(test)]
 pub mod tests {
-    use crate::c_oracle_header::{
-        PRICE_ACCOUNT_SIZE,
-        TIME_MACHINE_STRUCT_SIZE,
+    use {
+        crate::{
+            c_oracle_header::{
+                PRICE_ACCOUNT_SIZE,
+                TIME_MACHINE_STRUCT_SIZE,
+            },
+            time_machine_types::{
+                PriceAccountWrapper,
+                SmaTracker,
+                NUM_BUCKETS_THIRTY_MIN,
+            },
+        },
+        std::mem::size_of,
     };
-    use crate::time_machine_types::{
-        PriceAccountWrapper,
-        SmaTracker,
-        NUM_BUCKETS_THIRTY_MIN,
-    };
-    use std::mem::size_of;
+
     #[test]
-    ///test that the size defined in C matches that
-    ///defined in Rust
+    /// Test that the size defined in C matches that defined in Rust
     fn c_time_machine_size_is_correct() {
         assert_eq!(
             TIME_MACHINE_STRUCT_SIZE as usize,
             size_of::<SmaTracker<NUM_BUCKETS_THIRTY_MIN>>()
         );
     }
+
     #[test]
-    ///test that priceAccountWrapper has a correct size
+    /// Test that priceAccountWrapper has a correct size
     fn c_price_account_size_is_correct() {
         assert_eq!(
         size_of::<PriceAccountWrapper>(),

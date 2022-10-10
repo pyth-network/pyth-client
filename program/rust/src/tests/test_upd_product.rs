@@ -1,29 +1,33 @@
-use std::mem::size_of;
-
-use crate::instruction::{
-    CommandHeader,
-    OracleCommand,
-};
-use crate::processor::process_instruction;
-use crate::tests::test_utils::AccountSetup;
-use crate::utils::{
-    read_pc_str_t,
-    try_convert,
-};
-use solana_program::account_info::AccountInfo;
-use solana_program::program_error::ProgramError;
-use solana_program::pubkey::Pubkey;
-
-use crate::c_oracle_header::{
-    ProductAccount,
-    PythAccount,
-    PC_PROD_ACC_SIZE,
-    PC_VERSION,
-};
-use crate::deserialize::{
-    initialize_pyth_account_checked,
-    load_checked,
-    load_mut,
+use {
+    crate::{
+        c_oracle_header::{
+            ProductAccount,
+            PythAccount,
+            PC_PROD_ACC_SIZE,
+            PC_VERSION,
+        },
+        deserialize::{
+            initialize_pyth_account_checked,
+            load_checked,
+            load_mut,
+        },
+        instruction::{
+            CommandHeader,
+            OracleCommand,
+        },
+        processor::process_instruction,
+        tests::test_utils::AccountSetup,
+        utils::{
+            read_pc_str_t,
+            try_convert,
+        },
+    },
+    solana_program::{
+        account_info::AccountInfo,
+        program_error::ProgramError,
+        pubkey::Pubkey,
+    },
+    std::mem::size_of,
 };
 
 #[test]

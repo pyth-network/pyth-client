@@ -1,24 +1,28 @@
-use std::mem::size_of;
-
-use solana_program::account_info::AccountInfo;
-use solana_program::program_error::ProgramError;
-use solana_program::pubkey::Pubkey;
-
-use crate::c_oracle_header::{
-    PriceAccount,
-    PC_VERSION,
+use {
+    crate::{
+        c_oracle_header::{
+            PriceAccount,
+            PC_VERSION,
+        },
+        deserialize::{
+            initialize_pyth_account_checked,
+            load_checked,
+            load_mut,
+        },
+        instruction::{
+            OracleCommand,
+            SetMinPubArgs,
+        },
+        processor::process_instruction,
+        tests::test_utils::AccountSetup,
+    },
+    solana_program::{
+        account_info::AccountInfo,
+        program_error::ProgramError,
+        pubkey::Pubkey,
+    },
+    std::mem::size_of,
 };
-use crate::deserialize::{
-    initialize_pyth_account_checked,
-    load_checked,
-    load_mut,
-};
-use crate::instruction::{
-    OracleCommand,
-    SetMinPubArgs,
-};
-use crate::processor::process_instruction;
-use crate::tests::test_utils::AccountSetup;
 
 #[test]
 fn test_set_min_pub() {

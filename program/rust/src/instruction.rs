@@ -1,16 +1,20 @@
-use crate::c_oracle_header::PC_VERSION;
-use crate::deserialize::load;
-use crate::error::OracleError;
-use bytemuck::{
-    Pod,
-    Zeroable,
+use {
+    crate::{
+        c_oracle_header::PC_VERSION,
+        deserialize::load,
+        error::OracleError,
+    },
+    bytemuck::{
+        Pod,
+        Zeroable,
+    },
+    num_derive::{
+        FromPrimitive,
+        ToPrimitive,
+    },
+    num_traits::FromPrimitive,
+    solana_program::pubkey::Pubkey,
 };
-use num_derive::{
-    FromPrimitive,
-    ToPrimitive,
-};
-use num_traits::FromPrimitive;
-use solana_program::pubkey::Pubkey;
 
 /// WARNING : NEW COMMANDS SHOULD BE ADDED AT THE END OF THE LIST
 #[repr(i32)]

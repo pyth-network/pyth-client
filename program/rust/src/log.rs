@@ -1,15 +1,21 @@
-use crate::c_oracle_header::*;
-use crate::deserialize::{
-    load,
-    load_account_as,
+use {
+    crate::{
+        c_oracle_header::*,
+        deserialize::{
+            load,
+            load_account_as,
+        },
+        error::OracleError,
+    },
+    solana_program::{
+        account_info::AccountInfo,
+        clock::Clock,
+        entrypoint::ProgramResult,
+        msg,
+        program_error::ProgramError,
+        sysvar::Sysvar,
+    },
 };
-use crate::error::OracleError;
-use solana_program::account_info::AccountInfo;
-use solana_program::clock::Clock;
-use solana_program::entrypoint::ProgramResult;
-use solana_program::msg;
-use solana_program::program_error::ProgramError;
-use solana_program::sysvar::Sysvar;
 
 pub fn pre_log(accounts: &[AccountInfo], instruction_data: &[u8]) -> ProgramResult {
     msg!("Pyth oracle contract");
@@ -87,7 +93,7 @@ pub fn pre_log(accounts: &[AccountInfo], instruction_data: &[u8]) -> ProgramResu
         }
 
         command_t_e_cmd_resize_price_account => {
-            //accounts[1] is the updated account
+            // accounts[1] is the updated account
             msg!("ResizePriceAccount: {}", accounts[1].key);
         }
         _ => {

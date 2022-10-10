@@ -1,25 +1,28 @@
-use solana_program::pubkey::Pubkey;
-use std::mem::size_of;
-
-use crate::c_oracle_header::{
-    PriceAccount,
-    PriceInfo,
-    PC_STATUS_TRADING,
-    PC_STATUS_UNKNOWN,
-    PC_VERSION,
+use {
+    crate::{
+        c_oracle_header::{
+            PriceAccount,
+            PriceInfo,
+            PC_STATUS_TRADING,
+            PC_STATUS_UNKNOWN,
+            PC_VERSION,
+        },
+        deserialize::{
+            initialize_pyth_account_checked,
+            load_checked,
+            load_mut,
+        },
+        instruction::{
+            OracleCommand,
+            UpdPriceArgs,
+        },
+        rust_oracle::c_upd_aggregate,
+        tests::test_utils::AccountSetup,
+    },
+    solana_program::pubkey::Pubkey,
+    std::mem::size_of,
 };
 
-use crate::deserialize::{
-    initialize_pyth_account_checked,
-    load_checked,
-    load_mut,
-};
-use crate::instruction::{
-    OracleCommand,
-    UpdPriceArgs,
-};
-use crate::rust_oracle::c_upd_aggregate;
-use crate::tests::test_utils::AccountSetup;
 #[test]
 fn test_upd_aggregate() {
     let p1: PriceInfo = PriceInfo {

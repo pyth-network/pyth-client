@@ -1,28 +1,33 @@
-use solana_program::program_error::ProgramError;
-use solana_program::pubkey::Pubkey;
-use std::mem::size_of;
-
-use crate::c_oracle_header::{
-    PriceAccount,
-    PC_STATUS_TRADING,
-    PC_STATUS_UNKNOWN,
-    PC_VERSION,
+use {
+    crate::{
+        c_oracle_header::{
+            PriceAccount,
+            PC_STATUS_TRADING,
+            PC_STATUS_UNKNOWN,
+            PC_VERSION,
+        },
+        deserialize::{
+            initialize_pyth_account_checked,
+            load_checked,
+            load_mut,
+        },
+        instruction::{
+            OracleCommand,
+            UpdPriceArgs,
+        },
+        processor::process_instruction,
+        tests::test_utils::{
+            update_clock_slot,
+            AccountSetup,
+        },
+    },
+    solana_program::{
+        program_error::ProgramError,
+        pubkey::Pubkey,
+    },
+    std::mem::size_of,
 };
 
-use crate::deserialize::{
-    initialize_pyth_account_checked,
-    load_checked,
-    load_mut,
-};
-use crate::instruction::{
-    OracleCommand,
-    UpdPriceArgs,
-};
-use crate::processor::process_instruction;
-use crate::tests::test_utils::{
-    update_clock_slot,
-    AccountSetup,
-};
 #[test]
 fn test_upd_price_no_fail_on_error_no_fail_on_error() {
     let mut instruction_data = [0u8; size_of::<UpdPriceArgs>()];

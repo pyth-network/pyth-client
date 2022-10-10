@@ -1,38 +1,42 @@
-use crate::c_oracle_header::{
-    MappingAccount,
-    PermissionAccount,
-    PriceAccount,
-    ProductAccount,
-    PC_VERSION,
+use {
+    crate::{
+        c_oracle_header::{
+            MappingAccount,
+            PermissionAccount,
+            PriceAccount,
+            ProductAccount,
+            PC_VERSION,
+        },
+        deserialize::initialize_pyth_account_checked,
+        error::OracleError,
+        instruction::{
+            AddPriceArgs,
+            AddPublisherArgs,
+            CommandHeader,
+            DelPublisherArgs,
+            InitPriceArgs,
+            OracleCommand::{
+                AddMapping,
+                AddPrice,
+                AddProduct,
+                AddPublisher,
+                DelPrice,
+                DelProduct,
+                DelPublisher,
+                InitMapping,
+                InitPrice,
+                ResizePriceAccount,
+                SetMinPub,
+                UpdProduct,
+            },
+            SetMinPubArgs,
+        },
+        processor::process_instruction,
+        tests::test_utils::AccountSetup,
+    },
+    bytemuck::bytes_of,
+    solana_program::pubkey::Pubkey,
 };
-use crate::deserialize::initialize_pyth_account_checked;
-use crate::error::OracleError;
-use crate::instruction::OracleCommand::{
-    AddMapping,
-    AddPrice,
-    AddProduct,
-    AddPublisher,
-    DelPrice,
-    DelProduct,
-    DelPublisher,
-    InitMapping,
-    InitPrice,
-    ResizePriceAccount,
-    SetMinPub,
-    UpdProduct,
-};
-use crate::instruction::{
-    AddPriceArgs,
-    AddPublisherArgs,
-    CommandHeader,
-    DelPublisherArgs,
-    InitPriceArgs,
-    SetMinPubArgs,
-};
-use crate::processor::process_instruction;
-use crate::tests::test_utils::AccountSetup;
-use bytemuck::bytes_of;
-use solana_program::pubkey::Pubkey;
 
 #[test]
 fn test_permission_migration() {

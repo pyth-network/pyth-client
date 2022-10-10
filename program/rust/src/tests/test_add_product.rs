@@ -1,34 +1,39 @@
-use std::mem::size_of;
-
-use crate::c_oracle_header::{
-    MappingAccount,
-    ProductAccount,
-    PythAccount,
-    PC_ACCTYPE_PRODUCT,
-    PC_MAGIC,
-    PC_MAP_TABLE_SIZE,
-    PC_PROD_ACC_SIZE,
-    PC_VERSION,
+use {
+    crate::{
+        c_oracle_header::{
+            MappingAccount,
+            ProductAccount,
+            PythAccount,
+            PC_ACCTYPE_PRODUCT,
+            PC_MAGIC,
+            PC_MAP_TABLE_SIZE,
+            PC_PROD_ACC_SIZE,
+            PC_VERSION,
+        },
+        deserialize::{
+            initialize_pyth_account_checked,
+            load_account_as,
+            load_checked,
+        },
+        error::OracleError,
+        instruction::{
+            CommandHeader,
+            OracleCommand,
+        },
+        processor::process_instruction,
+        tests::test_utils::AccountSetup,
+        utils::clear_account,
+    },
+    bytemuck::bytes_of,
+    solana_program::{
+        account_info::AccountInfo,
+        clock::Epoch,
+        program_error::ProgramError,
+        pubkey::Pubkey,
+        rent::Rent,
+    },
+    std::mem::size_of,
 };
-use crate::deserialize::{
-    initialize_pyth_account_checked,
-    load_account_as,
-    load_checked,
-};
-use crate::error::OracleError;
-use crate::instruction::{
-    CommandHeader,
-    OracleCommand,
-};
-use crate::processor::process_instruction;
-use crate::tests::test_utils::AccountSetup;
-use crate::utils::clear_account;
-use bytemuck::bytes_of;
-use solana_program::account_info::AccountInfo;
-use solana_program::clock::Epoch;
-use solana_program::program_error::ProgramError;
-use solana_program::pubkey::Pubkey;
-use solana_program::rent::Rent;
 
 
 #[test]

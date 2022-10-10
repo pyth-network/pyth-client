@@ -1,26 +1,32 @@
-use solana_program::pubkey::Pubkey;
-use solana_program::rent::Rent;
-use solana_sdk::signer::Signer;
+use {
+    crate::{
+        c_oracle_header::{
+            PermissionAccount,
+            PythAccount,
+        },
+        deserialize::load,
+        error::OracleError,
+        instruction::{
+            OracleCommand,
+            UpdPermissionsArgs,
+        },
+        tests::pyth_simulator::{
+            copy_keypair,
+            PythSimulator,
+        },
+    },
+    solana_program::{
+        pubkey::Pubkey,
+        rent::Rent,
+    },
+    solana_sdk::signer::Signer,
+};
 
-use crate::c_oracle_header::{
-    PermissionAccount,
-    PythAccount,
-};
-use crate::deserialize::load;
-use crate::error::OracleError;
-use crate::instruction::{
-    OracleCommand,
-    UpdPermissionsArgs,
-};
-use crate::tests::pyth_simulator::{
-    copy_keypair,
-    PythSimulator,
-};
 #[tokio::test]
 async fn test_upd_permissions() {
     let mut sim = PythSimulator::new().await;
 
-    //Check that the program got deployed properly and can be interacted with
+    // Check that the program got deployed properly and can be interacted with
     let mapping_keypair = sim.init_mapping().await.unwrap();
     let product = sim.add_product(&mapping_keypair).await.unwrap();
     let price = sim.add_price(&product, -8).await.unwrap();
@@ -30,7 +36,7 @@ async fn test_upd_permissions() {
     let mut data_curation_authority = Pubkey::new_unique();
     let mut security_authority = Pubkey::new_unique();
 
-    //Airdrop some lamports to check whether someone can DDOS the account
+    // Airdrop some lamports to check whether someone can DDOS the account
     let permissions_pubkey = sim.get_permissions_pubkey();
     sim.airdrop(&permissions_pubkey, Rent::default().minimum_balance(0))
         .await

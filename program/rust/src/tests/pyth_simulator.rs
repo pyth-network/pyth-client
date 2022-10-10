@@ -1,54 +1,57 @@
-use std::mem::size_of;
-use std::path::Path;
-
-use bytemuck::{
-    bytes_of,
-    Pod,
-};
-use solana_program::bpf_loader_upgradeable::{
-    self,
-    UpgradeableLoaderState,
-};
-use solana_program::hash::Hash;
-use solana_program::instruction::{
-    AccountMeta,
-    Instruction,
-};
-use solana_program::native_token::LAMPORTS_PER_SOL;
-use solana_program::pubkey::Pubkey;
-use solana_program::rent::Rent;
-use solana_program::stake_history::Epoch;
-use solana_program::{
-    system_instruction,
-    system_program,
-};
-use solana_program_test::{
-    read_file,
-    BanksClient,
-    BanksClientError,
-    ProgramTest,
-    ProgramTestBanksClientExt,
-};
-use solana_sdk::account::Account;
-use solana_sdk::signature::{
-    Keypair,
-    Signer,
-};
-use solana_sdk::transaction::Transaction;
-
-use crate::c_oracle_header::{
-    MappingAccount,
-    PriceAccount,
-    PC_PROD_ACC_SIZE,
-    PC_PTYPE_PRICE,
-    PERMISSIONS_SEED,
-};
-use crate::deserialize::load;
-use crate::instruction::{
-    AddPriceArgs,
-    CommandHeader,
-    OracleCommand,
-    UpdPermissionsArgs,
+use {
+    crate::{
+        c_oracle_header::{
+            MappingAccount,
+            PriceAccount,
+            PC_PROD_ACC_SIZE,
+            PC_PTYPE_PRICE,
+            PERMISSIONS_SEED,
+        },
+        deserialize::load,
+        instruction::{
+            AddPriceArgs,
+            CommandHeader,
+            OracleCommand,
+            UpdPermissionsArgs,
+        },
+    },
+    bytemuck::{
+        bytes_of,
+        Pod,
+    },
+    solana_program::{
+        bpf_loader_upgradeable::{
+            self,
+            UpgradeableLoaderState,
+        },
+        hash::Hash,
+        instruction::{
+            AccountMeta,
+            Instruction,
+        },
+        native_token::LAMPORTS_PER_SOL,
+        pubkey::Pubkey,
+        rent::Rent,
+        stake_history::Epoch,
+        system_instruction,
+        system_program,
+    },
+    solana_program_test::{
+        read_file,
+        BanksClient,
+        BanksClientError,
+        ProgramTest,
+        ProgramTestBanksClientExt,
+    },
+    solana_sdk::{
+        account::Account,
+        signature::{
+            Keypair,
+            Signer,
+        },
+        transaction::Transaction,
+    },
+    std::{mem::size_of, path::Path}
 };
 
 
