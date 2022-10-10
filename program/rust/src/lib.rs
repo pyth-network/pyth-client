@@ -11,7 +11,6 @@ mod deserialize;
 mod error;
 mod instruction;
 mod processor;
-mod rust_oracle;
 mod time_machine_types;
 mod utils;
 

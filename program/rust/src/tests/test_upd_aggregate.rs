@@ -18,7 +18,7 @@ use {
             OracleCommand,
             UpdPriceArgs,
         },
-        rust_oracle::c_upd_aggregate,
+        processor::c_upd_aggregate,
         tests::test_utils::AccountSetup,
     },
     solana_program::pubkey::Pubkey,
