@@ -137,7 +137,7 @@ impl PythSimulator {
             .await
             .unwrap();
 
-        return result;
+        result
     }
 
 
@@ -233,7 +233,7 @@ impl PythSimulator {
 
         self.process_ix(
             instruction,
-            &vec![&mapping_keypair, &product_keypair],
+            &vec![mapping_keypair, &product_keypair],
             &copy_keypair(&self.genesis_keypair),
         )
         .await
@@ -259,7 +259,7 @@ impl PythSimulator {
 
         self.process_ix(
             instruction,
-            &vec![&mapping_keypair, &product_keypair],
+            &vec![mapping_keypair, product_keypair],
             &copy_keypair(&self.genesis_keypair),
         )
         .await
@@ -291,7 +291,7 @@ impl PythSimulator {
 
         self.process_ix(
             instruction,
-            &vec![&product_keypair, &price_keypair],
+            &vec![product_keypair, &price_keypair],
             &copy_keypair(&self.genesis_keypair),
         )
         .await
@@ -317,7 +317,7 @@ impl PythSimulator {
 
         self.process_ix(
             instruction,
-            &vec![&product_keypair, &price_keypair],
+            &vec![product_keypair, price_keypair],
             &copy_keypair(&self.genesis_keypair),
         )
         .await
@@ -342,7 +342,7 @@ impl PythSimulator {
 
         self.process_ix(
             instruction,
-            &vec![&price_keypair],
+            &vec![price_keypair],
             &copy_keypair(&self.genesis_keypair),
         )
         .await
@@ -388,7 +388,7 @@ impl PythSimulator {
     pub async fn get_account_data_as<T: Pod>(&mut self, key: Pubkey) -> Option<T> {
         self.get_account(key)
             .await
-            .map(|x| load::<T>(&x.data).unwrap().clone())
+            .map(|x| *load::<T>(&x.data).unwrap())
     }
 
     pub fn is_owned_by_oracle(&self, account: &Account) -> bool {
@@ -406,10 +406,10 @@ impl PythSimulator {
     pub fn get_permissions_pubkey(&self) -> Pubkey {
         let (permissions_pubkey, __bump) =
             Pubkey::find_program_address(&[PERMISSIONS_SEED.as_bytes()], &self.program_id);
-        return permissions_pubkey;
+        permissions_pubkey
     }
 }
 
 pub fn copy_keypair(keypair: &Keypair) -> Keypair {
-    return Keypair::from_bytes(&keypair.to_bytes()).unwrap();
+    Keypair::from_bytes(&keypair.to_bytes()).unwrap()
 }

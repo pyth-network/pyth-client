@@ -38,10 +38,10 @@ fn test_sma_epoch_transition() {
     let program_id = Pubkey::new_unique();
 
     let mut funding_setup = AccountSetup::new_funding();
-    let funding_account = funding_setup.to_account_info();
+    let funding_account = funding_setup.as_account_info();
 
     let mut price_setup = AccountSetup::new::<PriceAccountWrapper>(&program_id);
-    let mut price_account = price_setup.to_account_info();
+    let mut price_account = price_setup.as_account_info();
     price_account.is_signer = false;
     initialize_pyth_account_checked::<PriceAccountWrapper>(&price_account, PC_VERSION).unwrap();
 
@@ -58,7 +58,7 @@ fn test_sma_epoch_transition() {
     }
 
     let mut clock_setup = AccountSetup::new_clock();
-    let mut clock_account = clock_setup.to_account_info();
+    let mut clock_account = clock_setup.as_account_info();
     clock_account.is_signer = false;
     clock_account.is_writable = false;
 
@@ -284,6 +284,7 @@ fn test_sma_epoch_transition() {
     )
     .is_ok());
 
+    #[allow(clippy::identity_op)]
     {
         let price_data = load_checked::<PriceAccountWrapper>(&price_account, PC_VERSION).unwrap();
         // Aggregation was successful, check that all skipped buckets got updated
@@ -352,6 +353,7 @@ fn test_sma_epoch_transition() {
     )
     .is_ok());
 
+    #[allow(clippy::identity_op)]
     {
         let price_data = load_checked::<PriceAccountWrapper>(&price_account, PC_VERSION).unwrap();
         // Nothing got updated, since slot gap was too big, so aggregation was not successful
@@ -450,7 +452,7 @@ fn test_sma_epoch_transition() {
 }
 
 // Create an upd_price instruction with the provided parameters
-fn populate_instruction(instruction_data: &mut [u8], price: i64, conf: u64, pub_slot: u64) -> () {
+fn populate_instruction(instruction_data: &mut [u8], price: i64, conf: u64, pub_slot: u64) {
     let mut cmd = load_mut::<UpdPriceArgs>(instruction_data).unwrap();
     cmd.header = OracleCommand::UpdPrice.into();
     cmd.status = PC_STATUS_TRADING;

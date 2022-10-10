@@ -54,7 +54,7 @@ fn test_sizes() {
     );
     assert_eq!(
         size_of::<PriceAccount>(),
-        48 + 8 * size_of::<u64>()
+        48 + u64::BITS as usize
             + 3 * size_of::<Pubkey>()
             + size_of::<PriceInfo>()
             + (PC_COMP_SIZE as usize) * size_of::<PriceComponent>()
@@ -85,7 +85,7 @@ fn test_offsets() {
     let program_id = Pubkey::new_unique();
 
     let mut price_setup = AccountSetup::new::<PriceAccount>(&program_id);
-    let price_account = price_setup.to_account_info();
+    let price_account = price_setup.as_account_info();
 
     initialize_pyth_account_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
     let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
@@ -96,7 +96,7 @@ fn test_offsets() {
     );
 
     let mut mapping_setup = AccountSetup::new::<MappingAccount>(&program_id);
-    let mapping_account = mapping_setup.to_account_info();
+    let mapping_account = mapping_setup.as_account_info();
 
     initialize_pyth_account_checked::<MappingAccount>(&mapping_account, PC_VERSION).unwrap();
     let mapping_data = load_checked::<MappingAccount>(&mapping_account, PC_VERSION).unwrap();

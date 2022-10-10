@@ -31,10 +31,10 @@ fn test_set_min_pub() {
     let program_id = Pubkey::new_unique();
 
     let mut funding_setup = AccountSetup::new_funding();
-    let funding_account = funding_setup.to_account_info();
+    let funding_account = funding_setup.as_account_info();
 
     let mut price_setup = AccountSetup::new::<PriceAccount>(&program_id);
-    let price_account = price_setup.to_account_info();
+    let price_account = price_setup.as_account_info();
     initialize_pyth_account_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
 
     assert_eq!(get_min_pub(&price_account), Ok(0));
@@ -59,7 +59,7 @@ fn test_set_min_pub() {
 }
 
 // Create an upd_product instruction that sets the product metadata to strings
-fn populate_instruction(instruction_data: &mut [u8], min_pub: u8) -> () {
+fn populate_instruction(instruction_data: &mut [u8], min_pub: u8) {
     let mut hdr = load_mut::<SetMinPubArgs>(instruction_data).unwrap();
     hdr.header = OracleCommand::SetMinPub.into();
     hdr.minimum_publishers = min_pub;

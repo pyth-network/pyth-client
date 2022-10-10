@@ -63,7 +63,7 @@ fn test_upd_aggregate() {
     let program_id = Pubkey::new_unique();
 
     let mut price_setup = AccountSetup::new::<PriceAccount>(&program_id);
-    let mut price_account = price_setup.to_account_info();
+    let mut price_account = price_setup.as_account_info();
     price_account.is_signer = false;
     initialize_pyth_account_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
 
@@ -270,7 +270,7 @@ fn test_upd_aggregate() {
 }
 
 // Create an upd_price instruction with the provided parameters
-fn populate_instruction(instruction_data: &mut [u8], price: i64, conf: u64, pub_slot: u64) -> () {
+fn populate_instruction(instruction_data: &mut [u8], price: i64, conf: u64, pub_slot: u64) {
     let mut cmd = load_mut::<UpdPriceArgs>(instruction_data).unwrap();
     cmd.header = OracleCommand::AggPrice.into();
     cmd.status = PC_STATUS_TRADING;

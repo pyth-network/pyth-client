@@ -56,17 +56,17 @@ pub struct AccountSetup {
 impl AccountSetup {
     pub fn new<T: PythAccount>(owner: &Pubkey) -> Self {
         let key = Pubkey::new_unique();
-        let owner = owner.clone();
+        let owner = *owner;
         let balance = Rent::minimum_balance(&Rent::default(), T::MINIMUM_SIZE);
         let size = T::MINIMUM_SIZE;
         let data = [0; UPPER_BOUND_OF_ALL_ACCOUNT_SIZES];
-        return AccountSetup {
+        AccountSetup {
             key,
             owner,
             balance,
             size,
             data,
-        };
+        }
     }
 
     pub fn new_funding() -> Self {
@@ -75,28 +75,28 @@ impl AccountSetup {
         let balance = LAMPORTS_PER_SOL;
         let size = 0;
         let data = [0; UPPER_BOUND_OF_ALL_ACCOUNT_SIZES];
-        return AccountSetup {
+        AccountSetup {
             key,
             owner,
             balance,
             size,
             data,
-        };
+        }
     }
 
     pub fn new_permission(owner: &Pubkey) -> Self {
         let (key, _bump) = Pubkey::find_program_address(&[PERMISSIONS_SEED.as_bytes()], owner);
-        let owner = owner.clone();
+        let owner = *owner;
         let balance = Rent::minimum_balance(&Rent::default(), PermissionAccount::MINIMUM_SIZE);
         let size = PermissionAccount::MINIMUM_SIZE;
         let data = [0; UPPER_BOUND_OF_ALL_ACCOUNT_SIZES];
-        return AccountSetup {
+        AccountSetup {
             key,
             owner,
             balance,
             size,
             data,
-        };
+        }
     }
 
     pub fn new_clock() -> Self {
@@ -105,17 +105,17 @@ impl AccountSetup {
         let balance = Rent::minimum_balance(&Rent::default(), clock::Clock::size_of());
         let size = clock::Clock::size_of();
         let data = [0u8; UPPER_BOUND_OF_ALL_ACCOUNT_SIZES];
-        return AccountSetup {
+        AccountSetup {
             key,
             owner,
             balance,
             size,
             data,
-        };
+        }
     }
 
-    pub fn to_account_info(&mut self) -> AccountInfo {
-        return AccountInfo::new(
+    pub fn as_account_info(&mut self) -> AccountInfo {
+        AccountInfo::new(
             &self.key,
             true,
             true,
@@ -124,7 +124,7 @@ impl AccountSetup {
             &self.owner,
             false,
             Epoch::default(),
-        );
+        )
     }
 }
 
@@ -140,17 +140,17 @@ pub fn update_clock_timestamp(clock_account: &mut AccountInfo, timestamp: i64) {
     clock_data.to_account_info(clock_account);
 }
 
-impl Into<CommandHeader> for OracleCommand {
-    fn into(self) -> CommandHeader {
-        return CommandHeader {
+impl From<OracleCommand> for CommandHeader {
+    fn from(val: OracleCommand) -> Self {
+        CommandHeader {
             version: PC_VERSION,
-            command: self.to_i32().unwrap(), // This can never fail and is only used in tests
-        };
+            command: val.to_i32().unwrap(), // This can never fail and is only used in tests
+        }
     }
 }
 
-impl Into<TransactionError> for OracleError {
-    fn into(self) -> TransactionError {
+impl From<OracleError> for TransactionError {
+    fn from(_: OracleError) -> Self {
         TransactionError::InstructionError(
             0,
             InstructionError::try_from(u64::from(ProgramError::from(

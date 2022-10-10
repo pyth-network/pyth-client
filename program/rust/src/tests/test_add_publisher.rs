@@ -41,10 +41,10 @@ fn test_add_publisher() {
     let mut instruction_data = bytes_of::<AddPublisherArgs>(&cmd);
 
     let mut funding_setup = AccountSetup::new_funding();
-    let funding_account = funding_setup.to_account_info();
+    let funding_account = funding_setup.as_account_info();
 
     let mut price_setup = AccountSetup::new::<PriceAccount>(&program_id);
-    let price_account = price_setup.to_account_info();
+    let price_account = price_setup.as_account_info();
     initialize_pyth_account_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
 
 

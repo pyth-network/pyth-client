@@ -35,14 +35,14 @@ fn test_add_mapping() {
     let program_id = Pubkey::new_unique();
 
     let mut funding_setup = AccountSetup::new_funding();
-    let funding_account = funding_setup.to_account_info();
+    let funding_account = funding_setup.as_account_info();
 
     let mut curr_mapping_setup = AccountSetup::new::<MappingAccount>(&program_id);
-    let cur_mapping = curr_mapping_setup.to_account_info();
+    let cur_mapping = curr_mapping_setup.as_account_info();
     initialize_pyth_account_checked::<MappingAccount>(&cur_mapping, PC_VERSION).unwrap();
 
     let mut next_mapping_setup = AccountSetup::new::<MappingAccount>(&program_id);
-    let next_mapping = next_mapping_setup.to_account_info();
+    let next_mapping = next_mapping_setup.as_account_info();
 
     {
         let mut cur_mapping_data =

@@ -35,15 +35,15 @@ fn test_upd_price_no_fail_on_error_no_fail_on_error() {
     let program_id = Pubkey::new_unique();
 
     let mut funding_setup = AccountSetup::new_funding();
-    let funding_account = funding_setup.to_account_info();
+    let funding_account = funding_setup.as_account_info();
 
     let mut price_setup = AccountSetup::new::<PriceAccount>(&program_id);
-    let mut price_account = price_setup.to_account_info();
+    let mut price_account = price_setup.as_account_info();
     price_account.is_signer = false;
     initialize_pyth_account_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
 
     let mut clock_setup = AccountSetup::new_clock();
-    let mut clock_account = clock_setup.to_account_info();
+    let mut clock_account = clock_setup.as_account_info();
     clock_account.is_signer = false;
     clock_account.is_writable = false;
 
@@ -174,7 +174,7 @@ fn populate_instruction(
     conf: u64,
     pub_slot: u64,
     fail_on_error: bool,
-) -> () {
+) {
     let mut cmd = load_mut::<UpdPriceArgs>(instruction_data).unwrap();
     cmd.header = if fail_on_error {
         OracleCommand::UpdPrice.into()

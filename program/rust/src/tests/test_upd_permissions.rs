@@ -88,9 +88,8 @@ async fn test_upd_permissions() {
     );
     assert!(sim.is_owned_by_oracle(&permission_account));
 
-    let mut permission_data = load::<PermissionAccount>(permission_account.data.as_slice())
-        .unwrap()
-        .clone();
+    let mut permission_data =
+        *load::<PermissionAccount>(permission_account.data.as_slice()).unwrap();
 
     assert_eq!(master_authority, permission_data.master_authority);
     assert_eq!(

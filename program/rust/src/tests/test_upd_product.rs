@@ -37,10 +37,10 @@ fn test_upd_product() {
     let program_id = Pubkey::new_unique();
 
     let mut funding_setup = AccountSetup::new_funding();
-    let funding_account = funding_setup.to_account_info();
+    let funding_account = funding_setup.as_account_info();
 
     let mut product_setup = AccountSetup::new::<ProductAccount>(&program_id);
-    let product_account = product_setup.to_account_info();
+    let product_account = product_setup.as_account_info();
 
     initialize_pyth_account_checked::<ProductAccount>(&product_account, PC_VERSION).unwrap();
 
