@@ -75,10 +75,10 @@ e79bc372baadecff
 */
 
 const uint64_t compute_budget_program_id[] = {
-  0306466fe5211732UL
-  ffecadba72c39be7UL,
-  bc8ce5bbc5f7126bUL,
-  2c439b3a40UL
+  0x0306466fe5211732UL,
+  0xffecadba72c39be7UL,
+  0xbc8ce5bbc5f7126bUL,
+  0x2c439b3a40UL
 };
 
 // public key of symbol or publisher account
