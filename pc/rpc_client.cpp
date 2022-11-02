@@ -910,19 +910,29 @@ bool rpc::upd_price::build_tx(
   auto& first = *upds[ 0 ];
 
   // accounts
-  tx.add_len( n + 3 ); // n + 3 accounts: publish, symbol{n}, sysvar, program
+  tx.add_len( n + 4 ); // n + 4 accounts: publish, symbol{n}, sysvar, pyth program, compute budget program
   tx.add( *first.pkey_ ); // publish account
   for ( unsigned i = 0; i < n; ++i ) {
     tx.add( *upds[ i ]->akey_ ); // symbol account
   }
   tx.add( *(pub_key*)sysvar_clock ); // sysvar account
   tx.add( *first.gkey_ ); // programid
+  tx.add( *(pub_key*)compute_budget_program_id ); // compute budget program id
 
   // recent block hash
   tx.add( *first.bhash_ ); // recent block hash
 
   // instructions section
-  tx.add_len( n ); // n instruction(s)
+  tx.add_len( n + 1 ); // 1 compute limit instruction, n upd_price instruction(s)
+
+  // Set compute limit
+  tx.add( (uint8_t)( n + 3 ) ); // compute budget program id index in accounts list
+  tx.add_len<0>(); // no accounts
+  // compute limit instruction parameters
+  tx.add_len<sizeof(uint8_t) + sizeof(uint32_t)>(); // uint8_t enum variant + uint32_t requested compute units
+  tx.add( (uint8_t) 2 ); // SetComputeLimit enum variant
+  tx.add( (uint32_t) CU_BUDGET_PER_IX * n ); // the budget (scaled for number of instructions)
+
   for ( unsigned i = 0; i < n; ++i ) {
     tx.add( (uint8_t)( n + 2 ) ); // program_id index
     tx.add_len< 3 >(); // 3 accounts: publish, symbol, sysvar

@@ -53,12 +53,32 @@ const uint64_t EXTRA_PUBLISHER_SPACE = 3072ULL;
 #define PC_ACCTYPE_TEST       4
 #define PC_ACCTYPE_PERMISSIONS       5
 
+
+// Compute budget requested per price update instruction
+// The biggest instruction appears to be about ~10300 CUs, so overestimate by 100%.
+#define CU_BUDGET_PER_IX 20000
+
 // binary version of sysvar_clock account id
 const uint64_t sysvar_clock[] = {
   0xc974c71817d5a706UL,
   0xb65e1d6998635628UL,
   0x5c6d4b9ba3b85e8bUL,
   0x215b5573UL
+};
+
+// compute budget program id in hex (but wrong endianness)
+/*
+321721e56f460603
+e79bc372baadecff
+6b12f7c5bbe58cbc
+403a9b432c
+*/
+
+const uint64_t compute_budget_program_id[] = {
+  0306466fe5211732UL
+  ffecadba72c39be7UL,
+  bc8ce5bbc5f7126bUL,
+  2c439b3a40UL
 };
 
 // public key of symbol or publisher account
