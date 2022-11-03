@@ -23,7 +23,6 @@ use solana_program::{
     system_program,
 };
 use solana_program_test::{
-    find_file,
     read_file,
     BanksClient,
     BanksClientError,
