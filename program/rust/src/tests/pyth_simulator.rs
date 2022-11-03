@@ -1,4 +1,5 @@
 use std::mem::size_of;
+use std::path::Path;
 
 use bytemuck::{
     bytes_of,
@@ -69,9 +70,7 @@ pub struct PythSimulator {
 impl PythSimulator {
     /// Deploys the oracle program as upgradable
     pub async fn new() -> PythSimulator {
-        let mut bpf_data = read_file(find_file("pyth_oracle.so").unwrap_or_else(|| {
-            panic!("Unable to locate {}", "pyth_oracle.so");
-        }));
+        let mut bpf_data = read_file(std::env::current_dir().unwrap().join(Path::new("../../target/deploy/pyth_oracle.so")));
 
 
         let mut program_test = ProgramTest::default();
