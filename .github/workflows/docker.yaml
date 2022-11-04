@@ -6,8 +6,8 @@ on:
     branches: [ main ]
 
 env:
-  SOLANA_VERSION: 1.10.29
-  SOLANA_DOCKER_IMAGE_HASH: 78900501ccd1ade1bf088fa0830c46bc6095c6799469ff9b335e1f02d957e53a
+  SOLANA_VERSION: 1.14.7 # Using 1.14.x to have sbf instead of bpf. bpf does not work anymore.
+  SOLANA_DOCKER_IMAGE_HASH: 9130b4a26ec00c4ba99c023da98c06abb0dba2904c990af7770928e0f7dfd2d5
   DOCKER_HUB: docker.io
   DOCKER_USER: ${{ secrets.DOCKER_IO_USER }}
   IS_RELEASE: ${{
