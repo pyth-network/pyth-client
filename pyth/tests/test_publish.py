@@ -78,8 +78,7 @@ def test_publish(solana_test_validator, pyth_dir,
         """
         PublicKey(acc_address)
         solana_client = Client("http://localhost:8899")
-        data = solana_client.get_account_info(PublicKey(acc_address), encoding = 'base64')['result']['value']['data'][0]
-        data = base64.b64decode(data)
+        data = solana_client.get_account_info(PublicKey(acc_address), encoding = 'base64').value.data
         return len(data)
         
 
