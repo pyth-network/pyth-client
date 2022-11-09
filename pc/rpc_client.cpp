@@ -923,7 +923,7 @@ bool rpc::upd_price::build_tx(
   tx.add( *first.bhash_ ); // recent block hash
 
   // instructions section
-  tx.add_len( n + 1 ); // 1 compute limit instruction, n upd_price instruction(s)
+  tx.add_len( n + 1 + 1 ); // 1 compute limit instruction, 1 compute unit price instruction, n upd_price instruction(s)
 
   // Set compute limit
   tx.add( (uint8_t)( n + 3 ) ); // compute budget program id index in accounts list
@@ -932,6 +932,14 @@ bool rpc::upd_price::build_tx(
   tx.add_len<sizeof(uint8_t) + sizeof(uint32_t)>(); // uint8_t enum variant + uint32_t requested compute units
   tx.add( (uint8_t) 2 ); // SetComputeLimit enum variant
   tx.add( (uint32_t) CU_BUDGET_PER_IX * n ); // the budget (scaled for number of instructions)
+
+  // Set compute unit price
+  tx.add( (uint8_t)( n + 3 ) );
+  tx.add_len<0>(); // no accounts
+  // compute unit price instruction parameters
+  tx.add_len<sizeof(uint8_t) + sizeof(uint64_t)>(); // uint8_t enum variant + uint32_t compute price
+  tx.add( (uint8_t) 3 ); // SetComputePrice enum variant
+  tx.add( (uint64_t) CU_PRICE ); // price we are willing to pay per compute unit in Micro Lamports
 
   for ( unsigned i = 0; i < n; ++i ) {
     tx.add( (uint8_t)( n + 2 ) ); // program_id index
