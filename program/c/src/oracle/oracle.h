@@ -58,11 +58,6 @@ const uint64_t EXTRA_PUBLISHER_SPACE = 3072ULL;
 // The biggest instruction appears to be about ~10300 CUs, so overestimate by 100%.
 #define CU_BUDGET_PER_IX 20000
 
-// Requested price per compute unit, in micro lamports
-// We want to pay 5000 lamports in total, so ((5000/20000) / 8) * (10^6)
-// assuming upper bound of 20000 CUs and 8 instructions.
-#define CU_PRICE 31250
-
 // binary version of sysvar_clock account id
 const uint64_t sysvar_clock[] = {
   0xc974c71817d5a706UL,
