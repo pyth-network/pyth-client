@@ -937,7 +937,7 @@ bool rpc::upd_price::build_tx(
   tx.add( (uint8_t)( n + 3 ) );
   tx.add_len<0>(); // no accounts
   // compute unit price instruction parameters
-  tx.add_len<sizeof(uint8_t) + sizeof(uint64_t)>(); // uint8_t enum variant + uint32_t compute price
+  tx.add_len<sizeof(uint8_t) + sizeof(uint64_t)>(); // uint8_t enum variant + uint62_t compute price
   tx.add( (uint8_t) 3 ); // SetComputePrice enum variant
   tx.add( (uint64_t) CU_PRICE ); // price we are willing to pay per compute unit in Micro Lamports
 
