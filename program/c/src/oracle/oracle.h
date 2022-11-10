@@ -35,7 +35,7 @@ const uint64_t EXTRA_PUBLISHER_SPACE = 1000ULL;
 #define PC_EXP_DECAY         -9
 // If ci > price / PC_MAX_CI_DIVISOR, set publisher status to unknown.
 // (e.g., 20 means ci must be < 5% of price)
-#define PC_MAX_CI_DIVISOR    20
+#define PC_MAX_CI_DIVISOR    3
 
 #ifndef PC_HEAP_START
 #define PC_HEAP_START (0x300000000)
