@@ -51,7 +51,10 @@ use {
         },
         transaction::Transaction,
     },
-    std::{mem::size_of, path::Path}
+    std::{
+        mem::size_of,
+        path::Path,
+    },
 };
 
 
