@@ -214,7 +214,7 @@ fn test_upd_price() {
         assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
     }
 
-    populate_instruction(&mut instruction_data, 50, 6, 5);
+    populate_instruction(&mut instruction_data, 50, 20, 5);
     update_clock_slot(&mut clock_account, 6);
 
     // Publishing a wide CI results in a status of unknown.
@@ -239,7 +239,7 @@ fn test_upd_price() {
     {
         let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
         assert_eq!(price_data.comp_[0].latest_.price_, 50);
-        assert_eq!(price_data.comp_[0].latest_.conf_, 6);
+        assert_eq!(price_data.comp_[0].latest_.conf_, 20);
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 5);
         assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_UNKNOWN);
         assert_eq!(price_data.valid_slot_, 5);
