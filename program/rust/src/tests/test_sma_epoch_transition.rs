@@ -87,7 +87,7 @@ fn test_sma_epoch_transition() {
         );
         assert_eq!(price_data.time_machine.granularity, THIRTY_MINUTES);
         assert_eq!(price_data.time_machine.current_epoch_numerator, 0);
-        assert_eq!(price_data.time_machine.current_epoch_is_valid, false);
+        assert!(!price_data.time_machine.current_epoch_is_valid);
         assert_eq!(price_data.time_machine.current_epoch_denominator, 0);
         for i in 0..NUM_BUCKETS_THIRTY_MIN {
             assert_eq!(price_data.time_machine.running_sum_of_price_averages[i], 0);
@@ -120,7 +120,7 @@ fn test_sma_epoch_transition() {
         );
         assert_eq!(price_data.time_machine.granularity, THIRTY_MINUTES);
         assert_eq!(price_data.time_machine.current_epoch_numerator, 42 / 2 * 2);
-        assert_eq!(price_data.time_machine.current_epoch_is_valid, false);
+        assert!(!price_data.time_machine.current_epoch_is_valid);
         assert_eq!(price_data.time_machine.current_epoch_denominator, 2);
         for i in 0..NUM_BUCKETS_THIRTY_MIN {
             assert_eq!(price_data.time_machine.running_sum_of_price_averages[i], 0);
@@ -157,7 +157,7 @@ fn test_sma_epoch_transition() {
             price_data.time_machine.current_epoch_numerator,
             (80 + 42) / 2
         );
-        assert_eq!(price_data.time_machine.current_epoch_is_valid, true);
+        assert!(price_data.time_machine.current_epoch_is_valid);
         assert_eq!(price_data.time_machine.current_epoch_denominator, 1);
 
         for i in 1..NUM_BUCKETS_THIRTY_MIN {
@@ -201,7 +201,7 @@ fn test_sma_epoch_transition() {
             price_data.time_machine.current_epoch_numerator,
             (80 + 42) / 2
         );
-        assert_eq!(price_data.time_machine.current_epoch_is_valid, true);
+        assert!(price_data.time_machine.current_epoch_is_valid);
         assert_eq!(price_data.time_machine.current_epoch_denominator, 1);
 
         for i in 1..NUM_BUCKETS_THIRTY_MIN {
@@ -246,7 +246,7 @@ fn test_sma_epoch_transition() {
             price_data.time_machine.current_epoch_numerator,
             (40 + 80) / 2 * 28
         );
-        assert_eq!(price_data.time_machine.current_epoch_is_valid, false);
+        assert!(!price_data.time_machine.current_epoch_is_valid);
         assert_eq!(price_data.time_machine.current_epoch_denominator, 28);
 
         for i in 2..NUM_BUCKETS_THIRTY_MIN {
@@ -297,7 +297,7 @@ fn test_sma_epoch_transition() {
             price_data.time_machine.current_epoch_numerator,
             (40 + 41) / 2
         );
-        assert_eq!(price_data.time_machine.current_epoch_is_valid, true);
+        assert!(price_data.time_machine.current_epoch_is_valid);
         assert_eq!(price_data.time_machine.current_epoch_denominator, 1);
 
         for i in 5..NUM_BUCKETS_THIRTY_MIN {
@@ -367,7 +367,7 @@ fn test_sma_epoch_transition() {
             price_data.time_machine.current_epoch_numerator,
             (40 + 41) / 2
         );
-        assert_eq!(price_data.time_machine.current_epoch_is_valid, true);
+        assert!(price_data.time_machine.current_epoch_is_valid);
         assert_eq!(price_data.time_machine.current_epoch_denominator, 1);
 
         for i in 5..NUM_BUCKETS_THIRTY_MIN {
@@ -434,7 +434,7 @@ fn test_sma_epoch_transition() {
             price_data.time_machine.current_epoch_numerator,
             (41 + 100) / 2 * 69
         );
-        assert_eq!(price_data.time_machine.current_epoch_is_valid, false);
+        assert!(!price_data.time_machine.current_epoch_is_valid);
         assert_eq!(price_data.time_machine.current_epoch_denominator, 69);
         for i in 0..NUM_BUCKETS_THIRTY_MIN {
             assert_eq!(

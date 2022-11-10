@@ -94,7 +94,7 @@ fn test_upd_sma() {
         assert_eq!(price_data.price_data.agg_.status_, PC_STATUS_UNKNOWN);
 
         assert_eq!(price_data.time_machine.current_epoch_numerator, 0);
-        assert_eq!(price_data.time_machine.current_epoch_is_valid, false);
+        assert!(!price_data.time_machine.current_epoch_is_valid);
         assert_eq!(price_data.time_machine.current_epoch_denominator, 0);
     }
 
@@ -129,7 +129,7 @@ fn test_upd_sma() {
         assert_eq!(price_data.price_data.agg_.status_, PC_STATUS_UNKNOWN);
 
         assert_eq!(price_data.time_machine.current_epoch_numerator, 0);
-        assert_eq!(price_data.time_machine.current_epoch_is_valid, false);
+        assert!(!price_data.time_machine.current_epoch_is_valid);
         assert_eq!(price_data.time_machine.current_epoch_denominator, 0);
     }
 
@@ -163,7 +163,7 @@ fn test_upd_sma() {
         assert_eq!(price_data.price_data.agg_.status_, PC_STATUS_TRADING);
 
         assert_eq!(price_data.time_machine.current_epoch_numerator, 42 / 2 * 3);
-        assert_eq!(price_data.time_machine.current_epoch_is_valid, false);
+        assert!(!price_data.time_machine.current_epoch_is_valid);
         assert_eq!(price_data.time_machine.current_epoch_denominator, 3);
     }
 
@@ -199,7 +199,7 @@ fn test_upd_sma() {
             price_data.time_machine.current_epoch_numerator,
             42 / 2 * 3 + (81 + 42) / 2
         );
-        assert_eq!(price_data.time_machine.current_epoch_is_valid, false);
+        assert!(!price_data.time_machine.current_epoch_is_valid);
         assert_eq!(price_data.time_machine.current_epoch_denominator, 3 + 1);
     }
 
@@ -235,7 +235,7 @@ fn test_upd_sma() {
             price_data.time_machine.current_epoch_numerator,
             42 / 2 * 3 + (81 + 42) / 2 + 81
         );
-        assert_eq!(price_data.time_machine.current_epoch_is_valid, false);
+        assert!(!price_data.time_machine.current_epoch_is_valid);
         assert_eq!(price_data.time_machine.current_epoch_denominator, 3 + 1 + 1);
     }
 
@@ -273,7 +273,7 @@ fn test_upd_sma() {
             price_data.time_machine.current_epoch_numerator,
             42 / 2 * 3 + (81 + 42) / 2 + 81
         );
-        assert_eq!(price_data.time_machine.current_epoch_is_valid, false);
+        assert!(!price_data.time_machine.current_epoch_is_valid);
         assert_eq!(price_data.time_machine.current_epoch_denominator, 3 + 1 + 1);
     }
 
@@ -320,7 +320,7 @@ fn test_upd_sma() {
             price_data.time_machine.current_epoch_numerator,
             42 / 2 * 3 + (81 + 42) / 2 + 81 + 81
         );
-        assert_eq!(price_data.time_machine.current_epoch_is_valid, false);
+        assert!(!price_data.time_machine.current_epoch_is_valid);
         assert_eq!(
             price_data.time_machine.current_epoch_denominator,
             3 + 1 + 1 + 1
@@ -360,7 +360,7 @@ fn test_upd_sma() {
             price_data.time_machine.current_epoch_numerator,
             42 / 2 * 3 + (81 + 42) / 2 + 81 + 81
         );
-        assert_eq!(price_data.time_machine.current_epoch_is_valid, false);
+        assert!(!price_data.time_machine.current_epoch_is_valid);
         assert_eq!(
             price_data.time_machine.current_epoch_denominator,
             3 + 1 + 1 + 1
