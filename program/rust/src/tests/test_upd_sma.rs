@@ -328,7 +328,7 @@ fn test_upd_sma() {
     }
 
     // Crank one more time and aggregate should be unknown
-    populate_instruction(&mut instruction_data, 50, 6, 6);
+    populate_instruction(&mut instruction_data, 50, 20, 6);
     update_clock_slot(&mut clock_account, 7);
 
     assert!(process_instruction(
@@ -345,7 +345,7 @@ fn test_upd_sma() {
     {
         let price_data = load_checked::<PriceAccountWrapper>(&price_account, PC_VERSION).unwrap();
         assert_eq!(price_data.price_data.comp_[0].latest_.price_, 50);
-        assert_eq!(price_data.price_data.comp_[0].latest_.conf_, 6);
+        assert_eq!(price_data.price_data.comp_[0].latest_.conf_, 20);
         assert_eq!(price_data.price_data.comp_[0].latest_.pub_slot_, 6);
         assert_eq!(
             price_data.price_data.comp_[0].latest_.status_,
