@@ -74,6 +74,7 @@ e79bc372baadecff
 403a9b432c
 */
 
+// correct
 const uint64_t compute_budget_program_id[] = {
   0x321721e56f460603UL,
   0xe79bc372baadecffUL,
