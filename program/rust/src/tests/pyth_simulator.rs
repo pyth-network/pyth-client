@@ -1,5 +1,4 @@
 use std::mem::size_of;
-use std::path::Path;
 
 use bytemuck::{
     bytes_of,
@@ -15,7 +14,6 @@ use solana_program::rent::Rent;
 use solana_program::system_instruction;
 use solana_program_test::{
     processor,
-    read_file,
     BanksClient,
     BanksClientError,
     ProgramTest,
