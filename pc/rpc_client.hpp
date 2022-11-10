@@ -87,7 +87,7 @@ namespace pc
 
     // submit rpc request (and bundled callback)
     void send( rpc_request * );
-    void send( rpc::upd_price *[], unsigned n );
+    void send( rpc::upd_price *[], unsigned n, unsigned cu_units, unsigned cu_price );
 
   public:
 
@@ -428,8 +428,11 @@ namespace pc
       static bool build( net_wtr&, upd_price*[], unsigned n );
       static bool request( json_wtr&, upd_price*[], const unsigned n );
 
+      static bool build( net_wtr&, upd_price*[], unsigned n, unsigned cu_units, unsigned cu_price  );
+      static bool request( json_wtr&, upd_price*[], const unsigned n, unsigned cu_units, unsigned cu_price );
+
     private:
-      static bool build_tx( bincode&, upd_price*[], unsigned n );
+      static bool build_tx( bincode&, upd_price*[], unsigned n, unsigned cu_units, unsigned cu_price );
 
       hash         *bhash_;
       key_pair     *pkey_;

@@ -100,6 +100,14 @@ namespace pc
     void set_publish_interval( int64_t mill_secs );
     int64_t get_publish_interval() const;
 
+    // override the amount of requested CU units per upd_price transaction
+    void set_requested_upd_price_cu_units( unsigned cu_units );
+    unsigned get_requested_upd_price_cu_units() const;
+
+    // override the price per CU for upd_price transaction
+    void set_requested_upd_price_cu_price( unsigned cu_price );
+    unsigned get_requested_upd_price_cu_price() const;
+
     // override the default maximum number of price updates to send in a batch
     void set_max_batch_size( unsigned batch_size );
     unsigned get_max_batch_size() const;
@@ -275,6 +283,8 @@ namespace pc
     tx_parser    txp_;      // handle unexpected errors
     commitment   cmt_;      // account get/subscribe commitment
     unsigned     max_batch_;// maximum number of price updates that can be sent in a single batch
+    unsigned     requested_upd_price_cu_units_; // amount of requested CU units per upd_price transaction
+    unsigned     requested_upd_price_cu_price_; // price per CU for upd_price transaction
 
     // requests
     rpc::get_slot              sreq_[1]; // slot subscription
