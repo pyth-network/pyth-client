@@ -82,12 +82,5 @@ fn mapping_product_list_equals(mapping_data: &MappingAccount, expected: Vec<Pubk
         return false;
     }
 
-    #[allow(clippy::needless_range_loop)]
-    for i in 0..expected.len() {
-        if mapping_data.products_list[i] != expected[i] {
-            return false;
-        }
-    }
-
-    true
+    mapping_data.products_list == expected.as_slice()
 }

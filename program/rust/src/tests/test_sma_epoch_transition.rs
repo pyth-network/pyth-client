@@ -284,7 +284,6 @@ fn test_sma_epoch_transition() {
     )
     .is_ok());
 
-    #[allow(clippy::identity_op)]
     {
         let price_data = load_checked::<PriceAccountWrapper>(&price_account, PC_VERSION).unwrap();
         // Aggregation was successful, check that all skipped buckets got updated
@@ -319,7 +318,7 @@ fn test_sma_epoch_transition() {
 
         assert_eq!(
             price_data.time_machine.running_sum_of_price_averages[2],
-            price_data.time_machine.running_sum_of_price_averages[1] + (60 * 28 + 1 * 41) / 29
+            price_data.time_machine.running_sum_of_price_averages[1] + (60 * 28 + 41) / 29
         );
         assert_eq!(price_data.time_machine.running_valid_epoch_counter[2], 0);
 
@@ -353,7 +352,6 @@ fn test_sma_epoch_transition() {
     )
     .is_ok());
 
-    #[allow(clippy::identity_op)]
     {
         let price_data = load_checked::<PriceAccountWrapper>(&price_account, PC_VERSION).unwrap();
         // Nothing got updated, since slot gap was too big, so aggregation was not successful
@@ -389,7 +387,7 @@ fn test_sma_epoch_transition() {
 
         assert_eq!(
             price_data.time_machine.running_sum_of_price_averages[2],
-            price_data.time_machine.running_sum_of_price_averages[1] + (60 * 28 + 1 * 41) / 29
+            price_data.time_machine.running_sum_of_price_averages[1] + (60 * 28 + 41) / 29
         );
         assert_eq!(price_data.time_machine.running_valid_epoch_counter[2], 0);
 
