@@ -1,27 +1,33 @@
-use crate::c_oracle_header::{
-    PriceAccount,
-    PriceComponent,
-    PythAccount,
-    PC_COMP_SIZE,
-    PC_VERSION,
+use {
+    crate::{
+        c_oracle_header::{
+            PriceAccount,
+            PriceComponent,
+            PythAccount,
+            PC_COMP_SIZE,
+            PC_VERSION,
+        },
+        deserialize::{
+            initialize_pyth_account_checked,
+            load_checked,
+        },
+        instruction::{
+            AddPublisherArgs,
+            OracleCommand,
+        },
+        processor::process_instruction,
+        tests::test_utils::AccountSetup,
+        utils::clear_account,
+        OracleError,
+    },
+    bytemuck::bytes_of,
+    solana_program::{
+        program_error::ProgramError,
+        pubkey::Pubkey,
+        rent::Rent,
+    },
+    std::mem::size_of,
 };
-use crate::deserialize::{
-    initialize_pyth_account_checked,
-    load_checked,
-};
-use crate::instruction::{
-    AddPublisherArgs,
-    OracleCommand,
-};
-use crate::processor::process_instruction;
-use crate::tests::test_utils::AccountSetup;
-use crate::utils::clear_account;
-use crate::OracleError;
-use bytemuck::bytes_of;
-use solana_program::program_error::ProgramError;
-use solana_program::pubkey::Pubkey;
-use solana_program::rent::Rent;
-use std::mem::size_of;
 
 #[test]
 fn test_add_publisher() {
@@ -35,10 +41,10 @@ fn test_add_publisher() {
     let mut instruction_data = bytes_of::<AddPublisherArgs>(&cmd);
 
     let mut funding_setup = AccountSetup::new_funding();
-    let funding_account = funding_setup.to_account_info();
+    let funding_account = funding_setup.as_account_info();
 
     let mut price_setup = AccountSetup::new::<PriceAccount>(&program_id);
-    let price_account = price_setup.to_account_info();
+    let price_account = price_setup.as_account_info();
     initialize_pyth_account_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
 
 
@@ -100,7 +106,7 @@ fn test_add_publisher() {
 
     initialize_pyth_account_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
 
-    //Fill up price node
+    // Fill up price node
     for i in 0..PC_COMP_SIZE {
         cmd.publisher = Pubkey::new_unique();
         instruction_data = bytes_of::<AddPublisherArgs>(&cmd);

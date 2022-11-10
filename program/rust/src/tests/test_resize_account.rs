@@ -1,9 +1,12 @@
-use solana_sdk::signer::Signer;
-use std::mem::size_of;
-
-use crate::c_oracle_header::pc_price_t;
-use crate::tests::pyth_simulator::PythSimulator;
-use crate::time_machine_types::PriceAccountWrapper;
+use {
+    crate::{
+        c_oracle_header::pc_price_t,
+        tests::pyth_simulator::PythSimulator,
+        time_machine_types::PriceAccountWrapper,
+    },
+    solana_sdk::signer::Signer,
+    std::mem::size_of,
+};
 
 
 /// Warning : This test will fail if you run cargo test instead of cargo test-bpf

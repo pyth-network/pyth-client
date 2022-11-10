@@ -1,26 +1,32 @@
-use crate::c_oracle_header::{
-    MappingAccount,
-    PermissionAccount,
-    PC_ACCTYPE_MAPPING,
-    PC_MAGIC,
-    PC_VERSION,
+use {
+    crate::{
+        c_oracle_header::{
+            MappingAccount,
+            PermissionAccount,
+            PC_ACCTYPE_MAPPING,
+            PC_MAGIC,
+            PC_VERSION,
+        },
+        deserialize::{
+            initialize_pyth_account_checked,
+            load_account_as,
+        },
+        error::OracleError,
+        instruction::{
+            CommandHeader,
+            OracleCommand,
+        },
+        processor::process_instruction,
+        tests::test_utils::AccountSetup,
+        utils::clear_account,
+    },
+    bytemuck::bytes_of,
+    solana_program::pubkey::Pubkey,
+    std::{
+        cell::RefCell,
+        rc::Rc,
+    },
 };
-use crate::deserialize::{
-    initialize_pyth_account_checked,
-    load_account_as,
-};
-use crate::error::OracleError;
-use crate::instruction::{
-    CommandHeader,
-    OracleCommand,
-};
-use crate::processor::process_instruction;
-use crate::tests::test_utils::AccountSetup;
-use crate::utils::clear_account;
-use bytemuck::bytes_of;
-use solana_program::pubkey::Pubkey;
-use std::cell::RefCell;
-use std::rc::Rc;
 
 #[test]
 fn test_init_mapping() {
@@ -31,13 +37,13 @@ fn test_init_mapping() {
     let program_id_2 = Pubkey::new_unique();
 
     let mut funding_setup = AccountSetup::new_funding();
-    let mut funding_account = funding_setup.to_account_info();
+    let mut funding_account = funding_setup.as_account_info();
 
     let mut attacker_setup = AccountSetup::new_funding();
-    let attacker_account = attacker_setup.to_account_info();
+    let attacker_account = attacker_setup.as_account_info();
 
     let mut mapping_setup = AccountSetup::new::<MappingAccount>(&program_id);
-    let mut mapping_account = mapping_setup.to_account_info();
+    let mut mapping_account = mapping_setup.as_account_info();
 
     assert!(process_instruction(
         &program_id,
@@ -156,7 +162,7 @@ fn test_init_mapping() {
     mapping_account.is_signer = false;
 
     let mut permissions_setup = AccountSetup::new_permission(&program_id);
-    let permissions_account = permissions_setup.to_account_info();
+    let permissions_account = permissions_setup.as_account_info();
 
     // Permissions account is unitialized
     assert_eq!(
@@ -195,7 +201,7 @@ fn test_init_mapping() {
 
     // Attacker tries to impersonate permissions account
     let mut impersonating_permission_setup = AccountSetup::new::<PermissionAccount>(&program_id);
-    let impersonating_permission_account = impersonating_permission_setup.to_account_info();
+    let impersonating_permission_account = impersonating_permission_setup.as_account_info();
 
     {
         let mut impersonating_permission_account_data =

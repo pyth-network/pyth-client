@@ -1,32 +1,36 @@
-use solana_program::program_error::ProgramError;
-use solana_program::pubkey::Pubkey;
-use std::mem::size_of;
-
-use crate::c_oracle_header::{
-    PC_MAX_SEND_LATENCY,
-    PC_STATUS_TRADING,
-    PC_STATUS_UNKNOWN,
-    PC_VERSION,
-};
-
-use crate::deserialize::{
-    initialize_pyth_account_checked,
-    load_checked,
-    load_mut,
-};
-use crate::instruction::{
-    OracleCommand,
-    UpdPriceArgs,
-};
-use crate::processor::process_instruction;
 // use crate::processor::process_instruction;
-use crate::tests::test_utils::{
-    update_clock_slot,
-    AccountSetup,
-};
-use crate::time_machine_types::{
-    PriceAccountWrapper,
-    THIRTY_MINUTES,
+use {
+    crate::{
+        c_oracle_header::{
+            PC_MAX_SEND_LATENCY,
+            PC_STATUS_TRADING,
+            PC_STATUS_UNKNOWN,
+            PC_VERSION,
+        },
+        deserialize::{
+            initialize_pyth_account_checked,
+            load_checked,
+            load_mut,
+        },
+        instruction::{
+            OracleCommand,
+            UpdPriceArgs,
+        },
+        processor::process_instruction,
+        tests::test_utils::{
+            update_clock_slot,
+            AccountSetup,
+        },
+        time_machine_types::{
+            PriceAccountWrapper,
+            THIRTY_MINUTES,
+        },
+    },
+    solana_program::{
+        program_error::ProgramError,
+        pubkey::Pubkey,
+    },
+    std::mem::size_of,
 };
 
 /// Clone of test_upd_price that also checks sma fields
@@ -38,10 +42,10 @@ fn test_upd_sma() {
     let program_id = Pubkey::new_unique();
 
     let mut funding_setup = AccountSetup::new_funding();
-    let funding_account = funding_setup.to_account_info();
+    let funding_account = funding_setup.as_account_info();
 
     let mut price_setup = AccountSetup::new::<PriceAccountWrapper>(&program_id);
-    let mut price_account = price_setup.to_account_info();
+    let mut price_account = price_setup.as_account_info();
     price_account.is_signer = false;
     initialize_pyth_account_checked::<PriceAccountWrapper>(&price_account, PC_VERSION).unwrap();
 
@@ -58,7 +62,7 @@ fn test_upd_sma() {
     }
 
     let mut clock_setup = AccountSetup::new_clock();
-    let mut clock_account = clock_setup.to_account_info();
+    let mut clock_account = clock_setup.as_account_info();
     clock_account.is_signer = false;
     clock_account.is_writable = false;
 
@@ -90,7 +94,7 @@ fn test_upd_sma() {
         assert_eq!(price_data.price_data.agg_.status_, PC_STATUS_UNKNOWN);
 
         assert_eq!(price_data.time_machine.current_epoch_numerator, 0);
-        assert_eq!(price_data.time_machine.current_epoch_is_valid, false);
+        assert!(!price_data.time_machine.current_epoch_is_valid);
         assert_eq!(price_data.time_machine.current_epoch_denominator, 0);
     }
 
@@ -125,7 +129,7 @@ fn test_upd_sma() {
         assert_eq!(price_data.price_data.agg_.status_, PC_STATUS_UNKNOWN);
 
         assert_eq!(price_data.time_machine.current_epoch_numerator, 0);
-        assert_eq!(price_data.time_machine.current_epoch_is_valid, false);
+        assert!(!price_data.time_machine.current_epoch_is_valid);
         assert_eq!(price_data.time_machine.current_epoch_denominator, 0);
     }
 
@@ -159,7 +163,7 @@ fn test_upd_sma() {
         assert_eq!(price_data.price_data.agg_.status_, PC_STATUS_TRADING);
 
         assert_eq!(price_data.time_machine.current_epoch_numerator, 42 / 2 * 3);
-        assert_eq!(price_data.time_machine.current_epoch_is_valid, false);
+        assert!(!price_data.time_machine.current_epoch_is_valid);
         assert_eq!(price_data.time_machine.current_epoch_denominator, 3);
     }
 
@@ -195,7 +199,7 @@ fn test_upd_sma() {
             price_data.time_machine.current_epoch_numerator,
             42 / 2 * 3 + (81 + 42) / 2
         );
-        assert_eq!(price_data.time_machine.current_epoch_is_valid, false);
+        assert!(!price_data.time_machine.current_epoch_is_valid);
         assert_eq!(price_data.time_machine.current_epoch_denominator, 3 + 1);
     }
 
@@ -231,7 +235,7 @@ fn test_upd_sma() {
             price_data.time_machine.current_epoch_numerator,
             42 / 2 * 3 + (81 + 42) / 2 + 81
         );
-        assert_eq!(price_data.time_machine.current_epoch_is_valid, false);
+        assert!(!price_data.time_machine.current_epoch_is_valid);
         assert_eq!(price_data.time_machine.current_epoch_denominator, 3 + 1 + 1);
     }
 
@@ -269,7 +273,7 @@ fn test_upd_sma() {
             price_data.time_machine.current_epoch_numerator,
             42 / 2 * 3 + (81 + 42) / 2 + 81
         );
-        assert_eq!(price_data.time_machine.current_epoch_is_valid, false);
+        assert!(!price_data.time_machine.current_epoch_is_valid);
         assert_eq!(price_data.time_machine.current_epoch_denominator, 3 + 1 + 1);
     }
 
@@ -316,7 +320,7 @@ fn test_upd_sma() {
             price_data.time_machine.current_epoch_numerator,
             42 / 2 * 3 + (81 + 42) / 2 + 81 + 81
         );
-        assert_eq!(price_data.time_machine.current_epoch_is_valid, false);
+        assert!(!price_data.time_machine.current_epoch_is_valid);
         assert_eq!(
             price_data.time_machine.current_epoch_denominator,
             3 + 1 + 1 + 1
@@ -356,7 +360,7 @@ fn test_upd_sma() {
             price_data.time_machine.current_epoch_numerator,
             42 / 2 * 3 + (81 + 42) / 2 + 81 + 81
         );
-        assert_eq!(price_data.time_machine.current_epoch_is_valid, false);
+        assert!(!price_data.time_machine.current_epoch_is_valid);
         assert_eq!(
             price_data.time_machine.current_epoch_denominator,
             3 + 1 + 1 + 1
@@ -365,7 +369,7 @@ fn test_upd_sma() {
 }
 
 // Create an upd_price instruction with the provided parameters
-fn populate_instruction(instruction_data: &mut [u8], price: i64, conf: u64, pub_slot: u64) -> () {
+fn populate_instruction(instruction_data: &mut [u8], price: i64, conf: u64, pub_slot: u64) {
     let mut cmd = load_mut::<UpdPriceArgs>(instruction_data).unwrap();
     cmd.header = OracleCommand::UpdPrice.into();
     cmd.status = PC_STATUS_TRADING;

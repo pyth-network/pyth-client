@@ -17,5 +17,5 @@ repos:
     - id: cargo-clippy
       name: Cargo clippy
       language: "rust"
-      entry : cargo +nightly clippy -- -D warnings
+      entry : cargo +nightly clippy --tests -- -D warnings
       pass_filenames : false

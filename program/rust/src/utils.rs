@@ -1,36 +1,42 @@
-use crate::c_oracle_header::{
-    AccountHeader,
-    PermissionAccount,
-    MAX_NUM_DECIMALS,
-    PERMISSIONS_SEED,
+use {
+    crate::{
+        c_oracle_header::{
+            AccountHeader,
+            PermissionAccount,
+            MAX_NUM_DECIMALS,
+            PERMISSIONS_SEED,
+        },
+        deserialize::{
+            load_account_as,
+            load_checked,
+        },
+        instruction::{
+            CommandHeader,
+            OracleCommand,
+            UpdPriceArgs,
+        },
+        OracleError,
+    },
+    num_traits::FromPrimitive,
+    solana_program::{
+        account_info::AccountInfo,
+        bpf_loader_upgradeable::UpgradeableLoaderState,
+        program::{
+            invoke,
+            invoke_signed,
+        },
+        program_error::ProgramError,
+        program_memory::sol_memset,
+        pubkey::Pubkey,
+        system_instruction::{
+            allocate,
+            assign,
+            transfer,
+        },
+        sysvar::rent::Rent,
+    },
+    std::borrow::BorrowMut,
 };
-use crate::deserialize::{
-    load_account_as,
-    load_checked,
-};
-use crate::instruction::{
-    CommandHeader,
-    OracleCommand,
-    UpdPriceArgs,
-};
-use crate::OracleError;
-use num_traits::FromPrimitive;
-use solana_program::account_info::AccountInfo;
-use solana_program::bpf_loader_upgradeable::UpgradeableLoaderState;
-use solana_program::program::{
-    invoke,
-    invoke_signed,
-};
-use solana_program::program_error::ProgramError;
-use solana_program::program_memory::sol_memset;
-use solana_program::pubkey::Pubkey;
-use solana_program::system_instruction::{
-    allocate,
-    assign,
-    transfer,
-};
-use solana_program::sysvar::rent::Rent;
-use std::borrow::BorrowMut;
 
 
 pub fn pyth_assert(condition: bool, error_code: ProgramError) -> Result<(), ProgramError> {

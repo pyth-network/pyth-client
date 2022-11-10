@@ -1,25 +1,31 @@
-use crate::c_oracle_header::{
-    MappingAccount,
-    PriceAccount,
-    ProductAccount,
-    PC_VERSION,
+use {
+    crate::{
+        c_oracle_header::{
+            MappingAccount,
+            PriceAccount,
+            ProductAccount,
+            PC_VERSION,
+        },
+        deserialize::{
+            initialize_pyth_account_checked,
+            load_checked,
+        },
+        error::OracleError,
+        instruction::{
+            AddPriceArgs,
+            CommandHeader,
+            OracleCommand,
+        },
+        processor::process_instruction,
+        tests::test_utils::AccountSetup,
+        utils::clear_account,
+    },
+    bytemuck::bytes_of,
+    solana_program::{
+        program_error::ProgramError,
+        pubkey::Pubkey,
+    },
 };
-use crate::deserialize::{
-    initialize_pyth_account_checked,
-    load_checked,
-};
-use crate::error::OracleError;
-use crate::instruction::{
-    AddPriceArgs,
-    CommandHeader,
-    OracleCommand,
-};
-use crate::processor::process_instruction;
-use crate::tests::test_utils::AccountSetup;
-use crate::utils::clear_account;
-use bytemuck::bytes_of;
-use solana_program::program_error::ProgramError;
-use solana_program::pubkey::Pubkey;
 
 #[test]
 fn test_add_price() {
@@ -36,20 +42,20 @@ fn test_add_price() {
     let program_id = Pubkey::new_unique();
 
     let mut funding_setup = AccountSetup::new_funding();
-    let funding_account = funding_setup.to_account_info();
+    let funding_account = funding_setup.as_account_info();
 
     let mut mapping_setup = AccountSetup::new::<MappingAccount>(&program_id);
-    let mapping_account = mapping_setup.to_account_info();
+    let mapping_account = mapping_setup.as_account_info();
     initialize_pyth_account_checked::<MappingAccount>(&mapping_account, PC_VERSION).unwrap();
 
     let mut product_setup = AccountSetup::new::<ProductAccount>(&program_id);
-    let product_account = product_setup.to_account_info();
+    let product_account = product_setup.as_account_info();
 
     let mut price_setup = AccountSetup::new::<PriceAccount>(&program_id);
-    let mut price_account = price_setup.to_account_info();
+    let mut price_account = price_setup.as_account_info();
 
     let mut price_setup_2 = AccountSetup::new::<PriceAccount>(&program_id);
-    let price_account_2 = price_setup_2.to_account_info();
+    let price_account_2 = price_setup_2.as_account_info();
 
     assert!(process_instruction(
         &program_id,
@@ -153,7 +159,7 @@ fn test_add_price() {
     );
 
 
-    //Price not signing
+    // Price not signing
     hdr_add_price = AddPriceArgs {
         header:     OracleCommand::AddPrice.into(),
         exponent:   6,

@@ -1,13 +1,15 @@
-use std::mem::{
-    size_of,
-    size_of_val,
+use {
+    crate::{
+        c_oracle_header::MappingAccount,
+        tests::pyth_simulator::PythSimulator,
+    },
+    solana_program::pubkey::Pubkey,
+    solana_sdk::signer::Signer,
+    std::mem::{
+        size_of,
+        size_of_val,
+    },
 };
-
-use solana_program::pubkey::Pubkey;
-use solana_sdk::signer::Signer;
-
-use crate::c_oracle_header::MappingAccount;
-use crate::tests::pyth_simulator::PythSimulator;
 
 
 #[tokio::test]
@@ -79,12 +81,5 @@ fn mapping_product_list_equals(mapping_data: &MappingAccount, expected: Vec<Pubk
     if mapping_data.header.size != expected_size {
         return false;
     }
-
-    for i in 0..expected.len() {
-        if mapping_data.products_list[i] != expected[i] {
-            return false;
-        }
-    }
-
-    return true;
+    &mapping_data.products_list[..expected.len()] == expected.as_slice()
 }

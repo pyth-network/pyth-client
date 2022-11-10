@@ -1,54 +1,60 @@
-use std::mem::size_of;
-use std::path::Path;
-
-use bytemuck::{
-    bytes_of,
-    Pod,
-};
-use solana_program::bpf_loader_upgradeable::{
-    self,
-    UpgradeableLoaderState,
-};
-use solana_program::hash::Hash;
-use solana_program::instruction::{
-    AccountMeta,
-    Instruction,
-};
-use solana_program::native_token::LAMPORTS_PER_SOL;
-use solana_program::pubkey::Pubkey;
-use solana_program::rent::Rent;
-use solana_program::stake_history::Epoch;
-use solana_program::{
-    system_instruction,
-    system_program,
-};
-use solana_program_test::{
-    read_file,
-    BanksClient,
-    BanksClientError,
-    ProgramTest,
-    ProgramTestBanksClientExt,
-};
-use solana_sdk::account::Account;
-use solana_sdk::signature::{
-    Keypair,
-    Signer,
-};
-use solana_sdk::transaction::Transaction;
-
-use crate::c_oracle_header::{
-    MappingAccount,
-    PriceAccount,
-    PC_PROD_ACC_SIZE,
-    PC_PTYPE_PRICE,
-    PERMISSIONS_SEED,
-};
-use crate::deserialize::load;
-use crate::instruction::{
-    AddPriceArgs,
-    CommandHeader,
-    OracleCommand,
-    UpdPermissionsArgs,
+use {
+    crate::{
+        c_oracle_header::{
+            MappingAccount,
+            PriceAccount,
+            PC_PROD_ACC_SIZE,
+            PC_PTYPE_PRICE,
+            PERMISSIONS_SEED,
+        },
+        deserialize::load,
+        instruction::{
+            AddPriceArgs,
+            CommandHeader,
+            OracleCommand,
+            UpdPermissionsArgs,
+        },
+    },
+    bytemuck::{
+        bytes_of,
+        Pod,
+    },
+    solana_program::{
+        bpf_loader_upgradeable::{
+            self,
+            UpgradeableLoaderState,
+        },
+        hash::Hash,
+        instruction::{
+            AccountMeta,
+            Instruction,
+        },
+        native_token::LAMPORTS_PER_SOL,
+        pubkey::Pubkey,
+        rent::Rent,
+        stake_history::Epoch,
+        system_instruction,
+        system_program,
+    },
+    solana_program_test::{
+        read_file,
+        BanksClient,
+        BanksClientError,
+        ProgramTest,
+        ProgramTestBanksClientExt,
+    },
+    solana_sdk::{
+        account::Account,
+        signature::{
+            Keypair,
+            Signer,
+        },
+        transaction::Transaction,
+    },
+    std::{
+        mem::size_of,
+        path::Path,
+    },
 };
 
 
@@ -134,7 +140,7 @@ impl PythSimulator {
             .await
             .unwrap();
 
-        return result;
+        result
     }
 
 
@@ -230,7 +236,7 @@ impl PythSimulator {
 
         self.process_ix(
             instruction,
-            &vec![&mapping_keypair, &product_keypair],
+            &vec![mapping_keypair, &product_keypair],
             &copy_keypair(&self.genesis_keypair),
         )
         .await
@@ -256,7 +262,7 @@ impl PythSimulator {
 
         self.process_ix(
             instruction,
-            &vec![&mapping_keypair, &product_keypair],
+            &vec![mapping_keypair, product_keypair],
             &copy_keypair(&self.genesis_keypair),
         )
         .await
@@ -288,7 +294,7 @@ impl PythSimulator {
 
         self.process_ix(
             instruction,
-            &vec![&product_keypair, &price_keypair],
+            &vec![product_keypair, &price_keypair],
             &copy_keypair(&self.genesis_keypair),
         )
         .await
@@ -314,7 +320,7 @@ impl PythSimulator {
 
         self.process_ix(
             instruction,
-            &vec![&product_keypair, &price_keypair],
+            &vec![product_keypair, price_keypair],
             &copy_keypair(&self.genesis_keypair),
         )
         .await
@@ -339,7 +345,7 @@ impl PythSimulator {
 
         self.process_ix(
             instruction,
-            &vec![&price_keypair],
+            &vec![price_keypair],
             &copy_keypair(&self.genesis_keypair),
         )
         .await
@@ -385,7 +391,7 @@ impl PythSimulator {
     pub async fn get_account_data_as<T: Pod>(&mut self, key: Pubkey) -> Option<T> {
         self.get_account(key)
             .await
-            .map(|x| load::<T>(&x.data).unwrap().clone())
+            .map(|x| *load::<T>(&x.data).unwrap())
     }
 
     pub fn is_owned_by_oracle(&self, account: &Account) -> bool {
@@ -403,10 +409,10 @@ impl PythSimulator {
     pub fn get_permissions_pubkey(&self) -> Pubkey {
         let (permissions_pubkey, __bump) =
             Pubkey::find_program_address(&[PERMISSIONS_SEED.as_bytes()], &self.program_id);
-        return permissions_pubkey;
+        permissions_pubkey
     }
 }
 
 pub fn copy_keypair(keypair: &Keypair) -> Keypair {
-    return Keypair::from_bytes(&keypair.to_bytes()).unwrap();
+    Keypair::from_bytes(&keypair.to_bytes()).unwrap()
 }

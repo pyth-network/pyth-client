@@ -1,32 +1,38 @@
-use std::mem::size_of;
-
-use bytemuck::{
-    try_from_bytes,
-    try_from_bytes_mut,
-    Pod,
-};
-use solana_program::pubkey::Pubkey;
-
-use crate::c_oracle_header::{
-    AccountHeader,
-    PythAccount,
-    PC_MAGIC,
-};
-use crate::error::OracleError;
-use crate::utils::{
-    allocate_data,
-    assign_owner,
-    check_valid_fresh_account,
-    clear_account,
-    get_rent,
-    pyth_assert,
-    send_lamports,
-};
-use solana_program::account_info::AccountInfo;
-use solana_program::program_error::ProgramError;
-use std::cell::{
-    Ref,
-    RefMut,
+use {
+    crate::{
+        c_oracle_header::{
+            AccountHeader,
+            PythAccount,
+            PC_MAGIC,
+        },
+        error::OracleError,
+        utils::{
+            allocate_data,
+            assign_owner,
+            check_valid_fresh_account,
+            clear_account,
+            get_rent,
+            pyth_assert,
+            send_lamports,
+        },
+    },
+    bytemuck::{
+        try_from_bytes,
+        try_from_bytes_mut,
+        Pod,
+    },
+    solana_program::{
+        account_info::AccountInfo,
+        program_error::ProgramError,
+        pubkey::Pubkey,
+    },
+    std::{
+        cell::{
+            Ref,
+            RefMut,
+        },
+        mem::size_of,
+    },
 };
 
 /// Interpret the bytes in `data` as a value of type `T`

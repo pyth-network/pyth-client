@@ -1,31 +1,36 @@
-use crate::error::OracleError;
-use crate::instruction::{
-    load_command_header_checked,
-    OracleCommand,
+use {
+    crate::{
+        error::OracleError,
+        instruction::{
+            load_command_header_checked,
+            OracleCommand,
+        },
+        rust_oracle::{
+            add_mapping,
+            add_price,
+            add_product,
+            add_publisher,
+            del_price,
+            del_product,
+            del_publisher,
+            init_mapping,
+            init_price,
+            resize_price_account,
+            set_min_pub,
+            upd_permissions,
+            upd_price,
+            upd_price_no_fail_on_error,
+            upd_product,
+        },
+    },
+    solana_program::{
+        entrypoint::ProgramResult,
+        pubkey::Pubkey,
+        sysvar::slot_history::AccountInfo,
+    },
 };
-use solana_program::entrypoint::ProgramResult;
-use solana_program::pubkey::Pubkey;
-use solana_program::sysvar::slot_history::AccountInfo;
 
-use crate::rust_oracle::{
-    add_mapping,
-    add_price,
-    add_product,
-    add_publisher,
-    del_price,
-    del_product,
-    del_publisher,
-    init_mapping,
-    init_price,
-    resize_price_account,
-    set_min_pub,
-    upd_permissions,
-    upd_price,
-    upd_price_no_fail_on_error,
-    upd_product,
-};
-
-///dispatch to the right instruction in the oracle
+/// Dispatch to the right instruction in the oracle.
 pub fn process_instruction(
     program_id: &Pubkey,
     accounts: &[AccountInfo],

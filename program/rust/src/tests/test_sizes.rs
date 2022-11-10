@@ -1,39 +1,43 @@
-use crate::c_oracle_header::{
-    AccountHeader,
-    MappingAccount,
-    PermissionAccount,
-    PriceAccount,
-    PriceComponent,
-    PriceEma,
-    PriceInfo,
-    ProductAccount,
-    PythAccount,
-    PC_COMP_SIZE,
-    PC_MAP_TABLE_SIZE,
-    PC_VERSION,
-    PRICE_ACCOUNT_SIZE,
-};
-use crate::deserialize::{
-    initialize_pyth_account_checked,
-    load,
-    load_checked,
-};
-use crate::instruction::{
-    AddPriceArgs,
-    AddPublisherArgs,
-    CommandHeader,
-    DelPublisherArgs,
-    InitPriceArgs,
-    SetMinPubArgs,
-    UpdPriceArgs,
-};
-use crate::tests::test_utils::AccountSetup;
-use crate::time_machine_types::PriceAccountWrapper;
-use crate::utils::try_convert;
-use solana_program::pubkey::Pubkey;
-use std::mem::{
-    size_of,
-    size_of_val,
+use {
+    crate::{
+        c_oracle_header::{
+            AccountHeader,
+            MappingAccount,
+            PermissionAccount,
+            PriceAccount,
+            PriceComponent,
+            PriceEma,
+            PriceInfo,
+            ProductAccount,
+            PythAccount,
+            PC_COMP_SIZE,
+            PC_MAP_TABLE_SIZE,
+            PC_VERSION,
+            PRICE_ACCOUNT_SIZE,
+        },
+        deserialize::{
+            initialize_pyth_account_checked,
+            load,
+            load_checked,
+        },
+        instruction::{
+            AddPriceArgs,
+            AddPublisherArgs,
+            CommandHeader,
+            DelPublisherArgs,
+            InitPriceArgs,
+            SetMinPubArgs,
+            UpdPriceArgs,
+        },
+        tests::test_utils::AccountSetup,
+        time_machine_types::PriceAccountWrapper,
+        utils::try_convert,
+    },
+    solana_program::pubkey::Pubkey,
+    std::mem::{
+        size_of,
+        size_of_val,
+    },
 };
 
 #[test]
@@ -50,7 +54,7 @@ fn test_sizes() {
     );
     assert_eq!(
         size_of::<PriceAccount>(),
-        48 + 8 * size_of::<u64>()
+        48 + u64::BITS as usize
             + 3 * size_of::<Pubkey>()
             + size_of::<PriceInfo>()
             + (PC_COMP_SIZE as usize) * size_of::<PriceComponent>()
@@ -81,7 +85,7 @@ fn test_offsets() {
     let program_id = Pubkey::new_unique();
 
     let mut price_setup = AccountSetup::new::<PriceAccount>(&program_id);
-    let price_account = price_setup.to_account_info();
+    let price_account = price_setup.as_account_info();
 
     initialize_pyth_account_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
     let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
@@ -92,7 +96,7 @@ fn test_offsets() {
     );
 
     let mut mapping_setup = AccountSetup::new::<MappingAccount>(&program_id);
-    let mapping_account = mapping_setup.to_account_info();
+    let mapping_account = mapping_setup.as_account_info();
 
     initialize_pyth_account_checked::<MappingAccount>(&mapping_account, PC_VERSION).unwrap();
     let mapping_data = load_checked::<MappingAccount>(&mapping_account, PC_VERSION).unwrap();

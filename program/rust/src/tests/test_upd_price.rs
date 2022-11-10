@@ -1,28 +1,33 @@
-use solana_program::program_error::ProgramError;
-use solana_program::pubkey::Pubkey;
-use std::mem::size_of;
-
-use crate::c_oracle_header::{
-    PriceAccount,
-    PC_STATUS_TRADING,
-    PC_STATUS_UNKNOWN,
-    PC_VERSION,
+use {
+    crate::{
+        c_oracle_header::{
+            PriceAccount,
+            PC_STATUS_TRADING,
+            PC_STATUS_UNKNOWN,
+            PC_VERSION,
+        },
+        deserialize::{
+            initialize_pyth_account_checked,
+            load_checked,
+            load_mut,
+        },
+        instruction::{
+            OracleCommand,
+            UpdPriceArgs,
+        },
+        processor::process_instruction,
+        tests::test_utils::{
+            update_clock_slot,
+            AccountSetup,
+        },
+    },
+    solana_program::{
+        program_error::ProgramError,
+        pubkey::Pubkey,
+    },
+    std::mem::size_of,
 };
 
-use crate::deserialize::{
-    initialize_pyth_account_checked,
-    load_checked,
-    load_mut,
-};
-use crate::instruction::{
-    OracleCommand,
-    UpdPriceArgs,
-};
-use crate::processor::process_instruction;
-use crate::tests::test_utils::{
-    update_clock_slot,
-    AccountSetup,
-};
 #[test]
 fn test_upd_price() {
     let mut instruction_data = [0u8; size_of::<UpdPriceArgs>()];
@@ -31,10 +36,10 @@ fn test_upd_price() {
     let program_id = Pubkey::new_unique();
 
     let mut funding_setup = AccountSetup::new_funding();
-    let funding_account = funding_setup.to_account_info();
+    let funding_account = funding_setup.as_account_info();
 
     let mut price_setup = AccountSetup::new::<PriceAccount>(&program_id);
-    let mut price_account = price_setup.to_account_info();
+    let mut price_account = price_setup.as_account_info();
     price_account.is_signer = false;
     initialize_pyth_account_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
 
@@ -45,7 +50,7 @@ fn test_upd_price() {
     }
 
     let mut clock_setup = AccountSetup::new_clock();
-    let mut clock_account = clock_setup.to_account_info();
+    let mut clock_account = clock_setup.as_account_info();
     clock_account.is_signer = false;
     clock_account.is_writable = false;
 
@@ -272,7 +277,7 @@ fn test_upd_price() {
 }
 
 // Create an upd_price instruction with the provided parameters
-fn populate_instruction(instruction_data: &mut [u8], price: i64, conf: u64, pub_slot: u64) -> () {
+fn populate_instruction(instruction_data: &mut [u8], price: i64, conf: u64, pub_slot: u64) {
     let mut cmd = load_mut::<UpdPriceArgs>(instruction_data).unwrap();
     cmd.header = OracleCommand::UpdPrice.into();
     cmd.status = PC_STATUS_TRADING;

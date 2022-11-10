@@ -1,34 +1,39 @@
-use std::mem::size_of;
-
-use crate::c_oracle_header::{
-    MappingAccount,
-    ProductAccount,
-    PythAccount,
-    PC_ACCTYPE_PRODUCT,
-    PC_MAGIC,
-    PC_MAP_TABLE_SIZE,
-    PC_PROD_ACC_SIZE,
-    PC_VERSION,
+use {
+    crate::{
+        c_oracle_header::{
+            MappingAccount,
+            ProductAccount,
+            PythAccount,
+            PC_ACCTYPE_PRODUCT,
+            PC_MAGIC,
+            PC_MAP_TABLE_SIZE,
+            PC_PROD_ACC_SIZE,
+            PC_VERSION,
+        },
+        deserialize::{
+            initialize_pyth_account_checked,
+            load_account_as,
+            load_checked,
+        },
+        error::OracleError,
+        instruction::{
+            CommandHeader,
+            OracleCommand,
+        },
+        processor::process_instruction,
+        tests::test_utils::AccountSetup,
+        utils::clear_account,
+    },
+    bytemuck::bytes_of,
+    solana_program::{
+        account_info::AccountInfo,
+        clock::Epoch,
+        program_error::ProgramError,
+        pubkey::Pubkey,
+        rent::Rent,
+    },
+    std::mem::size_of,
 };
-use crate::deserialize::{
-    initialize_pyth_account_checked,
-    load_account_as,
-    load_checked,
-};
-use crate::error::OracleError;
-use crate::instruction::{
-    CommandHeader,
-    OracleCommand,
-};
-use crate::processor::process_instruction;
-use crate::tests::test_utils::AccountSetup;
-use crate::utils::clear_account;
-use bytemuck::bytes_of;
-use solana_program::account_info::AccountInfo;
-use solana_program::clock::Epoch;
-use solana_program::program_error::ProgramError;
-use solana_program::pubkey::Pubkey;
-use solana_program::rent::Rent;
 
 
 #[test]
@@ -39,17 +44,17 @@ fn test_add_product() {
     let program_id = Pubkey::new_unique();
 
     let mut funding_setup = AccountSetup::new_funding();
-    let funding_account = funding_setup.to_account_info();
+    let funding_account = funding_setup.as_account_info();
 
     let mut mapping_setup = AccountSetup::new::<MappingAccount>(&program_id);
-    let mapping_account = mapping_setup.to_account_info();
+    let mapping_account = mapping_setup.as_account_info();
     initialize_pyth_account_checked::<MappingAccount>(&mapping_account, PC_VERSION).unwrap();
 
     let mut product_setup = AccountSetup::new::<ProductAccount>(&program_id);
-    let product_account = product_setup.to_account_info();
+    let product_account = product_setup.as_account_info();
 
     let mut product_setup_2 = AccountSetup::new::<ProductAccount>(&program_id);
-    let product_account_2 = product_setup_2.to_account_info();
+    let product_account_2 = product_setup_2.as_account_info();
 
     assert!(process_instruction(
         &program_id,

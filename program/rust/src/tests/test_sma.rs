@@ -1,10 +1,11 @@
-use quickcheck::Arbitrary;
-use quickcheck_macros::quickcheck;
-
-use crate::time_machine_types::{
-    DataPoint,
-    SmaTracker,
-    NUM_BUCKETS_THIRTY_MIN,
+use {
+    crate::time_machine_types::{
+        DataPoint,
+        SmaTracker,
+        NUM_BUCKETS_THIRTY_MIN,
+    },
+    quickcheck::Arbitrary,
+    quickcheck_macros::quickcheck,
 };
 
 #[derive(Clone, Debug, Copy)]
@@ -57,7 +58,7 @@ fn test_sma(input: Vec<DataEvent>) -> bool {
     let mut data = Vec::<DataPoint>::new();
 
     let mut current_time = 0i64;
-    for data_event in input.clone() {
+    for data_event in input {
         let datapoint = DataPoint {
             previous_timestamp: current_time,
             current_timestamp:  current_time + data_event.time_gap,
@@ -85,13 +86,13 @@ fn test_sma(input: Vec<DataEvent>) -> bool {
         tracker5.check_array_fields(&data, current_time);
     }
 
-    return true;
+    true
 }
 
 
 impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
     pub fn zero() -> Self {
-        return SmaTracker::<NUM_ENTRIES> {
+        SmaTracker::<NUM_ENTRIES> {
             granularity:                   0,
             threshold:                     0,
             current_epoch_denominator:     0,
@@ -99,10 +100,10 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
             current_epoch_numerator:       0,
             running_valid_epoch_counter:   [0u64; NUM_ENTRIES],
             running_sum_of_price_averages: [0i128; NUM_ENTRIES],
-        };
+        }
     }
 
-    pub fn check_current_epoch_fields(&self, data: &Vec<DataPoint>, time: i64) {
+    pub fn check_current_epoch_fields(&self, data: &[DataPoint], time: i64) {
         let curent_epoch = self.time_to_epoch(time).unwrap();
 
         let result = self.compute_epoch_expected_values(data, curent_epoch);
@@ -111,7 +112,7 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
         assert_eq!(self.current_epoch_is_valid, result.2);
     }
 
-    pub fn check_array_fields(&self, data: &Vec<DataPoint>, time: i64) {
+    pub fn check_array_fields(&self, data: &[DataPoint], time: i64) {
         let current_epoch = self.time_to_epoch(time).unwrap();
         let mut values = vec![];
 
@@ -122,8 +123,8 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
 
         // Get running sums
         let running_sum_price_iter = values.iter().scan((0, 0), |res, &y| {
-            res.0 = res.0 + y.1 / i128::from(y.0);
-            res.1 = res.1 + u64::from(y.2);
+            res.0 += y.1 / i128::from(y.0);
+            res.1 += u64::from(y.2);
             Some(*res)
         });
 
@@ -143,7 +144,7 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
 
     pub fn compute_epoch_expected_values(
         &self,
-        data: &Vec<DataPoint>,
+        data: &[DataPoint],
         epoch_number: usize,
     ) -> (u64, i128, bool) {
         let left_bound = self
@@ -158,9 +159,8 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
 
 
         let mut result = data.iter().fold((0, 0, true), |x: (u64, i128, bool), y| {
-            if !((left_bound > y.current_timestamp) || (right_bound <= y.previous_timestamp))
-            //Check interval intersection
-            {
+            // Check interval intersection
+            if !((left_bound > y.current_timestamp) || (right_bound <= y.previous_timestamp)) {
                 let is_valid = y.slot_gap <= self.threshold;
                 return (
                     x.0 + y.slot_gap,
@@ -168,12 +168,13 @@ impl<const NUM_ENTRIES: usize> SmaTracker<NUM_ENTRIES> {
                     x.2 && is_valid,
                 );
             }
-            return x;
+            x
         });
 
         if epoch_number == 0 {
             result.2 = false;
         }
-        return result;
+
+        result
     }
 }

@@ -1,31 +1,33 @@
-use solana_program::pubkey::Pubkey;
-use std::mem::size_of;
-
-use crate::c_oracle_header::{
-    PC_MAX_SEND_LATENCY,
-    PC_STATUS_TRADING,
-    PC_VERSION,
-};
-
-use crate::deserialize::{
-    initialize_pyth_account_checked,
-    load_checked,
-    load_mut,
-};
-use crate::instruction::{
-    OracleCommand,
-    UpdPriceArgs,
-};
-use crate::processor::process_instruction;
-use crate::tests::test_utils::{
-    update_clock_slot,
-    update_clock_timestamp,
-    AccountSetup,
-};
-use crate::time_machine_types::{
-    PriceAccountWrapper,
-    NUM_BUCKETS_THIRTY_MIN,
-    THIRTY_MINUTES,
+use {
+    crate::{
+        c_oracle_header::{
+            PC_MAX_SEND_LATENCY,
+            PC_STATUS_TRADING,
+            PC_VERSION,
+        },
+        deserialize::{
+            initialize_pyth_account_checked,
+            load_checked,
+            load_mut,
+        },
+        instruction::{
+            OracleCommand,
+            UpdPriceArgs,
+        },
+        processor::process_instruction,
+        tests::test_utils::{
+            update_clock_slot,
+            update_clock_timestamp,
+            AccountSetup,
+        },
+        time_machine_types::{
+            PriceAccountWrapper,
+            NUM_BUCKETS_THIRTY_MIN,
+            THIRTY_MINUTES,
+        },
+    },
+    solana_program::pubkey::Pubkey,
+    std::mem::size_of,
 };
 
 /// Manually test some epoch transitions
@@ -36,10 +38,10 @@ fn test_sma_epoch_transition() {
     let program_id = Pubkey::new_unique();
 
     let mut funding_setup = AccountSetup::new_funding();
-    let funding_account = funding_setup.to_account_info();
+    let funding_account = funding_setup.as_account_info();
 
     let mut price_setup = AccountSetup::new::<PriceAccountWrapper>(&program_id);
-    let mut price_account = price_setup.to_account_info();
+    let mut price_account = price_setup.as_account_info();
     price_account.is_signer = false;
     initialize_pyth_account_checked::<PriceAccountWrapper>(&price_account, PC_VERSION).unwrap();
 
@@ -56,7 +58,7 @@ fn test_sma_epoch_transition() {
     }
 
     let mut clock_setup = AccountSetup::new_clock();
-    let mut clock_account = clock_setup.to_account_info();
+    let mut clock_account = clock_setup.as_account_info();
     clock_account.is_signer = false;
     clock_account.is_writable = false;
 
@@ -85,7 +87,7 @@ fn test_sma_epoch_transition() {
         );
         assert_eq!(price_data.time_machine.granularity, THIRTY_MINUTES);
         assert_eq!(price_data.time_machine.current_epoch_numerator, 0);
-        assert_eq!(price_data.time_machine.current_epoch_is_valid, false);
+        assert!(!price_data.time_machine.current_epoch_is_valid);
         assert_eq!(price_data.time_machine.current_epoch_denominator, 0);
         for i in 0..NUM_BUCKETS_THIRTY_MIN {
             assert_eq!(price_data.time_machine.running_sum_of_price_averages[i], 0);
@@ -118,7 +120,7 @@ fn test_sma_epoch_transition() {
         );
         assert_eq!(price_data.time_machine.granularity, THIRTY_MINUTES);
         assert_eq!(price_data.time_machine.current_epoch_numerator, 42 / 2 * 2);
-        assert_eq!(price_data.time_machine.current_epoch_is_valid, false);
+        assert!(!price_data.time_machine.current_epoch_is_valid);
         assert_eq!(price_data.time_machine.current_epoch_denominator, 2);
         for i in 0..NUM_BUCKETS_THIRTY_MIN {
             assert_eq!(price_data.time_machine.running_sum_of_price_averages[i], 0);
@@ -155,7 +157,7 @@ fn test_sma_epoch_transition() {
             price_data.time_machine.current_epoch_numerator,
             (80 + 42) / 2
         );
-        assert_eq!(price_data.time_machine.current_epoch_is_valid, true);
+        assert!(price_data.time_machine.current_epoch_is_valid);
         assert_eq!(price_data.time_machine.current_epoch_denominator, 1);
 
         for i in 1..NUM_BUCKETS_THIRTY_MIN {
@@ -199,7 +201,7 @@ fn test_sma_epoch_transition() {
             price_data.time_machine.current_epoch_numerator,
             (80 + 42) / 2
         );
-        assert_eq!(price_data.time_machine.current_epoch_is_valid, true);
+        assert!(price_data.time_machine.current_epoch_is_valid);
         assert_eq!(price_data.time_machine.current_epoch_denominator, 1);
 
         for i in 1..NUM_BUCKETS_THIRTY_MIN {
@@ -244,7 +246,7 @@ fn test_sma_epoch_transition() {
             price_data.time_machine.current_epoch_numerator,
             (40 + 80) / 2 * 28
         );
-        assert_eq!(price_data.time_machine.current_epoch_is_valid, false);
+        assert!(!price_data.time_machine.current_epoch_is_valid);
         assert_eq!(price_data.time_machine.current_epoch_denominator, 28);
 
         for i in 2..NUM_BUCKETS_THIRTY_MIN {
@@ -294,7 +296,7 @@ fn test_sma_epoch_transition() {
             price_data.time_machine.current_epoch_numerator,
             (40 + 41) / 2
         );
-        assert_eq!(price_data.time_machine.current_epoch_is_valid, true);
+        assert!(price_data.time_machine.current_epoch_is_valid);
         assert_eq!(price_data.time_machine.current_epoch_denominator, 1);
 
         for i in 5..NUM_BUCKETS_THIRTY_MIN {
@@ -316,7 +318,7 @@ fn test_sma_epoch_transition() {
 
         assert_eq!(
             price_data.time_machine.running_sum_of_price_averages[2],
-            price_data.time_machine.running_sum_of_price_averages[1] + (60 * 28 + 1 * 41) / 29
+            price_data.time_machine.running_sum_of_price_averages[1] + (60 * 28 + 41) / 29
         );
         assert_eq!(price_data.time_machine.running_valid_epoch_counter[2], 0);
 
@@ -363,7 +365,7 @@ fn test_sma_epoch_transition() {
             price_data.time_machine.current_epoch_numerator,
             (40 + 41) / 2
         );
-        assert_eq!(price_data.time_machine.current_epoch_is_valid, true);
+        assert!(price_data.time_machine.current_epoch_is_valid);
         assert_eq!(price_data.time_machine.current_epoch_denominator, 1);
 
         for i in 5..NUM_BUCKETS_THIRTY_MIN {
@@ -385,7 +387,7 @@ fn test_sma_epoch_transition() {
 
         assert_eq!(
             price_data.time_machine.running_sum_of_price_averages[2],
-            price_data.time_machine.running_sum_of_price_averages[1] + (60 * 28 + 1 * 41) / 29
+            price_data.time_machine.running_sum_of_price_averages[1] + (60 * 28 + 41) / 29
         );
         assert_eq!(price_data.time_machine.running_valid_epoch_counter[2], 0);
 
@@ -430,7 +432,7 @@ fn test_sma_epoch_transition() {
             price_data.time_machine.current_epoch_numerator,
             (41 + 100) / 2 * 69
         );
-        assert_eq!(price_data.time_machine.current_epoch_is_valid, false);
+        assert!(!price_data.time_machine.current_epoch_is_valid);
         assert_eq!(price_data.time_machine.current_epoch_denominator, 69);
         for i in 0..NUM_BUCKETS_THIRTY_MIN {
             assert_eq!(
@@ -448,7 +450,7 @@ fn test_sma_epoch_transition() {
 }
 
 // Create an upd_price instruction with the provided parameters
-fn populate_instruction(instruction_data: &mut [u8], price: i64, conf: u64, pub_slot: u64) -> () {
+fn populate_instruction(instruction_data: &mut [u8], price: i64, conf: u64, pub_slot: u64) {
     let mut cmd = load_mut::<UpdPriceArgs>(instruction_data).unwrap();
     cmd.header = OracleCommand::UpdPrice.into();
     cmd.status = PC_STATUS_TRADING;

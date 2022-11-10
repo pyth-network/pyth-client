@@ -1,29 +1,33 @@
-use std::mem::size_of;
-
-use crate::instruction::{
-    CommandHeader,
-    OracleCommand,
-};
-use crate::processor::process_instruction;
-use crate::tests::test_utils::AccountSetup;
-use crate::utils::{
-    read_pc_str_t,
-    try_convert,
-};
-use solana_program::account_info::AccountInfo;
-use solana_program::program_error::ProgramError;
-use solana_program::pubkey::Pubkey;
-
-use crate::c_oracle_header::{
-    ProductAccount,
-    PythAccount,
-    PC_PROD_ACC_SIZE,
-    PC_VERSION,
-};
-use crate::deserialize::{
-    initialize_pyth_account_checked,
-    load_checked,
-    load_mut,
+use {
+    crate::{
+        c_oracle_header::{
+            ProductAccount,
+            PythAccount,
+            PC_PROD_ACC_SIZE,
+            PC_VERSION,
+        },
+        deserialize::{
+            initialize_pyth_account_checked,
+            load_checked,
+            load_mut,
+        },
+        instruction::{
+            CommandHeader,
+            OracleCommand,
+        },
+        processor::process_instruction,
+        tests::test_utils::AccountSetup,
+        utils::{
+            read_pc_str_t,
+            try_convert,
+        },
+    },
+    solana_program::{
+        account_info::AccountInfo,
+        program_error::ProgramError,
+        pubkey::Pubkey,
+    },
+    std::mem::size_of,
 };
 
 #[test]
@@ -33,10 +37,10 @@ fn test_upd_product() {
     let program_id = Pubkey::new_unique();
 
     let mut funding_setup = AccountSetup::new_funding();
-    let funding_account = funding_setup.to_account_info();
+    let funding_account = funding_setup.as_account_info();
 
     let mut product_setup = AccountSetup::new::<ProductAccount>(&program_id);
-    let product_account = product_setup.to_account_info();
+    let product_account = product_setup.as_account_info();
 
     initialize_pyth_account_checked::<ProductAccount>(&product_account, PC_VERSION).unwrap();
 

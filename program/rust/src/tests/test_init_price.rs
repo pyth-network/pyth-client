@@ -1,23 +1,28 @@
-use bytemuck::bytes_of;
-use solana_program::program_error::ProgramError;
-use solana_program::pubkey::Pubkey;
-
-use crate::c_oracle_header::{
-    PriceAccount,
-    MAX_NUM_DECIMALS,
-    PC_VERSION,
+use {
+    crate::{
+        c_oracle_header::{
+            PriceAccount,
+            MAX_NUM_DECIMALS,
+            PC_VERSION,
+        },
+        deserialize::{
+            initialize_pyth_account_checked,
+            load_checked,
+        },
+        instruction::{
+            InitPriceArgs,
+            OracleCommand,
+        },
+        processor::process_instruction,
+        tests::test_utils::AccountSetup,
+        OracleError,
+    },
+    bytemuck::bytes_of,
+    solana_program::{
+        program_error::ProgramError,
+        pubkey::Pubkey,
+    },
 };
-use crate::deserialize::{
-    initialize_pyth_account_checked,
-    load_checked,
-};
-use crate::instruction::{
-    InitPriceArgs,
-    OracleCommand,
-};
-use crate::processor::process_instruction;
-use crate::tests::test_utils::AccountSetup;
-use crate::OracleError;
 
 #[test]
 fn test_init_price() {
@@ -38,10 +43,10 @@ fn test_init_price() {
     let next_price = Pubkey::new_unique();
 
     let mut funding_setup = AccountSetup::new_funding();
-    let funding_account = funding_setup.to_account_info();
+    let funding_account = funding_setup.as_account_info();
 
     let mut price_setup = AccountSetup::new::<PriceAccount>(&program_id);
-    let mut price_account = price_setup.to_account_info();
+    let mut price_account = price_setup.as_account_info();
 
     // Price account must be initialized
     assert_eq!(

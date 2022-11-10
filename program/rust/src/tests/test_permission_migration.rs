@@ -1,63 +1,67 @@
-use crate::c_oracle_header::{
-    MappingAccount,
-    PermissionAccount,
-    PriceAccount,
-    ProductAccount,
-    PC_VERSION,
+use {
+    crate::{
+        c_oracle_header::{
+            MappingAccount,
+            PermissionAccount,
+            PriceAccount,
+            ProductAccount,
+            PC_VERSION,
+        },
+        deserialize::initialize_pyth_account_checked,
+        error::OracleError,
+        instruction::{
+            AddPriceArgs,
+            AddPublisherArgs,
+            CommandHeader,
+            DelPublisherArgs,
+            InitPriceArgs,
+            OracleCommand::{
+                AddMapping,
+                AddPrice,
+                AddProduct,
+                AddPublisher,
+                DelPrice,
+                DelProduct,
+                DelPublisher,
+                InitMapping,
+                InitPrice,
+                ResizePriceAccount,
+                SetMinPub,
+                UpdProduct,
+            },
+            SetMinPubArgs,
+        },
+        processor::process_instruction,
+        tests::test_utils::AccountSetup,
+    },
+    bytemuck::bytes_of,
+    solana_program::pubkey::Pubkey,
 };
-use crate::deserialize::initialize_pyth_account_checked;
-use crate::error::OracleError;
-use crate::instruction::OracleCommand::{
-    AddMapping,
-    AddPrice,
-    AddProduct,
-    AddPublisher,
-    DelPrice,
-    DelProduct,
-    DelPublisher,
-    InitMapping,
-    InitPrice,
-    ResizePriceAccount,
-    SetMinPub,
-    UpdProduct,
-};
-use crate::instruction::{
-    AddPriceArgs,
-    AddPublisherArgs,
-    CommandHeader,
-    DelPublisherArgs,
-    InitPriceArgs,
-    SetMinPubArgs,
-};
-use crate::processor::process_instruction;
-use crate::tests::test_utils::AccountSetup;
-use bytemuck::bytes_of;
-use solana_program::pubkey::Pubkey;
 
 #[test]
 fn test_permission_migration() {
     let program_id = Pubkey::new_unique();
 
     let mut permissions_setup = AccountSetup::new_permission(&program_id);
-    let permissions_account = permissions_setup.to_account_info();
+    let permissions_account = permissions_setup.as_account_info();
 
     let mut funding_setup = AccountSetup::new_funding();
-    let funding_account = funding_setup.to_account_info();
+    let funding_account = funding_setup.as_account_info();
 
     let mut attacker_setup = AccountSetup::new_funding();
-    let attacker_account = attacker_setup.to_account_info();
+    let attacker_account = attacker_setup.as_account_info();
 
     let mut mapping_setup = AccountSetup::new::<MappingAccount>(&program_id);
-    let mut mapping_account = mapping_setup.to_account_info();
+    let mut mapping_account = mapping_setup.as_account_info();
 
     let mut next_mapping_setup = AccountSetup::new::<MappingAccount>(&program_id);
-    let mut next_mapping_account = next_mapping_setup.to_account_info();
+    let mut next_mapping_account = next_mapping_setup.as_account_info();
 
     let mut product_setup = AccountSetup::new::<ProductAccount>(&program_id);
-    let mut product_account = product_setup.to_account_info();
+    let mut product_account = product_setup.as_account_info();
 
     let mut price_setup = AccountSetup::new::<PriceAccount>(&program_id);
-    let mut price_account = price_setup.to_account_info();
+    let mut price_account = price_setup.as_account_info();
 
 
     product_account.is_signer = false;
