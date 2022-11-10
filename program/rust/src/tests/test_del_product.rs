@@ -81,6 +81,5 @@ fn mapping_product_list_equals(mapping_data: &MappingAccount, expected: Vec<Pubk
     if mapping_data.header.size != expected_size {
         return false;
     }
-
-    mapping_data.products_list == expected.as_slice()
+    &mapping_data.products_list[..expected.len()] == expected.as_slice()
 }
