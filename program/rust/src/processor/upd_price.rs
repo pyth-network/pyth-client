@@ -44,6 +44,10 @@ extern "C" {
     pub fn c_upd_aggregate(_input: *mut u8, clock_slot: u64, clock_timestamp: i64) -> bool;
 }
 
+/// Publish component price, never returning an error even if the update failed
+// account[0] funding account       [signer writable]
+// account[1] price account         [writable]
+// account[2] sysvar_clock account  []
 pub fn upd_price_no_fail_on_error(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
@@ -55,10 +59,10 @@ pub fn upd_price_no_fail_on_error(
     }
 }
 
-/// A publisher updates a price
-/// accounts[0] publisher account                                   [signer writable]
-/// accounts[1] price account to update                             [writable]
-/// accounts[2] sysvar clock                                        []
+/// Publish component price
+// account[0] funding account       [signer writable]
+// account[1] price account         [writable]
+// account[2] sysvar_clock account  []
 pub fn upd_price(
     program_id: &Pubkey,
     accounts: &[AccountInfo],

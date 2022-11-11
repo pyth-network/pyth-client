@@ -36,6 +36,9 @@ use {
 /// little weird, as it allows you to construct a list of multiple mapping accounts where non-tail
 /// accounts have empty space. This is fine however; users should simply add new products to the
 /// first available spot.
+// key[0] funding account       [signer writable]
+// key[1] mapping account       [signer writable]
+// key[2] product account       [signer writable]
 pub fn del_product(
     program_id: &Pubkey,
     accounts: &[AccountInfo],

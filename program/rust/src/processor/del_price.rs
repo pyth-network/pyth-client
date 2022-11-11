@@ -27,8 +27,9 @@ use {
 /// Delete a price account. This function will remove the link between the price account and its
 /// corresponding product account, then transfer any SOL in the price account to the funding
 /// account. This function can only delete the first price account in the linked list of
-/// price accounts for the given product.
-///
+// account[0] funding account       [signer writable]
+// account[1] product account       [signer writable]
+// account[2] price account         [signer writable]
 /// Warning: This function is dangerous and will break any programs that depend on the deleted
 /// price account!
 pub fn del_price(

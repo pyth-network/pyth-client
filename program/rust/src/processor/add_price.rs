@@ -27,10 +27,10 @@ use {
     },
 };
 
-/// Add a price account to a product account
-/// accounts[0] funding account                                   [signer writable]
-/// accounts[1] product account to add the price account to       [signer writable]
-/// accounts[2] newly created price account                       [signer writable]
+/// Add new price account to a product account
+// account[0] funding account       [signer writable]
+// account[1] product account       [signer writable]
+// account[2] new price account     [signer writable]
 pub fn add_price(
     program_id: &Pubkey,
     accounts: &[AccountInfo],

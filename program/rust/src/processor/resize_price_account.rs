@@ -32,9 +32,9 @@ use {
 };
 
 /// Resizes a price account so that it fits the Time Machine
-/// key[0] funding account       [signer writable]
-/// key[1] price account         [Signer writable]
-/// key[2] system program        [readable]
+// account[0] funding account       [signer writable]
+// account[1] price account         [signer writable]
+// account[2] system program        []
 pub fn resize_price_account(
     program_id: &Pubkey,
     accounts: &[AccountInfo],

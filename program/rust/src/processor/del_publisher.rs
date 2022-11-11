@@ -31,9 +31,9 @@ use {
     },
 };
 
-/// Add a publisher to a price account
-/// accounts[0] funding account                                   [signer writable]
-/// accounts[1] price account to delete the publisher from        [signer writable]
+/// Delete publisher from symbol account
+// account[0] funding account       [signer writable]
+// account[1] price account         [signer writable]
 pub fn del_publisher(
     program_id: &Pubkey,
     accounts: &[AccountInfo],

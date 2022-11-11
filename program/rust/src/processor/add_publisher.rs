@@ -32,9 +32,9 @@ use {
     },
 };
 
-/// Add a publisher to a price account
-/// accounts[0] funding account                                   [signer writable]
-/// accounts[1] price account to add the publisher to             [signer writable]
+/// Add publisher to symbol account
+// account[0] funding account       [signer writable]
+// account[1] price account         [signer writable]
 pub fn add_publisher(
     program_id: &Pubkey,
     accounts: &[AccountInfo],

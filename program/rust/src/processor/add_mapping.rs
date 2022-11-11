@@ -25,6 +25,10 @@ use {
     },
 };
 
+/// Initialize and add new mapping account
+// account[0] funding account       [signer writable]
+// account[1] tail mapping account  [signer writable]
+// account[2] new mapping account   [signer writable]
 pub fn add_mapping(
     program_id: &Pubkey,
     accounts: &[AccountInfo],

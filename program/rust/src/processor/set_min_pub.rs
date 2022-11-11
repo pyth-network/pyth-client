@@ -22,6 +22,9 @@ use {
     std::mem::size_of,
 };
 
+/// Set min publishers
+// account[0] funding account       [signer writable]
+// account[1] price account         [signer writable]
 pub fn set_min_pub(
     program_id: &Pubkey,
     accounts: &[AccountInfo],

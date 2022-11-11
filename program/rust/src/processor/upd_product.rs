@@ -28,6 +28,8 @@ use {
 
 /// Update the metadata associated with a product, overwriting any existing metadata.
 /// The metadata is provided as a list of key-value pairs at the end of the `instruction_data`.
+// account[0] funding account       [signer writable]
+// account[1] product account       [signer writable]
 pub fn upd_product(
     program_id: &Pubkey,
     accounts: &[AccountInfo],

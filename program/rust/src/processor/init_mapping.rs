@@ -19,9 +19,9 @@ use {
     },
 };
 
-/// Initialize the first mapping account in a new linked-list of mapping accounts
-/// accounts[0] funding account           [signer writable]
-/// accounts[1] new mapping account       [signer writable]
+/// Initialize first mapping list account
+// account[0] funding account       [signer writable]
+// account[1] mapping account       [signer writable]
 pub fn init_mapping(
     program_id: &Pubkey,
     accounts: &[AccountInfo],

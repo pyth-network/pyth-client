@@ -29,6 +29,9 @@ use {
     std::mem::size_of,
 };
 
+/// (Re)initialize price account
+// account[0] funding account       [signer writable]
+// account[1] new price account     [signer writable]
 pub fn init_price(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
