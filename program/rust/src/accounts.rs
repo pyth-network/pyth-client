@@ -97,11 +97,13 @@ pub trait PythAccount: Pod {
         check_valid_fresh_account(account)?;
         clear_account(account)?;
 
-        let mut account_header = load_account_as_mut::<AccountHeader>(account)?;
-        account_header.magic_number = PC_MAGIC;
-        account_header.version = version;
-        account_header.account_type = Self::ACCOUNT_TYPE;
-        account_header.size = Self::INITIAL_SIZE;
+        {
+            let mut account_header = load_account_as_mut::<AccountHeader>(account)?;
+            account_header.magic_number = PC_MAGIC;
+            account_header.version = version;
+            account_header.account_type = Self::ACCOUNT_TYPE;
+            account_header.size = Self::INITIAL_SIZE;
+        }
         load_account_as_mut::<Self>(account)
     }
 
