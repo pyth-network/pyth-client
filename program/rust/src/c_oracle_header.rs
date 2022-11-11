@@ -21,8 +21,7 @@ pub const PERMISSIONS_SEED: &str = "permissions";
 
 /// If ci > price / PC_MAX_CI_DIVISOR, set publisher status to unknown.
 /// (e.g., 20 means ci must be < 5% of price)
-pub const MAX_CI_DIVISOR: i64 = 20;
-
+pub const MAX_CI_DIVISOR: i64 = 3;
 /// Bound on the range of the exponent in price accounts. This number is set such that the
 /// PD-based EMA computation does not lose too much precision.
 pub const MAX_NUM_DECIMALS: i32 = 8;
