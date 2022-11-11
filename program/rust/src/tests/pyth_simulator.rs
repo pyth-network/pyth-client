@@ -1,11 +1,13 @@
 use {
     crate::{
-        c_oracle_header::{
+        accounts::{
             MappingAccount,
             PriceAccount,
+            PERMISSIONS_SEED,
+        },
+        c_oracle_header::{
             PC_PROD_ACC_SIZE,
             PC_PTYPE_PRICE,
-            PERMISSIONS_SEED,
         },
         deserialize::load,
         instruction::{

@@ -1,6 +1,6 @@
 use {
     crate::{
-        c_oracle_header::ProductAccount,
+        accounts::ProductAccount,
         tests::pyth_simulator::PythSimulator,
     },
     solana_program::pubkey::Pubkey,

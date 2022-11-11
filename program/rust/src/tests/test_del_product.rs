@@ -1,6 +1,6 @@
 use {
     crate::{
-        c_oracle_header::MappingAccount,
+        accounts::MappingAccount,
         tests::pyth_simulator::PythSimulator,
     },
     solana_program::pubkey::Pubkey,

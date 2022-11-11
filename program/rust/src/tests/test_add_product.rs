@@ -1,9 +1,12 @@
 use {
     crate::{
-        c_oracle_header::{
+        accounts::{
+            clear_account,
             MappingAccount,
             ProductAccount,
             PythAccount,
+        },
+        c_oracle_header::{
             PC_ACCTYPE_PRODUCT,
             PC_MAGIC,
             PC_MAP_TABLE_SIZE,
@@ -11,7 +14,6 @@ use {
             PC_VERSION,
         },
         deserialize::{
-            initialize_pyth_account_checked,
             load_account_as,
             load_checked,
         },
@@ -22,7 +24,6 @@ use {
         },
         processor::process_instruction,
         tests::test_utils::AccountSetup,
-        utils::clear_account,
     },
     bytemuck::bytes_of,
     solana_program::{
@@ -48,7 +49,7 @@ fn test_add_product() {
 
     let mut mapping_setup = AccountSetup::new::<MappingAccount>(&program_id);
     let mapping_account = mapping_setup.as_account_info();
-    initialize_pyth_account_checked::<MappingAccount>(&mapping_account, PC_VERSION).unwrap();
+    MappingAccount::initialize(&mapping_account, PC_VERSION).unwrap();
 
     let mut product_setup = AccountSetup::new::<ProductAccount>(&program_id);
     let product_account = product_setup.as_account_info();
@@ -132,7 +133,7 @@ fn test_add_product() {
 
     // test fill up of mapping table
     clear_account(&mapping_account).unwrap();
-    initialize_pyth_account_checked::<MappingAccount>(&mapping_account, PC_VERSION).unwrap();
+    MappingAccount::initialize(&mapping_account, PC_VERSION).unwrap();
 
     for i in 0..PC_MAP_TABLE_SIZE {
         clear_account(&product_account).unwrap();

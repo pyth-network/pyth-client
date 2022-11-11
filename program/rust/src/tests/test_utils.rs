@@ -1,11 +1,11 @@
 use {
     crate::{
-        c_oracle_header::{
+        accounts::{
             PermissionAccount,
             PythAccount,
-            PC_VERSION,
             PERMISSIONS_SEED,
         },
+        c_oracle_header::PC_VERSION,
         error::OracleError,
         instruction::{
             CommandHeader,

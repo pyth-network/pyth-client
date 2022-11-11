@@ -1,20 +1,12 @@
 use {
     crate::{
-        c_oracle_header::{
+        accounts::{
             AccountHeader,
             PythAccount,
-            PC_MAGIC,
         },
+        c_oracle_header::PC_MAGIC,
         error::OracleError,
-        utils::{
-            allocate_data,
-            assign_owner,
-            check_valid_fresh_account,
-            clear_account,
-            get_rent,
-            pyth_assert,
-            send_lamports,
-        },
+        utils::pyth_assert,
     },
     bytemuck::{
         try_from_bytes,
@@ -24,7 +16,6 @@ use {
     solana_program::{
         account_info::AccountInfo,
         program_error::ProgramError,
-        pubkey::Pubkey,
     },
     std::{
         cell::{
@@ -100,52 +91,4 @@ pub fn load_checked<'a, T: PythAccount>(
     }
 
     load_account_as_mut::<T>(account)
-}
-
-pub fn initialize_pyth_account_checked<'a, T: PythAccount>(
-    account: &'a AccountInfo,
-    version: u32,
-) -> Result<RefMut<'a, T>, ProgramError> {
-    pyth_assert(
-        account.data_len() >= T::MINIMUM_SIZE,
-        OracleError::AccountTooSmall.into(),
-    )?;
-    check_valid_fresh_account(account)?;
-    clear_account(account)?;
-
-    {
-        let mut account_header = load_account_as_mut::<AccountHeader>(account)?;
-        account_header.magic_number = PC_MAGIC;
-        account_header.version = version;
-        account_header.account_type = T::ACCOUNT_TYPE;
-        account_header.size = T::INITIAL_SIZE;
-    }
-
-    load_account_as_mut::<T>(account)
-}
-
-// Creates pda if needed and initializes it as one of the Pyth accounts
-pub fn create_pda_if_needed<'a, T: PythAccount>(
-    account: &AccountInfo<'a>,
-    funding_account: &AccountInfo<'a>,
-    system_program: &AccountInfo<'a>,
-    program_id: &Pubkey,
-    seeds: &[&[u8]],
-    version: u32,
-) -> Result<(), ProgramError> {
-    let target_rent = get_rent()?.minimum_balance(T::MINIMUM_SIZE);
-    if account.lamports() < target_rent {
-        send_lamports(
-            funding_account,
-            account,
-            system_program,
-            target_rent - account.lamports(),
-        )?;
-    }
-    if account.data_len() == 0 {
-        allocate_data(account, system_program, T::MINIMUM_SIZE, seeds)?;
-        assign_owner(account, program_id, system_program, seeds)?;
-        initialize_pyth_account_checked::<T>(account, version)?;
-    }
-    Ok(())
 }

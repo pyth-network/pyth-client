@@ -1,13 +1,15 @@
 use {
     crate::{
-        c_oracle_header::{
+        accounts::{
             PriceAccount,
+            PythAccount,
+        },
+        c_oracle_header::{
             PC_STATUS_TRADING,
             PC_STATUS_UNKNOWN,
             PC_VERSION,
         },
         deserialize::{
-            initialize_pyth_account_checked,
             load_checked,
             load_mut,
         },
@@ -41,7 +43,7 @@ fn test_upd_price() {
     let mut price_setup = AccountSetup::new::<PriceAccount>(&program_id);
     let mut price_account = price_setup.as_account_info();
     price_account.is_signer = false;
-    initialize_pyth_account_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+    PriceAccount::initialize(&price_account, PC_VERSION).unwrap();
 
     {
         let mut price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();

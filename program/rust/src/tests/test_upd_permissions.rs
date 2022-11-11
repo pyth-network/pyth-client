@@ -1,6 +1,6 @@
 use {
     crate::{
-        c_oracle_header::{
+        accounts::{
             PermissionAccount,
             PythAccount,
         },

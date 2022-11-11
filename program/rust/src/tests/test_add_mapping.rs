@@ -1,13 +1,16 @@
 use {
     crate::{
-        c_oracle_header::{
+        accounts::{
+            clear_account,
             MappingAccount,
+            PythAccount,
+        },
+        c_oracle_header::{
             PC_MAGIC,
             PC_MAP_TABLE_SIZE,
             PC_VERSION,
         },
         deserialize::{
-            initialize_pyth_account_checked,
             load_account_as_mut,
             load_checked,
         },
@@ -18,7 +21,6 @@ use {
         },
         processor::process_instruction,
         tests::test_utils::AccountSetup,
-        utils::clear_account,
     },
     bytemuck::bytes_of,
     solana_program::{
@@ -39,7 +41,7 @@ fn test_add_mapping() {
 
     let mut curr_mapping_setup = AccountSetup::new::<MappingAccount>(&program_id);
     let cur_mapping = curr_mapping_setup.as_account_info();
-    initialize_pyth_account_checked::<MappingAccount>(&cur_mapping, PC_VERSION).unwrap();
+    MappingAccount::initialize(&cur_mapping, PC_VERSION).unwrap();
 
     let mut next_mapping_setup = AccountSetup::new::<MappingAccount>(&program_id);
     let next_mapping = next_mapping_setup.as_account_info();
