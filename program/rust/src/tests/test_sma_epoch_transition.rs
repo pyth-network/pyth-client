@@ -284,7 +284,6 @@ fn test_sma_epoch_transition() {
     )
     .is_ok());
 
-    #[allow(clippy::identity_op)]
     {
         let price_data = load_checked::<PriceAccountWrapper>(&price_account, PC_VERSION).unwrap();
         // Aggregation was successful, check that all skipped buckets got updated
@@ -353,7 +352,6 @@ fn test_sma_epoch_transition() {
     )
     .is_ok());
 
-    #[allow(clippy::identity_op)]
     {
         let price_data = load_checked::<PriceAccountWrapper>(&price_account, PC_VERSION).unwrap();
         // Nothing got updated, since slot gap was too big, so aggregation was not successful
