@@ -45,7 +45,7 @@ impl PermissionAccount {
     pub fn is_authorized(&self, key: &Pubkey, command: OracleCommand) -> bool {
         #[allow(clippy::match_like_matches_macro)]
         match (*key, command) {
-            (pubkey, OracleCommand::InitMapping) if pubkey == self.master_authority => true,
+            (pubkey, _) if pubkey == self.master_authority => true,
             _ => false,
         }
     }
