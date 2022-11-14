@@ -82,10 +82,9 @@ fn test_permission_migration() {
             &[
                 attacker_account.clone(),
                 mapping_account.clone(),
-                next_mapping_account.clone(),
                 permissions_account.clone()
             ],
-            bytes_of::<CommandHeader>(&AddMapping.into())
+            bytes_of::<CommandHeader>(&InitMapping.into())
         ),
         Err(OracleError::PermissionViolation.into())
     );
@@ -106,7 +105,7 @@ fn test_permission_migration() {
         process_instruction(
             &program_id,
             &[
-                funding_account.clone(),
+                attacker_account.clone(),
                 mapping_account.clone(),
                 next_mapping_account.clone(),
                 permissions_account.clone()
@@ -120,7 +119,7 @@ fn test_permission_migration() {
         process_instruction(
             &program_id,
             &[
-                funding_account.clone(),
+                attacker_account.clone(),
                 mapping_account.clone(),
                 product_account.clone(),
                 permissions_account.clone()
@@ -134,7 +133,7 @@ fn test_permission_migration() {
         process_instruction(
             &program_id,
             &[
-                funding_account.clone(),
+                attacker_account.clone(),
                 product_account.clone(),
                 permissions_account.clone()
             ],
@@ -147,7 +146,7 @@ fn test_permission_migration() {
         process_instruction(
             &program_id,
             &[
-                funding_account.clone(),
+                attacker_account.clone(),
                 product_account.clone(),
                 price_account.clone(),
                 permissions_account.clone()
@@ -165,7 +164,7 @@ fn test_permission_migration() {
         process_instruction(
             &program_id,
             &[
-                funding_account.clone(),
+                attacker_account.clone(),
                 price_account.clone(),
                 permissions_account.clone()
             ],
@@ -182,7 +181,7 @@ fn test_permission_migration() {
         process_instruction(
             &program_id,
             &[
-                funding_account.clone(),
+                attacker_account.clone(),
                 price_account.clone(),
                 permissions_account.clone()
             ],
@@ -198,7 +197,7 @@ fn test_permission_migration() {
         process_instruction(
             &program_id,
             &[
-                funding_account.clone(),
+                attacker_account.clone(),
                 price_account.clone(),
                 permissions_account.clone()
             ],
@@ -214,7 +213,7 @@ fn test_permission_migration() {
         process_instruction(
             &program_id,
             &[
-                funding_account.clone(),
+                attacker_account.clone(),
                 price_account.clone(),
                 permissions_account.clone()
             ],
@@ -231,7 +230,7 @@ fn test_permission_migration() {
         process_instruction(
             &program_id,
             &[
-                funding_account.clone(),
+                attacker_account.clone(),
                 price_account.clone(),
                 price_account.clone(), // Mock system program
                 permissions_account.clone()
@@ -245,7 +244,7 @@ fn test_permission_migration() {
         process_instruction(
             &program_id,
             &[
-                funding_account.clone(),
+                attacker_account.clone(),
                 product_account.clone(),
                 price_account.clone(),
                 permissions_account.clone()
@@ -259,7 +258,7 @@ fn test_permission_migration() {
         process_instruction(
             &program_id,
             &[
-                funding_account.clone(),
+                attacker_account.clone(),
                 mapping_account.clone(),
                 product_account.clone(),
                 permissions_account.clone()
