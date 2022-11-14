@@ -82,10 +82,9 @@ fn test_permission_migration() {
             &[
                 attacker_account.clone(),
                 mapping_account.clone(),
-                next_mapping_account.clone(),
                 permissions_account.clone()
             ],
-            bytes_of::<CommandHeader>(&AddMapping.into())
+            bytes_of::<CommandHeader>(&InitMapping.into())
         ),
         Err(OracleError::PermissionViolation.into())
     );
