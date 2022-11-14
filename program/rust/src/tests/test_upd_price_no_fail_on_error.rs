@@ -13,6 +13,7 @@ use {
             load_checked,
             load_mut,
         },
+        error::OracleError,
         instruction::{
             OracleCommand,
             UpdPriceArgs,
@@ -65,7 +66,7 @@ fn test_upd_price_no_fail_on_error_no_fail_on_error() {
             ],
             &instruction_data
         ),
-        Err(ProgramError::InvalidArgument)
+        Err(OracleError::PermissionViolation.into())
     );
 
 
