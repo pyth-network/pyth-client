@@ -96,7 +96,7 @@ pub fn upd_price(
         }
         pyth_assert(
             publisher_index < try_convert::<u32, usize>(price_data.num_)?,
-            ProgramError::InvalidArgument,
+            OracleError::PermissionViolation.into(),
         )?;
 
 
