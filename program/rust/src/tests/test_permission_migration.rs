@@ -25,7 +25,6 @@ use {
                 DelPublisher,
                 InitMapping,
                 InitPrice,
-                ResizePriceAccount,
                 SetMinPub,
                 UpdProduct,
             },
@@ -224,20 +223,6 @@ fn test_permission_migration() {
             })
         ),
         Err(OracleError::PermissionViolation.into())
-    );
-
-    assert_eq!(
-        process_instruction(
-            &program_id,
-            &[
-                attacker_account.clone(),
-                price_account.clone(),
-                price_account.clone(), // Mock system program
-                permissions_account.clone()
-            ],
-            bytes_of::<CommandHeader>(&ResizePriceAccount.into())
-        ),
-        Err(OracleError::UnrecognizedInstruction.into())
     );
 
     assert_eq!(
