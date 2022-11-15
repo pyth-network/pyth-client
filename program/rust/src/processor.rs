@@ -72,7 +72,7 @@ pub fn process_instruction(
         UpdTest => Err(OracleError::UnrecognizedInstruction.into()),
         SetMinPub => set_min_pub(program_id, accounts, instruction_data),
         UpdPriceNoFailOnError => upd_price_no_fail_on_error(program_id, accounts, instruction_data),
-        ResizePriceAccount => resize_price_account(program_id, accounts, instruction_data),
+        ResizePriceAccount => Err(OracleError::UnrecognizedInstruction.into()),
         DelPrice => del_price(program_id, accounts, instruction_data),
         DelProduct => del_product(program_id, accounts, instruction_data),
         UpdPermissions => Err(OracleError::UnrecognizedInstruction.into()),

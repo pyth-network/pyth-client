@@ -331,6 +331,7 @@ impl PythSimulator {
 
     /// Resize a price account (using the resize_price_account
     /// instruction).
+    #[allow(dead_code)]
     pub async fn resize_price_account(
         &mut self,
         price_keypair: &Keypair,
