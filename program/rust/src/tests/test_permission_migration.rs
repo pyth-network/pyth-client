@@ -22,7 +22,6 @@ use {
                 DelPublisher,
                 InitMapping,
                 InitPrice,
-                ResizePriceAccount,
                 SetMinPub,
                 UpdProduct,
             },
@@ -212,20 +211,6 @@ fn test_permission_migration() {
                 minimum_publishers: 3,
                 unused_:            [0; 3],
             })
-        ),
-        Err(OracleError::PermissionViolation.into())
-    );
-
-    assert_eq!(
-        process_instruction(
-            &program_id,
-            &[
-                attacker_account.clone(),
-                price_account.clone(),
-                price_account.clone(), // Mock system program
-                permissions_account.clone()
-            ],
-            bytes_of::<CommandHeader>(&ResizePriceAccount.into())
         ),
         Err(OracleError::PermissionViolation.into())
     );
