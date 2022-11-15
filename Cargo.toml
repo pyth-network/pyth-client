@@ -1,6 +1,8 @@
 [profile.release]
 opt-level = 2
-lto = true
+lto = "fat"
+codegen-units = 1
+strip = true
 
 [workspace]
 members = [
