@@ -35,6 +35,7 @@ use {
 // account[0] funding account       [signer writable]
 // account[1] price account         [signer writable]
 // account[2] system program        []
+#[allow(dead_code)]
 pub fn resize_price_account(
     program_id: &Pubkey,
     accounts: &[AccountInfo],

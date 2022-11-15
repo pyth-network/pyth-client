@@ -36,7 +36,7 @@ fn test_init_mapping() {
     let program_id = Pubkey::new_unique();
     let program_id_2 = Pubkey::new_unique();
 
-    let mut funding_setup = AccountSetup::new_funding();
+    let mut funding_setup = AccountSetup::new_master_authority();
     let mut funding_account = funding_setup.as_account_info();
 
     let mut attacker_setup = AccountSetup::new_funding();
@@ -163,26 +163,6 @@ fn test_init_mapping() {
 
     let mut permissions_setup = AccountSetup::new_permission(&program_id);
     let permissions_account = permissions_setup.as_account_info();
-
-    // Permissions account is unitialized
-    assert_eq!(
-        process_instruction(
-            &program_id,
-            &[
-                funding_account.clone(),
-                mapping_account.clone(),
-                permissions_account.clone()
-            ],
-            instruction_data
-        ),
-        Err(OracleError::InvalidAccountHeader.into())
-    );
-
-    {
-        let mut permissions_account_data =
-            PermissionAccount::initialize(&permissions_account, PC_VERSION).unwrap();
-        permissions_account_data.master_authority = *funding_account.key;
-    }
 
     // Attacker account tries to sign transaction instead of funding account
     assert_eq!(

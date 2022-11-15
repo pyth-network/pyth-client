@@ -44,6 +44,7 @@ pub use {
     mapping::MappingAccount,
     permission::{
         PermissionAccount,
+        MASTER_AUTHORITY,
         PERMISSIONS_SEED,
     },
     price::{
@@ -154,6 +155,7 @@ fn allocate_data<'a>(
 }
 
 /// Given a newly created `AccountInfo`, assign the owner to the given program id.
+#[allow(dead_code)]
 fn assign_owner<'a>(
     account: &AccountInfo<'a>,
     owner: &Pubkey,
