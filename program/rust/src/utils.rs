@@ -213,7 +213,7 @@ pub fn is_component_update(cmd_args: &UpdPriceArgs) -> Result<bool, OracleError>
 
 #[repr(C)]
 #[derive(Pod, Zeroable, Copy, Clone)]
-struct ProgramDataAccount {
+struct ProgramdataAccount {
     pub account_type:          u32,
     pub unused1:               u32,
     pub unused2:               u32,
@@ -234,7 +234,7 @@ pub fn check_is_upgrade_authority_for_program(
     programdata_account: &AccountInfo,
     program_id: &Pubkey,
 ) -> Result<(), ProgramError> {
-    let programdata_deserialized = load_account_as::<ProgramDataAccount>(programdata_account)?;
+    let programdata_deserialized = load_account_as::<ProgramdataAccount>(programdata_account)?;
 
     // 1. program_account is actually this program's account
     pyth_assert(
