@@ -1,5 +1,4 @@
 //! Account types and utilities for working with Pyth accounts.
-
 use {
     crate::{
         c_oracle_header::PC_MAGIC,
@@ -9,7 +8,6 @@ use {
             check_valid_fresh_account,
             get_rent,
             pyth_assert,
-            send_lamports,
             try_convert,
         },
     },
@@ -26,6 +24,7 @@ use {
         system_instruction::{
             allocate,
             assign,
+            create_account,
         },
     },
     std::{
@@ -119,26 +118,42 @@ pub trait PythAccount: Pod {
     ) -> Result<(), ProgramError> {
         let target_rent = get_rent()?.minimum_balance(Self::MINIMUM_SIZE);
 
-        if account.lamports() < target_rent {
-            send_lamports(
+        if account.data_len() == 0 {
+            create(
                 funding_account,
                 account,
                 system_program,
-                target_rent - account.lamports(),
+                program_id,
+                Self::MINIMUM_SIZE,
+                target_rent,
+                seeds,
             )?;
         }
-
-        if account.data_len() == 0 {
-            allocate_data(account, system_program, Self::MINIMUM_SIZE, seeds)?;
-            assign_owner(account, program_id, system_program, seeds)?;
-            Self::initialize(account, version)?;
-        }
+        Self::initialize(account, version)?;
         Ok(())
     }
 }
 
+fn create<'a>(
+    from: &AccountInfo<'a>,
+    to: &AccountInfo<'a>,
+    system_program: &AccountInfo<'a>,
+    owner: &Pubkey,
+    space: usize,
+    lamports: u64,
+    seeds: &[&[u8]],
+) -> Result<(), ProgramError> {
+    let create_instruction = create_account(from.key, to.key, lamports, try_convert(space)?, owner);
+    invoke_signed(
+        &create_instruction,
+        &[from.clone(), to.clone(), system_program.clone()],
+        &[seeds],
+    )?;
+    Ok(())
+}
 /// Given an already empty `AccountInfo`, allocate the data field to the given size. This make no
 /// assumptions about owner.
+#[allow(dead_code)]
 fn allocate_data<'a>(
     account: &AccountInfo<'a>,
     system_program: &AccountInfo<'a>,

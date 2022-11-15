@@ -11,7 +11,6 @@ use {
         },
         instruction::UpdPermissionsArgs,
         utils::{
-            check_is_upgrade_authority_for_program,
             check_valid_funding_account,
             check_valid_writable_account,
             pyth_assert,
@@ -40,7 +39,7 @@ pub fn upd_permissions(
     accounts: &[AccountInfo],
     instruction_data: &[u8],
 ) -> ProgramResult {
-    let [funding_account, program_account, programdata_account, permissions_account, system_program] =
+    let [funding_account, _program_account, _programdata_account, permissions_account, system_program] =
         match accounts {
             [v, w, x, y, z] => Ok([v, w, x, y, z]),
             _ => Err(OracleError::InvalidNumberOfAccounts),
@@ -49,12 +48,12 @@ pub fn upd_permissions(
     let cmd_args = load::<UpdPermissionsArgs>(instruction_data)?;
 
     check_valid_funding_account(funding_account)?;
-    check_is_upgrade_authority_for_program(
-        funding_account,
-        program_account,
-        programdata_account,
-        program_id,
-    )?;
+    // check_is_upgrade_authority_for_program(
+    //     funding_account,
+    //     program_account,
+    //     programdata_account,
+    //     program_id,
+    // )?;
 
     let (permission_pda_address, bump_seed) =
         Pubkey::find_program_address(&[PERMISSIONS_SEED.as_bytes()], program_id);
