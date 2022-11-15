@@ -5,12 +5,10 @@ use crate::c_oracle_header::{
     PC_ACCTYPE_PRICE,
     PC_PRICE_T_COMP_OFFSET,
 };
-use crate::error::OracleError;
 use bytemuck::{
     Pod,
     Zeroable,
 };
-use solana_program::msg;
 
 
 #[derive(Debug, Clone, Copy)]
@@ -32,17 +30,6 @@ pub struct PriceAccountWrapper {
     pub extra_publisher_space: [u8; EXTRA_PUBLISHER_SPACE as usize],
     //TimeMachine
     pub time_machine:          TimeMachineWrapper,
-}
-impl PriceAccountWrapper {
-    pub fn initialize_time_machine(&mut self) -> Result<(), OracleError> {
-        msg!("implement me");
-        Ok(())
-    }
-
-    pub fn add_price_to_time_machine(&mut self) -> Result<(), OracleError> {
-        msg!("implement me");
-        Ok(())
-    }
 }
 
 #[cfg(target_endian = "little")]

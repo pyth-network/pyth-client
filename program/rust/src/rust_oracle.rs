@@ -50,7 +50,6 @@ use crate::deserialize::{
     initialize_pyth_account_checked, /* TODO: This has a confusingly similar name to a Solana
                                       * sdk function */
     load,
-    load_account_as_mut,
     load_checked,
 };
 use crate::time_machine_types::PriceAccountWrapper;
@@ -148,10 +147,8 @@ pub fn resize_price_account(
             price_account_info.realloc(size_of::<PriceAccountWrapper>(), false)?;
             //The load below would fail if the account was not a price account, reverting the whole
             // transaction
-            let mut price_account =
+            let mut _price_account =
                 load_checked::<PriceAccountWrapper>(price_account_info, PC_VERSION)?;
-            //Initialize Time Machine
-            price_account.initialize_time_machine()?;
             Ok(())
         }
         PRICE_ACCOUNT_SIZE => Ok(()),
@@ -272,21 +269,14 @@ pub fn upd_price(
     }
 
     // Try to update the aggregate
-    let mut aggregate_updated = false;
     if clock.slot > latest_aggregate_price.pub_slot_ {
         unsafe {
-            aggregate_updated = c_upd_aggregate(
+            let _aggregate_updated = c_upd_aggregate(
                 price_account.try_borrow_mut_data()?.as_mut_ptr(),
                 clock.slot,
                 clock.unix_timestamp,
             );
         }
-    }
-
-    let account_len = price_account.try_data_len()?;
-    if aggregate_updated && account_len == PRICE_ACCOUNT_SIZE {
-        let mut price_account = load_account_as_mut::<PriceAccountWrapper>(price_account)?;
-        price_account.add_price_to_time_machine()?;
     }
 
     // Try to update the publisher's price
