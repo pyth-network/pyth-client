@@ -85,6 +85,7 @@ impl AccountSetup {
         }
     }
 
+    /// Funding account with authority to perform admin tasks
     pub fn new_master_authority() -> Self {
         let key = MASTER_AUTHORITY;
         let owner = system_program::id();

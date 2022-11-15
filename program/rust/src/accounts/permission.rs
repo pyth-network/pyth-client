@@ -58,7 +58,7 @@ impl PermissionAccount {
         }
     }
 
-    /// Creating PDAs exceed or current program space.
+    /// Creating PDAs exceeds our current program space.
     /// Therefore the program will use the permissions specified here.
     /// To modify the permissions the program needs to be upgraded.
     pub fn hardcoded() -> Self {

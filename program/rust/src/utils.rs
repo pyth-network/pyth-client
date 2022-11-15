@@ -212,7 +212,6 @@ pub fn is_component_update(cmd_args: &UpdPriceArgs) -> Result<bool, OracleError>
 ///   `programdata_account`
 /// - `programdata_account` has an `upgrade_authority_address` field that needs to match
 ///   `upgrade_authority.key`
-#[allow(dead_code)]
 pub fn check_is_upgrade_authority_for_program(
     upgrade_authority_account: &AccountInfo,
     program_account: &AccountInfo,

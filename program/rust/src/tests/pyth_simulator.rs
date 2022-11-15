@@ -62,7 +62,6 @@ use {
 
 /// Simulator for the state of the pyth program on Solana. You can run solana transactions against
 /// this struct to test how pyth instructions execute in the Solana runtime.
-#[deny(dead_code)]
 pub struct PythSimulator {
     program_id:            Pubkey,
     banks_client:          BanksClient,
