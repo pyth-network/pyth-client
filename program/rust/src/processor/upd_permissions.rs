@@ -34,7 +34,6 @@ use {
 // key[2] programdata account       []
 // key[3] permissions account       [writable]
 // key[4] system program            []
-#[allow(dead_code)]
 pub fn upd_permissions(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
