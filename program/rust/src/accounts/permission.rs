@@ -4,26 +4,18 @@ use {
         PythAccount,
     },
     crate::{
-        c_oracle_header::{
-            PC_ACCTYPE_PERMISSIONS,
-            PC_MAGIC,
-            PC_VERSION,
-        },
+        c_oracle_header::PC_ACCTYPE_PERMISSIONS,
         instruction::OracleCommand,
     },
     bytemuck::{
         Pod,
         Zeroable,
     },
-    solana_program::{
-        pubkey,
-        pubkey::Pubkey,
-    },
+    solana_program::pubkey::Pubkey,
     std::mem::size_of,
 };
 
 pub const PERMISSIONS_SEED: &str = "permissions";
-pub const MASTER_AUTHORITY: Pubkey = pubkey!("6oXTdojyfDS8m5VtTaYB9xRCxpKGSvKJFndLUPV3V3wT");
 
 /// This account stores the pubkeys that can execute administrative instructions in the Pyth
 /// program. Only the upgrade authority of the program can update these permissions.
@@ -55,20 +47,6 @@ impl PermissionAccount {
         match (*key, command) {
             (pubkey, _) if pubkey == self.master_authority => true,
             _ => false,
-        }
-    }
-
-    pub fn hardcoded() -> Self {
-        Self {
-            header:                  AccountHeader {
-                magic_number: PC_MAGIC,
-                version:      PC_VERSION,
-                account_type: Self::ACCOUNT_TYPE,
-                size:         Self::INITIAL_SIZE,
-            },
-            master_authority:        MASTER_AUTHORITY,
-            data_curation_authority: Pubkey::zeroed(),
-            security_authority:      Pubkey::zeroed(),
         }
     }
 }

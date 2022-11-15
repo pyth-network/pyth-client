@@ -6,7 +6,10 @@ use {
             PERMISSIONS_SEED,
         },
         c_oracle_header::MAX_NUM_DECIMALS,
-        deserialize::load_account_as,
+        deserialize::{
+            load_account_as,
+            load_checked,
+        },
         instruction::{
             CommandHeader,
             OracleCommand,
@@ -81,8 +84,8 @@ pub fn check_valid_signable_account_or_permissioned_funding_account(
 ) -> Result<(), ProgramError> {
     if let Some(permissions_account) = permissions_account_option {
         check_valid_permissions_account(program_id, permissions_account)?;
-
-        let permissions_account_data = PermissionAccount::hardcoded();
+        let permissions_account_data =
+            load_checked::<PermissionAccount>(permissions_account, cmd_hdr.version)?;
         check_valid_funding_account(funding_account)?;
         pyth_assert(
             permissions_account_data.is_authorized(
@@ -97,7 +100,6 @@ pub fn check_valid_signable_account_or_permissioned_funding_account(
         check_valid_signable_account(program_id, account)
     }
 }
-
 
 /// Returns `true` if the `account` is fresh, i.e., its data can be overwritten.
 /// Use this check to prevent accidentally overwriting accounts whose data is already populated.
@@ -226,7 +228,6 @@ struct ProgramDataAccount {
 ///   `programdata_account`
 /// - `programdata_account` has an `upgrade_authority_address` field that needs to match
 ///   `upgrade_authority.key`
-#[allow(dead_code)]
 pub fn check_is_upgrade_authority_for_program(
     upgrade_authority_account: &AccountInfo,
     program_account: &AccountInfo,
@@ -246,7 +247,7 @@ pub fn check_is_upgrade_authority_for_program(
         Pubkey::find_program_address(&[&program_id.to_bytes()], &bpf_loader_upgradeable::id());
     pyth_assert(
         programdata_address.eq(programdata_account.key),
-        OracleError::InvalidUpgradeAuthority.into(),
+        OracleError::UnrecognizedInstruction.into(),
     )?;
 
 
@@ -262,7 +263,6 @@ pub fn check_is_upgrade_authority_for_program(
     )?;
     Ok(())
 }
-
 pub fn send_lamports<'a>(
     from: &AccountInfo<'a>,
     to: &AccountInfo<'a>,

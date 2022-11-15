@@ -62,7 +62,6 @@ use {
 
 /// Simulator for the state of the pyth program on Solana. You can run solana transactions against
 /// this struct to test how pyth instructions execute in the Solana runtime.
-#[deny(dead_code)]
 pub struct PythSimulator {
     program_id:            Pubkey,
     banks_client:          BanksClient,
@@ -87,8 +86,8 @@ impl PythSimulator {
 
         let mut program_test = ProgramTest::default();
         let program_key = Pubkey::new_unique();
-        let programdata_key = Pubkey::new_unique();
-
+        let (programdata_key, _) =
+            Pubkey::find_program_address(&[&program_key.to_bytes()], &bpf_loader_upgradeable::id());
         let upgrade_authority_keypair = Keypair::new();
 
         let program_deserialized = UpgradeableLoaderState::Program {
@@ -331,6 +330,7 @@ impl PythSimulator {
 
     /// Resize a price account (using the resize_price_account
     /// instruction).
+    #[allow(dead_code)]
     pub async fn resize_price_account(
         &mut self,
         price_keypair: &Keypair,
@@ -357,7 +357,6 @@ impl PythSimulator {
 
     /// Update permissions (using the upd_permissions intruction) and return the pubkey of the
     /// permissions account
-    #[allow(dead_code)]
     pub async fn upd_permissions(
         &mut self,
         cmd_args: UpdPermissionsArgs,
@@ -398,7 +397,6 @@ impl PythSimulator {
             .map(|x| *load::<T>(&x.data).unwrap())
     }
 
-    #[allow(dead_code)]
     pub fn is_owned_by_oracle(&self, account: &Account) -> bool {
         account.owner == self.program_id
     }
@@ -411,7 +409,6 @@ impl PythSimulator {
             .await
     }
 
-    #[allow(dead_code)]
     pub fn get_permissions_pubkey(&self) -> Pubkey {
         let (permissions_pubkey, __bump) =
             Pubkey::find_program_address(&[PERMISSIONS_SEED.as_bytes()], &self.program_id);

@@ -2,3 +2,8 @@
 members = [
   "program/rust"
 ]
+
+[profile.release]
+opt-level = 2
+lto = "fat"
+codegen-units = 1

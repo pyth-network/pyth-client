@@ -2,9 +2,12 @@ use {
     crate::{
         accounts::{
             MappingAccount,
+            PermissionAccount,
             PriceAccount,
             ProductAccount,
+            PythAccount,
         },
+        c_oracle_header::PC_VERSION,
         error::OracleError,
         instruction::{
             AddPriceArgs,
@@ -42,7 +45,7 @@ fn test_permission_migration() {
     let mut permissions_setup = AccountSetup::new_permission(&program_id);
     let permissions_account = permissions_setup.as_account_info();
 
-    let mut funding_setup = AccountSetup::new_master_authority();
+    let mut funding_setup = AccountSetup::new_funding();
     let funding_account = funding_setup.as_account_info();
 
     let mut attacker_setup = AccountSetup::new_funding();
@@ -65,6 +68,13 @@ fn test_permission_migration() {
     mapping_account.is_signer = false;
     price_account.is_signer = false;
     next_mapping_account.is_signer = false;
+
+
+    {
+        let mut permissions_account_data =
+            PermissionAccount::initialize(&permissions_account, PC_VERSION).unwrap();
+        permissions_account_data.master_authority = *funding_account.key;
+    }
 
     assert_eq!(
         process_instruction(
@@ -227,7 +237,7 @@ fn test_permission_migration() {
             ],
             bytes_of::<CommandHeader>(&ResizePriceAccount.into())
         ),
-        Err(OracleError::PermissionViolation.into())
+        Err(OracleError::UnrecognizedInstruction.into())
     );
 
     assert_eq!(

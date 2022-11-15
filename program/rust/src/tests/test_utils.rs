@@ -3,7 +3,6 @@ use {
         accounts::{
             PermissionAccount,
             PythAccount,
-            MASTER_AUTHORITY,
             PERMISSIONS_SEED,
         },
         c_oracle_header::PC_VERSION,
@@ -72,21 +71,6 @@ impl AccountSetup {
 
     pub fn new_funding() -> Self {
         let key = Pubkey::new_unique();
-        let owner = system_program::id();
-        let balance = LAMPORTS_PER_SOL;
-        let size = 0;
-        let data = [0; UPPER_BOUND_OF_ALL_ACCOUNT_SIZES];
-        AccountSetup {
-            key,
-            owner,
-            balance,
-            size,
-            data,
-        }
-    }
-
-    pub fn new_master_authority() -> Self {
-        let key = MASTER_AUTHORITY;
         let owner = system_program::id();
         let balance = LAMPORTS_PER_SOL;
         let size = 0;

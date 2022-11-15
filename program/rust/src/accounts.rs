@@ -43,7 +43,6 @@ pub use {
     mapping::MappingAccount,
     permission::{
         PermissionAccount,
-        MASTER_AUTHORITY,
         PERMISSIONS_SEED,
     },
     price::{
@@ -128,8 +127,9 @@ pub trait PythAccount: Pod {
                 target_rent,
                 seeds,
             )?;
+            Self::initialize(account, version)?;
         }
-        Self::initialize(account, version)?;
+
         Ok(())
     }
 }
