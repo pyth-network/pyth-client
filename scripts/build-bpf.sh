@@ -39,6 +39,7 @@ cargo clean
 cargo build-bpf
 
 sha256sum ./target/**/*.so
+./scripts/check-size.sh
 
 
 
