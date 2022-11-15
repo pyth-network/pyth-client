@@ -211,6 +211,9 @@ pub fn is_component_update(cmd_args: &UpdPriceArgs) -> Result<bool, OracleError>
     }
 }
 
+/// This struct represents UpgradeableLoaderState from bpf-upgradable-loader.
+/// Solana uses bincode for the struct and the bincode crate is too big the space we have onchain,
+/// therefore we will use bytemuck for deserialization
 #[repr(C)]
 #[derive(Pod, Zeroable, Copy, Clone)]
 struct ProgramdataAccount {
