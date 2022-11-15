@@ -371,7 +371,7 @@ pub fn init_price(
         0,
         size_of::<pc_price_info_t>(),
     );
-    for i in 0..(price_data.comp_.len() as usize) {
+    for i in 0..price_data.comp_.len() {
         sol_memset(
             bytes_of_mut(&mut price_data.comp_[i].agg_),
             0,
