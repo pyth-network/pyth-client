@@ -247,7 +247,7 @@ pub fn check_is_upgrade_authority_for_program(
         Pubkey::find_program_address(&[&program_id.to_bytes()], &bpf_loader_upgradeable::id());
     pyth_assert(
         programdata_address.eq(programdata_account.key),
-        OracleError::UnrecognizedInstruction.into(),
+        OracleError::InvalidUpgradeAuthority.into(),
     )?;
 
 
