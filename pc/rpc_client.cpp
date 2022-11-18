@@ -888,8 +888,16 @@ public:
   }
 };
 
+// Populates the given tx with the given upd_price requests. This function allows
+// specifying the number of requested cu units, and a price per cu unit, to enable
+// priority fees. If these parameters are emitted these are left as unspecified in
+// the transaction.
 bool rpc::upd_price::build_tx(
-  bincode& tx, upd_price* upds[], const unsigned n, unsigned cu_units, unsigned cu_price
+  bincode& tx,
+  upd_price* upds[],
+  const unsigned n,
+  unsigned cu_units,
+  unsigned cu_price
 )
 {
   if ( ! n ) {
