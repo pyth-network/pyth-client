@@ -72,6 +72,10 @@ int usage()
   std::cerr << "  -d" << std::endl;
   std::cerr << "     Turn on debug logging. Can also toggle this on/off via "
                "kill -s SIGUSR1 <pid>\n" << std::endl;
+  std::cerr << "  -u" << std::endl;
+  std::cerr << "     Number of compute units requested by each upd_price transaction (default 20000)" << std::endl;
+  std::cerr << "  -v" << std::endl;
+  std::cerr << "     Price per compute unit for each upd_price transaction, in micro lamports (the default is not to specify a specific price)" << std::endl;
   return 1;
 }
 
@@ -104,6 +108,8 @@ int main(int argc, char **argv)
   int pyth_port = get_port();
   int opt = 0;
   int pub_int = 1000;
+  unsigned cu_units = 20000;
+  unsigned cu_price = 0;
   unsigned max_batch_size = 0;
   bool do_wait = true, do_tx = true, do_ws = true, do_debug = false;
   while( (opt = ::getopt(argc,argv, "r:s:t:p:i:k:w:c:l:m:b:dnxhz" )) != -1 ) {
@@ -123,6 +129,8 @@ int main(int argc, char **argv)
       case 'x': do_tx = false; break;
       case 'z': do_ws = false; break;
       case 'd': do_debug = true; break;
+      case 'u': cu_units = strtoul(optarg, NULL, 0); break;
+      case 'v': cu_price = strtoul(optarg, NULL, 0); break;
       default: return usage();
     }
   }
@@ -153,6 +161,8 @@ int main(int argc, char **argv)
   mgr.set_do_capture( !cap_file.empty() );
   mgr.set_commitment( cmt );
   mgr.set_publish_interval( pub_int );
+  mgr.set_requested_upd_price_cu_units( cu_units );
+  mgr.set_requested_upd_price_cu_price( cu_price );
 
   bool do_secondary = !secondary_rpc_host.empty();
   if ( do_secondary ) {

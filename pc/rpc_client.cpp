@@ -184,7 +184,7 @@ void rpc_client::send( rpc_request *rptr )
   }
 }
 
-void rpc_client::send( rpc::upd_price *upds[], const unsigned n )
+void rpc_client::send( rpc::upd_price *upds[], const unsigned n, unsigned cu_units, unsigned cu_price )
 {
   if ( ! n ) {
     return;
@@ -212,7 +212,7 @@ void rpc_client::send( rpc::upd_price *upds[], const unsigned n )
   jw.add_val( json_wtr::e_obj );
   jw.add_key( "jsonrpc", "2.0" );
   jw.add_key( "id", id );
-  rpc::upd_price::request( jw, upds, n );
+  rpc::upd_price::request( jw, upds, n, cu_units, cu_price );
   jw.pop();
 //  jw.print();
   if ( upds[ 0 ]->get_is_http() ) {
@@ -888,8 +888,16 @@ public:
   }
 };
 
+// Populates the given tx with the given upd_price requests. This function allows
+// specifying the number of requested cu units, and a price per cu unit, to enable
+// priority fees. If these parameters are emitted these are left as unspecified in
+// the transaction.
 bool rpc::upd_price::build_tx(
-  bincode& tx, upd_price* upds[], const unsigned n
+  bincode& tx,
+  upd_price* upds[],
+  const unsigned n,
+  unsigned cu_units,
+  unsigned cu_price
 )
 {
   if ( ! n ) {
@@ -923,28 +931,34 @@ bool rpc::upd_price::build_tx(
   tx.add( *first.bhash_ ); // recent block hash
 
   // instructions section
-  tx.add_len( n + 1 + 1 ); // 1 compute limit instruction, 1 compute unit price instruction, n upd_price instruction(s)
+  unsigned instruction_count = n; // n upd_price instruction(s)
+  if ( cu_units > 0 ) {
+    instruction_count += 1; // Extra instruction for specifying number of cus per instructions
+  }
+  if ( cu_price > 0 ) {
+    instruction_count += 1; // Extra instruction for specifying compute unit price 
+  }
+  tx.add_len( instruction_count ); // 1 compute limit instruction, 1 compute unit price instruction, n upd_price instruction(s)
 
   // Set compute limit
-  tx.add( (uint8_t)( n + 3 ) ); // compute budget program id index in accounts list
-  tx.add_len<0>(); // no accounts
-  // compute limit instruction parameters
-  tx.add_len<sizeof(uint8_t) + sizeof(uint32_t)>(); // uint8_t enum variant + uint32_t requested compute units
-  tx.add( (uint8_t) 2 ); // SetComputeLimit enum variant
-  tx.add( (uint32_t) CU_BUDGET_PER_IX * n ); // the budget (scaled for number of instructions)
-
-  // Requested price per compute unit, in micro lamports
-  // We want to pay 5000 lamports in total, so ((5000/20000) / 8) * (10^6)
-  // assuming upper bound of 20000 CUs and 8 instructions.
-  const uint64_t cu_price_micro_lamports = 31250;
+  if ( cu_units > 0 ) {
+    tx.add( (uint8_t)( n + 3 ) ); // compute budget program id index in accounts list
+    tx.add_len<0>(); // no accounts
+    // compute limit instruction parameters
+    tx.add_len<sizeof(uint8_t) + sizeof(uint32_t)>(); // uint8_t enum variant + uint32_t requested compute units
+    tx.add( (uint8_t) 2 ); // SetComputeLimit enum variant
+    tx.add( (uint32_t) ( cu_units * n ) ); // the budget (scaled for number of instructions)
+  }
 
   // Set compute unit price
-  tx.add( (uint8_t)( n + 3 ) );
-  tx.add_len<0>(); // no accounts
-  // compute unit price instruction parameters
-  tx.add_len<sizeof(uint8_t) + sizeof(uint64_t)>(); // uint8_t enum variant + uint62_t compute price
-  tx.add( (uint8_t) 3 ); // SetComputePrice enum variant
-  tx.add( (uint64_t) cu_price_micro_lamports ); // price we are willing to pay per compute unit in Micro Lamports
+  if ( cu_price > 0 ) {
+    tx.add( (uint8_t)( n + 3 ) );
+    tx.add_len<0>(); // no accounts
+    // compute unit price instruction parameters
+    tx.add_len<sizeof(uint8_t) + sizeof(uint64_t)>(); // uint8_t enum variant + uint62_t compute price
+    tx.add( (uint8_t) 3 ); // SetComputePrice enum variant
+    tx.add( (uint64_t) cu_price ); // price we are willing to pay per compute unit in Micro Lamports
+  }
 
   for ( unsigned i = 0; i < n; ++i ) {
     tx.add( (uint8_t)( n + 2 ) ); // program_id index
@@ -990,9 +1004,16 @@ bool rpc::upd_price::build(
   net_wtr& wtr, upd_price* upds[], const unsigned n
 )
 {
+  return build( wtr, upds, n, 0, 0 );
+}
+
+bool rpc::upd_price::build(
+  net_wtr& wtr, upd_price* upds[], const unsigned n, unsigned cu_units, unsigned cu_price
+)
+{
   bincode tx;
   static_cast< tx_wtr& >( wtr ).init( tx );
-  if ( ! build_tx( tx, upds, n ) ) {
+  if ( ! build_tx( tx, upds, n, cu_units, cu_price ) ) {
     return false;
   }
   static_cast< tx_wtr& >( wtr ).commit( tx );
@@ -1001,12 +1022,18 @@ bool rpc::upd_price::build(
 
 bool rpc::upd_price::request(
   json_wtr& msg, upd_price* upds[], const unsigned n
+) {
+  return request( msg, upds, n, 0, 0 );
+}
+
+bool rpc::upd_price::request(
+  json_wtr& msg, upd_price* upds[], const unsigned n, unsigned cu_units, unsigned cu_price
 )
 {
   // construct binary transaction
   net_buf *bptr = net_buf::alloc();
   bincode tx( bptr->buf_ );
-  if ( ! build_tx( tx, upds, n ) ) {
+  if ( ! build_tx( tx, upds, n, cu_units, cu_price ) ) {
     return false;
   }
 

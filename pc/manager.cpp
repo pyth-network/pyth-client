@@ -14,6 +14,9 @@ using namespace pc;
 #define PC_MAX_BATCH          8
 // Flush partial batches if not completed within 400 ms.
 #define PC_FLUSH_INTERVAL       (400L*PC_NSECS_IN_MSEC)
+// Compute units requested per price update instruction
+// The biggest instruction appears to be about ~10300 CUs, so we overestimate by 100%.
+#define PC_UPD_PRICE_COMPUTE_UNITS 20000
 
 ///////////////////////////////////////////////////////////////////////////
 // manager_sub
@@ -76,6 +79,8 @@ manager::manager()
   is_pub_( false ),
   cmt_( commitment::e_confirmed ),
   max_batch_( PC_MAX_BATCH ),
+  requested_upd_price_cu_units_( PC_UPD_PRICE_COMPUTE_UNITS ),
+  requested_upd_price_cu_price_( 0UL ),
   sreq_{ { commitment::e_processed } },
   secondary_{ nullptr },
   is_secondary_( false )
@@ -187,6 +192,22 @@ void manager::set_publish_interval( int64_t pub_int )
 int64_t manager::get_publish_interval() const
 {
   return pub_int_ / PC_NSECS_IN_MSEC;
+}
+
+void manager::set_requested_upd_price_cu_units( unsigned cu_units ) {
+  requested_upd_price_cu_units_ = cu_units;
+}
+
+unsigned manager::get_requested_upd_price_cu_units() const {
+  return requested_upd_price_cu_units_;
+}
+
+void manager::set_requested_upd_price_cu_price( unsigned cu_price ) {
+  requested_upd_price_cu_price_ = cu_price;
+}
+
+unsigned manager::get_requested_upd_price_cu_price() const {
+  return requested_upd_price_cu_price_;
 }
 
 void manager::set_max_batch_size( unsigned batch_size )

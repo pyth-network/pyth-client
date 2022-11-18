@@ -801,7 +801,7 @@ bool price::send( price *prices[], const unsigned n )
     ) {
       if ( mgr->get_do_tx() ) {
         net_wtr msg;
-        if ( rpc::upd_price::build( msg, &upds_[ 0 ], upds_.size() ) ) {
+        if ( rpc::upd_price::build( msg, &upds_[ 0 ], upds_.size(), mgr->get_requested_upd_price_cu_units(), mgr->get_requested_upd_price_cu_units() ) ) {
           mgr->submit( msg );
         }
         else {
@@ -814,7 +814,7 @@ bool price::send( price *prices[], const unsigned n )
         }
       }
       else {
-        p->get_rpc_client()->send( &upds_[ 0 ], upds_.size() );
+        p->get_rpc_client()->send( &upds_[ 0 ], upds_.size(), mgr->get_requested_upd_price_cu_units(), mgr->get_requested_upd_price_cu_price() );
         for ( unsigned k = j; k <= i; ++k ) {
           price *const p1 = prices[ k ];
           p1->tvec_.emplace_back(
