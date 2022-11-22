@@ -211,12 +211,8 @@ pub fn is_component_update(cmd_args: &UpdPriceArgs) -> Result<bool, OracleError>
 }
 
 
-/// These 3 accounts need to get passed to make sure that the upgrade authority is signing the
-/// transaction
-/// - `program_account` is the program at address `program_id`. It just contains a pointer to the
-///   `programdata_account`
-/// - `programdata_account` has an `upgrade_authority_address` field that needs to match
-///   `upgrade_authority.key`
+/// Check that `programdata_account` is actually the buffer for `program_id`.
+/// Check that the authority in `programdata_account` matches `upgrade_authority_account`.
 pub fn check_is_upgrade_authority_for_program(
     upgrade_authority_account: &AccountInfo,
     programdata_account: &AccountInfo,
