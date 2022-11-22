@@ -1,3 +1,5 @@
+use solana_program::bpf_loader_upgradeable;
+
 use {
     crate::{
         accounts::{
@@ -216,37 +218,25 @@ pub fn is_component_update(cmd_args: &UpdPriceArgs) -> Result<bool, OracleError>
 ///   `upgrade_authority.key`
 pub fn check_is_upgrade_authority_for_program(
     upgrade_authority_account: &AccountInfo,
-    program_account: &AccountInfo,
     programdata_account: &AccountInfo,
     program_id: &Pubkey,
 ) -> Result<(), ProgramError> {
-    let program_deserialized: UpgradeableLoaderState =
-        bincode::deserialize(&program_account.try_borrow_data()?)
-            .map_err(|_| OracleError::DeserializationError)?;
+
     let programdata_deserialized: UpgradeableLoaderState =
         bincode::deserialize(&programdata_account.try_borrow_data()?)
             .map_err(|_| OracleError::DeserializationError)?;
 
-    // 1. program_account is actually this program's account
+    // 1. programdata_account is actually this program's buffer
+    let (programdata_address, _) =
+    Pubkey::find_program_address(&[&program_id.to_bytes()], &bpf_loader_upgradeable::id());
+
     pyth_assert(
-        program_account.key.eq(program_id) && program_account.executable,
+        programdata_address.eq(programdata_account.key),
         OracleError::InvalidUpgradeAuthority.into(),
     )?;
 
-    // 2. programdata_account is actually this program's buffer
-    if let UpgradeableLoaderState::Program {
-        programdata_address,
-    } = program_deserialized
-    {
-        pyth_assert(
-            programdata_address.eq(programdata_account.key),
-            OracleError::InvalidUpgradeAuthority.into(),
-        )?;
-    } else {
-        return Err(OracleError::InvalidUpgradeAuthority.into());
-    }
 
-    // 3. upgrade_authority_account is actually the authority inside programdata_account
+    // 2. upgrade_authority_account is actually the authority inside programdata_account
     if let UpgradeableLoaderState::ProgramData {
         slot: _,
         upgrade_authority_address: Some(upgrade_authority_key),
