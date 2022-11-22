@@ -1,3 +1,5 @@
+use solana_program::bpf_loader_upgradeable;
+
 use {
     crate::{
         accounts::{
@@ -225,12 +227,6 @@ pub fn check_is_upgrade_authority_for_program(
     // 1. programdata_account is actually this program's buffer
     let (programdata_address, _) =
         Pubkey::find_program_address(&[&program_id.to_bytes()], &bpf_loader_upgradeable::id());
-
-    pyth_assert(
-        programdata_address.eq(programdata_account.key),
-        OracleError::InvalidUpgradeAuthority.into(),
-    )?;
-
 
     // 2. upgrade_authority_account is actually the authority inside programdata_account
     if let UpgradeableLoaderState::ProgramData {
