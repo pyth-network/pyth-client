@@ -17,19 +17,21 @@ use {
         },
         OracleError,
     },
+    bytemuck::{
+        Pod,
+        Zeroable,
+    },
     num_traits::FromPrimitive,
     solana_program::{
         account_info::AccountInfo,
-        bpf_loader_upgradeable::{
-            self,
-            UpgradeableLoaderState,
-        },
+        bpf_loader_upgradeable,
         program::invoke,
         program_error::ProgramError,
         pubkey::Pubkey,
         system_instruction::transfer,
         sysvar::rent::Rent,
     },
+    std::cell::Ref,
 };
 
 
@@ -210,6 +212,19 @@ pub fn is_component_update(cmd_args: &UpdPriceArgs) -> Result<bool, OracleError>
     }
 }
 
+/// This struct represents UpgradeableLoaderState from bpf-upgradable-loader.
+/// Solana uses bincode for the struct. However the bincode crate is too big the space we have onchain,
+/// therefore we will use bytemuck for deserialization
+#[repr(C)]
+#[derive(Pod, Zeroable, Copy, Clone)]
+struct ProgramdataAccount {
+    pub account_type:          u32,
+    pub unused1:               u32,
+    pub unused2:               u32,
+    pub has_upgrade_authority: u8,
+    pub upgrade_authority:     Pubkey,
+    pub unused3:               [u8; 3],
+}
 
 /// Check that `programdata_account` is actually the buffer for `program_id`.
 /// Check that the authority in `programdata_account` matches `upgrade_authority_account`.
@@ -218,9 +233,8 @@ pub fn check_is_upgrade_authority_for_program(
     programdata_account: &AccountInfo,
     program_id: &Pubkey,
 ) -> Result<(), ProgramError> {
-    let programdata_deserialized: UpgradeableLoaderState =
-        bincode::deserialize(&programdata_account.try_borrow_data()?)
-            .map_err(|_| OracleError::DeserializationError)?;
+    let programdata_deserialized: Ref<ProgramdataAccount> =
+        load_account_as::<ProgramdataAccount>(programdata_account)?;
 
     // 1. programdata_account is actually this program's buffer
     let (programdata_address, _) =
@@ -233,18 +247,15 @@ pub fn check_is_upgrade_authority_for_program(
 
 
     // 2. upgrade_authority_account is actually the authority inside programdata_account
-    if let UpgradeableLoaderState::ProgramData {
-        slot: _,
-        upgrade_authority_address: Some(upgrade_authority_key),
-    } = programdata_deserialized
-    {
-        pyth_assert(
-            upgrade_authority_key.eq(upgrade_authority_account.key),
-            OracleError::InvalidUpgradeAuthority.into(),
-        )?;
-    } else {
-        return Err(OracleError::InvalidUpgradeAuthority.into());
-    }
+    pyth_assert(
+        programdata_deserialized
+            .upgrade_authority
+            .eq(upgrade_authority_account.key)
+            && programdata_deserialized.account_type == 3
+            && programdata_deserialized.has_upgrade_authority == 1,
+        OracleError::InvalidUpgradeAuthority.into(),
+    )?;
+
     Ok(())
 }
 
