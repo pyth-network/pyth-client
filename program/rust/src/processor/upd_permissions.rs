@@ -39,11 +39,19 @@ pub fn upd_permissions(
     accounts: &[AccountInfo],
     instruction_data: &[u8],
 ) -> ProgramResult {
+    let [funding_account, programdata_account, permissions_account, system_program] = match accounts
+    {
+        [w, x, y, z] => Ok([w, x, y, z]),
+        _ => Err(OracleError::InvalidNumberOfAccounts),
+    }?;
+
+    let cmd_args = load::<UpdPermissionsArgs>(instruction_data)?;
 
     check_valid_funding_account(funding_account)?;
     check_is_upgrade_authority_for_program(funding_account, programdata_account, program_id)?;
 
     let (permission_pda_address, bump_seed) =
+        Pubkey::find_program_address(&[PERMISSIONS_SEED.as_bytes()], program_id);
     pyth_assert(
         permission_pda_address == *permissions_account.key,
         OracleError::InvalidPda.into(),
