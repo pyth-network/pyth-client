@@ -1,5 +1,3 @@
-use solana_program::bpf_loader_upgradeable;
-
 use {
     crate::{
         accounts::{
@@ -22,7 +20,10 @@ use {
     num_traits::FromPrimitive,
     solana_program::{
         account_info::AccountInfo,
-        bpf_loader_upgradeable::UpgradeableLoaderState,
+        bpf_loader_upgradeable::{
+            self,
+            UpgradeableLoaderState,
+        },
         program::invoke,
         program_error::ProgramError,
         pubkey::Pubkey,
@@ -221,14 +222,13 @@ pub fn check_is_upgrade_authority_for_program(
     programdata_account: &AccountInfo,
     program_id: &Pubkey,
 ) -> Result<(), ProgramError> {
-
     let programdata_deserialized: UpgradeableLoaderState =
         bincode::deserialize(&programdata_account.try_borrow_data()?)
             .map_err(|_| OracleError::DeserializationError)?;
 
     // 1. programdata_account is actually this program's buffer
     let (programdata_address, _) =
-    Pubkey::find_program_address(&[&program_id.to_bytes()], &bpf_loader_upgradeable::id());
+        Pubkey::find_program_address(&[&program_id.to_bytes()], &bpf_loader_upgradeable::id());
 
     pyth_assert(
         programdata_address.eq(programdata_account.key),
