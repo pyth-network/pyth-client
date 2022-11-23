@@ -218,12 +218,16 @@ pub fn is_component_update(cmd_args: &UpdPriceArgs) -> Result<bool, OracleError>
 #[repr(C)]
 #[derive(Pod, Zeroable, Copy, Clone)]
 struct ProgramdataAccount {
+    /// 3 is the variant for programdata
     pub account_type:          u32,
-    pub unused1:               u32,
-    pub unused2:               u32,
+    /// Space for slot of last upgrade (we don't use this field)
+    pub slot:                  [u32; 2],
+    /// 0 if immutable, 1 if has upgrade authority
     pub has_upgrade_authority: u8,
+    /// Upgrade authority of the program
     pub upgrade_authority:     Pubkey,
-    pub unused3:               [u8; 3],
+    /// Unused field needed for this struct to be Pod
+    pub unused:                [u8; 3],
 }
 
 /// Check that `programdata_account` is actually the buffer for `program_id`.
