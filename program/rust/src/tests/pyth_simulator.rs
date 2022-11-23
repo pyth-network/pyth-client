@@ -86,7 +86,10 @@ impl PythSimulator {
 
         let mut program_test = ProgramTest::default();
         let program_key = Pubkey::new_unique();
-        let programdata_key = Pubkey::new_unique();
+        // This PDA is the actual address in the real world
+        // https://docs.rs/solana-program/1.6.4/solana_program/bpf_loader_upgradeable/index.html
+        let (programdata_key, _) =
+            Pubkey::find_program_address(&[&program_key.to_bytes()], &bpf_loader_upgradeable::id());
 
         let upgrade_authority_keypair = Keypair::new();
 
@@ -368,7 +371,6 @@ impl PythSimulator {
             bytes_of(&cmd_args),
             vec![
                 AccountMeta::new(payer.pubkey(), true),
-                AccountMeta::new_readonly(self.program_id, false),
                 AccountMeta::new_readonly(self.programdata_id, false),
                 AccountMeta::new(permissions_pubkey, false),
                 AccountMeta::new_readonly(system_program::id(), false),
