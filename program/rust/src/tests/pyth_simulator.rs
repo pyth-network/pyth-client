@@ -331,32 +331,6 @@ impl PythSimulator {
         .await
     }
 
-    /// Resize a price account (using the resize_price_account
-    /// instruction).
-    pub async fn resize_price_account(
-        &mut self,
-        price_keypair: &Keypair,
-    ) -> Result<(), BanksClientError> {
-        let cmd: CommandHeader = OracleCommand::ResizePriceAccount.into();
-        let instruction = Instruction::new_with_bytes(
-            self.program_id,
-            bytes_of(&cmd),
-            vec![
-                AccountMeta::new(self.genesis_keypair.pubkey(), true),
-                AccountMeta::new(price_keypair.pubkey(), true),
-                AccountMeta::new(system_program::id(), false),
-            ],
-        );
-
-        self.process_ix(
-            instruction,
-            &vec![price_keypair],
-            &copy_keypair(&self.genesis_keypair),
-        )
-        .await
-    }
-
-
     /// Update permissions (using the upd_permissions intruction) and return the pubkey of the
     /// permissions account
     pub async fn upd_permissions(

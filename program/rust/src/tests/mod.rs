@@ -9,7 +9,6 @@ mod test_del_publisher;
 mod test_init_mapping;
 mod test_init_price;
 mod test_permission_migration;
-mod test_resize_account;
 mod test_set_min_pub;
 mod test_sizes;
 mod test_sma;
