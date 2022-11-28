@@ -57,8 +57,6 @@ export PYTHONPATH=\"\${PYTHONPATH:+\$PYTHONPATH:}\${HOME}/pyth-client\"\n\
 
 COPY --chown=pyth:pyth . pyth-client/
 
-RUN pip3 install solana
-
 # Build off-chain binaries.
 RUN cd pyth-client && ./scripts/build.sh
 
