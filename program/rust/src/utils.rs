@@ -25,10 +25,8 @@ use {
     solana_program::{
         account_info::AccountInfo,
         bpf_loader_upgradeable,
-        program::invoke,
         program_error::ProgramError,
         pubkey::Pubkey,
-        system_instruction::transfer,
         sysvar::rent::Rent,
     },
     std::cell::Ref,
@@ -260,20 +258,6 @@ pub fn check_is_upgrade_authority_for_program(
         OracleError::InvalidUpgradeAuthority.into(),
     )?;
 
-    Ok(())
-}
-
-pub fn send_lamports<'a>(
-    from: &AccountInfo<'a>,
-    to: &AccountInfo<'a>,
-    system_program: &AccountInfo<'a>,
-    amount: u64,
-) -> Result<(), ProgramError> {
-    let transfer_instruction = transfer(from.key, to.key, amount);
-    invoke(
-        &transfer_instruction,
-        &[from.clone(), to.clone(), system_program.clone()],
-    )?;
     Ok(())
 }
 

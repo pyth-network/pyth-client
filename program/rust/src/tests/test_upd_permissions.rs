@@ -36,17 +36,6 @@ async fn test_upd_permissions() {
     let mut data_curation_authority = Pubkey::new_unique();
     let mut security_authority = Pubkey::new_unique();
 
-    // Airdrop some lamports to check whether someone can DDOS the account
-    let permissions_pubkey = sim.get_permissions_pubkey();
-    sim.airdrop(&permissions_pubkey, Rent::default().minimum_balance(0))
-        .await
-        .unwrap();
-    let permission_account = sim.get_account(permissions_pubkey).await.unwrap();
-    assert_eq!(
-        permission_account.lamports,
-        Rent::default().minimum_balance(0)
-    );
-
     // Should fail because payer is not the authority
     assert_eq!(
         sim.upd_permissions(
