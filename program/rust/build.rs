@@ -21,7 +21,7 @@ fn main() {
         .expect("Couldn't write bindings!");
 }
 
-/// Find the Solana header file for bindgen
+/// Find the Solana C header bindgen
 fn get_solana_inc_path() -> PathBuf {
     let which_stdout = Command::new("which")
         .args(["cargo-build-bpf"])
