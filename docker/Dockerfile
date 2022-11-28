@@ -40,7 +40,7 @@ RUN useradd -m pyth
 # Fixes a bug in the solana docker image
 # https://github.com/solana-labs/solana/issues/20577
 RUN mkdir /usr/bin/sdk/bpf/dependencies \
-    && chmod 777 /usr/bin/sdk/bpf/dependencies
+    && chmod -R 777 /usr/bin/
 
 
 USER pyth
