@@ -9,7 +9,6 @@ use {
             check_valid_fresh_account,
             get_rent,
             pyth_assert,
-            send_lamports,
             try_convert,
         },
     },
@@ -23,10 +22,7 @@ use {
         program_error::ProgramError,
         program_memory::sol_memset,
         pubkey::Pubkey,
-        system_instruction::{
-            allocate,
-            assign,
-        },
+        system_instruction::create_account,
     },
     std::{
         borrow::BorrowMut,
@@ -107,7 +103,9 @@ pub trait PythAccount: Pod {
         load_account_as_mut::<Self>(account)
     }
 
-    // Creates PDA accounts only when needed, and initializes it as one of the Pyth accounts
+    /// Creates PDA accounts only when needed, and initializes it as one of the Pyth accounts.
+    /// This PDA initialization assumes that the account has 0 lamports.
+    /// TO DO: Fix this once we can resize the program.
     fn initialize_pda<'a>(
         account: &AccountInfo<'a>,
         funding_account: &AccountInfo<'a>,
@@ -118,52 +116,36 @@ pub trait PythAccount: Pod {
     ) -> Result<(), ProgramError> {
         let target_rent = get_rent()?.minimum_balance(Self::MINIMUM_SIZE);
 
-        if account.lamports() < target_rent {
-            send_lamports(
+        if account.data_len() == 0 {
+            create(
                 funding_account,
                 account,
                 system_program,
-                target_rent - account.lamports(),
+                program_id,
+                Self::MINIMUM_SIZE,
+                target_rent,
+                seeds,
             )?;
-        }
-
-        if account.data_len() == 0 {
-            allocate_data(account, system_program, Self::MINIMUM_SIZE, seeds)?;
-            assign_owner(account, program_id, system_program, seeds)?;
             Self::initialize(account, version)?;
         }
+
         Ok(())
     }
 }
 
-/// Given an already empty `AccountInfo`, allocate the data field to the given size. This make no
-/// assumptions about owner.
-fn allocate_data<'a>(
-    account: &AccountInfo<'a>,
+fn create<'a>(
+    from: &AccountInfo<'a>,
+    to: &AccountInfo<'a>,
     system_program: &AccountInfo<'a>,
-    space: usize,
-    seeds: &[&[u8]],
-) -> Result<(), ProgramError> {
-    let allocate_instruction = allocate(account.key, try_convert(space)?);
-    invoke_signed(
-        &allocate_instruction,
-        &[account.clone(), system_program.clone()],
-        &[seeds],
-    )?;
-    Ok(())
-}
-
-/// Given a newly created `AccountInfo`, assign the owner to the given program id.
-fn assign_owner<'a>(
-    account: &AccountInfo<'a>,
     owner: &Pubkey,
-    system_program: &AccountInfo<'a>,
+    space: usize,
+    lamports: u64,
     seeds: &[&[u8]],
 ) -> Result<(), ProgramError> {
-    let assign_instruction = assign(account.key, owner);
+    let create_instruction = create_account(from.key, to.key, lamports, try_convert(space)?, owner);
     invoke_signed(
-        &assign_instruction,
-        &[account.clone(), system_program.clone()],
+        &create_instruction,
+        &[from.clone(), to.clone(), system_program.clone()],
         &[seeds],
     )?;
     Ok(())
