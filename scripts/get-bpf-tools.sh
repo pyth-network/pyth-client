@@ -7,4 +7,13 @@ curl https://github.com/guibescos/sbf-tools/releases/download/v1.29.1/solana-bpf
 mkdir -p ~/.cache/solana/v1.29/bpf-tools/
 tar -xf solana-bpf-tools-linux.tar.bz2 -C ~/.cache/solana/v1.29/bpf-tools/
 rm solana-bpf-tools-linux.tar.bz2
+
+# Source cargo
+if ! which cargo 2> /dev/null
+then
+  # shellcheck disable=SC1090
+  source "${CARGO_HOME:-$HOME/.cargo}/env"
+fi
+
+# Link the toolchain for future use
 rustup toolchain link bpf ~/.cache/solana/v1.29/bpf-tools/rust
