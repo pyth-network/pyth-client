@@ -8,7 +8,6 @@ mod deserialize;
 mod error;
 mod instruction;
 mod processor;
-mod time_machine_types;
 mod utils;
 
 #[cfg(test)]

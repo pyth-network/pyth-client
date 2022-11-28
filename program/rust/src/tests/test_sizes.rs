@@ -15,7 +15,6 @@ use {
             PC_COMP_SIZE,
             PC_MAP_TABLE_SIZE,
             PC_VERSION,
-            PRICE_ACCOUNT_SIZE,
         },
         deserialize::{
             load,
@@ -31,7 +30,6 @@ use {
             UpdPriceArgs,
         },
         tests::test_utils::AccountSetup,
-        time_machine_types::PriceAccountWrapper,
         utils::try_convert,
     },
     solana_program::pubkey::Pubkey,
@@ -74,10 +72,6 @@ fn test_sizes() {
     assert_eq!(size_of::<PriceComponent>(), 96);
     assert_eq!(size_of::<PriceEma>(), 24);
     assert_eq!(size_of::<PriceAccount>(), 3312);
-    assert_eq!(
-        size_of::<PriceAccountWrapper>(),
-        try_convert::<_, usize>(PRICE_ACCOUNT_SIZE).unwrap()
-    );
     assert_eq!(size_of::<PermissionAccount>(), 112);
 }
 
