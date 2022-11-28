@@ -1,5 +1,5 @@
 OUT_DIR := ./target
-SOLANA := "$(dirname $(which cargo-build-bpf))"
+SOLANA := $(shell dirname $(shell which cargo-build-bpf))
 include $(SOLANA)/sdk/bpf/c/bpf.mk
 
 cpyth-bpf:
