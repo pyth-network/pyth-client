@@ -10,8 +10,7 @@ set -eu
 
 THIS_DIR="$( dirname "${BASH_SOURCE[0]}" )"
 THIS_DIR="$( cd "${THIS_DIR}" && pwd )"
-SOLANA="${SOLANA:-$THIS_DIR/../../solana}"
-SOLANA="$( cd "${SOLANA}" && pwd )"
+SOLANA="$(dirname $(which cargo-build-bpf))"
 
 set -x
 cd "${SOLANA}"
