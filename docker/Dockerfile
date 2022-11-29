@@ -40,7 +40,7 @@ RUN useradd -m pyth
 # Fixes a bug in the solana docker image
 # https://github.com/solana-labs/solana/issues/20577
 RUN mkdir /usr/bin/sdk/bpf/dependencies \
-    && chmod 777 /usr/bin/sdk/bpf/dependencies
+    && chmod -R 777 /usr/bin/sdk/bpf
 
 
 USER pyth
@@ -61,9 +61,7 @@ COPY --chown=pyth:pyth . pyth-client/
 RUN cd pyth-client && ./scripts/build.sh
 
 RUN ./pyth-client/scripts/get-bpf-tools.sh
-# Copy solana sdk and apply patch.
-RUN mkdir solana
-RUN cp -a /usr/bin/sdk solana
+# Apply patch to solana
 RUN ./pyth-client/scripts/patch-solana.sh
 
 # Build and test the oracle program.
