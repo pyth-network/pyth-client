@@ -161,7 +161,7 @@ SORT_IMPL(stable_node)( SORT_KEY_T * x,
   SORT_IDX_T k = (SORT_IDX_T)0;
 
   /* Note that nl and nr are both at least one at this point so at least
-     one interation of the loop body is necessary. */
+     one iteration of the loop body is necessary. */
 
   for(;;) { /* Minimal C language operations */
     if( SORT_BEFORE( yr[k], yl[j] ) ) {

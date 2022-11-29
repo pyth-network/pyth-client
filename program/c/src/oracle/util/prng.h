@@ -15,7 +15,7 @@
 #include "hash.h" /* includes stdint.h */
 
 /* prng_t should be treated as an opaque handle of a pseudo random
-   number generator.  (It technically isn't here to faciliate inlining
+   number generator.  (It technically isn't here to facilitate inlining
    of prng operations.) */
 
 struct prng {
@@ -65,7 +65,7 @@ prng_private_contract( uint64_t seq ) {
 
    prng_new takes ownership of the memory region pointed to by mem
    (which is assumed to be non-NULL with the appropriate footprint and
-   alingment) and formats it as a prng.  The pseudo random number
+   alignment) and formats it as a prng.  The pseudo random number
    generator stream will initialized to use sequence random sequence
    "seq" and will start at index "idx".  Returns mem (which will be
    formatted for use).  The caller will not be joined to the region on
