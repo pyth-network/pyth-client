@@ -25,8 +25,8 @@ use {
 
 // Below is a high level description of the rust/c setup.
 
-// As we migrate from C to Rust, our Rust code needs to be able to interact with C/
-// build-bpf.sh is set up to compile the C code into a two archive files/
+// As we migrate from C to Rust, our Rust code needs to be able to interact with C.
+// build-bpf.sh is set up to compile the C code into a two archive files.
 // contained in `./program/c/target/`
 //  - `libcpyth-bpf.a` contains the bpf version for production code
 //  - `libcpyth-native.a` contains the systems architecture version for tests
