@@ -60,7 +60,7 @@ COPY --chown=pyth:pyth . pyth-client/
 # Build off-chain binaries.
 RUN cd pyth-client && ./scripts/build.sh
 
-
+RUN ./pyth-client/scripts/get-bpf-tools.sh
 # Copy solana sdk and apply patch.
 RUN mkdir solana
 RUN cp -a /usr/bin/sdk solana
