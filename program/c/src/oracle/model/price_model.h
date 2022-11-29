@@ -47,7 +47,7 @@ price_model_scratch_footprint( uint64_t cnt ) { /* Assumes price_model_cnt_valid
    large ... typically a multiple of 3 but this is not required,
    quote[i] for i in [0,cnt) are the quotes of interest on input, p25,
    p50, p75 point to where to write model outputs, scratch points to a
-   suitable footprint srcatch region).
+   suitable footprint scratch region).
 
    Returns a pointer to the quotes sorted in ascending order.  As such,
    the min and max and any other rank statistic can be extracted easily
@@ -68,7 +68,7 @@ price_model_scratch_footprint( uint64_t cnt ) { /* Assumes price_model_cnt_valid
    worst cases.  This function uses no heap / dynamic memory allocation.
    It is thread safe provided it passed non-conflicting quote, output
    and scratch arrays.  It has a bounded call depth ~lg cnt <= ~64 (this
-   could reducd to O(1) by using a non-recursive sort/select
+   could reduce to O(1) by using a non-recursive sort/select
    implementation under the hood if desired). */
 
 int64_t *                              /* Returns pointer to sorted quotes (either quote or ALIGN_UP(scratch,int64_t)) */

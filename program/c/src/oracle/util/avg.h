@@ -3,7 +3,7 @@
 
 /* Portable robust integer averaging.  (No intermediate overflow, no
    assumptions about platform type wides, no assumptions about integer
-   signed right shift, no signed integer division, no implict
+   signed right shift, no signed integer division, no implicit
    conversions, etc.) */
 
 #include "sar.h"
