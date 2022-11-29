@@ -1,8 +1,10 @@
 #!/bin/bash
 
 PYTH=./pyth
-SOLANA=../../solana/target/release/solana
-SOLANA_KEYGEN=../../solana/target/release/solana-keygen
+SOLANA_DIR="$(dirname $(which cargo-build-bpf))"
+SOLANA="$SOLANA_DIR/solana"
+SOLANA_KEYGEN="$SOLANA_DIR/solana-keygen"
+
 SOL_OPT="-u localhost --commitment finalized"
 RPC="-r localhost"
 FINAL="-c finalized"

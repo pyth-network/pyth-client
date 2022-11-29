@@ -2,7 +2,8 @@
 
 PYTH=./pyth
 PYTH_ADMIN=./pyth_admin
-SOLANA=../../solana/target/release/solana
+SOLANA_DIR="$(dirname $(which cargo-build-bpf))"
+SOLANA="$SOLANA_DIR/solana"
 SOL_OPT="-u localhost --commitment finalized"
 RPC="-r localhost"
 FINAL="-c finalized"

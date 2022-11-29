@@ -106,8 +106,6 @@ root@pyth-dev# usermod -u 1002 -g 1004 -s /bin/bash pyth
 
 Finally, in docker extension inside VS Code click right and choose "Attach VS Code". If you're using a remote host in VS Code make sure to let this connection be open.
 
-To get best experience from C++ IntelliSense, open entire `/home/pyth` in VS Code to include `solana` directory in home for lookup directories.
-
 ### pre-commit hooks
 pre-commit is a tool that checks and fixes simple issues (formatting, ...) before each commit. You can install it by following [their website](https://pre-commit.com/). In order to enable checks for this repo run `pre-commit install` from command-line in the root of this repo.
 
