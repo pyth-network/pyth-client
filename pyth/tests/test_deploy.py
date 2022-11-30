@@ -1,3 +1,3 @@
-def test_setup(pyth_init_price):
+def test_setup(pyth_add_product):
 
     assert(True)

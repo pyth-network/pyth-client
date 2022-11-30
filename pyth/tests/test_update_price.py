@@ -36,7 +36,7 @@ async def test_batch_update_price(solana_test_validator, solana_logs, pythd, pyt
                 account,
                 '-r', 'localhost',
                 '-k', pyth_dir,
-                '-c', 'finalized',
+                '-c', 'processed',
                 '-j',
             ]).decode('ascii')
             result = json.loads(output)
@@ -96,8 +96,6 @@ async def test_batch_update_price(solana_test_validator, solana_logs, pythd, pyt
                 new_values[product]['conf'],
                 new_values[product]['status'])
 
-        time.sleep(80)
-
         # Crank the products
         for product in PRODUCTS.keys():
             await update_price(
@@ -105,8 +103,6 @@ async def test_batch_update_price(solana_test_validator, solana_logs, pythd, pyt
                 1,
                 1,
                 'trading')
-
-        time.sleep(80)
 
         # Check that the price has been updated
         for product in PRODUCTS.keys():

@@ -217,7 +217,7 @@ int on_add_product( int argc, char **argv )
     // add mapping account
     add_mapping req_m[1];
     req_m->set_lamports( req_r->get_lamports() );
-    req_m->set_commitment( commitment::e_finalized );
+    req_m->set_commitment( args.cmt_ );
     if( !mgr.submit_poll( req_m ) ) {
       return 1;
     }

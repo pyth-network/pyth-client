@@ -27,6 +27,7 @@ static void send_transaction( json_wtr& msg, bincode& tx )
   msg.add_val_enc_base64( str( tx.get_buf(), tx.size() ) );
   msg.add_val( json_wtr::e_obj );
   msg.add_key( "encoding", "base64" );
+  msg.add_key( "preflightCommitment", commitment_to_str( e_processed ) );
   msg.pop();
   msg.pop();
 }

@@ -4,7 +4,7 @@ from subprocess import check_call, check_output
 
 
 def test_publish(solana_test_validator, pyth_dir,
-                 pyth_init_product, pyth_init_price, solana_keygen, solana_program_deploy):
+                 pyth_init_product, pyth_init_price, solana_keygen):
 
     def get_price_acct():
         cmd = [
@@ -12,7 +12,7 @@ def test_publish(solana_test_validator, pyth_dir,
             pyth_init_product['LTC'],  # TODO get_price method
             '-r', 'localhost',
             '-k', pyth_dir,
-            '-c', 'finalized',
+            '-c', 'processed',
             '-j',
         ]
         output = check_output(cmd)
@@ -31,24 +31,21 @@ def test_publish(solana_test_validator, pyth_dir,
         '150', '7', 'trading',
         '-r', 'localhost',
         '-k', pyth_dir,
-        '-c', 'finalized',
+        '-c', 'processed',
         '-x',
     ]
     check_call(cmd)
-
-    time.sleep(20)
 
     cmd = [
         'pyth', 'upd_price',
         pyth_init_price['LTC'],
         '-r', 'localhost',
         '-k', pyth_dir,
-        '-c', 'finalized',
+        '-c', 'processed',
         '-x',
     ]
     check_call(cmd)
 
-    time.sleep(20)
     after = get_price_acct()
     assert after['publisher_accounts'][0]['price'] == 150
     assert after['publisher_accounts'][0]['conf'] == 7
@@ -60,24 +57,20 @@ def test_publish(solana_test_validator, pyth_dir,
         '100', '1', 'trading',
         '-r', 'localhost',
         '-k', pyth_dir,
-        '-c', 'finalized',
+        '-c', 'processed',
         '-x',
     ]
     check_call(cmd)
-
-    time.sleep(20)
 
     cmd = [
         'pyth', 'upd_price',
         pyth_init_price['LTC'],
         '-r', 'localhost',
         '-k', pyth_dir,
-        '-c', 'finalized',
+        '-c', 'processed',
         '-x',
     ]
     check_call(cmd)
-
-    time.sleep(20)
 
     after = get_price_acct()
     assert after['publisher_accounts'][0]['price'] == 100

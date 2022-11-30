@@ -77,7 +77,7 @@ void init_mapping::on_response( rpc::create_account *res )
   } else if ( st_ == e_create_sent ) {
     // subscribe to signature completion
     st_ = e_create_sig;
-    sig_->set_commitment( commitment::e_finalized );
+    sig_->set_commitment( commitment::e_processed );
     sig_->set_signature( res->get_signature() );
     get_rpc_client()->send( sig_ );
   }
@@ -213,7 +213,7 @@ void add_mapping::on_response( rpc::create_account *res )
   } else if ( st_ == e_create_sent ) {
     // subscribe to signature completion
     st_ = e_create_sig;
-    sig_->set_commitment( commitment::e_finalized );
+    sig_->set_commitment( commitment::e_processed );
     sig_->set_signature( res->get_signature() );
     get_rpc_client()->send( sig_ );
   }
@@ -353,7 +353,7 @@ void add_product::on_response( rpc::create_account *res )
   } else if ( st_ == e_create_sent ) {
     // subscribe to signature completion
     st_ = e_create_sig;
-    sig_->set_commitment( commitment::e_finalized );
+    sig_->set_commitment( commitment::e_processed );
     sig_->set_signature( res->get_signature() );
     get_rpc_client()->send( sig_ );
   }
@@ -605,7 +605,7 @@ void add_price::on_response( rpc::create_account *res )
   } else if ( st_ == e_create_sent ) {
     // subscribe to signature completion
     st_ = e_create_sig;
-    sig_->set_commitment( commitment::e_finalized );
+    sig_->set_commitment( commitment::e_processed );
     sig_->set_signature( res->get_signature() );
     get_rpc_client()->send( sig_ );
   }
