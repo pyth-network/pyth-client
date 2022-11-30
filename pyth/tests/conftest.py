@@ -134,28 +134,6 @@ PRODUCTS = {
     },
 }
 
-
-@pytest.fixture(scope='session')
-def solana_test_validator():
-
-    ledger_dir = mkdtemp(prefix='stv_')
-    cmd = [
-        'solana-test-validator',
-        '--rpc-port', '8899',
-        '--ledger', ledger_dir,
-    ]
-    kwargs = {
-        'stdin': DEVNULL,
-        'stdout': DEVNULL,
-        'stderr': DEVNULL,
-    }
-    with Popen(cmd, **kwargs) as p:
-        time.sleep(3)
-        yield
-        p.terminate()
-    rmtree(ledger_dir)
-
-
 @pytest.fixture(scope='session')
 def solana_keygen():
 
@@ -170,40 +148,29 @@ def solana_keygen():
     yield (output, path)
     rmtree(cfg_dir)
 
-
 @pytest.fixture(scope='session')
-def solana_airdrop(solana_test_validator, solana_keygen):
+def solana_test_validator(solana_keygen):
 
+    ledger_dir = mkdtemp(prefix='stv_')
     cmd = [
-        'solana', 'airdrop', '100', solana_keygen[0],
-        '--commitment', 'finalized',
-        '--url', 'localhost',
-        '--keypair', solana_keygen[1],
-    ]
-    check_call(cmd)
-
-
-@pytest.fixture(scope='session')
-def solana_program_deploy(
-    solana_test_validator, solana_keygen, solana_airdrop
-):
-
-    cmd = [
-        'solana', 'program', 'deploy',
-        os.path.abspath(
+        'solana-test-validator',
+        '--rpc-port', '8899',
+        '--ledger', ledger_dir,
+        '--mint', solana_keygen[0],
+        '--bpf-program', "FsJ3A3u2vn5cTVofAjvy6y5kwABJAqYWpe4975bi2epH", os.path.abspath(
             os.path.join(__this_dir, '..', '..', 'target', 'deploy','pyth_oracle.so')
-        ),
-        '--commitment', 'finalized',
-        '--url', 'localhost',
-        '--keypair', solana_keygen[1],
+        )
     ]
-    output = check_output(cmd)
-    output = output.decode('ascii')
-    output = output.splitlines()
-    output = [line for line in output if 'Program Id' in line][0]
-    output = output.split('Program Id: ')[1]
-    return output
-
+    kwargs = {
+        'stdin': DEVNULL,
+        'stdout': DEVNULL,
+        'stderr': DEVNULL,
+    }
+    with Popen(cmd, **kwargs) as p:
+        time.sleep(10)
+        yield
+        p.terminate()
+    rmtree(ledger_dir)
 
 @pytest.fixture(scope='session')
 def pyth_dir():
@@ -221,11 +188,11 @@ def pyth_publish_key(solana_keygen, pyth_dir):
 
 
 @pytest.fixture(scope='session')
-def pyth_program_key(solana_program_deploy, pyth_dir):
+def pyth_program_key(pyth_dir):
 
     pyth_path = os.path.join(pyth_dir, 'program_key.json')
     with open(pyth_path, 'w') as f:
-        f.write(solana_program_deploy)
+        f.write("FsJ3A3u2vn5cTVofAjvy6y5kwABJAqYWpe4975bi2epH")
 
 
 @pytest.fixture(scope='session')
@@ -237,7 +204,7 @@ def pyth_init_mapping(
         'pyth_admin', 'init_mapping',
         '-r', 'localhost',
         '-k', pyth_dir,
-        '-c', 'finalized',
+        '-c', 'confirmed',
     ]
     check_call(cmd)
 
@@ -251,7 +218,7 @@ def pyth_add_product(solana_test_validator, pyth_dir, pyth_init_mapping):
             'pyth_admin', 'add_product',
             '-r', 'localhost',
             '-k', pyth_dir,
-            '-c', 'finalized',
+            '-c', 'confirmed',
         ]
         output = check_output(cmd)
         output = output.decode('ascii')
@@ -276,7 +243,7 @@ def pyth_init_product(solana_test_validator, pyth_dir, pyth_add_product):
         'pyth_admin', 'upd_product', path,
         '-r', 'localhost',
         '-k', pyth_dir,
-        '-c', 'finalized',
+        '-c', 'confirmed',
     ]
     check_call(cmd)
     os.remove(path)
@@ -293,7 +260,7 @@ def pyth_add_price(solana_test_validator, pyth_dir, pyth_init_product):
             key, 'price', '-e', '-5',
             '-r', 'localhost',
             '-k', pyth_dir,
-            '-c', 'finalized',
+            '-c', 'confirmed',
             '-n',
         ]
         output = check_output(cmd)
@@ -314,7 +281,7 @@ def pyth_add_publisher(
             solana_keygen[0], key,
             '-r', 'localhost',
             '-k', pyth_dir,
-            '-c', 'finalized',
+            '-c', 'confirmed',
             '-n',
         ]
         check_call(cmd)
@@ -343,7 +310,7 @@ def pyth_init_price(solana_test_validator, pyth_dir, pyth_add_publisher):
             key, '-e', '-5',
             '-r', 'localhost',
             '-k', pyth_dir,
-            '-c', 'finalized',
+            '-c', 'confirmed',
             '-n',
         ]
         check_call(cmd)
@@ -358,7 +325,7 @@ def pythd(solana_test_validator, pyth_dir):
         '-r', 'localhost',
         '-k', pyth_dir,
         '-x',
-        '-m', 'finalized',
+        '-m', 'confirmed',
         '-d',
         '-l', 'pyth_logs.txt',
     ]
