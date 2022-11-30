@@ -204,7 +204,7 @@ def pyth_init_mapping(
         'pyth_admin', 'init_mapping',
         '-r', 'localhost',
         '-k', pyth_dir,
-        '-c', 'confirmed',
+        '-c', 'finalized',
     ]
     check_call(cmd)
 
@@ -218,7 +218,7 @@ def pyth_add_product(solana_test_validator, pyth_dir, pyth_init_mapping):
             'pyth_admin', 'add_product',
             '-r', 'localhost',
             '-k', pyth_dir,
-            '-c', 'confirmed',
+            '-c', 'finalized',
         ]
         output = check_output(cmd)
         output = output.decode('ascii')
@@ -243,7 +243,7 @@ def pyth_init_product(solana_test_validator, pyth_dir, pyth_add_product):
         'pyth_admin', 'upd_product', path,
         '-r', 'localhost',
         '-k', pyth_dir,
-        '-c', 'confirmed',
+        '-c', 'finalized',
     ]
     check_call(cmd)
     os.remove(path)
@@ -260,7 +260,7 @@ def pyth_add_price(solana_test_validator, pyth_dir, pyth_init_product):
             key, 'price', '-e', '-5',
             '-r', 'localhost',
             '-k', pyth_dir,
-            '-c', 'confirmed',
+            '-c', 'finalized',
             '-n',
         ]
         output = check_output(cmd)
@@ -281,7 +281,7 @@ def pyth_add_publisher(
             solana_keygen[0], key,
             '-r', 'localhost',
             '-k', pyth_dir,
-            '-c', 'confirmed',
+            '-c', 'finalized',
             '-n',
         ]
         check_call(cmd)
@@ -310,7 +310,7 @@ def pyth_init_price(solana_test_validator, pyth_dir, pyth_add_publisher):
             key, '-e', '-5',
             '-r', 'localhost',
             '-k', pyth_dir,
-            '-c', 'confirmed',
+            '-c', 'finalized',
             '-n',
         ]
         check_call(cmd)
@@ -325,7 +325,7 @@ def pythd(solana_test_validator, pyth_dir):
         '-r', 'localhost',
         '-k', pyth_dir,
         '-x',
-        '-m', 'confirmed',
+        '-m', 'finalized',
         '-d',
         '-l', 'pyth_logs.txt',
     ]
