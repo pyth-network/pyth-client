@@ -112,7 +112,7 @@ int main(int argc, char **argv)
   unsigned cu_price = 0;
   unsigned max_batch_size = 0;
   bool do_wait = true, do_tx = true, do_ws = true, do_debug = false;
-  while( (opt = ::getopt(argc,argv, "r:s:t:p:i:k:w:c:l:m:b:dnxhz" )) != -1 ) {
+  while( (opt = ::getopt(argc,argv, "r:s:t:p:i:k:w:c:l:m:b:u:v:dnxhz" )) != -1 ) {
     switch(opt) {
       case 'r': rpc_host = optarg; break;
       case 's': secondary_rpc_host = optarg; break;
