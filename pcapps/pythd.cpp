@@ -129,8 +129,8 @@ int main(int argc, char **argv)
       case 'x': do_tx = false; break;
       case 'z': do_ws = false; break;
       case 'd': do_debug = true; break;
-      case 'u': cu_units = strtoul(optarg, NULL, 0); break;
-      case 'v': cu_price = strtoul(optarg, NULL, 0); break;
+      case 'u': cu_units = strtoul(optarg, NULL, 0); std::cout << "cu_units" << cu_units << std::endl; break;
+      case 'v': cu_price = strtoul(optarg, NULL, 0); std::cout << "cu_price" << cu_price << std::endl; break;
       default: return usage();
     }
   }
