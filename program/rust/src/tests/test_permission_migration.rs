@@ -274,6 +274,7 @@ fn test_permission_migration() {
     );
 
 
+    // Security authority can change minimum number of publishers
     process_instruction(
         &program_id,
         &[
@@ -292,6 +293,7 @@ fn test_permission_migration() {
     )
     .unwrap();
 
+    // Security authority can't add publishers
     assert_eq!(
         process_instruction(
             &program_id,
