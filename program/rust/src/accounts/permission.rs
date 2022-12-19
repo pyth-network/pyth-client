@@ -46,6 +46,7 @@ impl PermissionAccount {
         #[allow(clippy::match_like_matches_macro)]
         match (*key, command) {
             (pubkey, _) if pubkey == self.master_authority => true,
+            (pubkey, OracleCommand::SetMinPub) if pubkey == self.security_authority => true,
             _ => false,
         }
     }
