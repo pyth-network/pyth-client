@@ -16,7 +16,6 @@ use {
             DelPublisherArgs,
             InitPriceArgs,
             OracleCommand::{
-                self,
                 AddMapping,
                 AddPrice,
                 AddProduct,
@@ -35,7 +34,6 @@ use {
         tests::test_utils::AccountSetup,
     },
     bytemuck::bytes_of,
-    num_traits::ToPrimitive,
     solana_program::pubkey::Pubkey,
 };
 
@@ -283,10 +281,7 @@ fn test_permission_migration() {
             permissions_account.clone(),
         ],
         bytes_of::<SetMinPubArgs>(&SetMinPubArgs {
-            header:             CommandHeader {
-                version: PC_VERSION,
-                command: OracleCommand::SetMinPub.to_i32().unwrap(),
-            },
+            header:             SetMinPub.into(),
             minimum_publishers: 5,
             unused_:            [0; 3],
         }),
