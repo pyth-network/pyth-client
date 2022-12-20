@@ -47,6 +47,9 @@ fn test_permission_migration() {
     let mut funding_setup = AccountSetup::new_funding();
     let funding_account = funding_setup.as_account_info();
 
+    let mut security_auth_setup = AccountSetup::new_funding();
+    let security_auth_account = security_auth_setup.as_account_info();
+
     let mut attacker_setup = AccountSetup::new_funding();
     let attacker_account = attacker_setup.as_account_info();
 
@@ -61,6 +64,7 @@ fn test_permission_migration() {
 
     let mut price_setup = AccountSetup::new::<PriceAccount>(&program_id);
     let mut price_account = price_setup.as_account_info();
+    PriceAccount::initialize(&price_account, PC_VERSION).unwrap();
 
 
     product_account.is_signer = false;
@@ -73,6 +77,7 @@ fn test_permission_migration() {
         let mut permissions_account_data =
             PermissionAccount::initialize(&permissions_account, PC_VERSION).unwrap();
         permissions_account_data.master_authority = *funding_account.key;
+        permissions_account_data.security_authority = *security_auth_account.key;
     }
 
     assert_eq!(
@@ -88,6 +93,19 @@ fn test_permission_migration() {
         Err(OracleError::PermissionViolation.into())
     );
 
+
+    assert_eq!(
+        process_instruction(
+            &program_id,
+            &[
+                security_auth_account.clone(),
+                mapping_account.clone(),
+                permissions_account.clone()
+            ],
+            bytes_of::<CommandHeader>(&InitMapping.into())
+        ),
+        Err(OracleError::PermissionViolation.into())
+    );
 
     process_instruction(
         &program_id,
@@ -252,4 +270,38 @@ fn test_permission_migration() {
         ),
         Err(OracleError::PermissionViolation.into())
     );
+
+
+    // Security authority can change minimum number of publishers
+    process_instruction(
+        &program_id,
+        &[
+            security_auth_account.clone(),
+            price_account.clone(),
+            permissions_account.clone(),
+        ],
+        bytes_of::<SetMinPubArgs>(&SetMinPubArgs {
+            header:             SetMinPub.into(),
+            minimum_publishers: 5,
+            unused_:            [0; 3],
+        }),
+    )
+    .unwrap();
+
+    // Security authority can't add publishers
+    assert_eq!(
+        process_instruction(
+            &program_id,
+            &[
+                security_auth_account.clone(),
+                price_account.clone(),
+                permissions_account.clone(),
+            ],
+            bytes_of::<AddPublisherArgs>(&AddPublisherArgs {
+                header:    AddPublisher.into(),
+                publisher: Pubkey::new_unique(),
+            })
+        ),
+        Err(OracleError::PermissionViolation.into())
+    )
 }
