@@ -76,6 +76,7 @@ pub fn add_price(
     price_data.price_type = cmd_args.price_type;
     price_data.product_account = *product_account.key;
     price_data.next_price_account = product_data.first_price_account;
+    price_data.min_pub_ = 20;
     product_data.first_price_account = *price_account.key;
 
     Ok(())
