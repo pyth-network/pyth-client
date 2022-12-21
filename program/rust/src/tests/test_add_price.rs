@@ -7,7 +7,10 @@ use {
             ProductAccount,
             PythAccount,
         },
-        c_oracle_header::PC_VERSION,
+        c_oracle_header::{
+            PC_VERSION,
+            PRICE_ACCOUNT_DEFAULT_MIN_PUB,
+        },
         deserialize::load_checked,
         error::OracleError,
         instruction::{
@@ -82,7 +85,7 @@ fn test_add_price() {
         let product_data = load_checked::<ProductAccount>(&product_account, PC_VERSION).unwrap();
         assert_eq!(price_data.exponent, 1);
         assert_eq!(price_data.price_type, 1);
-        assert_eq!(price_data.min_pub_, 20);
+        assert_eq!(price_data.min_pub_, PRICE_ACCOUNT_DEFAULT_MIN_PUB);
         assert!(price_data.product_account == *product_account.key);
         assert!(price_data.next_price_account == Pubkey::default());
         assert!(product_data.first_price_account == *price_account.key);
@@ -104,7 +107,7 @@ fn test_add_price() {
         let product_data = load_checked::<ProductAccount>(&product_account, PC_VERSION).unwrap();
         assert_eq!(price_data_2.exponent, 1);
         assert_eq!(price_data_2.price_type, 1);
-        assert_eq!(price_data_2.min_pub_, 20);
+        assert_eq!(price_data_2.min_pub_, PRICE_ACCOUNT_DEFAULT_MIN_PUB);
         assert!(price_data_2.product_account == *product_account.key);
         assert!(price_data_2.next_price_account == *price_account.key);
         assert!(product_data.first_price_account == *price_account_2.key);
