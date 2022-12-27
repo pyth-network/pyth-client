@@ -5,7 +5,10 @@ use {
             ProductAccount,
             PythAccount,
         },
-        c_oracle_header::PC_PTYPE_UNKNOWN,
+        c_oracle_header::{
+            PC_PTYPE_UNKNOWN,
+            PRICE_ACCOUNT_DEFAULT_MIN_PUB,
+        },
         deserialize::{
             load,
             load_checked,
@@ -76,6 +79,7 @@ pub fn add_price(
     price_data.price_type = cmd_args.price_type;
     price_data.product_account = *product_account.key;
     price_data.next_price_account = product_data.first_price_account;
+    price_data.min_pub_ = PRICE_ACCOUNT_DEFAULT_MIN_PUB;
     product_data.first_price_account = *price_account.key;
 
     Ok(())
