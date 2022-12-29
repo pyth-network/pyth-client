@@ -5,6 +5,7 @@ use {
             PythAccount,
         },
         c_oracle_header::{
+            PC_STATUS_IGNORED,
             PC_STATUS_TRADING,
             PC_STATUS_UNKNOWN,
             PC_VERSION,
@@ -243,7 +244,7 @@ fn test_upd_price() {
         assert_eq!(price_data.comp_[0].latest_.price_, 50);
         assert_eq!(price_data.comp_[0].latest_.conf_, 20);
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 5);
-        assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_UNKNOWN);
+        assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_IGNORED);
         assert_eq!(price_data.valid_slot_, 5);
         assert_eq!(price_data.agg_.pub_slot_, 6);
         assert_eq!(price_data.agg_.price_, 81);
@@ -270,7 +271,7 @@ fn test_upd_price() {
         assert_eq!(price_data.comp_[0].latest_.price_, 50);
         assert_eq!(price_data.comp_[0].latest_.conf_, 20);
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 6);
-        assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_UNKNOWN);
+        assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_IGNORED);
         assert_eq!(price_data.valid_slot_, 6);
         assert_eq!(price_data.agg_.pub_slot_, 7);
         assert_eq!(price_data.agg_.price_, 81);
