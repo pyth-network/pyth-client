@@ -6,7 +6,7 @@ use {
         },
         c_oracle_header::{
             MAX_CI_DIVISOR,
-            PC_STATUS_UNKNOWN,
+            PC_STATUS_IGNORED,
         },
         deserialize::{
             load,
@@ -151,7 +151,7 @@ pub fn upd_price(
         }
 
         if cmd_args.confidence > try_convert::<_, u64>(threshold_conf)? {
-            status = PC_STATUS_UNKNOWN
+            status = PC_STATUS_IGNORED
         }
 
         {

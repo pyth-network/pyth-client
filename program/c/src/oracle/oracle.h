@@ -45,6 +45,7 @@ const uint64_t EXTRA_PUBLISHER_SPACE = 3072ULL;
 #define PC_STATUS_TRADING     1
 #define PC_STATUS_HALTED      2
 #define PC_STATUS_AUCTION     3
+#define PC_STATUS_IGNORED     4
 
 // account types
 #define PC_ACCTYPE_MAPPING    1

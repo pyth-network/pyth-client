@@ -1,4 +1,7 @@
-use crate::accounts::PythAccount;
+use crate::{
+    accounts::PythAccount,
+    c_oracle_header::PC_STATUS_IGNORED,
+};
 // use crate::processor::process_instruction;
 use {
     crate::{
@@ -309,7 +312,7 @@ fn test_upd_sma() {
         assert_eq!(price_data.price_data.comp_[0].latest_.pub_slot_, 5);
         assert_eq!(
             price_data.price_data.comp_[0].latest_.status_,
-            PC_STATUS_UNKNOWN
+            PC_STATUS_IGNORED
         );
         assert_eq!(price_data.price_data.valid_slot_, 5);
         assert_eq!(price_data.price_data.agg_.pub_slot_, 6);
@@ -349,7 +352,7 @@ fn test_upd_sma() {
         assert_eq!(price_data.price_data.comp_[0].latest_.pub_slot_, 6);
         assert_eq!(
             price_data.price_data.comp_[0].latest_.status_,
-            PC_STATUS_UNKNOWN
+            PC_STATUS_IGNORED
         );
         assert_eq!(price_data.price_data.valid_slot_, 6);
         assert_eq!(price_data.price_data.agg_.pub_slot_, 7);
