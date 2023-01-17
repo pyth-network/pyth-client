@@ -30,7 +30,7 @@ const uint64_t EXTRA_PUBLISHER_SPACE = 1000ULL;
 #define PC_COMP_SIZE         32
 // Bound on the range of the exponent in price accounts. This number is set such that the
 // PD-based EMA computation does not lose too much precision.
-#define PC_MAX_NUM_DECIMALS   8
+#define PC_MAX_NUM_DECIMALS  12
 #define PC_PROD_ACC_SIZE    512
 #define PC_EXP_DECAY         -9
 // If ci > price / PC_MAX_CI_DIVISOR, set publisher status to unknown.
