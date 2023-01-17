@@ -11,5 +11,5 @@ include!("../bindings.rs");
 pub const MAX_CI_DIVISOR: i64 = 3;
 /// Bound on the range of the exponent in price accounts. This number is set such that the
 /// PD-based EMA computation does not lose too much precision.
-pub const MAX_NUM_DECIMALS: i32 = 8;
+pub const MAX_NUM_DECIMALS: i32 = 12;
 pub const PRICE_ACCOUNT_DEFAULT_MIN_PUB: u8 = 20;
