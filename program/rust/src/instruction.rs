@@ -95,10 +95,9 @@ pub enum OracleCommand {
     DelProduct            = 16,
     /// Update authorities
     // key[0] upgrade authority         [signer writable]
-    // key[1] program account           []
-    // key[2] programdata account       []
-    // key[3] permissions account       [writable]
-    // key[4] system program            []
+    // key[1] programdata account       []
+    // key[2] permissions account       [writable]
+    // key[3] system program            []
     UpdPermissions        = 17,
 }
 
