@@ -1,3 +1,5 @@
+use crate::accounts::read_pc_str_t;
+
 use {
     crate::{
         accounts::{
@@ -19,7 +21,6 @@ use {
         processor::process_instruction,
         tests::test_utils::AccountSetup,
         utils::{
-            read_pc_str_t,
             try_convert,
         },
     },

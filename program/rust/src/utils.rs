@@ -131,21 +131,6 @@ pub fn try_convert<T, U: TryFrom<T>>(x: T) -> Result<U, OracleError> {
     U::try_from(x).map_err(|_| OracleError::IntegerCastingError)
 }
 
-/// Read a `pc_str_t` from the beginning of `source`. Returns a slice of `source` containing
-/// the bytes of the `pc_str_t`.
-pub fn read_pc_str_t(source: &[u8]) -> Result<&[u8], ProgramError> {
-    if source.is_empty() {
-        Err(ProgramError::InvalidArgument)
-    } else {
-        let tag_len: usize = try_convert(source[0])?;
-        if tag_len + 1 > source.len() {
-            Err(ProgramError::InvalidArgument)
-        } else {
-            Ok(&source[..(1 + tag_len)])
-        }
-    }
-}
-
 fn valid_writable_account(
     program_id: &Pubkey,
     account: &AccountInfo,
