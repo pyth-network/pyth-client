@@ -48,7 +48,11 @@ pub use {
         PriceEma,
         PriceInfo,
     },
-    product::{ProductAccount, update_product_metadata, read_pc_str_t},
+    product::{
+        read_pc_str_t,
+        update_product_metadata,
+        ProductAccount,
+    },
 };
 
 #[repr(C)]

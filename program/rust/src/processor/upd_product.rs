@@ -1,8 +1,9 @@
-use crate::accounts::update_product_metadata;
-
 use {
     crate::{
-        accounts::ProductAccount,
+        accounts::{
+            update_product_metadata,
+            ProductAccount,
+        },
         deserialize::{
             load,
             load_checked,

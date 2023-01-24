@@ -83,6 +83,6 @@ pub fn add_product(
     )? + mapping_data.number_of_products
         * try_convert::<_, u32>(size_of::<Pubkey>())?;
 
-    
+
     Ok(())
 }

@@ -1,8 +1,7 @@
-use crate::accounts::read_pc_str_t;
-
 use {
     crate::{
         accounts::{
+            read_pc_str_t,
             ProductAccount,
             PythAccount,
         },
@@ -20,9 +19,7 @@ use {
         },
         processor::process_instruction,
         tests::test_utils::AccountSetup,
-        utils::{
-            try_convert,
-        },
+        utils::try_convert,
     },
     solana_program::{
         account_info::AccountInfo,

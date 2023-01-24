@@ -1,21 +1,31 @@
-use solana_program::{entrypoint::ProgramResult, program_error::ProgramError, program_memory::sol_memcpy, account_info::AccountInfo};
-
-use crate::{utils::{try_convert, pyth_assert}, deserialize::load_checked, instruction::CommandHeader};
-
 use {
     super::{
         AccountHeader,
         PythAccount,
     },
-    crate::c_oracle_header::{
-        PC_ACCTYPE_PRODUCT,
-        PC_PROD_ACC_SIZE,
+    crate::{
+        c_oracle_header::{
+            PC_ACCTYPE_PRODUCT,
+            PC_PROD_ACC_SIZE,
+        },
+        deserialize::load_checked,
+        instruction::CommandHeader,
+        utils::{
+            pyth_assert,
+            try_convert,
+        },
     },
     bytemuck::{
         Pod,
         Zeroable,
     },
-    solana_program::pubkey::Pubkey,
+    solana_program::{
+        account_info::AccountInfo,
+        entrypoint::ProgramResult,
+        program_error::ProgramError,
+        program_memory::sol_memcpy,
+        pubkey::Pubkey,
+    },
     std::mem::size_of,
 };
 
@@ -32,8 +42,11 @@ impl PythAccount for ProductAccount {
     const MINIMUM_SIZE: usize = PC_PROD_ACC_SIZE as usize;
 }
 
-pub fn update_product_metadata(instruction_data : &[u8], product_account : &AccountInfo, version : u32 ) -> ProgramResult {
-
+pub fn update_product_metadata(
+    instruction_data: &[u8],
+    product_account: &AccountInfo,
+    version: u32,
+) -> ProgramResult {
     pyth_assert(
         instruction_data.len() >= size_of::<CommandHeader>(),
         ProgramError::InvalidInstructionData,
@@ -42,7 +55,7 @@ pub fn update_product_metadata(instruction_data : &[u8], product_account : &Acco
     let new_data_len = instruction_data.len() - size_of::<CommandHeader>();
     let max_data_len = try_convert::<_, usize>(PC_PROD_ACC_SIZE)? - size_of::<ProductAccount>();
     pyth_assert(new_data_len <= max_data_len, ProgramError::InvalidArgument)?;
- 
+
     let new_data = &instruction_data[size_of::<CommandHeader>()..instruction_data.len()];
     let mut idx = 0;
     // new_data must be a list of key-value pairs, both of which are instances of pc_str_t.
