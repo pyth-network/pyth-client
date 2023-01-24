@@ -1,6 +1,7 @@
 use {
     crate::{
         accounts::{
+            update_product_metadata,
             MappingAccount,
             ProductAccount,
             PythAccount,
@@ -83,6 +84,7 @@ pub fn add_product(
     )? + mapping_data.number_of_products
         * try_convert::<_, u32>(size_of::<Pubkey>())?;
 
+    update_product_metadata(instruction_data, new_product_account, hdr.version)?;
 
     Ok(())
 }
