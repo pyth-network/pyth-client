@@ -2,6 +2,7 @@ use {
     crate::{
         accounts::{
             clear_account,
+            read_pc_str_t,
             MappingAccount,
             ProductAccount,
             PythAccount,
@@ -16,6 +17,7 @@ use {
         deserialize::{
             load_account_as,
             load_checked,
+            load_mut,
         },
         error::OracleError,
         instruction::{
@@ -24,8 +26,8 @@ use {
         },
         processor::process_instruction,
         tests::test_utils::AccountSetup,
+        utils::try_convert,
     },
-    bytemuck::bytes_of,
     solana_program::{
         account_info::AccountInfo,
         clock::Epoch,
@@ -39,8 +41,8 @@ use {
 
 #[test]
 fn test_add_product() {
-    let hdr: CommandHeader = OracleCommand::AddProduct.into();
-    let instruction_data = bytes_of::<CommandHeader>(&hdr);
+    let mut instruction_data = [0u8; PC_PROD_ACC_SIZE as usize];
+    let mut size = populate_instruction(&mut instruction_data, &[]);
 
     let program_id = Pubkey::new_unique();
 
@@ -64,7 +66,7 @@ fn test_add_product() {
             mapping_account.clone(),
             product_account.clone()
         ],
-        instruction_data
+        &instruction_data[..size]
     )
     .is_ok());
 
@@ -83,7 +85,10 @@ fn test_add_product() {
         );
         assert!(mapping_data.products_list[0] == *product_account.key);
     }
+    assert!(account_has_key_values(&product_account, &[]).unwrap());
 
+    size = populate_instruction(&mut instruction_data, &["foo", "bar"]);
+    // Add product with metadata
     assert!(process_instruction(
         &program_id,
         &[
@@ -91,7 +96,7 @@ fn test_add_product() {
             mapping_account.clone(),
             product_account_2.clone()
         ],
-        instruction_data
+        &instruction_data[..size]
     )
     .is_ok());
     {
@@ -103,6 +108,7 @@ fn test_add_product() {
         );
         assert!(mapping_data.products_list[1] == *product_account_2.key);
     }
+    assert!(account_has_key_values(&product_account, &["foo", "bar"]).unwrap());
 
     // invalid account size
     let product_key_3 = Pubkey::new_unique();
@@ -126,7 +132,7 @@ fn test_add_product() {
                 mapping_account.clone(),
                 product_account_3.clone()
             ],
-            instruction_data
+            &instruction_data[..size]
         ),
         Err(OracleError::AccountTooSmall.into())
     );
@@ -145,7 +151,7 @@ fn test_add_product() {
                 mapping_account.clone(),
                 product_account.clone()
             ],
-            instruction_data
+            &instruction_data[..size]
         )
         .is_ok());
         let mapping_data = load_checked::<MappingAccount>(&mapping_account, PC_VERSION).unwrap();
@@ -154,6 +160,7 @@ fn test_add_product() {
             MappingAccount::INITIAL_SIZE + (i + 1) * 32
         );
         assert_eq!(mapping_data.number_of_products, i + 1);
+        assert!(account_has_key_values(&product_account, &["foo", "bar"]).unwrap());
     }
 
     clear_account(&product_account).unwrap();
@@ -166,11 +173,72 @@ fn test_add_product() {
                 mapping_account.clone(),
                 product_account.clone()
             ],
-            instruction_data
+            &instruction_data[..size]
         ),
         Err(ProgramError::InvalidArgument)
     );
 
     let mapping_data = load_checked::<MappingAccount>(&mapping_account, PC_VERSION).unwrap();
     assert_eq!(mapping_data.number_of_products, PC_MAP_TABLE_SIZE);
+}
+
+// Create an upd_product instruction that sets the product metadata to strings
+pub fn populate_instruction(instruction_data: &mut [u8], strings: &[&str]) -> usize {
+    {
+        let hdr = load_mut::<CommandHeader>(instruction_data).unwrap();
+        *hdr = OracleCommand::AddProduct.into();
+    }
+
+    let mut idx = size_of::<CommandHeader>();
+    for s in strings.iter() {
+        let pc_str = create_pc_str_t(s);
+        instruction_data[idx..(idx + pc_str.len())].copy_from_slice(pc_str.as_slice());
+        idx += pc_str.len()
+    }
+
+    idx
+}
+
+fn create_pc_str_t(s: &str) -> Vec<u8> {
+    let mut v = vec![s.len() as u8];
+    v.extend_from_slice(s.as_bytes());
+    v
+}
+
+// Check that the key-value list in product_account equals the strings in expected
+// Returns an Err if the account data is incorrectly formatted and the comparison cannot be
+// performed.
+fn account_has_key_values(
+    product_account: &AccountInfo,
+    expected: &[&str],
+) -> Result<bool, ProgramError> {
+    let account_size: usize = try_convert(
+        load_checked::<ProductAccount>(product_account, PC_VERSION)?
+            .header
+            .size,
+    )?;
+    let mut all_account_data = product_account.try_borrow_mut_data()?;
+    let kv_data = &mut all_account_data[size_of::<ProductAccount>()..account_size];
+    let mut kv_idx = 0;
+    let mut expected_idx = 0;
+
+    while kv_idx < kv_data.len() {
+        let key = read_pc_str_t(&kv_data[kv_idx..])?;
+        if key[0] != try_convert::<_, u8>(key.len())? - 1 {
+            return Ok(false);
+        }
+
+        if &key[1..] != expected[expected_idx].as_bytes() {
+            return Ok(false);
+        }
+
+        kv_idx += key.len();
+        expected_idx += 1;
+    }
+
+    if expected_idx != expected.len() {
+        return Ok(false);
+    }
+
+    Ok(true)
 }

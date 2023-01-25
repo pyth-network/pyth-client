@@ -99,7 +99,7 @@ fn test_upd_product() {
 }
 
 // Create an upd_product instruction that sets the product metadata to strings
-fn populate_instruction(instruction_data: &mut [u8], strings: &[&str]) -> usize {
+pub fn populate_instruction(instruction_data: &mut [u8], strings: &[&str]) -> usize {
     {
         let hdr = load_mut::<CommandHeader>(instruction_data).unwrap();
         *hdr = OracleCommand::UpdProduct.into();
