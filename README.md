@@ -61,10 +61,10 @@ docker run -t \
   --platform linux/amd64 \
   -v "$(pwd)"/findings:/home/pyth/pyth-client/findings \
   pyth-fuzz \
-  sh -c "./afl/afl-fuzz -i ./pyth-client/pyth/tests/fuzz/add/testcases -o ./pyth-client/findings ./pyth-client/build/fuzz add"
+  sh -c "./afl/afl-fuzz -i ./pyth-client/pytest/tests/fuzz/add/testcases -o ./pyth-client/findings ./pyth-client/build/fuzz add"
 ```
 
-This command will run the `add` fuzz test on the tests cases in `pyth/tests/fuzz/add/testcases`, saving any outputs to `findings/`.
+This command will run the `add` fuzz test on the tests cases in `pytest/tests/fuzz/add/testcases`, saving any outputs to `findings/`.
 Note that `findings/` is shared between the host machine and the docker container, so you can inspect any error cases
 by looking in that subdirectory on the host.
 
