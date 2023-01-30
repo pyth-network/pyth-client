@@ -1,3 +1,4 @@
+mod product_metadata;
 mod pyth_simulator;
 mod test_add_mapping;
 mod test_add_price;

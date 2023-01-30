@@ -1,8 +1,9 @@
 use {
     crate::{
         accounts::{
+            account_has_key_values,
             clear_account,
-            read_pc_str_t,
+            create_pc_str_t,
             MappingAccount,
             ProductAccount,
             PythAccount,
@@ -15,7 +16,6 @@ use {
             PC_VERSION,
         },
         deserialize::{
-            load_account_as,
             load_checked,
             load_mut,
         },
@@ -26,7 +26,6 @@ use {
         },
         processor::process_instruction,
         tests::test_utils::AccountSetup,
-        utils::try_convert,
     },
     solana_program::{
         account_info::AccountInfo,
@@ -42,7 +41,6 @@ use {
 #[test]
 fn test_add_product() {
     let mut instruction_data = [0u8; PC_PROD_ACC_SIZE as usize];
-    let mut size = populate_instruction(&mut instruction_data, &[]);
 
     let program_id = Pubkey::new_unique();
 
@@ -59,6 +57,7 @@ fn test_add_product() {
     let mut product_setup_2 = AccountSetup::new::<ProductAccount>(&program_id);
     let product_account_2 = product_setup_2.as_account_info();
 
+    let mut size = populate_instruction(&mut instruction_data, &[]);
     assert!(process_instruction(
         &program_id,
         &[
@@ -71,7 +70,7 @@ fn test_add_product() {
     .is_ok());
 
     {
-        let product_data = load_account_as::<ProductAccount>(&product_account).unwrap();
+        let product_data = load_checked::<ProductAccount>(&product_account, PC_VERSION).unwrap();
         let mapping_data = load_checked::<MappingAccount>(&mapping_account, PC_VERSION).unwrap();
 
         assert_eq!(product_data.header.magic_number, PC_MAGIC);
@@ -100,6 +99,7 @@ fn test_add_product() {
     )
     .is_ok());
     {
+        let _product_data = load_checked::<ProductAccount>(&product_account_2, PC_VERSION).unwrap();
         let mapping_data = load_checked::<MappingAccount>(&mapping_account, PC_VERSION).unwrap();
         assert_eq!(mapping_data.number_of_products, 2);
         assert_eq!(
@@ -108,7 +108,7 @@ fn test_add_product() {
         );
         assert!(mapping_data.products_list[1] == *product_account_2.key);
     }
-    assert!(account_has_key_values(&product_account, &["foo", "bar"]).unwrap());
+    assert!(account_has_key_values(&product_account_2, &["foo", "bar"]).unwrap());
 
     // invalid account size
     let product_key_3 = Pubkey::new_unique();
@@ -124,6 +124,7 @@ fn test_add_product() {
         false,
         Epoch::default(),
     );
+
     assert_eq!(
         process_instruction(
             &program_id,
@@ -143,6 +144,7 @@ fn test_add_product() {
 
     for i in 0..PC_MAP_TABLE_SIZE {
         clear_account(&product_account).unwrap();
+        size = populate_instruction(&mut instruction_data, &["symbol", &i.to_string()[..]]);
 
         assert!(process_instruction(
             &program_id,
@@ -160,7 +162,7 @@ fn test_add_product() {
             MappingAccount::INITIAL_SIZE + (i + 1) * 32
         );
         assert_eq!(mapping_data.number_of_products, i + 1);
-        assert!(account_has_key_values(&product_account, &["foo", "bar"]).unwrap());
+        assert!(account_has_key_values(&product_account, &["symbol", &i.to_string()[..]]).unwrap());
     }
 
     clear_account(&product_account).unwrap();
@@ -182,7 +184,8 @@ fn test_add_product() {
     assert_eq!(mapping_data.number_of_products, PC_MAP_TABLE_SIZE);
 }
 
-// Create an upd_product instruction that sets the product metadata to strings
+
+// Create an add_product instruction that sets the product metadata to strings
 pub fn populate_instruction(instruction_data: &mut [u8], strings: &[&str]) -> usize {
     {
         let hdr = load_mut::<CommandHeader>(instruction_data).unwrap();
@@ -197,48 +200,4 @@ pub fn populate_instruction(instruction_data: &mut [u8], strings: &[&str]) -> us
     }
 
     idx
-}
-
-fn create_pc_str_t(s: &str) -> Vec<u8> {
-    let mut v = vec![s.len() as u8];
-    v.extend_from_slice(s.as_bytes());
-    v
-}
-
-// Check that the key-value list in product_account equals the strings in expected
-// Returns an Err if the account data is incorrectly formatted and the comparison cannot be
-// performed.
-fn account_has_key_values(
-    product_account: &AccountInfo,
-    expected: &[&str],
-) -> Result<bool, ProgramError> {
-    let account_size: usize = try_convert(
-        load_checked::<ProductAccount>(product_account, PC_VERSION)?
-            .header
-            .size,
-    )?;
-    let mut all_account_data = product_account.try_borrow_mut_data()?;
-    let kv_data = &mut all_account_data[size_of::<ProductAccount>()..account_size];
-    let mut kv_idx = 0;
-    let mut expected_idx = 0;
-
-    while kv_idx < kv_data.len() {
-        let key = read_pc_str_t(&kv_data[kv_idx..])?;
-        if key[0] != try_convert::<_, u8>(key.len())? - 1 {
-            return Ok(false);
-        }
-
-        if &key[1..] != expected[expected_idx].as_bytes() {
-            return Ok(false);
-        }
-
-        kv_idx += key.len();
-        expected_idx += 1;
-    }
-
-    if expected_idx != expected.len() {
-        return Ok(false);
-    }
-
-    Ok(true)
 }

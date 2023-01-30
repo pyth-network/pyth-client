@@ -1,7 +1,8 @@
 use {
     crate::{
         accounts::{
-            read_pc_str_t,
+            account_has_key_values,
+            create_pc_str_t,
             ProductAccount,
             PythAccount,
         },
@@ -19,10 +20,8 @@ use {
         },
         processor::process_instruction,
         tests::test_utils::AccountSetup,
-        utils::try_convert,
     },
     solana_program::{
-        account_info::AccountInfo,
         program_error::ProgramError,
         pubkey::Pubkey,
     },
@@ -99,7 +98,7 @@ fn test_upd_product() {
 }
 
 // Create an upd_product instruction that sets the product metadata to strings
-pub fn populate_instruction(instruction_data: &mut [u8], strings: &[&str]) -> usize {
+fn populate_instruction(instruction_data: &mut [u8], strings: &[&str]) -> usize {
     {
         let hdr = load_mut::<CommandHeader>(instruction_data).unwrap();
         *hdr = OracleCommand::UpdProduct.into();
@@ -113,48 +112,4 @@ pub fn populate_instruction(instruction_data: &mut [u8], strings: &[&str]) -> us
     }
 
     idx
-}
-
-fn create_pc_str_t(s: &str) -> Vec<u8> {
-    let mut v = vec![s.len() as u8];
-    v.extend_from_slice(s.as_bytes());
-    v
-}
-
-// Check that the key-value list in product_account equals the strings in expected
-// Returns an Err if the account data is incorrectly formatted and the comparison cannot be
-// performed.
-fn account_has_key_values(
-    product_account: &AccountInfo,
-    expected: &[&str],
-) -> Result<bool, ProgramError> {
-    let account_size: usize = try_convert(
-        load_checked::<ProductAccount>(product_account, PC_VERSION)?
-            .header
-            .size,
-    )?;
-    let mut all_account_data = product_account.try_borrow_mut_data()?;
-    let kv_data = &mut all_account_data[size_of::<ProductAccount>()..account_size];
-    let mut kv_idx = 0;
-    let mut expected_idx = 0;
-
-    while kv_idx < kv_data.len() {
-        let key = read_pc_str_t(&kv_data[kv_idx..])?;
-        if key[0] != try_convert::<_, u8>(key.len())? - 1 {
-            return Ok(false);
-        }
-
-        if &key[1..] != expected[expected_idx].as_bytes() {
-            return Ok(false);
-        }
-
-        kv_idx += key.len();
-        expected_idx += 1;
-    }
-
-    if expected_idx != expected.len() {
-        return Ok(false);
-    }
-
-    Ok(true)
 }
