@@ -1,0 +1,5 @@
+
+# This is only used for tests
+[toolchain]
+channel = "1.66.1"
+profile = "minimal"
