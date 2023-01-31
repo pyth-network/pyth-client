@@ -46,7 +46,7 @@ impl PythAccount for ProductAccount {
 /// The product metadata is located after the header. It is a key-value storage
 /// where keys are strings and values are strings
 /// that is represented as a byte array with the following schema :
-/// [len(key1), ...key1, len(val1), ...val1, len(key2), ...key2, len(val2), ...val2, ...]
+/// `[len(key1), ...key1, len(val1), ...val1, len(key2), ...key2, len(val2), ...val2, ...]`
 pub fn update_product_metadata(
     instruction_data: &[u8],
     product_account: &AccountInfo,
