@@ -51,6 +51,7 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
 
 
 RUN echo "\n\
+export PATH=\"\${PATH}:\${HOME}/pyth-client/build\"\n\
 export PYTHONPATH=\"\${PYTHONPATH:+\$PYTHONPATH:}\${HOME}/pyth-client\"\n\
 " >> .profile
 
