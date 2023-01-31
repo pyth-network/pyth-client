@@ -1,4 +1,4 @@
-from pyth.tests.conftest import BaseTest
+from tests.conftest import BaseTest
 
 
 __all__ = [

@@ -2,7 +2,7 @@ import asyncio
 import json
 import websockets
 
-from pyth.tests.conftest import PRODUCTS
+from tests.conftest import PRODUCTS
 
 
 def test_get_product_list(solana_test_validator, pythd, pyth_init_price):
