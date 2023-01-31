@@ -29,8 +29,8 @@ rm ./target/*-keypair.json
 
 #build Rust and link it with C
 cd "${PYTH_DIR}"
-# cargo clean
-# cargo-test-bpf
+cargo clean
+cargo-test-bpf
 cargo clean
 cargo-build-bpf -- -Z build-std=std,panic_abort -Z build-std-features=panic_immediate_abort
 
