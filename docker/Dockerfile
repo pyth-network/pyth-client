@@ -49,12 +49,6 @@ WORKDIR /home/pyth
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
   | sh -s -- -y 
 
-
-RUN echo "\n\
-export PATH=\"\${PATH}:\${HOME}/pyth-client/build:\${HOME}/.cargo/bin\"\n\
-export PYTHONPATH=\"\${PYTHONPATH:+\$PYTHONPATH:}\${HOME}/pyth-client\"\n\
-" >> .profile
-
 COPY --chown=pyth:pyth . pyth-client/
 
 # Build off-chain binaries.
