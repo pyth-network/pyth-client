@@ -7,11 +7,7 @@
 set -eu
 
 PYTH_DIR=$( cd "${1:-.}" && pwd)
-
-#find the makefile in pyth-client
-#ASSUMES THAT there is only one makefile there 
-C_DIR="$( find $PYTH_DIR | grep makefile)"
-C_DIR=$(dirname $C_DIR)
+C_DIR="$PYTH_DIR/program/c/"
 
 if ! which cargo 2> /dev/null
 then

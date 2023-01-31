@@ -6,7 +6,7 @@ import time
 import itertools
 import random
 
-from pyth.tests.conftest import PRODUCTS
+from tests.conftest import PRODUCTS
 
 @pytest.mark.asyncio
 async def test_batch_update_price(solana_test_validator, solana_logs, pythd, pyth_dir, pyth_init_product, pyth_init_price):

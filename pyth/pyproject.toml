@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "pyth"
+version = "0.1.0"
+description = ""
+authors = ["Pyth Data Association <contact@pyth.network>"]
+readme = "README.md"
+packages = [{include = "pyth"}]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.2.1"
+pytest-asyncio = "^0.20.3"
+websockets = "^10.4"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
