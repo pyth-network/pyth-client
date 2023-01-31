@@ -45,7 +45,7 @@ WORKDIR /home/pyth
 
 # Install poetry 
 RUN curl -sSL https://install.python-poetry.org | python3 -
-ENV PATH="${PATH}:/home/pyth/.local/bin:/home/pyth/pyth-client/build:/home/pyth/.cargo/bin"
+ENV PATH="${PATH}:/home/pyth/.local/bin:/home/pyth/pyth-client/build"
 
 #Install rust
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
