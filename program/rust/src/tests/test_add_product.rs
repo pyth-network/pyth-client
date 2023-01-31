@@ -1,7 +1,9 @@
 use {
     crate::{
         accounts::{
+            account_has_key_values,
             clear_account,
+            create_pc_str_t,
             MappingAccount,
             ProductAccount,
             PythAccount,
@@ -14,8 +16,8 @@ use {
             PC_VERSION,
         },
         deserialize::{
-            load_account_as,
             load_checked,
+            load_mut,
         },
         error::OracleError,
         instruction::{
@@ -25,7 +27,6 @@ use {
         processor::process_instruction,
         tests::test_utils::AccountSetup,
     },
-    bytemuck::bytes_of,
     solana_program::{
         account_info::AccountInfo,
         clock::Epoch,
@@ -39,8 +40,7 @@ use {
 
 #[test]
 fn test_add_product() {
-    let hdr: CommandHeader = OracleCommand::AddProduct.into();
-    let instruction_data = bytes_of::<CommandHeader>(&hdr);
+    let mut instruction_data = [0u8; PC_PROD_ACC_SIZE as usize];
 
     let program_id = Pubkey::new_unique();
 
@@ -57,6 +57,7 @@ fn test_add_product() {
     let mut product_setup_2 = AccountSetup::new::<ProductAccount>(&program_id);
     let product_account_2 = product_setup_2.as_account_info();
 
+    let mut size = populate_instruction(&mut instruction_data, &[]);
     assert!(process_instruction(
         &program_id,
         &[
@@ -64,12 +65,12 @@ fn test_add_product() {
             mapping_account.clone(),
             product_account.clone()
         ],
-        instruction_data
+        &instruction_data[..size]
     )
     .is_ok());
 
     {
-        let product_data = load_account_as::<ProductAccount>(&product_account).unwrap();
+        let product_data = load_checked::<ProductAccount>(&product_account, PC_VERSION).unwrap();
         let mapping_data = load_checked::<MappingAccount>(&mapping_account, PC_VERSION).unwrap();
 
         assert_eq!(product_data.header.magic_number, PC_MAGIC);
@@ -83,7 +84,10 @@ fn test_add_product() {
         );
         assert!(mapping_data.products_list[0] == *product_account.key);
     }
+    assert!(account_has_key_values(&product_account, &[]).unwrap());
 
+    size = populate_instruction(&mut instruction_data, &["foo", "bar"]);
+    // Add product with metadata
     assert!(process_instruction(
         &program_id,
         &[
@@ -91,10 +95,11 @@ fn test_add_product() {
             mapping_account.clone(),
             product_account_2.clone()
         ],
-        instruction_data
+        &instruction_data[..size]
     )
     .is_ok());
     {
+        let _product_data = load_checked::<ProductAccount>(&product_account_2, PC_VERSION).unwrap();
         let mapping_data = load_checked::<MappingAccount>(&mapping_account, PC_VERSION).unwrap();
         assert_eq!(mapping_data.number_of_products, 2);
         assert_eq!(
@@ -103,6 +108,7 @@ fn test_add_product() {
         );
         assert!(mapping_data.products_list[1] == *product_account_2.key);
     }
+    assert!(account_has_key_values(&product_account_2, &["foo", "bar"]).unwrap());
 
     // invalid account size
     let product_key_3 = Pubkey::new_unique();
@@ -118,6 +124,7 @@ fn test_add_product() {
         false,
         Epoch::default(),
     );
+
     assert_eq!(
         process_instruction(
             &program_id,
@@ -126,7 +133,7 @@ fn test_add_product() {
                 mapping_account.clone(),
                 product_account_3.clone()
             ],
-            instruction_data
+            &instruction_data[..size]
         ),
         Err(OracleError::AccountTooSmall.into())
     );
@@ -137,6 +144,7 @@ fn test_add_product() {
 
     for i in 0..PC_MAP_TABLE_SIZE {
         clear_account(&product_account).unwrap();
+        size = populate_instruction(&mut instruction_data, &["symbol", &i.to_string()[..]]);
 
         assert!(process_instruction(
             &program_id,
@@ -145,7 +153,7 @@ fn test_add_product() {
                 mapping_account.clone(),
                 product_account.clone()
             ],
-            instruction_data
+            &instruction_data[..size]
         )
         .is_ok());
         let mapping_data = load_checked::<MappingAccount>(&mapping_account, PC_VERSION).unwrap();
@@ -154,6 +162,7 @@ fn test_add_product() {
             MappingAccount::INITIAL_SIZE + (i + 1) * 32
         );
         assert_eq!(mapping_data.number_of_products, i + 1);
+        assert!(account_has_key_values(&product_account, &["symbol", &i.to_string()[..]]).unwrap());
     }
 
     clear_account(&product_account).unwrap();
@@ -166,11 +175,29 @@ fn test_add_product() {
                 mapping_account.clone(),
                 product_account.clone()
             ],
-            instruction_data
+            &instruction_data[..size]
         ),
         Err(ProgramError::InvalidArgument)
     );
 
     let mapping_data = load_checked::<MappingAccount>(&mapping_account, PC_VERSION).unwrap();
     assert_eq!(mapping_data.number_of_products, PC_MAP_TABLE_SIZE);
+}
+
+
+// Create an add_product instruction that sets the product metadata to strings
+pub fn populate_instruction(instruction_data: &mut [u8], strings: &[&str]) -> usize {
+    {
+        let hdr = load_mut::<CommandHeader>(instruction_data).unwrap();
+        *hdr = OracleCommand::AddProduct.into();
+    }
+
+    let mut idx = size_of::<CommandHeader>();
+    for s in strings.iter() {
+        let pc_str = create_pc_str_t(s);
+        instruction_data[idx..(idx + pc_str.len())].copy_from_slice(pc_str.as_slice());
+        idx += pc_str.len()
+    }
+
+    idx
 }
