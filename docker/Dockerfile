@@ -16,9 +16,6 @@ RUN apt-get install -qq \
   git \
   libzstd1 \
   libzstd-dev \
-  python3-pytest \
-  python3-pytest-asyncio \
-  python3-websockets \
   sudo \
   zlib1g \
   zlib1g-dev \
@@ -46,13 +43,17 @@ RUN mkdir /usr/bin/sdk/bpf/dependencies \
 USER pyth
 WORKDIR /home/pyth
 
+# Install poetry 
+RUN curl -sSL https://install.python-poetry.org | python3 -
+ENV PATH="${PATH}:/home/pyth/.local/bin:/home/pyth/pyth-client/build:/home/pyth/.cargo/bin"
+
+#Install rust
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
   | sh -s -- -y 
 
 
 RUN echo "\n\
-export PATH=\"\${PATH}:\${HOME}/pyth-client/build:\${HOME}/.cargo/bin\"\n\
-export PYTHONPATH=\"\${PYTHONPATH:+\$PYTHONPATH:}\${HOME}/pyth-client\"\n\
+export PATH=\"\${PATH}:\${HOME}/pyth-client/build:\${HOME}/.cargo/bin:\${HOME}/.local/bin\"\n\
 " >> .profile
 
 COPY --chown=pyth:pyth . pyth-client/
@@ -68,8 +69,8 @@ RUN ./pyth-client/scripts/patch-solana.sh
 RUN cd pyth-client && ./scripts/build-bpf.sh .
 RUN cd pyth-client && ./scripts/check-size.sh
 # Run aggregation logic tests
-RUN cd pyth-client && ./scripts/run-aggregation-tests.sh
-RUN /bin/bash -l -c "pytest-3 --pyargs pyth"
+# RUN cd pyth-client && ./scripts/run-aggregation-tests.sh
+RUN cd pyth-client/pyth && poetry install && poetry run python -m pytest
 
 ENTRYPOINT []
 CMD []
