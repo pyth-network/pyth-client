@@ -9,15 +9,15 @@ publish = false
 bindgen = "0.60.1"
 
 [dependencies]
-solana-program = "=1.13.3"
+solana-program = "1.14.12"
 bytemuck = "1.11.0"
 thiserror = "1.0"
 num-derive = "0.3"
 num-traits = "0.2"
 
 [dev-dependencies]
-solana-program-test = "=1.13.3"
-solana-sdk = "=1.13.3"
+solana-program-test = "1.14.12"
+solana-sdk = "1.14.12"
 tokio = "1.14.1"
 hex = "0.3.1"
 quickcheck = "1"
