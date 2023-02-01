@@ -2,14 +2,14 @@
 // Allow non upper case globals from C
 #![allow(non_upper_case_globals)]
 
-mod accounts;
-mod c_oracle_header;
-mod deserialize;
-mod error;
-mod instruction;
-mod processor;
-mod time_machine_types;
-mod utils;
+pub mod accounts;
+pub mod c_oracle_header;
+pub mod deserialize;
+pub mod error;
+pub mod instruction;
+pub mod processor;
+pub mod time_machine_types;
+pub mod utils;
 
 #[cfg(test)]
 mod tests;
