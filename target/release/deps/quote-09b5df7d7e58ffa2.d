@@ -1,0 +1,13 @@
+/Users/orex/work/pyth-client/target/release/deps/quote-09b5df7d7e58ffa2.rmeta: /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/quote-1.0.23/src/lib.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/quote-1.0.23/src/ext.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/quote-1.0.23/src/format.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/quote-1.0.23/src/ident_fragment.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/quote-1.0.23/src/to_tokens.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/quote-1.0.23/src/runtime.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/quote-1.0.23/src/spanned.rs
+
+/Users/orex/work/pyth-client/target/release/deps/libquote-09b5df7d7e58ffa2.rlib: /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/quote-1.0.23/src/lib.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/quote-1.0.23/src/ext.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/quote-1.0.23/src/format.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/quote-1.0.23/src/ident_fragment.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/quote-1.0.23/src/to_tokens.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/quote-1.0.23/src/runtime.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/quote-1.0.23/src/spanned.rs
+
+/Users/orex/work/pyth-client/target/release/deps/quote-09b5df7d7e58ffa2.d: /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/quote-1.0.23/src/lib.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/quote-1.0.23/src/ext.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/quote-1.0.23/src/format.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/quote-1.0.23/src/ident_fragment.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/quote-1.0.23/src/to_tokens.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/quote-1.0.23/src/runtime.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/quote-1.0.23/src/spanned.rs
+
+/Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/quote-1.0.23/src/lib.rs:
+/Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/quote-1.0.23/src/ext.rs:
+/Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/quote-1.0.23/src/format.rs:
+/Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/quote-1.0.23/src/ident_fragment.rs:
+/Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/quote-1.0.23/src/to_tokens.rs:
+/Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/quote-1.0.23/src/runtime.rs:
+/Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/quote-1.0.23/src/spanned.rs:

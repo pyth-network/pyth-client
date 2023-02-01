@@ -1,0 +1,12 @@
+/Users/orex/work/pyth-client/target/release/deps/os_str_bytes-17991dfd7880637c.rmeta: /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/os_str_bytes-6.4.1/src/lib.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/os_str_bytes-6.4.1/src/common/mod.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/os_str_bytes-6.4.1/src/common/raw.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/os_str_bytes-6.4.1/src/iter.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/os_str_bytes-6.4.1/src/pattern.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/os_str_bytes-6.4.1/src/raw_str.rs
+
+/Users/orex/work/pyth-client/target/release/deps/libos_str_bytes-17991dfd7880637c.rlib: /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/os_str_bytes-6.4.1/src/lib.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/os_str_bytes-6.4.1/src/common/mod.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/os_str_bytes-6.4.1/src/common/raw.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/os_str_bytes-6.4.1/src/iter.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/os_str_bytes-6.4.1/src/pattern.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/os_str_bytes-6.4.1/src/raw_str.rs
+
+/Users/orex/work/pyth-client/target/release/deps/os_str_bytes-17991dfd7880637c.d: /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/os_str_bytes-6.4.1/src/lib.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/os_str_bytes-6.4.1/src/common/mod.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/os_str_bytes-6.4.1/src/common/raw.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/os_str_bytes-6.4.1/src/iter.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/os_str_bytes-6.4.1/src/pattern.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/os_str_bytes-6.4.1/src/raw_str.rs
+
+/Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/os_str_bytes-6.4.1/src/lib.rs:
+/Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/os_str_bytes-6.4.1/src/common/mod.rs:
+/Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/os_str_bytes-6.4.1/src/common/raw.rs:
+/Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/os_str_bytes-6.4.1/src/iter.rs:
+/Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/os_str_bytes-6.4.1/src/pattern.rs:
+/Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/os_str_bytes-6.4.1/src/raw_str.rs:

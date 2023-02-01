@@ -1,0 +1,13 @@
+/Users/orex/work/pyth-client/target/bpfel-unknown-unknown/release/deps/sha2-b788a4e9da999450.rmeta: /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/sha2-0.10.6/src/lib.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/sha2-0.10.6/src/core_api.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/sha2-0.10.6/src/sha256.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/sha2-0.10.6/src/sha512.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/sha2-0.10.6/src/consts.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/sha2-0.10.6/src/sha256/soft.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/sha2-0.10.6/src/sha512/soft.rs
+
+/Users/orex/work/pyth-client/target/bpfel-unknown-unknown/release/deps/libsha2-b788a4e9da999450.rlib: /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/sha2-0.10.6/src/lib.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/sha2-0.10.6/src/core_api.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/sha2-0.10.6/src/sha256.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/sha2-0.10.6/src/sha512.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/sha2-0.10.6/src/consts.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/sha2-0.10.6/src/sha256/soft.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/sha2-0.10.6/src/sha512/soft.rs
+
+/Users/orex/work/pyth-client/target/bpfel-unknown-unknown/release/deps/sha2-b788a4e9da999450.d: /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/sha2-0.10.6/src/lib.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/sha2-0.10.6/src/core_api.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/sha2-0.10.6/src/sha256.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/sha2-0.10.6/src/sha512.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/sha2-0.10.6/src/consts.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/sha2-0.10.6/src/sha256/soft.rs /Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/sha2-0.10.6/src/sha512/soft.rs
+
+/Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/sha2-0.10.6/src/lib.rs:
+/Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/sha2-0.10.6/src/core_api.rs:
+/Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/sha2-0.10.6/src/sha256.rs:
+/Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/sha2-0.10.6/src/sha512.rs:
+/Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/sha2-0.10.6/src/consts.rs:
+/Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/sha2-0.10.6/src/sha256/soft.rs:
+/Users/orex/.cargo/registry/src/github.com-1ecc6299db9ec823/sha2-0.10.6/src/sha512/soft.rs:
