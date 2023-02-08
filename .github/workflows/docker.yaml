@@ -12,7 +12,7 @@ env:
   DOCKER_USER: ${{ secrets.DOCKER_IO_USER }}
   IS_RELEASE: ${{
     startsWith( github.ref, 'refs/tags/pythd-' ) ||
-    startsWith( github.ref, 'refs/tags/oracle-' ) ||
+    startsWith( github.ref, 'refs/tags/oracle-' ) }}
   IS_ORACLE_RELEASE: ${{
     startsWith( github.ref, 'refs/tags/oracle-' ) }}
 
