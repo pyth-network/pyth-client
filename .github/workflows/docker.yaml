@@ -12,11 +12,9 @@ env:
   DOCKER_USER: ${{ secrets.DOCKER_IO_USER }}
   IS_RELEASE: ${{
     startsWith( github.ref, 'refs/tags/pythd-' ) ||
-    startsWith( github.ref, 'refs/tags/devnet-' ) ||
-    startsWith( github.ref, 'refs/tags/testnet-' ) ||
-    startsWith( github.ref, 'refs/tags/mainnet-' ) }}
-  IS_DEVNET_RELEASE: ${{
-    startsWith( github.ref, 'refs/tags/devnet-' ) }}
+    startsWith( github.ref, 'refs/tags/oracle-' ) ||
+  IS_ORACLE_RELEASE: ${{
+    startsWith( github.ref, 'refs/tags/oracle-' ) }}
 
 
 jobs:
@@ -56,14 +54,14 @@ jobs:
           echo "${{ secrets.DOCKER_IO_PASS }}" | publish
 
       - name : Get binary from docker
-        if : env.IS_DEVNET_RELEASE == 'true'
+        if : env.IS_ORACLE_RELEASE == 'true'
         run : |
             docker create -ti --name container "${DOCKER_IMAGE}" bash
             docker cp container:/home/pyth/pyth-client/target/deploy/pyth_oracle.so .
             docker rm -f container
 
       - name : Publish binary
-        if : env.IS_DEVNET_RELEASE == 'true'
+        if : env.IS_ORACLE_RELEASE == 'true'
         uses: svenstaro/upload-release-action@133984371c30d34e38222a64855679a414cb7575
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
