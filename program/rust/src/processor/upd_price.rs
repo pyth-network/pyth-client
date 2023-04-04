@@ -24,7 +24,6 @@ use {
         },
         OracleError,
     },
-    borsh::ser::BorshSerialize,
     solana_program::{
         account_info::AccountInfo,
         clock::Clock,
@@ -157,19 +156,17 @@ pub fn upd_price(
 
             let price_data = load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
 
-            let create_inputs_ix = Instruction {
-                program_id: *accumulator_program.key,
-                accounts:   account_metas,
-                data:       (
-                    //anchor ix discriminator/identifier
+            let create_inputs_ix = Instruction::new_with_borsh(
+                *accumulator_program.key,
+                &(
                     [1, 2, 3, 4, 5, 6, 7, 8],
                     price_account.key.to_bytes(),
                     CompactPriceMessage::from(&*price_data).accumulator_serialize()?,
                     1,
                     vec![1],
-                )
-                    .try_to_vec()?,
-            };
+                ),
+                account_metas,
+            );
             invoke_signed(&create_inputs_ix, accounts, &[])?;
         }
     }
