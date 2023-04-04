@@ -1,6 +1,8 @@
 use {
     crate::{
         accounts::{
+            AccumulatorSerializer,
+            CompactPriceMessage,
             PriceAccount,
             PriceInfo,
         },
@@ -22,10 +24,16 @@ use {
         },
         OracleError,
     },
+    borsh::ser::BorshSerialize,
     solana_program::{
         account_info::AccountInfo,
         clock::Clock,
         entrypoint::ProgramResult,
+        instruction::{
+            AccountMeta,
+            Instruction,
+        },
+        program::invoke_signed,
         program_error::ProgramError,
         pubkey::Pubkey,
         sysvar::Sysvar,
@@ -74,9 +82,10 @@ pub fn upd_price(
 ) -> ProgramResult {
     let cmd_args = load::<UpdPriceArgs>(instruction_data)?;
 
-    let [funding_account, price_account, clock_account] = match accounts {
-        [x, y, z] => Ok([x, y, z]),
-        [x, y, _, z] => Ok([x, y, z]),
+    let (funding_account, price_account, clock_account, accumulator_accounts) = match accounts {
+        [x, y, z] => Ok((x, y, z, None)),
+        [x, y, _, z] => Ok((x, y, z, None)),
+        [x, y, z, a, b, c, d, e] => Ok((x, y, z, Some((a, b, c, d, e)))),
         _ => Err(OracleError::InvalidNumberOfAccounts),
     }?;
 
@@ -129,19 +138,39 @@ pub fn upd_price(
         }
     }
 
-    #[cfg(test)]
-    // Sma feature disabled in production for now
-    {
-        use crate::accounts::PythAccount;
-        let account_len = price_account.try_data_len()?;
-        if aggregate_updated
-            && account_len == crate::time_machine_types::PriceAccountWrapper::MINIMUM_SIZE
+    if aggregate_updated {
+        if let Some((
+            accumulator_program,
+            whitelist_account,
+            system_program,
+            ixs_sysvar,
+            accumulator_account,
+        )) = accumulator_accounts
         {
-            let mut price_account = load_checked::<crate::time_machine_types::PriceAccountWrapper>(
-                price_account,
-                cmd_args.header.version,
-            )?;
-            price_account.add_price_to_time_machine()?;
+            let account_metas = vec![
+                AccountMeta::new(*funding_account.key, true),
+                AccountMeta::new_readonly(*whitelist_account.key, false),
+                AccountMeta::new_readonly(*ixs_sysvar.key, false),
+                AccountMeta::new_readonly(*system_program.key, false),
+                AccountMeta::new_readonly(*accumulator_account.key, false),
+            ];
+
+            let price_data = load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
+
+            let create_inputs_ix = Instruction {
+                program_id: *accumulator_program.key,
+                accounts:   account_metas,
+                data:       (
+                    //anchor ix discriminator/identifier
+                    [1, 2, 3, 4, 5, 6, 7, 8],
+                    price_account.key.to_bytes(),
+                    CompactPriceMessage::from(&*price_data).accumulator_serialize()?,
+                    1,
+                    vec![1],
+                )
+                    .try_to_vec()?,
+            };
+            invoke_signed(&create_inputs_ix, accounts, &[])?;
         }
     }
 

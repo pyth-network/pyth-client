@@ -12,7 +12,11 @@ use {
         Pod,
         Zeroable,
     },
-    solana_program::pubkey::Pubkey,
+    solana_program::{
+        program_error::ProgramError,
+        pubkey::Pubkey,
+    },
+    std::io::Write,
 };
 
 #[repr(C)]
@@ -90,4 +94,36 @@ impl PythAccount for PriceAccount {
     const ACCOUNT_TYPE: u32 = PC_ACCTYPE_PRICE;
     /// Equal to the offset of `comp_` in `PriceAccount`, see the trait comment for more detail
     const INITIAL_SIZE: u32 = PC_PRICE_T_COMP_OFFSET as u32;
+}
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone, Pod, Zeroable)]
+pub struct CompactPriceMessage {
+    pub price_expo: i32,
+    pub zeros:      i32,
+    pub price:      i64,
+}
+
+pub trait AccumulatorSerializer {
+    fn accumulator_serialize(&self) -> Result<Vec<u8>, ProgramError>;
+}
+
+
+impl AccumulatorSerializer for CompactPriceMessage {
+    fn accumulator_serialize(&self) -> Result<Vec<u8>, ProgramError> {
+        let mut bytes = vec![];
+        bytes.write_all(&self.price.to_be_bytes())?;
+        bytes.write_all(&self.price_expo.to_be_bytes())?;
+        Ok(bytes)
+    }
+}
+
+impl From<&PriceAccount> for CompactPriceMessage {
+    fn from(other: &PriceAccount) -> Self {
+        Self {
+            price:      other.agg_.price_,
+            zeros:      0,
+            price_expo: other.exponent,
+        }
+    }
 }

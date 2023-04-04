@@ -48,6 +48,8 @@ pub use {
         PERMISSIONS_SEED,
     },
     price::{
+        AccumulatorSerializer,
+        CompactPriceMessage,
         PriceAccount,
         PriceComponent,
         PriceEma,
