@@ -1,12 +1,21 @@
-OUT_DIR := ./target
+# Use the OUT_DIR env variable as the output directory if available, otherwise
+# default to ./target
+OUT_DIR := $(if $(OUT_DIR),$(OUT_DIR),./target)
 SOLANA := $(shell dirname $(shell which cargo-build-bpf))
 include $(SOLANA)/sdk/bpf/c/bpf.mk
 
+
+# Bundle C code compiled to bpf for use by rust
+.PHONY: cpyth-bpf
 cpyth-bpf:
-#   Bundle C code compiled to bpf for use by rust
-	bash -c "ar rcs target/libcpyth-bpf.a target/**/*.o"
+	bash -c "ar rcs $(OUT_DIR)/libcpyth-bpf.a target/**/*.o"
+
+
+# 2-Stage Contract Build
+#
+# 1) Compile C code to system architecture for use by rust's cargo test
+# 2) Bundle C code compiled to system architecture for use by rust's cargo test
+.PHONY: cpyth-native
 cpyth-native:
-#   Compile C code to system architecture for use by rust's cargo test
-	gcc -c ./src/oracle/native/upd_aggregate.c -o ./target/cpyth-native.o -fPIC
-#   Bundle C code compiled to system architecture for use by rust's cargo test
-	ar rcs target/libcpyth-native.a ./target/cpyth-native.o
+	gcc -c ./src/oracle/native/upd_aggregate.c -o $(OUT_DIR)/cpyth-native.o -fPIC
+	ar rcs $(OUT_DIR)/libcpyth-native.a $(OUT_DIR)/cpyth-native.o
