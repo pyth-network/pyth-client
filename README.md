@@ -111,3 +111,27 @@ pre-commit is a tool that checks and fixes simple issues (formatting, ...) befor
 
 The checks are also performed in the CI to ensure the code follows consistent formatting. Formatting is only currently enforced in the `program/` directory.
 You might also need to install the nightly toolchain to run the formatting by running `rustup toolchain install nightly`.
+
+
+### Build notes
+
+On a mac, make sure you're building x86_64. This command will switch your shell to run x86_64:
+
+`env /usr/bin/arch -x86_64 /bin/bash --login`
+
+then in the C directory, run:
+
+```
+make
+make cpyth-bpf
+make cpyth-native
+```
+
+then in the rust directory, run:
+
+```
+cargo build-bpf 
+cargo test
+```
+
+Note that the tests depend on the bpf build!

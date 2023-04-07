@@ -1,6 +1,13 @@
 OUT_DIR := ./target
 SOLANA := $(shell dirname $(shell which cargo-build-bpf))
-include $(SOLANA)/sdk/bpf/c/bpf.mk
+
+ifneq ("$(wildcard $(SOLANA)/sdk/bpf/c/bpf.mk)","")
+  $(info using Solana BPF SDK)
+  include $(SOLANA)/sdk/bpf/c/bpf.mk
+else
+  $(info using Solana SBF SDK)
+  include $(SOLANA)/sdk/sbf/c/sbf.mk
+endif
 
 cpyth-bpf:
 #   Bundle C code compiled to bpf for use by rust
