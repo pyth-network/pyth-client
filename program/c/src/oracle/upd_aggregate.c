@@ -8,3 +8,7 @@
 extern bool c_upd_aggregate( pc_price_t *ptr, uint64_t slot, int64_t timestamp ){
   return upd_aggregate(ptr, slot, timestamp );
 }
+
+extern bool c_upd_twap( pc_price_t *ptr, int64_t nslots ){
+  return upd_twap(ptr, nslots);
+}

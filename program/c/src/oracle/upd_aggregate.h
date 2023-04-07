@@ -131,8 +131,10 @@ static void upd_ema(
 }
 
 static inline void upd_twap(
-    pc_price_t *ptr, int64_t nslots, pc_qset_t *qs )
+    pc_price_t *ptr, int64_t nslots )
 {
+  pc_qset_t *qs = qset_new( ptr->expo_ );
+
   pd_t px[1], conf[1];
   pd_new_scale( px, ptr->agg_.price_, ptr->expo_ );
   pd_new_scale( conf, ( int64_t )( ptr->agg_.conf_ ), ptr->expo_ );
@@ -147,7 +149,6 @@ static inline bool upd_aggregate( pc_price_t *ptr, uint64_t slot, int64_t timest
   if ( slot <= ptr->agg_.pub_slot_ ) {
     return false;
   }
-  pc_qset_t *qs = qset_new( ptr->expo_ );
 
   // get number of slots from last published valid price
   int64_t agg_diff = ( int64_t )slot - ( int64_t )( ptr->last_slot_ );
@@ -230,7 +231,7 @@ static inline bool upd_aggregate( pc_price_t *ptr, uint64_t slot, int64_t timest
   ptr->agg_.price_  = agg_price;
   ptr->agg_.conf_   = (uint64_t)agg_conf;
 
-  upd_twap( ptr, agg_diff, qs );
+  upd_twap( ptr, agg_diff );
   return true;
 }
 
