@@ -1,8 +1,15 @@
-use serde::{Deserialize, Serialize};
-use std::fs::File;
-use bytemuck::Zeroable;
-use crate::accounts::{PriceAccount};
-use crate::processor::c_upd_aggregate;
+use {
+    crate::{
+        accounts::PriceAccount,
+        processor::c_upd_aggregate,
+    },
+    bytemuck::Zeroable,
+    serde::{
+        Deserialize,
+        Serialize,
+    },
+    std::fs::File,
+};
 extern crate test_generator;
 
 use test_generator::test_resources;
@@ -17,7 +24,8 @@ fn test_quote_set(input_path_raw: &str) {
     let quote_set: QuoteSet = serde_json::from_reader(&file).expect("Unable to parse JSON");
 
     let result_file = File::open(result_path).expect("Test file not found");
-    let expected_result: QuoteSetResult = serde_json::from_reader(&result_file).expect("Unable to parse JSON");
+    let expected_result: QuoteSetResult =
+        serde_json::from_reader(&result_file).expect("Unable to parse JSON");
 
     let current_slot = 1000; // arbitrary
     let current_timestamp = 1234; // also arbitrary
@@ -34,7 +42,7 @@ fn test_quote_set(input_path_raw: &str) {
         current_component.latest_.price_ = quote.price;
         current_component.latest_.conf_ = quote.conf;
         let slot_diff = quote.slot_diff.unwrap_or(0);
-        assert!(slot_diff > current_slot as i64 * -1);
+        assert!(slot_diff > -(current_slot as i64));
         current_component.latest_.pub_slot_ = ((current_slot as i64) + slot_diff) as u64;
     }
 
@@ -53,14 +61,15 @@ fn test_quote_set(input_path_raw: &str) {
         2 => "halted",
         3 => "auction",
         4 => "ignored",
-        _ => "invalid status"
-    }.into();
+        _ => "invalid status",
+    }
+    .into();
 
     let actual_result = QuoteSetResult {
         exponent: price_account.exponent,
-        price: price_account.agg_.price_,
-        conf: price_account.agg_.conf_,
-        status: result_status
+        price:    price_account.agg_.price_,
+        conf:     price_account.agg_.conf_,
+        status:   result_status,
     };
 
     assert_eq!(expected_result, actual_result);
@@ -68,23 +77,22 @@ fn test_quote_set(input_path_raw: &str) {
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Quote {
-    price: i64,
-    conf: u64,
-    status: u32,
+    price:     i64,
+    conf:      u64,
+    status:    u32,
     slot_diff: Option<i64>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 struct QuoteSet {
     exponent: i32,
-    quotes: Vec<Quote>,
+    quotes:   Vec<Quote>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 struct QuoteSetResult {
     exponent: i32,
-    price: i64,
-    conf: u64,
-    status: String
+    price:    i64,
+    conf:     u64,
+    status:   String,
 }
-
