@@ -44,6 +44,30 @@ This command runs a recent pyth-client docker image that already has the necessa
 Therefore, once the container is running, all you have to do is run `cd pyth-client && ./scripts/build.sh`.
 Note that updates to the `pyth-client` directory made inside the docker container will be persisted to the host filesystem (which is probably desirable).
 
+### Local development
+
+First, make sure you're building on the x86_64 architecture.
+On a mac, this command will switch your shell to x86_64:
+
+`env /usr/bin/arch -x86_64 /bin/bash --login`
+
+then in the `program/c` directory, run:
+
+```
+make
+make cpyth-bpf
+make cpyth-native
+```
+
+then in the `program/rust` directory, run:
+
+```
+cargo build-bpf
+cargo test
+```
+
+Note that the tests depend on the bpf build!
+
 ### Fuzzing
 
 Build a docker image for running fuzz tests:
@@ -111,27 +135,3 @@ pre-commit is a tool that checks and fixes simple issues (formatting, ...) befor
 
 The checks are also performed in the CI to ensure the code follows consistent formatting. Formatting is only currently enforced in the `program/` directory.
 You might also need to install the nightly toolchain to run the formatting by running `rustup toolchain install nightly`.
-
-
-### Build notes
-
-On a mac, make sure you're building x86_64. This command will switch your shell to run x86_64:
-
-`env /usr/bin/arch -x86_64 /bin/bash --login`
-
-then in the C directory, run:
-
-```
-make
-make cpyth-bpf
-make cpyth-native
-```
-
-then in the rust directory, run:
-
-```
-cargo build-bpf 
-cargo test
-```
-
-Note that the tests depend on the bpf build!
