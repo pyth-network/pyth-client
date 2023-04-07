@@ -99,91 +99,10 @@ void test_pd()
   PC_TEST_CHECK( pd_gt( n2, n1, dec_fact ) );
 }
 
-void test_qs()
+int main( int argc,char** argv )
 {
   PC_TEST_START
   test_pd();
   PC_TEST_END
-}
-
-int main( int argc,char** argv )
-{
-  if ( argc < 2 ) {
-    return usage();
-  }
-  // unit test piece first
-  test_qs();
-
-  // construct quotes
-  mem_map mf;
-  std::string file = argv[1];
-  mf.set_file(file );
-  if ( !mf.init() ) {
-    std::cerr << "test_qset: failed to read file[" << file << "]"
-              << std::endl;
-    return 1;
-  }
-  jtree pt;
-  pt.parse( mf.data(), mf.size() );
-  if ( !pt.is_valid() ) {
-    std::cerr << "test_qset: failed to parse file[" << file << "]"
-              << std::endl;
-    return 1;
-  }
-  pc_price_t px[1];
-  __builtin_memset( px, 0, sizeof( pc_price_t ) );
-  uint64_t slot = 1000UL;
-  px->last_slot_ = slot;
-  px->agg_.pub_slot_ = slot;
-  px->expo_      = pt.get_int( pt.find_val( 1, "exponent" ) );
-  px->num_       = 0;
-  uint32_t qt =pt.find_val( 1, "quotes" );
-  for( uint32_t it = pt.get_first( qt ); it; it = pt.get_next( it ) ) {
-    pc_price_comp_t *ptr = &px->comp_[px->num_++];
-    ptr->latest_.status_ = pt.get_int( pt.find_val( it, "status" ) );
-    ptr->latest_.price_ = pt.get_int( pt.find_val( it, "price" ) );
-    int64_t conf = pt.get_int( pt.find_val( it,  "conf" ) );
-    assert( conf >= 0 );
-    ptr->latest_.conf_  = static_cast< uint64_t >( conf );
-    int64_t pub_slot = pt.get_int( pt.find_val( it,  "slot_diff" ) );
-    ptr->latest_.pub_slot_ =
-      static_cast< uint64_t >( static_cast< int64_t >( slot ) + pub_slot );
-  }
-  upd_aggregate( px, slot+1, 1234 );
-
-  char const* status = "invalid value";
-  switch ( px->agg_.status_ ) {
-  case PC_STATUS_UNKNOWN:
-    status = "unknown";
-    break;
-  case PC_STATUS_TRADING:
-    status = "trading";
-    break;
-  case PC_STATUS_HALTED:
-    status = "halted";
-    break;
-  case PC_STATUS_AUCTION:
-    status = "auction";
-    break;
-  }
-
-  // generate result
-  json_wtr jw;
-  jw.add_val( json_wtr::e_obj );
-  jw.add_key( "exponent", (int64_t)px->expo_ );
-  jw.add_key( "price", px->agg_.price_ );
-  jw.add_key( "conf", px->agg_.conf_ );
-  jw.add_key( "status", status );
-  jw.pop();
-  net_buf *hd, *tl;
-  jw.detach( hd, tl );
-  while( hd ) {
-    net_buf *nxt = hd->next_;
-    std::cout.write( hd->buf_, hd->size_ );
-    hd->dealloc();
-    hd = nxt;
-  }
-  std::cout << std::endl;
-
   return 0;
 }
