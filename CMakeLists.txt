@@ -110,8 +110,6 @@ target_link_libraries( test_net ${PC_DEP} )
 
 add_executable( test_pd pctest/test_pd.cpp )
 target_link_libraries( test_pd ${PC_DEP} )
-add_executable( test_twap pctest/test_twap.cpp )
-target_link_libraries( test_twap ${PC_DEP} )
 add_executable( leader_stats pctest/leader_stats.cpp )
 target_link_libraries( leader_stats ${PC_DEP} )
 
