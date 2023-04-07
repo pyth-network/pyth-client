@@ -84,6 +84,30 @@ This command runs a recent pyth-client docker image that already has the necessa
 Therefore, once the container is running, all you have to do is run `cd pyth-client && ./scripts/build.sh`.
 Note that updates to the `pyth-client` directory made inside the docker container will be persisted to the host filesystem (which is probably desirable).
 
+### Local development
+
+First, make sure you're building on the x86_64 architecture.
+On a mac, this command will switch your shell to x86_64:
+
+`env /usr/bin/arch -x86_64 /bin/bash --login`
+
+then in the `program/c` directory, run:
+
+```
+make
+make cpyth-bpf
+make cpyth-native
+```
+
+then in the `program/rust` directory, run:
+
+```
+cargo build-bpf
+cargo test
+```
+
+Note that the tests depend on the bpf build!
+
 ### Fuzzing
 
 Build a docker image for running fuzz tests:
@@ -145,4 +169,3 @@ root@pyth-dev# usermod -u 1002 -g 1004 -s /bin/bash pyth
 ```
 
 Finally, in docker extension inside VS Code click right and choose "Attach VS Code". If you're using a remote host in VS Code make sure to let this connection be open.
-
