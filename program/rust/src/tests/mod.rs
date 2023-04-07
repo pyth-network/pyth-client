@@ -21,3 +21,4 @@ mod test_upd_product;
 mod test_upd_sma;
 mod test_utils;
 mod test_aggregation;
+mod test_twap;
