@@ -18,8 +18,8 @@ use {
 };
 
 
-#[test_resources("program/rust/test_data/twap/*.csv")]
-fn test_quote_set(input_path_raw: &str) {
+#[test_resources("program/rust/test_data/ema/*.csv")]
+fn test_ema(input_path_raw: &str) {
     // For some reason these tests have a different working directory than the macro.
     let input_path = input_path_raw.replace("program/rust/", "");
     let result_path = input_path.replace(".csv", ".result");
