@@ -182,7 +182,7 @@ static inline bool upd_aggregate( pc_price_t *ptr, uint64_t slot, int64_t timest
       int64_t price     = iptr->agg_.price_;
       int64_t conf      = ( int64_t )( iptr->agg_.conf_ );
       if ( iptr->agg_.status_ == PC_STATUS_TRADING &&
-           (int64_t)0 < conf && conf < price && conf <= (INT64_MAX-price) && // No overflow for INT64_MAX-price as price>0
+           (int64_t)0 < conf && (conf + INT64_MIN) < price && price <= (INT64_MAX-conf) && // No overflow for INT64_MAX-conf as conf>0
            slot_diff >= 0 && slot_diff <= PC_MAX_SEND_LATENCY ) {
         numv += 1;
         prcs[ nprcs++ ] = price - conf; // No overflow as 0 < conf < price
