@@ -105,6 +105,7 @@ static void upd_ema(
     // compute numer/denom and new value from decay factor
     pd_load( numer, ptr->numer_ );
     pd_load( denom, ptr->denom_ );
+    // FIXME: this if statement probably needs to get deleted!
     if ( numer->v_ < 0 || denom->v_ < 0 ) {
       // temporary reset twap on negative value
       pd_set( numer, val );
