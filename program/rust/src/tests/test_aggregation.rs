@@ -7,8 +7,7 @@ extern crate test_generator;
 
 use test_generator::test_resources;
 
-
-#[test_resources("program/rust/src/tests/quote_set/data/*.json")]
+#[test_resources("program/rust/test_data/aggregation/*.json")]
 fn test_quote_set(input_path_raw: &str) {
     // For some reason these tests have a different working directory than the macro.
     let input_path = input_path_raw.replace("program/rust/", "");
