@@ -99,7 +99,7 @@ void test_pd()
   PC_TEST_CHECK( pd_gt( n2, n1, dec_fact ) );
 }
 
-int main( int argc,char** argv )
+int main(int,char**)
 {
   PC_TEST_START
   test_pd();
