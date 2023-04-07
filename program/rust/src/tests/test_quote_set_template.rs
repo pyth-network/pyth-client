@@ -3,11 +3,16 @@ use std::fs::File;
 use bytemuck::Zeroable;
 use crate::accounts::{PriceAccount};
 use crate::processor::c_upd_aggregate;
+extern crate test_generator;
 
-#[test]
-fn test_quote_set() {
-    let input_path = "src/tests/quote_set/data/1.json";
-    let result_path = "src/tests/quote_set/data/1.result";
+use test_generator::test_resources;
+
+
+#[test_resources("program/rust/src/tests/quote_set/data/*.json")]
+fn test_quote_set(input_path_raw: &str) {
+    // For some reason these tests have a different working directory than the macro.
+    let input_path = input_path_raw.replace("program/rust/", "");
+    let result_path = input_path.replace(".json", ".result");
 
     let file = File::open(input_path).expect("Test file not found");
     let quote_set: QuoteSet = serde_json::from_reader(&file).expect("Unable to parse JSON");
