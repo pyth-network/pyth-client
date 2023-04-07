@@ -4,7 +4,7 @@ use std::fs::File;
 use crate::accounts::{PriceAccount};
 use csv::ReaderBuilder;
 use serde::{Deserialize, Serialize};
-use crate::processor::c_upd_aggregate;
+use crate::processor::{c_upd_aggregate, c_upd_twap};
 
 use test_generator::test_resources;
 
@@ -35,12 +35,12 @@ fn test_quote_set(input_path_raw: &str) {
 
     upd_aggregate(&mut price_account, current_slot + 1, current_timestamp);
 
-    for (input, expected_output) in inputs.iter().zip(expected_outputs.iter()) {
+    for (input, _expected_output) in inputs.iter().zip(expected_outputs.iter()) {
         price_account.exponent = input.expo;
         price_account.agg_.price_ = input.price;
         price_account.agg_.conf_ = input.conf;
 
-        // upd_twap(&mut price_account, input.nslots, )
+        upd_twap(&mut price_account, input.nslots);
     }
 
 
@@ -98,7 +98,7 @@ fn test_quote_set(input_path_raw: &str) {
      */
 }
 
-// TODO: put this function somewhere more accessible
+// TODO: put these functions somewhere more accessible
 pub fn upd_aggregate(price_account: &mut PriceAccount, clock_slot: u64, clock_timestamp: i64) -> bool {
     unsafe {
         return c_upd_aggregate(
@@ -106,6 +106,12 @@ pub fn upd_aggregate(price_account: &mut PriceAccount, clock_slot: u64, clock_ti
             clock_slot,
             clock_timestamp,
         );
+    }
+}
+
+pub fn upd_twap(price_account: &mut PriceAccount, nslots: i64) {
+    unsafe {
+        c_upd_twap((price_account as *mut PriceAccount) as *mut u8, nslots)
     }
 }
 
