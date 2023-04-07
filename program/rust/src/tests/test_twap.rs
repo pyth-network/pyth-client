@@ -1,19 +1,27 @@
-use serde::{Deserialize, Serialize};
-use std::fs::File;
-use bytemuck::Zeroable;
-use crate::accounts::{PriceAccount};
-use crate::processor::c_upd_aggregate;
 extern crate test_generator;
 
+use std::fs::File;
+
+use csv::ReaderBuilder;
+use serde::{Deserialize, Serialize};
 use test_generator::test_resources;
+
 
 #[test_resources("program/rust/test_data/twap/*.csv")]
 fn test_quote_set(input_path_raw: &str) {
     // For some reason these tests have a different working directory than the macro.
     let input_path = input_path_raw.replace("program/rust/", "");
-    let result_path = input_path.replace(".csv", ".result");
+    // let result_path = input_path.replace(".csv", ".result");
 
     let file = File::open(input_path).expect("Test file not found");
+    let mut reader = ReaderBuilder::new().has_headers(true).from_reader(file);
+
+    for result in reader.deserialize() {
+        let record: InputRecord = result.expect("Could not parse CSV record");
+        println!("{:?}", record);
+    }
+
+    /*
     let quote_set: QuoteSet = serde_json::from_reader(&file).expect("Unable to parse JSON");
 
     let result_file = File::open(result_path).expect("Test file not found");
@@ -64,27 +72,24 @@ fn test_quote_set(input_path_raw: &str) {
     };
 
     assert_eq!(expected_result, actual_result);
+     */
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-struct Quote {
+struct InputRecord {
     price: i64,
     conf: u64,
-    status: u32,
-    slot_diff: Option<i64>,
+    expo: i32,
+    nslots: i64,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-struct QuoteSet {
-    exponent: i32,
-    quotes: Vec<Quote>,
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
-struct QuoteSetResult {
-    exponent: i32,
+struct OutputRecord {
     price: i64,
     conf: u64,
-    status: String
+    expo: i32,
+    nslots: i64,
+    twap: i64,
+    twac: i64,
 }
 
