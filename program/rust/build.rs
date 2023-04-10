@@ -57,6 +57,14 @@ fn get_solana_inc_path() -> PathBuf {
     let mut path = PathBuf::new();
     path.push(std::str::from_utf8(&which_stdout).unwrap());
     path.pop(); //
-    path.push("sdk/bpf/c/inc/");
-    path
+    let mut bpf_path = path.clone();
+    // Older solana version have the SDK in the bpf/ folder, while newer version have
+    // it in the sbf/ folder
+    bpf_path.push("sdk/bpf/c/inc/");
+    if bpf_path.exists() {
+        bpf_path
+    } else {
+        path.push("sdk/sbf/c/inc/");
+        path
+    }
 }

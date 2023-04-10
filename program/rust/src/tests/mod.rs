@@ -3,6 +3,7 @@ mod test_add_mapping;
 mod test_add_price;
 mod test_add_product;
 mod test_add_publisher;
+mod test_aggregation;
 mod test_del_price;
 mod test_del_product;
 mod test_del_publisher;

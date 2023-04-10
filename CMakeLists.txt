@@ -108,8 +108,8 @@ target_link_libraries( test_net ${PC_DEP} )
 # add_executable( test_publish_websocket pctest/test_publish_websocket.cpp )
 # target_link_libraries( test_publish_websocket Qt5::Core Qt5::Network Qt5::WebSockets /usr/local/lib/libjcon.so)
 
-add_executable( test_qset pctest/test_qset.cpp )
-target_link_libraries( test_qset ${PC_DEP} )
+add_executable( test_pd pctest/test_pd.cpp )
+target_link_libraries( test_pd ${PC_DEP} )
 add_executable( test_twap pctest/test_twap.cpp )
 target_link_libraries( test_twap ${PC_DEP} )
 add_executable( leader_stats pctest/leader_stats.cpp )
@@ -117,6 +117,7 @@ target_link_libraries( leader_stats ${PC_DEP} )
 
 add_test( test_unit test_unit )
 add_test( test_net test_net )
+add_test( test_pd test_pd )
 
 
 #
