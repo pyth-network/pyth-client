@@ -7,6 +7,13 @@ use {
 };
 
 fn main() {
+    let target_arch = std::env::var("CARGO_CFG_TARGET_ARCH").unwrap();
+    // The tests depend on the BPF build (because we load the BPF program into the solana simulator).
+    // Always build the bpf binary before doing anything else.
+    if target_arch != "bpf" {
+        Command::new("cargo").arg("build-bpf").status().unwrap();
+    }
+
     // OUT_DIR is the path cargo provides to a build directory under `target/` specifically for
     // isolated build artifacts. We use this to build the C program and then link against the
     // resulting static library. This allows building the program when used as a dependency of
@@ -20,22 +27,21 @@ fn main() {
         .env("VERBOSE", "1")
         .env("OUT_DIR", out_dir.display().to_string())
         .current_dir("../c")
-        .args(["cpyth-native", "cpyth-bpf"])
+        .args([if target_arch == "bpf" {
+            "cpyth-bpf"
+        } else {
+            "cpyth-native"
+        }])
         .status()
         .expect("Failed to build C program");
 
-    // Emit instructions for cargo to link against the built static library.
-
-    let target_arch = std::env::var("CARGO_CFG_TARGET_ARCH").unwrap();
+    // Link against the right library for the architecture
     if target_arch == "bpf" {
-        // do something special for BPF target architecture
         println!("cargo:rustc-link-lib=static=cpyth-bpf");
     } else {
-        // do something else for other target architectures
         println!("cargo:rustc-link-lib=static=cpyth-native");
     }
     println!("cargo:rustc-link-search={}", out_dir.display());
-
 
     // Generate and write bindings
     let bindings = Builder::default()
@@ -47,6 +53,9 @@ fn main() {
     bindings
         .write_to_file("./bindings.rs")
         .expect("Couldn't write bindings!");
+
+    // Rerun the build script if either the rust or C code changes
+    println!("cargo:rerun-if-changed=../")
 }
 
 /// Find the Solana C header bindgen
