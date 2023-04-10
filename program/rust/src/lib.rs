@@ -17,6 +17,25 @@ mod tests;
 #[cfg(feature = "debug")]
 mod log;
 
+// When compiled in `library` mode the on-chain definitions provided by this library are
+// exported. This is useful when other libraries wish to directly utilise the exact Solana specific
+// on-chain definitions of the Pyth program.
+//
+// While we have `pyth-sdk-rs` which exposes a more friendly interface, this is still useful when a
+// downstream user wants to confirm for example that they can compile against the binary interface
+// of this program for their specific solana version.
+#[cfg(feature = "library")]
+pub use accounts::{
+    AccountHeader,
+    MappingAccount,
+    PermissionAccount,
+    PriceAccount,
+    PriceComponent,
+    PriceEma,
+    PriceInfo,
+    ProductAccount,
+    PythAccount,
+};
 use {
     crate::error::OracleError,
     processor::process_instruction,
