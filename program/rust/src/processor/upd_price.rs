@@ -36,6 +36,7 @@ use {
 #[link(name = "cpyth-bpf")]
 extern "C" {
     pub fn c_upd_aggregate(_input: *mut u8, clock_slot: u64, clock_timestamp: i64) -> bool;
+    #[allow(unused)]
     pub fn c_upd_twap(_input: *mut u8, nslots: i64);
 }
 
