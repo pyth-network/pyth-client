@@ -23,7 +23,7 @@ fn main() {
             .env("VERBOSE", "1")
             .env("OUT_DIR", out_dir.display().to_string())
             .current_dir("../c")
-            .args(&["cpyth-native"])
+            .args(["cpyth-native"])
             .status()
             .expect("Failed to build C program");
 
