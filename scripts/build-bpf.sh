@@ -7,7 +7,6 @@
 set -eu
 
 PYTH_DIR=$( cd "${1:-.}" && pwd)
-C_DIR="$PYTH_DIR/program/c/"
 
 if ! which cargo 2> /dev/null
 then
@@ -17,17 +16,7 @@ fi
 
 set -x
 
-#build the C code and make an archive file out of it
-cd "${C_DIR}"
-export V="${V:-1}" #verbose flag for solana
-make clean 
-make
-make cpyth-bpf 
-make cpyth-native
-rm ./target/*-keypair.json
-
-
-#build Rust and link it with C
+# Build both parts of the program (both C and rust) via Cargo
 cd "${PYTH_DIR}"
 cargo clean
 cargo-test-bpf
