@@ -13,8 +13,9 @@ endif
 
 
 # Bundle C code compiled to bpf for use by rust
+# The all target is defined by the solana makefile included above and generates the needed .o file.
 .PHONY: cpyth-bpf
-cpyth-bpf:
+cpyth-bpf: all
 	bash -c "ar rcs $(OUT_DIR)/libcpyth-bpf.a $(OUT_DIR)/**/*.o"
 
 
