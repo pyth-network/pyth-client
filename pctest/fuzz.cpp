@@ -264,13 +264,12 @@ void test_upd_ema(int64_t n, int64_t d, pd_t* val) {
     for (int i = 0; i < 18; i++) {
       qs->fact_[i] = dec_fact[i];
     }
-    qs->expo_ = -9;
 
-    upd_ema(ema, val, conf, 1, qs);
+    upd_ema(ema, val, conf, 1, qs, -9);
 
     pd_t result[1];
     result->v_ = ema->val_;
-    result->e_ = qs->expo_;
+    result->e_ = -9;
 
     log_pd_t("result: ", result);
     double actual = pd_to_double(result, 0);
