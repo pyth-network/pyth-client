@@ -15,7 +15,7 @@ endif
 # Bundle C code compiled to bpf for use by rust
 .PHONY: cpyth-bpf
 cpyth-bpf:
-	bash -c "ar rcs $(OUT_DIR)/libcpyth-bpf.a target/**/*.o"
+	bash -c "ar rcs $(OUT_DIR)/libcpyth-bpf.a $(OUT_DIR)/**/*.o"
 
 
 # 2-Stage Contract Build
