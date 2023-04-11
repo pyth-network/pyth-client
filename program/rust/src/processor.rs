@@ -41,6 +41,7 @@ pub use {
     upd_permissions::upd_permissions,
     upd_price::{
         c_upd_aggregate,
+        c_upd_twap,
         upd_price,
         upd_price_no_fail_on_error,
     },

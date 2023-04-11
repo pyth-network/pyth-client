@@ -18,11 +18,10 @@ typedef struct pc_qset
   pd_t      weight_[PC_COMP_SIZE];
   int64_t   decay_[1+PC_MAX_SEND_LATENCY];
   int64_t   fact_[PC_FACTOR_SIZE];
-  int32_t   expo_;
 } pc_qset_t;
 
 // initialize quote-set temporary data in heap area
-static pc_qset_t *qset_new( int expo )
+static pc_qset_t *qset_new()
 {
   // allocate off heap
   pc_qset_t *qs = (pc_qset_t*)PC_HEAP_START;
@@ -75,13 +74,11 @@ static pc_qset_t *qset_new( int expo )
   qs->fact_[16]  = 10000000000000000L;
   qs->fact_[17]  = 100000000000000000L;
 
-  qs->expo_ = expo;
-
   return qs;
 }
 
 static void upd_ema(
-    pc_ema_t *ptr, pd_t *val, pd_t *conf, int64_t nslot, pc_qset_t *qs
+    pc_ema_t *ptr, pd_t *val, pd_t *conf, int64_t nslot, pc_qset_t *qs, int32_t expo
     )
 {
   pd_t numer[1], denom[1], cwgt[1], wval[1], decay[1], diff[1], one[1];
@@ -121,7 +118,7 @@ static void upd_ema(
   }
 
   // adjust and store results
-  pd_adjust( val, qs->expo_, qs->fact_ );
+  pd_adjust( val, expo, qs->fact_ );
   ptr->val_   = val->v_;
   int64_t numer1, denom1;
   if ( pd_store( &numer1, numer ) && pd_store( &denom1, denom ) ) {
@@ -131,13 +128,15 @@ static void upd_ema(
 }
 
 static inline void upd_twap(
-    pc_price_t *ptr, int64_t nslots, pc_qset_t *qs )
+    pc_price_t *ptr, int64_t nslots )
 {
+  pc_qset_t *qs = qset_new( );
+
   pd_t px[1], conf[1];
   pd_new_scale( px, ptr->agg_.price_, ptr->expo_ );
   pd_new_scale( conf, ( int64_t )( ptr->agg_.conf_ ), ptr->expo_ );
-  upd_ema( &ptr->twap_, px, conf, nslots, qs );
-  upd_ema( &ptr->twac_, conf, conf, nslots, qs );
+  upd_ema( &ptr->twap_, px, conf, nslots, qs, ptr->expo_ );
+  upd_ema( &ptr->twac_, conf, conf, nslots, qs, ptr->expo_ );
 }
 
 // update aggregate price
@@ -147,7 +146,6 @@ static inline bool upd_aggregate( pc_price_t *ptr, uint64_t slot, int64_t timest
   if ( slot <= ptr->agg_.pub_slot_ ) {
     return false;
   }
-  pc_qset_t *qs = qset_new( ptr->expo_ );
 
   // get number of slots from last published valid price
   int64_t agg_diff = ( int64_t )slot - ( int64_t )( ptr->last_slot_ );
@@ -230,7 +228,7 @@ static inline bool upd_aggregate( pc_price_t *ptr, uint64_t slot, int64_t timest
   ptr->agg_.price_  = agg_price;
   ptr->agg_.conf_   = (uint64_t)agg_conf;
 
-  upd_twap( ptr, agg_diff, qs );
+  upd_twap( ptr, agg_diff );
   return true;
 }
 
