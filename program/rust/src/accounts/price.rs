@@ -7,6 +7,7 @@ use {
         PC_ACCTYPE_PRICE,
         PC_COMP_SIZE,
         PC_PRICE_T_COMP_OFFSET,
+        PC_STATUS_TRADING,
     },
     bytemuck::{
         Pod,
@@ -96,34 +97,63 @@ impl PythAccount for PriceAccount {
     const INITIAL_SIZE: u32 = PC_PRICE_T_COMP_OFFSET as u32;
 }
 
-#[repr(C)]
-#[derive(Debug, Copy, Clone, Pod, Zeroable)]
-pub struct CompactPriceMessage {
-    pub price_expo: i32,
-    pub zeros:      i32,
-    pub price:      i64,
+/// Message format for sending data to other chains via the accumulator program
+#[derive(Debug, Copy, Clone)]
+#[repr(u8)]
+pub enum Message {
+    PriceFeed(PriceFeedPayload), // 0
 }
 
-pub trait AccumulatorSerializer {
-    fn accumulator_serialize(&self) -> Result<Vec<u8>, ProgramError>;
-}
-
-
-impl AccumulatorSerializer for CompactPriceMessage {
-    fn accumulator_serialize(&self) -> Result<Vec<u8>, ProgramError> {
+impl Message {
+    pub fn to_bytes(&self) -> Result<Vec<u8>, ProgramError> {
         let mut bytes = vec![];
-        bytes.write_all(&self.price.to_be_bytes())?;
-        bytes.write_all(&self.price_expo.to_be_bytes())?;
+        match &self {
+            Message::PriceFeed(m) => {
+                // discriminant
+                bytes.write_all(&[0u8])?;
+                // payload
+                bytes.write_all(&m.id[..])?;
+                bytes.write_all(&m.price.to_be_bytes())?;
+                bytes.write_all(&m.conf.to_be_bytes())?;
+                bytes.write_all(&m.exponent.to_be_bytes())?;
+                bytes.write_all(&m.publish_time.to_be_bytes())?;
+                bytes.write_all(&m.ema_price.to_be_bytes())?;
+                bytes.write_all(&m.ema_conf.to_be_bytes())?;
+            }
+        }
+
         Ok(bytes)
     }
 }
 
-impl From<&PriceAccount> for CompactPriceMessage {
-    fn from(other: &PriceAccount) -> Self {
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct PriceFeedPayload {
+    id:           [u8; 32],
+    price:        i64,
+    conf:         u64,
+    exponent:     i32,
+    publish_time: i64,
+    ema_price:    i64,
+    ema_conf:     u64,
+}
+
+impl PriceFeedPayload {
+    pub fn from_price_account(key: &Pubkey, other: &PriceAccount) -> Self {
+        let (price, conf, publish_time) = if other.agg_.status_ == PC_STATUS_TRADING {
+            (other.agg_.price_, other.agg_.conf_, other.timestamp_)
+        } else {
+            (other.prev_price_, other.prev_conf_, other.prev_timestamp_)
+        };
+
         Self {
-            price:      other.agg_.price_,
-            zeros:      0,
-            price_expo: other.exponent,
+            id: key.to_bytes(),
+            price,
+            conf,
+            exponent: other.exponent,
+            publish_time,
+            ema_price: other.twap_.val_,
+            ema_conf: other.twac_.val_ as u64,
         }
     }
 }

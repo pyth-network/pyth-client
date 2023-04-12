@@ -1,9 +1,9 @@
 use {
     crate::{
         accounts::{
-            AccumulatorSerializer,
-            CompactPriceMessage,
+            Message,
             PriceAccount,
+            PriceFeedPayload,
             PriceInfo,
         },
         c_oracle_header::{
@@ -81,10 +81,22 @@ pub fn upd_price(
 ) -> ProgramResult {
     let cmd_args = load::<UpdPriceArgs>(instruction_data)?;
 
-    let (funding_account, price_account, clock_account, accumulator_accounts) = match accounts {
+    let (funding_account, price_account, clock_account, maybe_accumulator_accounts) = match accounts
+    {
         [x, y, z] => Ok((x, y, z, None)),
         [x, y, _, z] => Ok((x, y, z, None)),
-        [x, y, z, a, b, c, d, e] => Ok((x, y, z, Some((a, b, c, d, e)))),
+        [x, y, z, a, b, c, d, e] => Ok((
+            x,
+            y,
+            z,
+            Some(AccumulatorAccounts {
+                accumulator_program: a,
+                whitelist:           b,
+                system_program:      c,
+                ixs_sysvar:          d,
+                accumulator_data:    e,
+            }),
+        )),
         _ => Err(OracleError::InvalidNumberOfAccounts),
     }?;
 
@@ -138,30 +150,29 @@ pub fn upd_price(
     }
 
     if aggregate_updated {
-        if let Some((
-            accumulator_program,
-            whitelist_account,
-            system_program,
-            ixs_sysvar,
-            accumulator_account,
-        )) = accumulator_accounts
-        {
+        if let Some(accumulator_accounts) = maybe_accumulator_accounts {
             let account_metas = vec![
                 AccountMeta::new(*funding_account.key, true),
-                AccountMeta::new_readonly(*whitelist_account.key, false),
-                AccountMeta::new_readonly(*ixs_sysvar.key, false),
-                AccountMeta::new_readonly(*system_program.key, false),
-                AccountMeta::new_readonly(*accumulator_account.key, false),
+                AccountMeta::new_readonly(*accumulator_accounts.whitelist.key, false),
+                AccountMeta::new_readonly(*accumulator_accounts.ixs_sysvar.key, false),
+                AccountMeta::new_readonly(*accumulator_accounts.system_program.key, false),
+                AccountMeta::new_readonly(*accumulator_accounts.accumulator_data.key, false),
             ];
 
             let price_data = load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
+            let data_to_send = Message::PriceFeed(PriceFeedPayload::from_price_account(
+                &price_account.key,
+                &*price_data,
+            ))
+            .to_bytes()?;
 
+            // TODO: craft instruction properly
             let create_inputs_ix = Instruction::new_with_borsh(
-                *accumulator_program.key,
+                *accumulator_accounts.accumulator_program.key,
                 &(
                     [1, 2, 3, 4, 5, 6, 7, 8],
                     price_account.key.to_bytes(),
-                    CompactPriceMessage::from(&*price_data).accumulator_serialize()?,
+                    data_to_send,
                     1,
                     vec![1],
                 ),
@@ -196,4 +207,14 @@ pub fn upd_price(
     }
 
     Ok(())
+}
+
+
+// Wrapper struct for the accounts required to add data to the accumulator program.
+struct AccumulatorAccounts<'a, 'b: 'a> {
+    accumulator_program: &'a AccountInfo<'b>,
+    whitelist:           &'a AccountInfo<'b>,
+    system_program:      &'a AccountInfo<'b>,
+    ixs_sysvar:          &'a AccountInfo<'b>,
+    accumulator_data:    &'a AccountInfo<'b>,
 }
