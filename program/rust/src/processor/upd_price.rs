@@ -161,10 +161,10 @@ pub fn upd_price(
 
             let price_data = load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
             let data_to_send = Message::PriceFeed(PriceFeedPayload::from_price_account(
-                &price_account.key,
-                &*price_data,
+                price_account.key,
+                &price_data,
             ))
-            .to_bytes()?;
+            .as_bytes()?;
 
             // TODO: craft instruction properly
             let create_inputs_ix = Instruction::new_with_borsh(

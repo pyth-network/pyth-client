@@ -105,7 +105,7 @@ pub enum Message {
 }
 
 impl Message {
-    pub fn to_bytes(&self) -> Result<Vec<u8>, ProgramError> {
+    pub fn as_bytes(&self) -> Result<Vec<u8>, ProgramError> {
         let mut bytes = vec![];
         match &self {
             Message::PriceFeed(m) => {
