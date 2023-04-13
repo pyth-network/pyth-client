@@ -3,9 +3,7 @@
 #include "util.h"
 
 int
-main( int     argc,
-      char ** argv ) {
-  (void)argc; (void)argv;
+test_align() {
 
   uint32_t shift_mask = (uint32_t)(sizeof(uintptr_t)*(size_t)CHAR_BIT);
   if( !align_ispow2( (uintptr_t)shift_mask ) ) {

@@ -16,7 +16,7 @@ endif
 # The all target is defined by the solana makefile included above and generates the needed .o file.
 .PHONY: cpyth-bpf
 cpyth-bpf: all
-	bash -c "ar rcs $(OUT_DIR)/libcpyth-bpf.a $(OUT_DIR)/**/*.o"
+	bash -c "ar rcs $(OUT_DIR)/libcpyth-bpf.a $(OUT_DIR)/oracle/*.o"
 
 
 # 2-Stage Contract Build
@@ -27,3 +27,18 @@ cpyth-bpf: all
 cpyth-native:
 	gcc -c ./src/oracle/native/upd_aggregate.c -o $(OUT_DIR)/cpyth-native.o -fPIC
 	ar rcs $(OUT_DIR)/libcpyth-native.a $(OUT_DIR)/cpyth-native.o
+
+
+# Note: there's probably a smart way to do this with wildcards but I (jayant) can't figure it out
+.PHONY: test
+test:
+	mkdir -p $(OUT_DIR)/test/
+	gcc -c ./src/oracle/model/test_price_model.c -o $(OUT_DIR)/test/test_price_model.o -fPIC
+	gcc -c ./src/oracle/sort/test_sort_stable.c -o $(OUT_DIR)/test/test_sort_stable.o -fPIC
+	gcc -c ./src/oracle/util/test_align.c -o $(OUT_DIR)/test/test_align.o -fPIC
+	gcc -c ./src/oracle/util/test_avg.c -o $(OUT_DIR)/test/test_avg.o -fPIC
+	gcc -c ./src/oracle/util/test_hash.c -o $(OUT_DIR)/test/test_hash.o -fPIC
+	gcc -c ./src/oracle/util/test_prng.c -o $(OUT_DIR)/test/test_prng.o -fPIC
+	gcc -c ./src/oracle/util/test_round.c -o $(OUT_DIR)/test/test_round.o -fPIC
+	gcc -c ./src/oracle/util/test_sar.c -o $(OUT_DIR)/test/test_sar.o -fPIC
+	ar rcs $(OUT_DIR)/libcpyth-test.a $(OUT_DIR)/test/*.o

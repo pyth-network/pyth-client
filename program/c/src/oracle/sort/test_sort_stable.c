@@ -9,10 +9,7 @@
 #define SORT_BEFORE(i,j) BEFORE(i,j)
 #include "tmpl/sort_stable.c"
 
-int
-main( int     argc,
-      char ** argv ) {
-  (void)argc; (void)argv;
+int test_sort_stable() {
 
 # define N 96
   int x[N];

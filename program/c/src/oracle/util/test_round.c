@@ -1,10 +1,7 @@
 #include <stdio.h>
 
 int
-main( int     argc,
-      char ** argv ) {
-  (void)argc; (void)argv;
-
+test_round() {
   unsigned i = (unsigned)0;
 
   int ctr = 0;

@@ -21,17 +21,27 @@ fn main() {
     let out_dir = std::env::var("OUT_DIR").unwrap();
     let out_dir = PathBuf::from(out_dir);
 
+    let mut make_targets = vec![];
+    if target_arch == "bpf" {
+        make_targets.push("cpyth-bpf");
+    } else {
+        make_targets.push("cpyth-native");
+    }
+
+    let is_test = true;
+    if is_test {
+        make_targets.push("test");
+    }
+    println!("cargo:warning={}", cfg!(test));
+
+
     // We must forward OUT_DIR as an env variable to the make script otherwise it will output
     // its artifacts to the wrong place.
     std::process::Command::new("make")
         .env("VERBOSE", "1")
         .env("OUT_DIR", out_dir.display().to_string())
         .current_dir("../c")
-        .args([if target_arch == "bpf" {
-            "cpyth-bpf"
-        } else {
-            "cpyth-native"
-        }])
+        .args(make_targets)
         .status()
         .expect("Failed to build C program");
 
@@ -41,7 +51,12 @@ fn main() {
     } else {
         println!("cargo:rustc-link-lib=static=cpyth-native");
     }
+    if is_test {
+        println!("cargo:rustc-link-lib=static=cpyth-test");
+    }
     println!("cargo:rustc-link-search={}", out_dir.display());
+
+    println!("cargo:warning={}", out_dir.display());
 
     // Generate and write bindings
     let bindings = Builder::default()

@@ -42,10 +42,7 @@ printf_ref( uint64_t * ref,
   printf( "};\n" );
 }
 
-int
-main( int     argc,
-      char ** argv ) {
-  (void)argc; (void)argv;
+int test_prng() {
 
   uint64_t x[10];
 

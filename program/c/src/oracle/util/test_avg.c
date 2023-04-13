@@ -2,10 +2,7 @@
 #include "util.h"
 
 int
-main( int     argc,
-      char ** argv ) {
-  (void)argc; (void)argv;
-
+test_avg() {
   prng_t _prng[1];
   prng_t * prng = prng_join( prng_new( _prng, (uint32_t)0, (uint64_t)0 ) );
 
