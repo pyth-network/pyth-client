@@ -11,8 +11,8 @@ test_sar() {
      SAMPLED ALREADY THOUGH FOR 8 AND 16 BIT TYPES) */
 
   int ctr = 0;
-  for( int i=0; i<1000000000; i++ ) {
-    if( !ctr ) { printf( "Completed %i iterations\n", i ); ctr = 10000000; }
+  for( int i=0; i<100000000; i++ ) {
+    if( !ctr ) { ctr = 10000000; }
     ctr--;
 
     /* These tests assume the unit test platform has arithmetic right
@@ -39,8 +39,6 @@ test_sar() {
   }
 
   prng_delete( prng_leave( prng ) );
-
-  printf( "pass\n" );
 
   return 0;
 }

@@ -20,7 +20,6 @@ int test_sort_stable() {
      additional information in the keys to validate stability as well). */
 
   for( int n=0; n<=24; n++ ) {
-    printf( "Zero-One: Testing n=%i\n", n );
     for( long b=0L; b<(1L<<n); b++ ) {
       for( int i=0; i<n; i++ ) x[i] = (((int)((b>>i) & 1L))<<16) | i;
       for( int i=0; i<n; i++ ) w[i] = x[i];
@@ -48,7 +47,7 @@ int test_sort_stable() {
 
   int ctr = 0;
   for( int iter=0; iter<10000000; iter++ ) {
-    if( !ctr ) { printf( "Randomized: Completed %i iterations\n", iter ); ctr = 100000; }
+    if( !ctr ) { ctr = 100000; }
     ctr--;
 
     int n = (int)(prng_uint32( prng ) % (uint32_t)(N+1)); /* In [0,N], approx uniform IID */
@@ -70,9 +69,6 @@ int test_sort_stable() {
       if( z[i]<=z[i-1] ) { printf( "FAIL (%s)\n", BEFORE( z[i], z[i-1] ) ? "order" : "stable" ); return 1; }
   }
 
-  prng_delete( prng_leave( prng ) );
-
-  printf( "pass\n" );
   return 0;
 }
 

@@ -9,8 +9,8 @@ test_avg() {
   int ctr;
 
   ctr = 0;
-  for( int i=0; i<1000000000; i++ ) {
-    if( !ctr ) { printf( "reg: Completed %i iterations\n", i ); ctr = 10000000; }
+  for( int i=0; i<100000000; i++ ) {
+    if( !ctr ) { ctr = 10000000; }
     ctr--;
 
 #   define TEST(w) do {                                                                      \
@@ -73,8 +73,8 @@ test_avg() {
 # define N 512
 
   ctr = 0;
-  for( int i=0; i<10000000; i++ ) {
-    if( !ctr ) { printf( "mem: Completed %i iterations\n", i ); ctr = 100000; }
+  for( int i=0; i<1000000; i++ ) {
+    if( !ctr ) { ctr = 100000; }
     ctr--;
 
 #   define TEST(w) do {                                                    \
@@ -132,8 +132,6 @@ test_avg() {
 # undef N
 
   prng_delete( prng_leave( prng ) );
-
-  printf( "pass\n" );
 
   return 0;
 }

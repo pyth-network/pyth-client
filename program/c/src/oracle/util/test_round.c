@@ -7,7 +7,7 @@ test_round() {
   int ctr = 0;
   for( int x=-32767; x<=32767; x++ ) {
     for( int y=-32767; y<=32767; y++ ) {
-      if( !ctr ) { printf( "Completed %u iterations\n", i ); ctr = 10000000; }
+      if( !ctr ) { ctr = 10000000; }
       ctr--;
 
       int u = (x+y)>>1;
@@ -21,7 +21,6 @@ test_round() {
       i++;
     }
   }
-  printf( "pass\n" );
 
   return 0;
 }

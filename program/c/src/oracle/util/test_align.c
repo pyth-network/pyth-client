@@ -17,7 +17,7 @@ test_align() {
 
   int ctr = 0;
   for( int i=0; i<1000000000; i++ ) {
-    if( !ctr ) { printf( "Completed %i iterations\n", i ); ctr = 10000000; }
+    if( !ctr ) { ctr = 10000000; }
     ctr--;
 
     /* Test align_ispow2 */
@@ -67,8 +67,6 @@ test_align() {
   }
 
   prng_delete( prng_leave( prng ) );
-
-  printf( "pass\n" );
 
   return 0;
 }

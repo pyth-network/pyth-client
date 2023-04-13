@@ -49,7 +49,5 @@ int test_hash() {
   }
 
   /* FIXME: MEASURE AVALANCHE PROPERTIES? */
-
-  printf( "pass\n" );
   return 0;
 }

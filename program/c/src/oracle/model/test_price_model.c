@@ -28,7 +28,7 @@ int test_price_model() {
 
   int ctr = 0;
   for( int iter=0; iter<10000000; iter++ ) {
-    if( !ctr ) { printf( "Completed %u iterations\n", iter ); ctr = 100000; }
+    if( !ctr ) { ctr = 100000; }
     ctr--;
 
     /* Generate a random test */
@@ -60,6 +60,5 @@ int test_price_model() {
 
   prng_delete( prng_leave( prng ) );
 
-  printf( "pass\n" );
   return 0;
 }

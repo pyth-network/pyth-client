@@ -1,3 +1,6 @@
+// This file links the various test_*.c files in the C oracle code so they run via cargo.
+// Note that most of these tests are exhaustive (testing almost every possible input/output), so
+// they take a minute or so to run.
 mod c {
     #[link(name = "cpyth-test")]
     extern "C" {
