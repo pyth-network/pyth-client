@@ -45,10 +45,7 @@ int test_sort_stable() {
   prng_t _prng[1];
   prng_t * prng = prng_join( prng_new( _prng, (uint32_t)0, (uint64_t)0 ) );
 
-  int ctr = 0;
   for( int iter=0; iter<10000000; iter++ ) {
-    if( !ctr ) { ctr = 100000; }
-    ctr--;
 
     int n = (int)(prng_uint32( prng ) % (uint32_t)(N+1)); /* In [0,N], approx uniform IID */
     for( int i=0; i<n; i++ ) x[i] = (int)((prng_uint32( prng ) & UINT32_C( 0x00ff0000 )) | (uint32_t)i);
@@ -69,6 +66,7 @@ int test_sort_stable() {
       if( z[i]<=z[i-1] ) { printf( "FAIL (%s)\n", BEFORE( z[i], z[i-1] ) ? "order" : "stable" ); return 1; }
   }
 
+  prng_delete( prng_leave( prng ) );
   return 0;
 }
 

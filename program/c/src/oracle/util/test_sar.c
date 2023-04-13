@@ -10,10 +10,7 @@ test_sar() {
   /* FIXME: EXPLICT COVERAGE OF EDGE CASES (PROBABLY STATICALLY FULLY
      SAMPLED ALREADY THOUGH FOR 8 AND 16 BIT TYPES) */
 
-  int ctr = 0;
   for( int i=0; i<100000000; i++ ) {
-    if( !ctr ) { ctr = 10000000; }
-    ctr--;
 
     /* These tests assume the unit test platform has arithmetic right
        shift for signed integers (and the diagnostic printfs assume that

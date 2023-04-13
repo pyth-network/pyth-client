@@ -26,10 +26,7 @@ int test_price_model() {
   int64_t val    [3];
   int64_t scratch[N];
 
-  int ctr = 0;
   for( int iter=0; iter<10000000; iter++ ) {
-    if( !ctr ) { ctr = 100000; }
-    ctr--;
 
     /* Generate a random test */
 
