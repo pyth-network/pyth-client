@@ -28,10 +28,7 @@ uint64_t ref64[10] = {
   UINT64_C( 0x91209a1ff7f4f1d5 )
 };
 
-int
-main( int     argc,
-      char ** argv ) {
-  (void)argc; (void)argv;
+int test_hash() {
 
   for( int i=0; i<10; i++ ) {
     uint32_t x = (uint32_t)i;
@@ -52,7 +49,5 @@ main( int     argc,
   }
 
   /* FIXME: MEASURE AVALANCHE PROPERTIES? */
-
-  printf( "pass\n" );
   return 0;
 }

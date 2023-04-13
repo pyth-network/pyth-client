@@ -9,10 +9,7 @@
 #define SORT_BEFORE(i,j) BEFORE(i,j)
 #include "tmpl/sort_stable.c"
 
-int
-main( int     argc,
-      char ** argv ) {
-  (void)argc; (void)argv;
+int test_sort_stable() {
 
 # define N 96
   int x[N];
@@ -23,7 +20,6 @@ main( int     argc,
      additional information in the keys to validate stability as well). */
 
   for( int n=0; n<=24; n++ ) {
-    printf( "Zero-One: Testing n=%i\n", n );
     for( long b=0L; b<(1L<<n); b++ ) {
       for( int i=0; i<n; i++ ) x[i] = (((int)((b>>i) & 1L))<<16) | i;
       for( int i=0; i<n; i++ ) w[i] = x[i];
@@ -49,10 +45,7 @@ main( int     argc,
   prng_t _prng[1];
   prng_t * prng = prng_join( prng_new( _prng, (uint32_t)0, (uint64_t)0 ) );
 
-  int ctr = 0;
   for( int iter=0; iter<10000000; iter++ ) {
-    if( !ctr ) { printf( "Randomized: Completed %i iterations\n", iter ); ctr = 100000; }
-    ctr--;
 
     int n = (int)(prng_uint32( prng ) % (uint32_t)(N+1)); /* In [0,N], approx uniform IID */
     for( int i=0; i<n; i++ ) x[i] = (int)((prng_uint32( prng ) & UINT32_C( 0x00ff0000 )) | (uint32_t)i);
@@ -74,8 +67,6 @@ main( int     argc,
   }
 
   prng_delete( prng_leave( prng ) );
-
-  printf( "pass\n" );
   return 0;
 }
 

@@ -1,17 +1,11 @@
 #include <stdio.h>
 
 int
-main( int     argc,
-      char ** argv ) {
-  (void)argc; (void)argv;
-
+test_round() {
   unsigned i = (unsigned)0;
 
-  int ctr = 0;
   for( int x=-32767; x<=32767; x++ ) {
     for( int y=-32767; y<=32767; y++ ) {
-      if( !ctr ) { printf( "Completed %u iterations\n", i ); ctr = 10000000; }
-      ctr--;
 
       int u = (x+y)>>1;
       int v = (x>>1)+(y>>1);
@@ -24,7 +18,6 @@ main( int     argc,
       i++;
     }
   }
-  printf( "pass\n" );
 
   return 0;
 }

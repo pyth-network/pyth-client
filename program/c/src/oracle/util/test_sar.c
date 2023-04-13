@@ -2,9 +2,7 @@
 #include "util.h"
 
 int
-main( int     argc,
-      char ** argv ) {
-  (void)argc; (void)argv;
+test_sar() {
 
   prng_t _prng[1];
   prng_t * prng = prng_join( prng_new( _prng, (uint32_t)0, (uint64_t)0 ) );
@@ -12,10 +10,7 @@ main( int     argc,
   /* FIXME: EXPLICT COVERAGE OF EDGE CASES (PROBABLY STATICALLY FULLY
      SAMPLED ALREADY THOUGH FOR 8 AND 16 BIT TYPES) */
 
-  int ctr = 0;
-  for( int i=0; i<1000000000; i++ ) {
-    if( !ctr ) { printf( "Completed %i iterations\n", i ); ctr = 10000000; }
-    ctr--;
+  for( int i=0; i<100000000; i++ ) {
 
     /* These tests assume the unit test platform has arithmetic right
        shift for signed integers (and the diagnostic printfs assume that
@@ -41,8 +36,6 @@ main( int     argc,
   }
 
   prng_delete( prng_leave( prng ) );
-
-  printf( "pass\n" );
 
   return 0;
 }

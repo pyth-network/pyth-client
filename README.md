@@ -1,5 +1,45 @@
 # pyth-client
-client API for on-chain pyth programs
+
+Pyth oracle program and off-chain client API.
+
+## Oracle Program
+
+The Pyth oracle program lives in the `program/` directory.
+It consists of both C and Rust code, but everything can be built and tested using `cargo`.
+
+### Build Instructions
+
+First, make sure you have the [solana tool suite](https://docs.solana.com/cli/install-solana-cli-tools#use-solanas-install-tool)
+installed on your machine. (The build depends on some C makefiles that are in the tool suite.)
+
+Then, simply run `cargo build` to compile the oracle program as a native binary, or `cargo build-bpf` to build a BPF binary 
+that can be uploaded to the blockchain. This step will produce a program binary `target/deploy/pyth_oracle.so`.
+
+### Testing
+
+Simply run `cargo test`. This command will run several sets of tests:  
+
+- Unit tests of individual functions 
+- Simulated transaction tests against the BPF binary running on a solana simulator
+- Exhaustive / randomized test batteries for core oracle functionality
+
+Rust tests live in the `tests/` module of the rust code, and C tests are named something like `test_*.c`.
+The C tests are linked into the rust binary so they run as part of `cargo test` as well (see `tests/test_c_code.rs`).
+
+You can also run `cargo test-bpf`, which runs the same tests as `cargo test`, though it's slightly slower and the UX is worse.
+
+### pre-commit hooks
+pre-commit is a tool that checks and fixes simple issues (formatting, ...) before each commit. You can install it by following [their website](https://pre-commit.com/). In order to enable checks for this repo run `pre-commit install` from command-line in the root of this repo.
+
+The checks are also performed in the CI to ensure the code follows consistent formatting. Formatting is only currently enforced in the `program/` directory.
+You might also need to install the nightly toolchain to run the formatting by running `rustup toolchain install nightly`.
+
+## pythd (off-chain client API)
+
+> :warning: pythd is deprecated and has been replaced by [pyth-agent](https://github.com/pyth-network/pyth-agent).
+> This new client is backward compatible with pythd, but more stable and configurable. 
+
+`pythd` provides exposes a web API for interacting with the on-chain oracle program.
 
 ### Build Instructions
 
@@ -43,30 +83,6 @@ docker run -it \
 This command runs a recent pyth-client docker image that already has the necessary dependencies installed.
 Therefore, once the container is running, all you have to do is run `cd pyth-client && ./scripts/build.sh`.
 Note that updates to the `pyth-client` directory made inside the docker container will be persisted to the host filesystem (which is probably desirable).
-
-### Local development
-
-First, make sure you're building on the x86_64 architecture.
-On a mac, this command will switch your shell to x86_64:
-
-`env /usr/bin/arch -x86_64 /bin/bash --login`
-
-then in the `program/c` directory, run:
-
-```
-make
-make cpyth-bpf
-make cpyth-native
-```
-
-then in the `program/rust` directory, run:
-
-```
-cargo build-bpf
-cargo test
-```
-
-Note that the tests depend on the bpf build!
 
 ### Fuzzing
 
@@ -130,8 +146,3 @@ root@pyth-dev# usermod -u 1002 -g 1004 -s /bin/bash pyth
 
 Finally, in docker extension inside VS Code click right and choose "Attach VS Code". If you're using a remote host in VS Code make sure to let this connection be open.
 
-### pre-commit hooks
-pre-commit is a tool that checks and fixes simple issues (formatting, ...) before each commit. You can install it by following [their website](https://pre-commit.com/). In order to enable checks for this repo run `pre-commit install` from command-line in the root of this repo.
-
-The checks are also performed in the CI to ensure the code follows consistent formatting. Formatting is only currently enforced in the `program/` directory.
-You might also need to install the nightly toolchain to run the formatting by running `rustup toolchain install nightly`.

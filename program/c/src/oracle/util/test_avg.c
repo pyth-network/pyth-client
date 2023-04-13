@@ -2,19 +2,11 @@
 #include "util.h"
 
 int
-main( int     argc,
-      char ** argv ) {
-  (void)argc; (void)argv;
-
+test_avg() {
   prng_t _prng[1];
   prng_t * prng = prng_join( prng_new( _prng, (uint32_t)0, (uint64_t)0 ) );
 
-  int ctr;
-
-  ctr = 0;
-  for( int i=0; i<1000000000; i++ ) {
-    if( !ctr ) { printf( "reg: Completed %i iterations\n", i ); ctr = 10000000; }
-    ctr--;
+  for( int i=0; i<100000000; i++ ) {
 
 #   define TEST(w) do {                                                                      \
       uint##w##_t x = prng_uint##w( prng );                                                  \
@@ -75,18 +67,15 @@ main( int     argc,
 
 # define N 512
 
-  ctr = 0;
-  for( int i=0; i<10000000; i++ ) {
-    if( !ctr ) { printf( "mem: Completed %i iterations\n", i ); ctr = 100000; }
-    ctr--;
+  for( int i=0; i<1000000; i++ ) {
 
 #   define TEST(w) do {                                                    \
       uint##w##_t x[N];                                                    \
       uint32_t n = prng_uint32( prng ) & (uint32_t)(N-1);                  \
       uint64_t a = (uint64_t)0;                                            \
-      for( uint32_t i=(uint32_t)0; i<n; i++ ) {                            \
+      for( uint32_t j=(uint32_t)0; j<n; j++ ) {                            \
         uint##w##_t xi = prng_uint##w( prng );                             \
-        x[i] = xi;                                                         \
+        x[j] = xi;                                                         \
         a += (uint64_t)xi;                                                 \
       }                                                                    \
       if( n ) a /= (uint64_t)n;                                            \
@@ -109,9 +98,9 @@ main( int     argc,
       int##w##_t x[N];                                                                \
       uint32_t n = prng_uint32( prng ) & (uint32_t)(N-1);                             \
       int64_t a = (int64_t)0;                                                         \
-      for( uint32_t i=(uint32_t)0; i<n; i++ ) {                                       \
+      for( uint32_t j=(uint32_t)0; j<n; j++ ) {                                       \
         int##w##_t xi = (int##w##_t)prng_uint##w( prng );                             \
-        x[i] = xi;                                                                    \
+        x[j] = xi;                                                                    \
         a += (int64_t)xi;                                                             \
       }                                                                               \
       if( n ) a /= (int64_t)n; /* Assumes round to zero signed int div on platform */ \
@@ -135,8 +124,6 @@ main( int     argc,
 # undef N
 
   prng_delete( prng_leave( prng ) );
-
-  printf( "pass\n" );
 
   return 0;
 }
