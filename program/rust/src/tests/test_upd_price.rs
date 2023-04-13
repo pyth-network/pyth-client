@@ -291,7 +291,7 @@ fn test_upd_price() {
         ],
         &instruction_data
     )
-        .is_ok());
+    .is_ok());
 
     {
         let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
@@ -318,8 +318,8 @@ fn test_upd_price() {
         ],
         &instruction_data
     )
-        .is_ok());
-    
+    .is_ok());
+
     {
         let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
         assert_eq!(price_data.comp_[0].latest_.price_, -100);
