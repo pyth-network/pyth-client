@@ -27,12 +27,7 @@ fn main() {
     } else {
         make_targets.push("cpyth-native");
     }
-
-    let is_test = true;
-    if is_test {
-        make_targets.push("test");
-    }
-    println!("cargo:warning={}", cfg!(test));
+    make_targets.push("test");
 
 
     // We must forward OUT_DIR as an env variable to the make script otherwise it will output
@@ -51,12 +46,8 @@ fn main() {
     } else {
         println!("cargo:rustc-link-lib=static=cpyth-native");
     }
-    if is_test {
-        println!("cargo:rustc-link-lib=static=cpyth-test");
-    }
+    println!("cargo:rustc-link-lib=static=cpyth-test");
     println!("cargo:rustc-link-search={}", out_dir.display());
-
-    println!("cargo:warning={}", out_dir.display());
 
     // Generate and write bindings
     let bindings = Builder::default()
