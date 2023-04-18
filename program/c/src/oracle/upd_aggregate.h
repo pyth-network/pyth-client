@@ -102,20 +102,12 @@ static void upd_ema(
     // compute numer/denom and new value from decay factor
     pd_load( numer, ptr->numer_ );
     pd_load( denom, ptr->denom_ );
-    // FIXME: this if statement probably needs to get deleted!
-    if ( numer->v_ < 0 || denom->v_ < 0 ) {
-      // temporary reset twap on negative value
-      pd_set( numer, val );
-      pd_set( denom, one );
-    }
-    else {
-      pd_mul( numer, numer, decay );
-      pd_mul( wval, val, cwgt );
-      pd_add( numer, numer, wval, qs->fact_ );
-      pd_mul( denom, denom, decay );
-      pd_add( denom, denom, cwgt, qs->fact_ );
-      pd_div( val, numer, denom );
-    }
+    pd_mul( numer, numer, decay );
+    pd_mul( wval, val, cwgt );
+    pd_add( numer, numer, wval, qs->fact_ );
+    pd_mul( denom, denom, decay );
+    pd_add( denom, denom, cwgt, qs->fact_ );
+    pd_div( val, numer, denom );
   }
 
   // adjust and store results

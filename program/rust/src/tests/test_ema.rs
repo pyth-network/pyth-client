@@ -1,4 +1,5 @@
 extern crate test_generator;
+
 use {
     crate::{
         accounts::PriceAccount,
@@ -20,6 +21,41 @@ use {
 
 #[test_resources("program/rust/test_data/ema/*.csv")]
 fn test_ema(input_path_raw: &str) {
+    let (inputs, expected_outputs) = read_test_data(input_path_raw);
+    run_ema_test(&inputs, &expected_outputs);
+}
+
+// This test is identical to the one above, except that it negates all of the prices.
+#[test_resources("program/rust/test_data/ema/*.csv")]
+fn test_ema_negated(input_path_raw: &str) {
+    let (inputs, expected_outputs) = read_test_data(input_path_raw);
+
+    let modified_inputs: Vec<InputRecord> = inputs
+        .iter()
+        .map(|x| InputRecord {
+            price:  -x.price,
+            conf:   x.conf,
+            expo:   x.expo,
+            nslots: x.nslots,
+        })
+        .collect();
+
+    let modified_outputs: Vec<OutputRecord> = expected_outputs
+        .iter()
+        .map(|x| OutputRecord {
+            price:  -x.price,
+            conf:   x.conf,
+            expo:   x.expo,
+            nslots: x.nslots,
+            twap:   -x.twap,
+            twac:   x.twac,
+        })
+        .collect();
+
+    run_ema_test(&modified_inputs, &modified_outputs);
+}
+
+fn read_test_data(input_path_raw: &str) -> (Vec<InputRecord>, Vec<OutputRecord>) {
     // For some reason these tests have a different working directory than the macro.
     let input_path = input_path_raw.replace("program/rust/", "");
     let result_path = input_path.replace(".csv", ".result");
@@ -48,6 +84,10 @@ fn test_ema(input_path_raw: &str) {
         "Mismatched CSV file lengths"
     );
 
+    (inputs, expected_outputs)
+}
+
+fn run_ema_test(inputs: &[InputRecord], expected_outputs: &[OutputRecord]) {
     let current_slot = 1000;
     let current_timestamp = 1234;
     let mut price_account: PriceAccount = PriceAccount::zeroed();
@@ -69,6 +109,7 @@ fn test_ema(input_path_raw: &str) {
         assert_eq!(expected_output.twac, price_account.twac_.val_);
     }
 }
+
 
 // TODO: put these functions somewhere more accessible
 pub fn upd_aggregate(
