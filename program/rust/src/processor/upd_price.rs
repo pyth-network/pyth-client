@@ -28,6 +28,7 @@ use {
         account_info::AccountInfo,
         clock::Clock,
         entrypoint::ProgramResult,
+        hash::hashv,
         instruction::{
             AccountMeta,
             Instruction,
@@ -160,21 +161,19 @@ pub fn upd_price(
             ];
 
             let price_data = load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
-            let data_to_send = Message::PriceFeed(PriceFeedPayload::from_price_account(
+            let data_to_send = vec![Message::PriceFeed(PriceFeedPayload::from_price_account(
                 price_account.key,
                 &price_data,
             ))
-            .as_bytes()?;
+            .as_bytes()?];
 
             // TODO: craft instruction properly
             let create_inputs_ix = Instruction::new_with_borsh(
                 *accumulator_accounts.accumulator_program.key,
                 &(
-                    [1, 2, 3, 4, 5, 6, 7, 8],
+                    sighash("global", ACCUMULATOR_UPDATER_IX_NAME),
                     price_account.key.to_bytes(),
                     data_to_send,
-                    1,
-                    vec![1],
                 ),
                 account_metas,
             );
@@ -208,6 +207,22 @@ pub fn upd_price(
 
     Ok(())
 }
+
+/// Generate discriminator to be able to call anchor program's ix
+/// * `namespace` - "global" for instructions
+/// * `name` - name of ix to call CASE-SENSITIVE
+///
+/// Note: this could probably be converted into a constant hash value
+/// since it will always be the same.
+pub fn sighash(namespace: &str, name: &str) -> [u8; 8] {
+    let preimage = format!("{namespace}:{name}");
+
+    let mut sighash = [0u8; 8];
+    sighash.copy_from_slice(&hashv(&[preimage.as_bytes()]).to_bytes()[..8]);
+    sighash
+}
+
+pub const ACCUMULATOR_UPDATER_IX_NAME: &str = "put_all";
 
 
 // Wrapper struct for the accounts required to add data to the accumulator program.
