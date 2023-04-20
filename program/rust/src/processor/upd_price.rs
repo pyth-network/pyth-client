@@ -33,6 +33,7 @@ use {
             AccountMeta,
             Instruction,
         },
+        log::sol_log,
         program::invoke_signed,
         program_error::ProgramError,
         pubkey::Pubkey,
@@ -150,8 +151,12 @@ pub fn upd_price(
         }
     }
 
+    sol_log(&format!("aggregate updated: {}", aggregate_updated));
+
     if aggregate_updated {
         if let Some(accumulator_accounts) = maybe_accumulator_accounts {
+            sol_log("trying to invoke accumulator");
+
             let account_metas = vec![
                 AccountMeta::new(*funding_account.key, true),
                 AccountMeta::new_readonly(*accumulator_accounts.whitelist.key, false),
@@ -168,16 +173,20 @@ pub fn upd_price(
             .as_bytes()?];
 
             // TODO: craft instruction properly
+            let discriminator = sighash("global", ACCUMULATOR_UPDATER_IX_NAME);
             let create_inputs_ix = Instruction::new_with_borsh(
                 *accumulator_accounts.accumulator_program.key,
                 &(
-                    sighash("global", ACCUMULATOR_UPDATER_IX_NAME),
+                    discriminator,
                     price_account.key.to_bytes(),
                     data_to_send,
                 ),
                 account_metas,
             );
-            invoke_signed(&create_inputs_ix, accounts, &[])?;
+            sol_log(&format!("invoking CPI with discriminator {:?}", discriminator));
+            let result = invoke_signed(&create_inputs_ix, accounts, &[]);
+
+            sol_log(&format!("result: {:?}", result));
         }
     }
 
