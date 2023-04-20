@@ -16,8 +16,7 @@ use {
     solana_program::{
         program_error::ProgramError,
         pubkey::Pubkey,
-    },
-    std::io::Write,
+    }
 };
 
 #[repr(C)]
@@ -110,15 +109,15 @@ impl Message {
         match &self {
             Message::PriceFeed(m) => {
                 // discriminant
-                bytes.write_all(&[0u8])?;
+                bytes.extend_from_slice(&[0u8]);
                 // payload
-                bytes.write_all(&m.id[..])?;
-                bytes.write_all(&m.price.to_be_bytes())?;
-                bytes.write_all(&m.conf.to_be_bytes())?;
-                bytes.write_all(&m.exponent.to_be_bytes())?;
-                bytes.write_all(&m.publish_time.to_be_bytes())?;
-                bytes.write_all(&m.ema_price.to_be_bytes())?;
-                bytes.write_all(&m.ema_conf.to_be_bytes())?;
+                bytes.extend_from_slice(&m.id[..]);
+                bytes.extend_from_slice(&m.price.to_be_bytes());
+                bytes.extend_from_slice(&m.conf.to_be_bytes());
+                bytes.extend_from_slice(&m.exponent.to_be_bytes());
+                bytes.extend_from_slice(&m.publish_time.to_be_bytes());
+                bytes.extend_from_slice(&m.ema_price.to_be_bytes());
+                bytes.extend_from_slice(&m.ema_conf.to_be_bytes());
             }
         }
 
