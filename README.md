@@ -145,4 +145,3 @@ root@pyth-dev# usermod -u 1002 -g 1004 -s /bin/bash pyth
 ```
 
 Finally, in docker extension inside VS Code click right and choose "Attach VS Code". If you're using a remote host in VS Code make sure to let this connection be open.
-
