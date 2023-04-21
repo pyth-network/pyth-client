@@ -14,6 +14,7 @@ mod test_init_price;
 mod test_permission_migration;
 mod test_set_min_pub;
 mod test_sizes;
+mod test_publish;
 mod test_sma;
 mod test_sma_epoch_transition;
 mod test_upd_aggregate;

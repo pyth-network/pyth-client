@@ -1,3 +1,6 @@
+use solana_program::clock::Clock;
+use crate::instruction::{AddPublisherArgs, UpdPriceArgs};
+use solana_program::sysvar::SysvarId;
 use {
     crate::{
         accounts::{
@@ -8,6 +11,7 @@ use {
         c_oracle_header::{
             PC_PROD_ACC_SIZE,
             PC_PTYPE_PRICE,
+            PC_STATUS_UNKNOWN
         },
         deserialize::load,
         instruction::{
@@ -45,6 +49,7 @@ use {
         ProgramTest,
         ProgramTestBanksClientExt,
     },
+
     solana_sdk::{
         account::Account,
         signature::{
@@ -72,6 +77,13 @@ pub struct PythSimulator {
     programdata_id:        Pubkey,
     pub upgrade_authority: Keypair,
     pub genesis_keypair:   Keypair,
+}
+
+pub struct Quote {
+    pub price:     i64,
+    pub confidence:      u64,
+    pub status:    u32,
+    pub slot_diff: Option<i64>,
 }
 
 impl PythSimulator {
@@ -305,6 +317,84 @@ impl PythSimulator {
         .await
         .map(|_| price_keypair)
     }
+
+    /// Add a publisher to a price account (using the add_publisher instruction).
+    pub async fn add_publisher(
+        &mut self,
+        price_keypair : &Keypair,
+        publisher: Pubkey,
+    ) -> Result<(), BanksClientError> {
+
+        let cmd = AddPublisherArgs {
+            header:     OracleCommand::AddPublisher.into(),
+            publisher
+        };
+        let instruction = Instruction::new_with_bytes(
+            self.program_id,
+            bytes_of(&cmd),
+            vec![
+                AccountMeta::new(self.genesis_keypair.pubkey(), true),
+                AccountMeta::new(price_keypair.pubkey(), true),
+            ],
+        );
+
+        self.process_ix(
+            instruction,
+            &vec![&price_keypair],
+            &copy_keypair(&self.genesis_keypair),
+        )
+        .await
+    }
+
+        /// Update price of a component price account (using the upd_price instruction).
+        pub async fn upd_price(
+            &mut self,
+            publisher: &Keypair,
+            price_account : Pubkey,
+            optional_quote : Option<Quote>,
+        ) -> Result<(), BanksClientError> {
+    
+            let slot = self.banks_client.get_sysvar::<Clock>().await?.slot;
+            let cmd = 
+                if let Some(quote) = optional_quote {
+             UpdPriceArgs {
+                header:     OracleCommand::UpdPriceNoFailOnError.into(),
+                status : quote.status,
+                unused_:  0,
+                price : quote.price,
+                confidence : quote.confidence,
+                publishing_slot: slot
+            }
+        }
+            else {
+                UpdPriceArgs {
+                    header:     OracleCommand::UpdPriceNoFailOnError.into(),
+                    status : PC_STATUS_UNKNOWN,
+                    unused_:  0,
+                    price: 0,
+                    confidence : 0,
+                    publishing_slot: slot,
+
+            }
+            };
+            let instruction = Instruction::new_with_bytes(
+                self.program_id,
+                bytes_of(&cmd),
+                vec![
+                    AccountMeta::new(publisher.pubkey(), true),
+                    AccountMeta::new(price_account, false),
+                    AccountMeta::new(Clock::id(), false)
+                ],
+            );
+    
+            self.process_ix(
+                instruction,
+                &vec![&publisher],
+                &copy_keypair(&publisher),
+            )
+            .await
+            }
+    
 
     /// Delete a price account from an existing product account (using the del_price instruction).
     pub async fn del_price(
