@@ -162,7 +162,7 @@ pub fn upd_price(
                 AccountMeta::new_readonly(*accumulator_accounts.whitelist.key, false),
                 AccountMeta::new_readonly(*accumulator_accounts.ixs_sysvar.key, false),
                 AccountMeta::new_readonly(*accumulator_accounts.system_program.key, false),
-                AccountMeta::new_readonly(*accumulator_accounts.accumulator_data.key, false),
+                AccountMeta::new(*accumulator_accounts.accumulator_data.key, false),
             ];
 
             let price_data = load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
@@ -176,14 +176,13 @@ pub fn upd_price(
             let discriminator = sighash("global", ACCUMULATOR_UPDATER_IX_NAME);
             let create_inputs_ix = Instruction::new_with_borsh(
                 *accumulator_accounts.accumulator_program.key,
-                &(
-                    discriminator,
-                    price_account.key.to_bytes(),
-                    data_to_send,
-                ),
+                &(discriminator, price_account.key.to_bytes(), data_to_send),
                 account_metas,
             );
-            sol_log(&format!("invoking CPI with discriminator {:?}", discriminator));
+            sol_log(&format!(
+                "invoking CPI with discriminator {:?}",
+                discriminator
+            ));
             let result = invoke_signed(&create_inputs_ix, accounts, &[]);
 
             sol_log(&format!("result: {:?}", result));

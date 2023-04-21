@@ -16,7 +16,7 @@ use {
     solana_program::{
         program_error::ProgramError,
         pubkey::Pubkey,
-    }
+    },
 };
 
 #[repr(C)]
