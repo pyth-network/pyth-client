@@ -503,6 +503,8 @@ impl PythSimulator {
         permissions_pubkey
     }
 
+    /// Setup 3 product accounts with 1 price account each and add a publisher to all of them.
+    /// TODO : this fixture doesn't set the product metadata
     pub async fn setup_product_fixture(&mut self, publisher: Pubkey) -> HashMap<String, Pubkey> {
         let result_file =
             File::open("./test_data/publish/products.json").expect("Test file not found");
