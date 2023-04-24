@@ -176,15 +176,15 @@ impl PythSimulator {
     }
 
 
-    /// Process a transaction containing `instruction` signed by `signers`.
+    /// Process a transaction containing `instructions` signed by `signers`.
     /// `payer` is used to pay for and sign the transaction.
-    async fn process_ix(
+    async fn process_ixs(
         &mut self,
-        instruction: Instruction,
+        instructions: &[Instruction],
         signers: &Vec<&Keypair>,
         payer: &Keypair,
     ) -> Result<(), BanksClientError> {
-        let mut transaction = Transaction::new_with_payer(&[instruction], Some(&payer.pubkey()));
+        let mut transaction = Transaction::new_with_payer(instructions, Some(&payer.pubkey()));
 
         let blockhash = self
             .banks_client
@@ -212,8 +212,8 @@ impl PythSimulator {
             &self.program_id,
         );
 
-        self.process_ix(
-            instruction,
+        self.process_ixs(
+            &[instruction],
             &vec![&keypair],
             &copy_keypair(&self.genesis_keypair),
         )
@@ -238,8 +238,8 @@ impl PythSimulator {
             ],
         );
 
-        self.process_ix(
-            instruction,
+        self.process_ixs(
+            &[instruction],
             &vec![&mapping_keypair],
             &copy_keypair(&self.genesis_keypair),
         )
@@ -266,8 +266,8 @@ impl PythSimulator {
             ],
         );
 
-        self.process_ix(
-            instruction,
+        self.process_ixs(
+            &[instruction],
             &vec![mapping_keypair, &product_keypair],
             &copy_keypair(&self.genesis_keypair),
         )
@@ -292,8 +292,8 @@ impl PythSimulator {
             ],
         );
 
-        self.process_ix(
-            instruction,
+        self.process_ixs(
+            &[instruction],
             &vec![mapping_keypair, product_keypair],
             &copy_keypair(&self.genesis_keypair),
         )
@@ -324,8 +324,8 @@ impl PythSimulator {
             ],
         );
 
-        self.process_ix(
-            instruction,
+        self.process_ixs(
+            &[instruction],
             &vec![product_keypair, &price_keypair],
             &copy_keypair(&self.genesis_keypair),
         )
@@ -352,8 +352,8 @@ impl PythSimulator {
             ],
         );
 
-        self.process_ix(
-            instruction,
+        self.process_ixs(
+            &[instruction],
             &vec![price_keypair],
             &copy_keypair(&self.genesis_keypair),
         )
@@ -405,18 +405,8 @@ impl PythSimulator {
             ));
         }
 
-        let mut transaction = Transaction::new_with_payer(&instructions, Some(&publisher.pubkey()));
-
-        let blockhash = self
-            .banks_client
-            .get_new_latest_blockhash(&self.last_blockhash)
+        self.process_ixs(&instructions, &vec![publisher], publisher)
             .await
-            .unwrap();
-        self.last_blockhash = blockhash;
-
-        transaction.partial_sign(&[publisher], self.last_blockhash);
-
-        self.banks_client.process_transaction(transaction).await
     }
 
     // /// Delete a price account from an existing product account (using the del_price instruction).
@@ -436,8 +426,8 @@ impl PythSimulator {
             ],
         );
 
-        self.process_ix(
-            instruction,
+        self.process_ixs(
+            &[instruction],
             &vec![product_keypair, price_keypair],
             &copy_keypair(&self.genesis_keypair),
         )
@@ -464,7 +454,7 @@ impl PythSimulator {
             ],
         );
 
-        self.process_ix(instruction, &vec![], payer)
+        self.process_ixs(&[instruction], &vec![], payer)
             .await
             .map(|_| permissions_pubkey)
     }
@@ -493,8 +483,12 @@ impl PythSimulator {
         let instruction =
             system_instruction::transfer(&self.genesis_keypair.pubkey(), to, lamports);
 
-        self.process_ix(instruction, &vec![], &copy_keypair(&self.genesis_keypair))
-            .await
+        self.process_ixs(
+            &[instruction],
+            &vec![],
+            &copy_keypair(&self.genesis_keypair),
+        )
+        .await
     }
 
     pub fn get_permissions_pubkey(&self) -> Pubkey {
