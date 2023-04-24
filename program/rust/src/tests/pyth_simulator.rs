@@ -8,7 +8,6 @@ use {
         c_oracle_header::{
             PC_PROD_ACC_SIZE,
             PC_PTYPE_PRICE,
-            PC_STATUS_UNKNOWN,
         },
         deserialize::load,
         instruction::{
@@ -365,28 +364,18 @@ impl PythSimulator {
         &mut self,
         publisher: &Keypair,
         price_account: Pubkey,
-        optional_quote: Option<Quote>,
+        quote: Quote,
     ) -> Result<(), BanksClientError> {
         let slot = self.banks_client.get_sysvar::<Clock>().await?.slot;
-        let cmd = if let Some(quote) = optional_quote {
-            UpdPriceArgs {
-                header:          OracleCommand::UpdPriceNoFailOnError.into(),
-                status:          quote.status,
-                unused_:         0,
-                price:           quote.price,
-                confidence:      quote.confidence,
-                publishing_slot: slot + quote.slot_diff,
-            }
-        } else {
-            UpdPriceArgs {
-                header:          OracleCommand::UpdPriceNoFailOnError.into(),
-                status:          PC_STATUS_UNKNOWN,
-                unused_:         0,
-                price:           0,
-                confidence:      0,
-                publishing_slot: slot,
-            }
+        let cmd = UpdPriceArgs {
+            header:          OracleCommand::UpdPriceNoFailOnError.into(),
+            status:          quote.status,
+            unused_:         0,
+            price:           quote.price,
+            confidence:      quote.confidence,
+            publishing_slot: slot + quote.slot_diff,
         };
+
         let instruction = Instruction::new_with_bytes(
             self.program_id,
             bytes_of(&cmd),

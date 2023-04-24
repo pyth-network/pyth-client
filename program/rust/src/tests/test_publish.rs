@@ -47,17 +47,15 @@ async fn test_publish() {
     sim.upd_price(
         &publisher,
         price,
-        Some(Quote {
+        Quote {
             price:      150,
             confidence: 7,
             status:     PC_STATUS_TRADING,
             slot_diff:  0,
-        }),
+        },
     )
     .await
     .unwrap();
-    sim.upd_price(&publisher, price, None).await.unwrap(); //Trigger update
-
 
     {
         let price_data = sim
@@ -73,16 +71,15 @@ async fn test_publish() {
     sim.upd_price(
         &publisher,
         price,
-        Some(Quote {
+        Quote {
             price:      100,
             confidence: 1,
             status:     PC_STATUS_TRADING,
             slot_diff:  1,
-        }),
+        },
     )
     .await
     .unwrap();
-    sim.upd_price(&publisher, price, None).await.unwrap(); //Trigger update
 
     {
         let price_data = sim
