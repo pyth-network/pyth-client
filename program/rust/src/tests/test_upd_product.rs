@@ -104,7 +104,7 @@ fn populate_instruction(instruction_data: &mut [u8], strings: &[&str]) -> usize 
         *hdr = OracleCommand::UpdProduct.into();
     }
 
-    let mut idx: usize = size_of::<CommandHeader>();
+    let mut idx = size_of::<CommandHeader>();
     for s in strings.iter() {
         let pc_str = create_pc_str_t(s);
         instruction_data[idx..(idx + pc_str.len())].copy_from_slice(pc_str.as_slice());
