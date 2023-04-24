@@ -42,6 +42,10 @@ async fn test_publish() {
 
         assert_eq!(price_data.num_, 1);
         assert_eq!(price_data.comp_[0].pub_, publisher.pubkey());
+
+        assert_eq!(price_data.comp_[0].latest_.price_, 0);
+        assert_eq!(price_data.comp_[0].latest_.conf_, 0);
+        assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_UNKNOWN);
     }
 
     sim.upd_price(

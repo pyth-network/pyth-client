@@ -498,6 +498,7 @@ impl PythSimulator {
     }
 
     /// Setup 3 product accounts with 1 price account each and add a publisher to all of them.
+    /// Returns the mapping of product symbol to price account pubkey.
     /// TODO : this fixture doesn't set the product metadata
     pub async fn setup_product_fixture(&mut self, publisher: Pubkey) -> HashMap<String, Pubkey> {
         let result_file =
@@ -510,7 +511,7 @@ impl PythSimulator {
         let product_metadatas: HashMap<String, ProductMetadata> =
             serde_json::from_reader(&result_file).unwrap();
         let mut price_accounts: HashMap<String, Pubkey> = HashMap::new();
-        let mapping_keypair = self.init_mapping().await.unwrap();
+        let mapping_keypair: Keypair = self.init_mapping().await.unwrap();
         for symbol in product_metadatas.keys() {
             let product_keypair = self.add_product(&mapping_keypair).await.unwrap();
             let price_keypair = self.add_price(&product_keypair, -5).await.unwrap();
