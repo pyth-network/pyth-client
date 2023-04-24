@@ -1,4 +1,7 @@
+use serde::{Serialize, Deserialize};
+use serde_json::Value;
 use solana_program::clock::Clock;
+use std::{fs::File, collections::HashMap};
 use crate::instruction::{AddPublisherArgs, UpdPriceArgs};
 use solana_program::sysvar::SysvarId;
 use {
@@ -83,7 +86,16 @@ pub struct Quote {
     pub price:     i64,
     pub confidence:      u64,
     pub status:    u32,
-    pub slot_diff: Option<i64>,
+    pub slot_diff: u64,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct ProductMetadata {
+    symbol: String,
+    asset_type: String,
+    country: String,
+    quote_currency: String,
+    tenor: String,
 }
 
 impl PythSimulator {
@@ -363,7 +375,7 @@ impl PythSimulator {
                 unused_:  0,
                 price : quote.price,
                 confidence : quote.confidence,
-                publishing_slot: slot
+                publishing_slot: slot + quote.slot_diff
             }
         }
             else {
@@ -395,8 +407,53 @@ impl PythSimulator {
             .await
             }
     
+    /// Update price in multiple price account atomically (using the upd_price instruction)
+    // pub async fn upd_price_batch(
+    //     &mut self,
+    //     publisher: &Keypair,
+    //     price_accounts : HashMap<String, Pubkey>,
+    //     quotes : HashMap<String, Quote>
+    // ) -> Result<(), BanksClientError> {
 
-    /// Delete a price account from an existing product account (using the del_price instruction).
+    //     let mut instructions : Vec<Instruction> = vec![];
+        
+    //     for (key, price_account) in price_accounts {
+    //         let cmd =                 UpdPriceArgs {
+    //             header:     OracleCommand::UpdPriceNoFailOnError.into(),
+    //             status : quotes[key].status,
+    //             unused_:  0,
+    //             price: quotes[key].price,
+    //             confidence : quotes[key].confidence,
+    //             publishing_slot: quotes[key].publishing_slot,
+
+    //     };
+    //         instructions.push(Instruction::new_with_bytes(
+    //             self.program_id,
+    //             bytes_of(&cmd),
+    //             vec![
+    //                 AccountMeta::new(publisher.pubkey(), true),
+    //                 AccountMeta::new(price_account, false),
+    //                 AccountMeta::new(Clock::id(), false)
+    //             ],
+    //         ));
+    //     }
+
+    //     let mut transaction = Transaction::new_with_payer(&instructions, Some(&publisher.pubkey()));
+
+    //     let blockhash = self
+    //         .banks_client
+    //         .get_new_latest_blockhash(&self.last_blockhash)
+    //         .await
+    //         .unwrap();
+    //     self.last_blockhash = blockhash;
+
+    //     transaction.partial_sign(&[publisher], self.last_blockhash);
+
+    //     self.banks_client.process_transaction(transaction).await
+
+    //     }
+
+    // /// Delete a price account from an existing product account (using the del_price instruction).
     pub async fn del_price(
         &mut self,
         product_keypair: &Keypair,
@@ -478,6 +535,23 @@ impl PythSimulator {
         let (permissions_pubkey, __bump) =
             Pubkey::find_program_address(&[PERMISSIONS_SEED.as_bytes()], &self.program_id);
         permissions_pubkey
+    }
+
+    pub async fn setup_product_fixture(&mut self, publisher: Pubkey) -> HashMap<String, Pubkey>{
+        let result_file = File::open("./test_data/publish/products.json").expect("Test file not found");
+
+         self.airdrop(&publisher, 100 * LAMPORTS_PER_SOL).await.unwrap();
+
+        let product_metadatas: HashMap<String, ProductMetadata> = serde_json::from_reader(&result_file).unwrap();
+        let mut price_accounts: HashMap<String, Pubkey> = HashMap::new();
+        let mapping_keypair = self.init_mapping().await.unwrap();
+        for (symbol, product_metadatas) in &product_metadatas {
+            let product_keypair = self.add_product(&mapping_keypair).await.unwrap();
+            let price_keypair = self.add_price(&product_keypair, -5).await.unwrap();
+            self.add_publisher(&price_keypair, publisher).await.unwrap();
+            price_accounts.insert(symbol.to_string(), price_keypair.pubkey());
+        }
+        return price_accounts;
     }
 }
 

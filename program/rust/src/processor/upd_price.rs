@@ -1,3 +1,5 @@
+use solana_program::msg;
+
 use {
     crate::{
         accounts::{
@@ -73,6 +75,7 @@ pub fn upd_price(
     instruction_data: &[u8],
 ) -> ProgramResult {
     let cmd_args = load::<UpdPriceArgs>(instruction_data)?;
+    msg!("slot, price : {}, {}", cmd_args.publishing_slot, cmd_args.price);
 
     let [funding_account, price_account, clock_account] = match accounts {
         [x, y, z] => Ok([x, y, z]),
@@ -145,6 +148,7 @@ pub fn upd_price(
         }
     }
 
+
     // Try to update the publisher's price
     if is_component_update(cmd_args)? {
         let mut status: u32 = cmd_args.status;
@@ -168,6 +172,6 @@ pub fn upd_price(
             publisher_price.pub_slot_ = cmd_args.publishing_slot;
         }
     }
-
+    msg!("Done updating price");
     Ok(())
 }
