@@ -35,6 +35,7 @@ async fn test_publish_batch() {
         assert_eq!(price_data.exponent, -5);
         assert_eq!(price_data.price_type, 1);
         assert_eq!(price_data.min_pub_, PRICE_ACCOUNT_DEFAULT_MIN_PUB);
+        assert_eq!(price_data.next_price_account, Pubkey::default());
 
         assert_eq!(price_data.agg_.status_, PC_STATUS_UNKNOWN);
         assert_eq!(price_data.agg_.price_, 0);
@@ -43,7 +44,9 @@ async fn test_publish_batch() {
         assert_eq!(price_data.num_, 1);
         assert_eq!(price_data.comp_[0].pub_, publisher.pubkey());
 
-        assert_eq!(price_data.next_price_account, Pubkey::default());
+        assert_eq!(price_data.comp_[0].latest_.price_, 0);
+        assert_eq!(price_data.comp_[0].latest_.conf_, 0);
+        assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_UNKNOWN);
     }
 
     let mut quotes: HashMap<String, Quote> = HashMap::new();

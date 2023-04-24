@@ -11,6 +11,7 @@ use {
             Quote,
         },
     },
+    solana_program::pubkey::Pubkey,
     solana_sdk::{
         signature::Keypair,
         signer::Signer,
@@ -35,6 +36,7 @@ async fn test_publish() {
         assert_eq!(price_data.exponent, -5);
         assert_eq!(price_data.price_type, 1);
         assert_eq!(price_data.min_pub_, PRICE_ACCOUNT_DEFAULT_MIN_PUB);
+        assert_eq!(price_data.next_price_account, Pubkey::default());
 
         assert_eq!(price_data.agg_.status_, PC_STATUS_UNKNOWN);
         assert_eq!(price_data.agg_.price_, 0);
