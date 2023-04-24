@@ -5,6 +5,7 @@ use {
             PriceAccount,
             PriceFeedPayload,
             PriceInfo,
+            UPD_PRICE_WRITE_SEED,
         },
         c_oracle_header::{
             MAX_CI_DIVISOR,
@@ -87,16 +88,15 @@ pub fn upd_price(
     {
         [x, y, z] => Ok((x, y, z, None)),
         [x, y, _, z] => Ok((x, y, z, None)),
-        [x, y, z, a, b, c, d, e] => Ok((
+        [x, y, z, a, b, c, d] => Ok((
             x,
             y,
             z,
             Some(AccumulatorAccounts {
                 accumulator_program: a,
                 whitelist:           b,
-                system_program:      c,
-                ixs_sysvar:          d,
-                accumulator_data:    e,
+                oracle_auth_pda:     c,
+                accumulator_data:    d,
             }),
         )),
         _ => Err(OracleError::InvalidNumberOfAccounts),
@@ -155,13 +155,26 @@ pub fn upd_price(
 
     if aggregate_updated {
         if let Some(accumulator_accounts) = maybe_accumulator_accounts {
+            // Check that the oracle PDA is correctly configured for the program we are calling.
+            let oracle_auth_seeds: &[&[u8]] = &[
+                UPD_PRICE_WRITE_SEED.as_bytes(),
+                &accumulator_accounts.accumulator_program.key.to_bytes(),
+            ];
+            let (expected_oracle_auth_pda, _) =
+                Pubkey::find_program_address(oracle_auth_seeds, program_id);
+            pyth_assert(
+                expected_oracle_auth_pda == *accumulator_accounts.oracle_auth_pda.key,
+                OracleError::InvalidPda.into(),
+            )?;
+
             sol_log("trying to invoke accumulator");
 
             let account_metas = vec![
                 AccountMeta::new(*funding_account.key, true),
                 AccountMeta::new_readonly(*accumulator_accounts.whitelist.key, false),
-                AccountMeta::new_readonly(*accumulator_accounts.ixs_sysvar.key, false),
-                AccountMeta::new_readonly(*accumulator_accounts.system_program.key, false),
+                AccountMeta::new_readonly(*accumulator_accounts.oracle_auth_pda.key, true),
+                // FIXME: this is still in the message buffer code but pretty sure it's not needed
+                // AccountMeta::new_readonly(*accumulator_accounts.system_program.key, false),
                 AccountMeta::new(*accumulator_accounts.accumulator_data.key, false),
             ];
 
@@ -183,7 +196,7 @@ pub fn upd_price(
                 "invoking CPI with discriminator {:?}",
                 discriminator
             ));
-            let result = invoke_signed(&create_inputs_ix, accounts, &[]);
+            let result = invoke_signed(&create_inputs_ix, accounts, &[oracle_auth_seeds]);
 
             sol_log(&format!("result: {:?}", result));
         }
@@ -237,7 +250,6 @@ pub const ACCUMULATOR_UPDATER_IX_NAME: &str = "put_all";
 struct AccumulatorAccounts<'a, 'b: 'a> {
     accumulator_program: &'a AccountInfo<'b>,
     whitelist:           &'a AccountInfo<'b>,
-    system_program:      &'a AccountInfo<'b>,
-    ixs_sysvar:          &'a AccountInfo<'b>,
+    oracle_auth_pda:     &'a AccountInfo<'b>,
     accumulator_data:    &'a AccountInfo<'b>,
 }
