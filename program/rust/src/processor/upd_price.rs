@@ -1,16 +1,8 @@
-use solana_program::msg;
-
-use crate::utils::check_confidence_too_big;
-
 use {
     crate::{
         accounts::{
             PriceAccount,
             PriceInfo,
-        },
-        c_oracle_header::{
-            MAX_CI_DIVISOR,
-            PC_STATUS_IGNORED,
         },
         deserialize::{
             load,
@@ -18,6 +10,7 @@ use {
         },
         instruction::UpdPriceArgs,
         utils::{
+            check_confidence_too_big,
             check_valid_funding_account,
             check_valid_writable_account,
             is_component_update,
@@ -77,7 +70,6 @@ pub fn upd_price(
     instruction_data: &[u8],
 ) -> ProgramResult {
     let cmd_args = load::<UpdPriceArgs>(instruction_data)?;
-    msg!("slot, price : {}, {}", cmd_args.publishing_slot, cmd_args.price);
 
     let [funding_account, price_account, clock_account] = match accounts {
         [x, y, z] => Ok([x, y, z]),
@@ -153,8 +145,9 @@ pub fn upd_price(
 
     // Try to update the publisher's price
     if is_component_update(cmd_args)? {
-        let mut status: u32 = check_confidence_too_big(cmd_args.price, cmd_args.confidence, cmd_args.status)?;
-        
+        let status: u32 =
+            check_confidence_too_big(cmd_args.price, cmd_args.confidence, cmd_args.status)?;
+
         {
             let mut price_data =
                 load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
@@ -165,6 +158,6 @@ pub fn upd_price(
             publisher_price.pub_slot_ = cmd_args.publishing_slot;
         }
     }
-    msg!("Done updating price");
+
     Ok(())
 }

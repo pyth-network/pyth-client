@@ -1,9 +1,3 @@
-use serde::{Serialize, Deserialize};
-use serde_json::Value;
-use solana_program::clock::Clock;
-use std::{fs::File, collections::HashMap};
-use crate::instruction::{AddPublisherArgs, UpdPriceArgs};
-use solana_program::sysvar::SysvarId;
 use {
     crate::{
         accounts::{
@@ -14,25 +8,32 @@ use {
         c_oracle_header::{
             PC_PROD_ACC_SIZE,
             PC_PTYPE_PRICE,
-            PC_STATUS_UNKNOWN
+            PC_STATUS_UNKNOWN,
         },
         deserialize::load,
         instruction::{
             AddPriceArgs,
+            AddPublisherArgs,
             CommandHeader,
             OracleCommand,
             UpdPermissionsArgs,
+            UpdPriceArgs,
         },
     },
     bytemuck::{
         bytes_of,
         Pod,
     },
+    serde::{
+        Deserialize,
+        Serialize,
+    },
     solana_program::{
         bpf_loader_upgradeable::{
             self,
             UpgradeableLoaderState,
         },
+        clock::Clock,
         hash::Hash,
         instruction::{
             AccountMeta,
@@ -44,6 +45,7 @@ use {
         stake_history::Epoch,
         system_instruction,
         system_program,
+        sysvar::SysvarId,
     },
     solana_program_test::{
         read_file,
@@ -52,7 +54,6 @@ use {
         ProgramTest,
         ProgramTestBanksClientExt,
     },
-
     solana_sdk::{
         account::Account,
         signature::{
@@ -62,6 +63,8 @@ use {
         transaction::Transaction,
     },
     std::{
+        collections::HashMap,
+        fs::File,
         mem::size_of,
         path::Path,
     },
@@ -83,19 +86,19 @@ pub struct PythSimulator {
 }
 
 pub struct Quote {
-    pub price:     i64,
-    pub confidence:      u64,
-    pub status:    u32,
-    pub slot_diff: u64,
+    pub price:      i64,
+    pub confidence: u64,
+    pub status:     u32,
+    pub slot_diff:  u64,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 struct ProductMetadata {
-    symbol: String,
-    asset_type: String,
-    country: String,
+    symbol:         String,
+    asset_type:     String,
+    country:        String,
     quote_currency: String,
-    tenor: String,
+    tenor:          String,
 }
 
 impl PythSimulator {
@@ -333,13 +336,12 @@ impl PythSimulator {
     /// Add a publisher to a price account (using the add_publisher instruction).
     pub async fn add_publisher(
         &mut self,
-        price_keypair : &Keypair,
+        price_keypair: &Keypair,
         publisher: Pubkey,
     ) -> Result<(), BanksClientError> {
-
         let cmd = AddPublisherArgs {
-            header:     OracleCommand::AddPublisher.into(),
-            publisher
+            header: OracleCommand::AddPublisher.into(),
+            publisher,
         };
         let instruction = Instruction::new_with_bytes(
             self.program_id,
@@ -352,88 +354,79 @@ impl PythSimulator {
 
         self.process_ix(
             instruction,
-            &vec![&price_keypair],
+            &vec![price_keypair],
             &copy_keypair(&self.genesis_keypair),
         )
         .await
     }
 
-        /// Update price of a component price account (using the upd_price instruction).
-        pub async fn upd_price(
-            &mut self,
-            publisher: &Keypair,
-            price_account : Pubkey,
-            optional_quote : Option<Quote>,
-        ) -> Result<(), BanksClientError> {
-    
-            let slot = self.banks_client.get_sysvar::<Clock>().await?.slot;
-            let cmd = 
-                if let Some(quote) = optional_quote {
-             UpdPriceArgs {
-                header:     OracleCommand::UpdPriceNoFailOnError.into(),
-                status : quote.status,
-                unused_:  0,
-                price : quote.price,
-                confidence : quote.confidence,
-                publishing_slot: slot + quote.slot_diff
+    /// Update price of a component price account (using the upd_price instruction).
+    pub async fn upd_price(
+        &mut self,
+        publisher: &Keypair,
+        price_account: Pubkey,
+        optional_quote: Option<Quote>,
+    ) -> Result<(), BanksClientError> {
+        let slot = self.banks_client.get_sysvar::<Clock>().await?.slot;
+        let cmd = if let Some(quote) = optional_quote {
+            UpdPriceArgs {
+                header:          OracleCommand::UpdPriceNoFailOnError.into(),
+                status:          quote.status,
+                unused_:         0,
+                price:           quote.price,
+                confidence:      quote.confidence,
+                publishing_slot: slot + quote.slot_diff,
             }
-        }
-            else {
-                UpdPriceArgs {
-                    header:     OracleCommand::UpdPriceNoFailOnError.into(),
-                    status : PC_STATUS_UNKNOWN,
-                    unused_:  0,
-                    price: 0,
-                    confidence : 0,
-                    publishing_slot: slot,
+        } else {
+            UpdPriceArgs {
+                header:          OracleCommand::UpdPriceNoFailOnError.into(),
+                status:          PC_STATUS_UNKNOWN,
+                unused_:         0,
+                price:           0,
+                confidence:      0,
+                publishing_slot: slot,
+            }
+        };
+        let instruction = Instruction::new_with_bytes(
+            self.program_id,
+            bytes_of(&cmd),
+            vec![
+                AccountMeta::new(publisher.pubkey(), true),
+                AccountMeta::new(price_account, false),
+                AccountMeta::new(Clock::id(), false),
+            ],
+        );
 
-            }
-            };
-            let instruction = Instruction::new_with_bytes(
-                self.program_id,
-                bytes_of(&cmd),
-                vec![
-                    AccountMeta::new(publisher.pubkey(), true),
-                    AccountMeta::new(price_account, false),
-                    AccountMeta::new(Clock::id(), false)
-                ],
-            );
-    
-            self.process_ix(
-                instruction,
-                &vec![&publisher],
-                &copy_keypair(&publisher),
-            )
+        self.process_ix(instruction, &vec![publisher], &copy_keypair(publisher))
             .await
-            }
-    
+    }
+
     /// Update price in multiple price account atomically (using the upd_price instruction)
     pub async fn upd_price_batch(
         &mut self,
         publisher: &Keypair,
-        price_accounts : &HashMap<String, Pubkey>,
-        quotes : &HashMap<String, Quote>
+        price_accounts: &HashMap<String, Pubkey>,
+        quotes: &HashMap<String, Quote>,
     ) -> Result<(), BanksClientError> {
         let slot = self.banks_client.get_sysvar::<Clock>().await?.slot;
-        let mut instructions : Vec<Instruction> = vec![];
-        
-        for (key, price_account) in price_accounts {
-            let cmd =                 UpdPriceArgs {
-                header:     OracleCommand::UpdPriceNoFailOnError.into(),
-                status : quotes[key].status,
-                unused_:  0,
-                price: quotes[key].price,
-                confidence : quotes[key].confidence,
-                publishing_slot: slot + quotes[key].slot_diff,
+        let mut instructions: Vec<Instruction> = vec![];
 
-        };
+        for (key, price_account) in price_accounts {
+            let cmd = UpdPriceArgs {
+                header:          OracleCommand::UpdPriceNoFailOnError.into(),
+                status:          quotes[key].status,
+                unused_:         0,
+                price:           quotes[key].price,
+                confidence:      quotes[key].confidence,
+                publishing_slot: slot + quotes[key].slot_diff,
+            };
             instructions.push(Instruction::new_with_bytes(
                 self.program_id,
                 bytes_of(&cmd),
                 vec![
                     AccountMeta::new(publisher.pubkey(), true),
                     AccountMeta::new(*price_account, false),
-                    AccountMeta::new(Clock::id(), false)
+                    AccountMeta::new(Clock::id(), false),
                 ],
             ));
         }
@@ -450,8 +443,7 @@ impl PythSimulator {
         transaction.partial_sign(&[publisher], self.last_blockhash);
 
         self.banks_client.process_transaction(transaction).await
-
-        }
+    }
 
     // /// Delete a price account from an existing product account (using the del_price instruction).
     pub async fn del_price(
@@ -537,21 +529,25 @@ impl PythSimulator {
         permissions_pubkey
     }
 
-    pub async fn setup_product_fixture(&mut self, publisher: Pubkey) -> HashMap<String, Pubkey>{
-        let result_file = File::open("./test_data/publish/products.json").expect("Test file not found");
+    pub async fn setup_product_fixture(&mut self, publisher: Pubkey) -> HashMap<String, Pubkey> {
+        let result_file =
+            File::open("./test_data/publish/products.json").expect("Test file not found");
 
-         self.airdrop(&publisher, 100 * LAMPORTS_PER_SOL).await.unwrap();
+        self.airdrop(&publisher, 100 * LAMPORTS_PER_SOL)
+            .await
+            .unwrap();
 
-        let product_metadatas: HashMap<String, ProductMetadata> = serde_json::from_reader(&result_file).unwrap();
+        let product_metadatas: HashMap<String, ProductMetadata> =
+            serde_json::from_reader(&result_file).unwrap();
         let mut price_accounts: HashMap<String, Pubkey> = HashMap::new();
         let mapping_keypair = self.init_mapping().await.unwrap();
-        for (symbol, product_metadatas) in &product_metadatas {
+        for symbol in product_metadatas.keys() {
             let product_keypair = self.add_product(&mapping_keypair).await.unwrap();
             let price_keypair = self.add_price(&product_keypair, -5).await.unwrap();
             self.add_publisher(&price_keypair, publisher).await.unwrap();
             price_accounts.insert(symbol.to_string(), price_keypair.pubkey());
         }
-        return price_accounts;
+        price_accounts
     }
 }
 
