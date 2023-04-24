@@ -64,6 +64,7 @@ use {
     std::{
         collections::HashMap,
         fs::File,
+        iter::once,
         mem::size_of,
         path::Path,
     },
@@ -366,28 +367,12 @@ impl PythSimulator {
         price_account: Pubkey,
         quote: Quote,
     ) -> Result<(), BanksClientError> {
-        let slot = self.banks_client.get_sysvar::<Clock>().await?.slot;
-        let cmd = UpdPriceArgs {
-            header:          OracleCommand::UpdPriceNoFailOnError.into(),
-            status:          quote.status,
-            unused_:         0,
-            price:           quote.price,
-            confidence:      quote.confidence,
-            publishing_slot: slot + quote.slot_diff,
-        };
-
-        let instruction = Instruction::new_with_bytes(
-            self.program_id,
-            bytes_of(&cmd),
-            vec![
-                AccountMeta::new(publisher.pubkey(), true),
-                AccountMeta::new(price_account, false),
-                AccountMeta::new(Clock::id(), false),
-            ],
-        );
-
-        self.process_ix(instruction, &vec![publisher], &copy_keypair(publisher))
-            .await
+        self.upd_price_batch(
+            publisher,
+            &HashMap::from_iter(once(("".to_string(), price_account))),
+            &HashMap::from_iter(once(("".to_string(), quote))),
+        )
+        .await
     }
 
     /// Update price in multiple price account atomically (using the upd_price instruction)
