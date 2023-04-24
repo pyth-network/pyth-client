@@ -48,10 +48,11 @@ use {
     },
     solana_program_test::{
         read_file,
-        BanksClient,
         BanksClientError,
         ProgramTest,
         ProgramTestBanksClientExt,
+        ProgramTestContext,
+        ProgramTestError,
     },
     solana_sdk::{
         account::Account,
@@ -75,7 +76,7 @@ use {
 /// this struct to test how pyth instructions execute in the Solana runtime.
 pub struct PythSimulator {
     program_id:            Pubkey,
-    banks_client:          BanksClient,
+    context:               ProgramTestContext,
     /// Hash used to submit the last transaction. The hash must be advanced for each new
     /// transaction; otherwise, replayed transactions in different states can return stale
     /// results.
@@ -89,7 +90,6 @@ pub struct Quote {
     pub price:      i64,
     pub confidence: u64,
     pub status:     u32,
-    pub slot_diff:  u64,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -155,12 +155,13 @@ impl PythSimulator {
 
 
         // Start validator
-        let (banks_client, genesis_keypair, recent_blockhash) = program_test.start().await;
-
+        let context = program_test.start_with_context().await;
+        let genesis_keypair = copy_keypair(&context.payer);
+        let last_blockhash = context.last_blockhash;
         let mut result = PythSimulator {
             program_id: program_key,
-            banks_client,
-            last_blockhash: recent_blockhash,
+            context,
+            last_blockhash,
             programdata_id: programdata_key,
             upgrade_authority: upgrade_authority_keypair,
             genesis_keypair,
@@ -187,6 +188,7 @@ impl PythSimulator {
         let mut transaction = Transaction::new_with_payer(instructions, Some(&payer.pubkey()));
 
         let blockhash = self
+            .context
             .banks_client
             .get_new_latest_blockhash(&self.last_blockhash)
             .await
@@ -196,7 +198,10 @@ impl PythSimulator {
         transaction.partial_sign(&[payer], self.last_blockhash);
         transaction.partial_sign(signers, self.last_blockhash);
 
-        self.banks_client.process_transaction(transaction).await
+        self.context
+            .banks_client
+            .process_transaction(transaction)
+            .await
     }
 
     /// Create an account owned by the pyth program containing `size` bytes.
@@ -382,7 +387,7 @@ impl PythSimulator {
         price_accounts: &HashMap<String, Pubkey>,
         quotes: &HashMap<String, Quote>,
     ) -> Result<(), BanksClientError> {
-        let slot = self.banks_client.get_sysvar::<Clock>().await?.slot;
+        let slot = self.context.banks_client.get_sysvar::<Clock>().await?.slot;
         let mut instructions: Vec<Instruction> = vec![];
 
         for (key, price_account) in price_accounts {
@@ -392,7 +397,7 @@ impl PythSimulator {
                 unused_:         0,
                 price:           quotes[key].price,
                 confidence:      quotes[key].confidence,
-                publishing_slot: slot + quotes[key].slot_diff,
+                publishing_slot: slot,
             };
             instructions.push(Instruction::new_with_bytes(
                 self.program_id,
@@ -461,7 +466,7 @@ impl PythSimulator {
 
     /// Get the account at `key`. Returns `None` if no such account exists.
     pub async fn get_account(&mut self, key: Pubkey) -> Option<Account> {
-        self.banks_client.get_account(key).await.unwrap()
+        self.context.banks_client.get_account(key).await.unwrap()
     }
 
 
@@ -519,6 +524,11 @@ impl PythSimulator {
             price_accounts.insert(symbol.to_string(), price_keypair.pubkey());
         }
         price_accounts
+    }
+
+    /// Advance clock to slot `slot`.
+    pub async fn warp_to_slot(&mut self, slot: u64) -> Result<(), ProgramTestError> {
+        self.context.warp_to_slot(slot)
     }
 }
 
