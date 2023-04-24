@@ -47,6 +47,10 @@ async fn test_publish_batch() {
         assert_eq!(price_data.comp_[0].latest_.price_, 0);
         assert_eq!(price_data.comp_[0].latest_.conf_, 0);
         assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_UNKNOWN);
+
+        assert_eq!(price_data.comp_[0].agg_.price_, 0);
+        assert_eq!(price_data.comp_[0].agg_.conf_, 0);
+        assert_eq!(price_data.comp_[0].agg_.status_, PC_STATUS_UNKNOWN);
     }
 
     let mut quotes: HashMap<String, Quote> = HashMap::new();
@@ -74,14 +78,12 @@ async fn test_publish_batch() {
         let quote = quotes.get(key).unwrap();
         assert_eq!(price_data.comp_[0].latest_.price_, quote.price);
         assert_eq!(price_data.comp_[0].latest_.conf_, quote.confidence);
-        println!("{} {}", quote.price, quote.confidence);
-        println!(
-            "status : {}",
-            check_confidence_too_big(quote.price, quote.confidence, quote.status).unwrap()
-        );
         assert_eq!(
             price_data.comp_[0].latest_.status_,
             check_confidence_too_big(quote.price, quote.confidence, quote.status).unwrap()
         );
+        assert_eq!(price_data.comp_[0].agg_.price_, 0);
+        assert_eq!(price_data.comp_[0].agg_.conf_, 0);
+        assert_eq!(price_data.comp_[0].agg_.status_, PC_STATUS_UNKNOWN);
     }
 }
