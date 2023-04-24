@@ -82,6 +82,35 @@ async fn test_publish() {
         &publisher,
         price,
         Quote {
+            price:      0,
+            confidence: 0,
+            status:     PC_STATUS_UNKNOWN,
+        },
+    )
+    .await
+    .unwrap();
+
+
+    {
+        let price_data = sim
+            .get_account_data_as::<PriceAccount>(price)
+            .await
+            .unwrap();
+
+        assert_eq!(price_data.comp_[0].latest_.price_, 0);
+        assert_eq!(price_data.comp_[0].latest_.conf_, 0);
+        assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_UNKNOWN);
+
+        assert_eq!(price_data.comp_[0].agg_.price_, 150);
+        assert_eq!(price_data.comp_[0].agg_.conf_, 7);
+        assert_eq!(price_data.comp_[0].agg_.status_, PC_STATUS_TRADING);
+    }
+
+    sim.warp_to_slot(3).await.unwrap();
+    sim.upd_price(
+        &publisher,
+        price,
+        Quote {
             price:      100,
             confidence: 1,
             status:     PC_STATUS_TRADING,
@@ -100,40 +129,12 @@ async fn test_publish() {
         assert_eq!(price_data.comp_[0].latest_.conf_, 1);
         assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_TRADING);
 
-        assert_eq!(price_data.comp_[0].agg_.price_, 150);
-        assert_eq!(price_data.comp_[0].agg_.conf_, 7);
-        assert_eq!(price_data.comp_[0].agg_.status_, PC_STATUS_TRADING);
+        assert_eq!(price_data.comp_[0].agg_.price_, 0);
+        assert_eq!(price_data.comp_[0].agg_.conf_, 0);
+        assert_eq!(price_data.comp_[0].agg_.status_, PC_STATUS_UNKNOWN);
     }
 
-    // This update gets rejected since no time has passed
-    sim.upd_price(
-        &publisher,
-        price,
-        Quote {
-            price:      0,
-            confidence: 0,
-            status:     PC_STATUS_UNKNOWN,
-        },
-    )
-    .await
-    .unwrap();
-
-    {
-        let price_data = sim
-            .get_account_data_as::<PriceAccount>(price)
-            .await
-            .unwrap();
-
-        assert_eq!(price_data.comp_[0].latest_.price_, 100);
-        assert_eq!(price_data.comp_[0].latest_.conf_, 1);
-        assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_TRADING);
-
-        assert_eq!(price_data.comp_[0].agg_.price_, 150);
-        assert_eq!(price_data.comp_[0].agg_.conf_, 7);
-        assert_eq!(price_data.comp_[0].agg_.status_, PC_STATUS_TRADING);
-    }
-
-    sim.warp_to_slot(3).await.unwrap();
+    sim.warp_to_slot(4).await.unwrap();
     sim.upd_price(
         &publisher,
         price,
