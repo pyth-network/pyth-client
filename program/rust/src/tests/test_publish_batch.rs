@@ -7,6 +7,8 @@ use crate::c_oracle_header::PC_VERSION;
 use crate::c_oracle_header::PC_STATUS_UNKNOWN;
 use crate::c_oracle_header::PC_STATUS_TRADING;
 use crate::c_oracle_header::PRICE_ACCOUNT_DEFAULT_MIN_PUB;
+use crate::tests::pyth_simulator::Quote;
+use crate::utils::check_confidence_too_big;
 use crate::{tests::pyth_simulator::PythSimulator, accounts::PriceAccount};
 
 #[tokio::test]
@@ -15,8 +17,8 @@ async fn test_publish_batch() {
     let publisher = Keypair::new();
     let price_accounts = sim.setup_product_fixture(publisher.pubkey()).await;
     
-    for (key, price) in price_accounts {
-        let price_data = sim.get_account_data_as::<PriceAccount>(price).await.unwrap();
+    for (key, price) in &price_accounts {
+        let price_data = sim.get_account_data_as::<PriceAccount>(*price).await.unwrap();
     
         assert_eq!(price_data.exponent, -5);
         assert_eq!(price_data.price_type, 1);
@@ -33,11 +35,22 @@ async fn test_publish_batch() {
     }
 
     let mut quotes : HashMap<String, Quote> = HashMap::new();
-    for (key, price) in price_accounts {
-        quotes.insert(key, Quote { price: 150, confidence: 7, status: PC_STATUS_TRADING, slot_diff : 0});
+    for (key, price) in &price_accounts {
+        quotes.insert(key.to_string(), Quote { price: rand::random::<i64>() % 150 + 1, confidence: rand::random::<u64>() % 20 + 1, status: PC_STATUS_TRADING, slot_diff : 0});
     }
 
-    // sim.upd_price_batch
+    sim.upd_price_batch(&publisher, &price_accounts,&quotes).await.unwrap();
+    
+    for (key, price) in &price_accounts {
+        let price_data = sim.get_account_data_as::<PriceAccount>(*price).await.unwrap();
+        let quote = quotes.get(key).unwrap();
+        assert_eq!(price_data.comp_[0].latest_.price_, quote.price);
+        assert_eq!(price_data.comp_[0].latest_.conf_, quote.confidence);
+        println!("{} {}", quote.price, quote.confidence);
+        println!("status : {}", check_confidence_too_big(quote.price, quote.confidence, quote.status).unwrap());
+        assert_eq!(price_data.comp_[0].latest_.status_, check_confidence_too_big(quote.price, quote.confidence, quote.status).unwrap());
+    }
 
 
 }
+

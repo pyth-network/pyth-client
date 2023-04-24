@@ -408,50 +408,50 @@ impl PythSimulator {
             }
     
     /// Update price in multiple price account atomically (using the upd_price instruction)
-    // pub async fn upd_price_batch(
-    //     &mut self,
-    //     publisher: &Keypair,
-    //     price_accounts : HashMap<String, Pubkey>,
-    //     quotes : HashMap<String, Quote>
-    // ) -> Result<(), BanksClientError> {
-
-    //     let mut instructions : Vec<Instruction> = vec![];
+    pub async fn upd_price_batch(
+        &mut self,
+        publisher: &Keypair,
+        price_accounts : &HashMap<String, Pubkey>,
+        quotes : &HashMap<String, Quote>
+    ) -> Result<(), BanksClientError> {
+        let slot = self.banks_client.get_sysvar::<Clock>().await?.slot;
+        let mut instructions : Vec<Instruction> = vec![];
         
-    //     for (key, price_account) in price_accounts {
-    //         let cmd =                 UpdPriceArgs {
-    //             header:     OracleCommand::UpdPriceNoFailOnError.into(),
-    //             status : quotes[key].status,
-    //             unused_:  0,
-    //             price: quotes[key].price,
-    //             confidence : quotes[key].confidence,
-    //             publishing_slot: quotes[key].publishing_slot,
+        for (key, price_account) in price_accounts {
+            let cmd =                 UpdPriceArgs {
+                header:     OracleCommand::UpdPriceNoFailOnError.into(),
+                status : quotes[key].status,
+                unused_:  0,
+                price: quotes[key].price,
+                confidence : quotes[key].confidence,
+                publishing_slot: slot + quotes[key].slot_diff,
 
-    //     };
-    //         instructions.push(Instruction::new_with_bytes(
-    //             self.program_id,
-    //             bytes_of(&cmd),
-    //             vec![
-    //                 AccountMeta::new(publisher.pubkey(), true),
-    //                 AccountMeta::new(price_account, false),
-    //                 AccountMeta::new(Clock::id(), false)
-    //             ],
-    //         ));
-    //     }
+        };
+            instructions.push(Instruction::new_with_bytes(
+                self.program_id,
+                bytes_of(&cmd),
+                vec![
+                    AccountMeta::new(publisher.pubkey(), true),
+                    AccountMeta::new(*price_account, false),
+                    AccountMeta::new(Clock::id(), false)
+                ],
+            ));
+        }
 
-    //     let mut transaction = Transaction::new_with_payer(&instructions, Some(&publisher.pubkey()));
+        let mut transaction = Transaction::new_with_payer(&instructions, Some(&publisher.pubkey()));
 
-    //     let blockhash = self
-    //         .banks_client
-    //         .get_new_latest_blockhash(&self.last_blockhash)
-    //         .await
-    //         .unwrap();
-    //     self.last_blockhash = blockhash;
+        let blockhash = self
+            .banks_client
+            .get_new_latest_blockhash(&self.last_blockhash)
+            .await
+            .unwrap();
+        self.last_blockhash = blockhash;
 
-    //     transaction.partial_sign(&[publisher], self.last_blockhash);
+        transaction.partial_sign(&[publisher], self.last_blockhash);
 
-    //     self.banks_client.process_transaction(transaction).await
+        self.banks_client.process_transaction(transaction).await
 
-    //     }
+        }
 
     // /// Delete a price account from an existing product account (using the del_price instruction).
     pub async fn del_price(

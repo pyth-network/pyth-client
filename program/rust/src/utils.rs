@@ -1,3 +1,6 @@
+use crate::c_oracle_header::MAX_CI_DIVISOR;
+use crate::c_oracle_header::PC_STATUS_IGNORED;
+
 use {
     crate::{
         accounts::{
@@ -192,6 +195,21 @@ pub fn is_component_update(cmd_args: &UpdPriceArgs) -> Result<bool, OracleError>
     {
         OracleCommand::UpdPrice | OracleCommand::UpdPriceNoFailOnError => Ok(true),
         _ => Ok(false),
+    }
+}
+
+pub fn check_confidence_too_big(price : i64, confidence : u64, status : u32) -> Result<u32, OracleError> {
+    let mut threshold_conf = price / MAX_CI_DIVISOR;
+
+    if threshold_conf < 0 {
+        threshold_conf = -threshold_conf;
+    }
+
+    if (confidence > try_convert::<_, u64>(threshold_conf)?){
+        return Ok(PC_STATUS_IGNORED)
+    }
+    else {
+        return Ok(status)
     }
 }
 

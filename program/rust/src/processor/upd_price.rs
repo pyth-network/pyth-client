@@ -1,5 +1,7 @@
 use solana_program::msg;
 
+use crate::utils::check_confidence_too_big;
+
 use {
     crate::{
         accounts::{
@@ -151,17 +153,8 @@ pub fn upd_price(
 
     // Try to update the publisher's price
     if is_component_update(cmd_args)? {
-        let mut status: u32 = cmd_args.status;
-        let mut threshold_conf = cmd_args.price / MAX_CI_DIVISOR;
-
-        if threshold_conf < 0 {
-            threshold_conf = -threshold_conf;
-        }
-
-        if cmd_args.confidence > try_convert::<_, u64>(threshold_conf)? {
-            status = PC_STATUS_IGNORED
-        }
-
+        let mut status: u32 = check_confidence_too_big(cmd_args.price, cmd_args.confidence, cmd_args.status)?;
+        
         {
             let mut price_data =
                 load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
