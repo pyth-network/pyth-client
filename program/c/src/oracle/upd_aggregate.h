@@ -12,10 +12,6 @@ extern "C" {
 
 typedef struct pc_qset
 {
-  pd_t      iprice_[PC_COMP_SIZE];
-  pd_t      uprice_[PC_COMP_SIZE];
-  pd_t      lprice_[PC_COMP_SIZE];
-  pd_t      weight_[PC_COMP_SIZE];
   int64_t   decay_[1+PC_MAX_SEND_LATENCY];
   int64_t   fact_[PC_FACTOR_SIZE];
 } pc_qset_t;

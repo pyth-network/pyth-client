@@ -27,7 +27,7 @@ const uint64_t EXTRA_PUBLISHER_SPACE = 3072ULL;
 #define PC_PUBKEY_SIZE       32
 #define PC_PUBKEY_SIZE_64   (PC_PUBKEY_SIZE/sizeof(uint64_t))
 #define PC_MAP_TABLE_SIZE   640
-#define PC_COMP_SIZE         128
+#define PC_COMP_SIZE         64
 
 #define PC_PROD_ACC_SIZE    512
 #define PC_EXP_DECAY         -9
