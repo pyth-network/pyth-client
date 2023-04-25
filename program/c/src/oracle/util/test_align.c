@@ -3,9 +3,7 @@
 #include "util.h"
 
 int
-main( int     argc,
-      char ** argv ) {
-  (void)argc; (void)argv;
+test_align() {
 
   uint32_t shift_mask = (uint32_t)(sizeof(uintptr_t)*(size_t)CHAR_BIT);
   if( !align_ispow2( (uintptr_t)shift_mask ) ) {
@@ -17,10 +15,7 @@ main( int     argc,
   prng_t _prng[1];
   prng_t * prng = prng_join( prng_new( _prng, (uint32_t)0, (uint64_t)0 ) );
 
-  int ctr = 0;
   for( int i=0; i<1000000000; i++ ) {
-    if( !ctr ) { printf( "Completed %i iterations\n", i ); ctr = 10000000; }
-    ctr--;
 
     /* Test align_ispow2 */
 
@@ -69,8 +64,6 @@ main( int     argc,
   }
 
   prng_delete( prng_leave( prng ) );
-
-  printf( "pass\n" );
 
   return 0;
 }

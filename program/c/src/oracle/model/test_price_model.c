@@ -14,10 +14,7 @@ qcmp( void const * _p,
   return 0;
 }
 
-int
-main( int     argc,
-      char ** argv ) {
-  (void)argc; (void)argv;
+int test_price_model() {
 
   prng_t _prng[1];
   prng_t * prng = prng_join( prng_new( _prng, (uint32_t)0, (uint64_t)0 ) );
@@ -29,10 +26,7 @@ main( int     argc,
   int64_t val    [3];
   int64_t scratch[N];
 
-  int ctr = 0;
   for( int iter=0; iter<10000000; iter++ ) {
-    if( !ctr ) { printf( "Completed %u iterations\n", iter ); ctr = 100000; }
-    ctr--;
 
     /* Generate a random test */
 
@@ -63,6 +57,5 @@ main( int     argc,
 
   prng_delete( prng_leave( prng ) );
 
-  printf( "pass\n" );
   return 0;
 }

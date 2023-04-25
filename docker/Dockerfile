@@ -63,8 +63,6 @@ RUN ./pyth-client/scripts/patch-solana.sh
 # Build and test the oracle program.
 RUN cd pyth-client && ./scripts/build-bpf.sh .
 RUN cd pyth-client && ./scripts/check-size.sh
-# Run aggregation logic tests
-RUN cd pyth-client && ./scripts/run-aggregation-tests.sh
 RUN cd pyth-client/pyth && poetry install && poetry run python -m pytest
 
 ENTRYPOINT []
