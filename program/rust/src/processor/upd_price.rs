@@ -102,10 +102,14 @@ pub fn upd_price(
         _ => Err(OracleError::InvalidNumberOfAccounts),
     }?;
 
+    sol_log("valid number of input accounts");
+
     check_valid_funding_account(funding_account)?;
     check_valid_writable_account(program_id, price_account)?;
     // Check clock
     let clock = Clock::from_account_info(clock_account)?;
+
+    sol_log("checked accounts");
 
     let mut publisher_index: usize = 0;
     let latest_aggregate_price: PriceInfo;
@@ -137,6 +141,8 @@ pub fn upd_price(
         )?;
     }
 
+    sol_log("before updating aggregate");
+
     // Try to update the aggregate
     #[allow(unused_variables)]
     let mut aggregate_updated = false;
@@ -160,7 +166,7 @@ pub fn upd_price(
                 UPD_PRICE_WRITE_SEED.as_bytes(),
                 &accumulator_accounts.accumulator_program.key.to_bytes(),
             ];
-            let (expected_oracle_auth_pda, _) =
+            let (expected_oracle_auth_pda, bump) =
                 Pubkey::find_program_address(oracle_auth_seeds, program_id);
             pyth_assert(
                 expected_oracle_auth_pda == *accumulator_accounts.oracle_auth_pda.key,
@@ -184,6 +190,7 @@ pub fn upd_price(
             .as_bytes()?];
 
             // TODO: craft instruction properly
+            // correct discriminator: [212, 225, 193, 91, 151, 238, 20, 93]
             let discriminator = sighash("global", ACCUMULATOR_UPDATER_IX_NAME);
             let create_inputs_ix = Instruction::new_with_borsh(
                 *accumulator_accounts.accumulator_program.key,
@@ -194,8 +201,12 @@ pub fn upd_price(
                 "invoking CPI with discriminator {:?}",
                 discriminator
             ));
-            let result = invoke_signed(&create_inputs_ix, accounts, &[oracle_auth_seeds]);
 
+            let mut auth_seeds_with_bump: Vec<&[u8]> = oracle_auth_seeds.to_vec();
+            let bump_vec: Vec<u8> = vec![bump];
+            auth_seeds_with_bump.push(&bump_vec);
+
+            let result = invoke_signed(&create_inputs_ix, accounts, &[&*auth_seeds_with_bump]);
             sol_log(&format!("result: {:?}", result));
         }
     }
