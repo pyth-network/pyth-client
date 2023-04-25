@@ -200,11 +200,7 @@ pub fn is_component_update(cmd_args: &UpdPriceArgs) -> Result<bool, OracleError>
 }
 
 // Return PC_STATUS_IGNORED if confidence is bigger than price divided by MAX_CI_DIVISOR else returns status
-pub fn check_confidence_too_big(
-    price: i64,
-    confidence: u64,
-    status: u32,
-) -> Result<u32, OracleError> {
+pub fn get_status_for_update(price: i64, confidence: u64, status: u32) -> Result<u32, OracleError> {
     let mut threshold_conf = price / MAX_CI_DIVISOR;
 
     if threshold_conf < 0 {

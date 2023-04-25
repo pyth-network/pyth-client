@@ -10,7 +10,7 @@ use {
             PythSimulator,
             Quote,
         },
-        utils::check_confidence_too_big,
+        utils::get_status_for_update,
     },
     solana_program::pubkey::Pubkey,
     solana_sdk::{
@@ -79,7 +79,7 @@ async fn test_publish_batch() {
         assert_eq!(price_data.comp_[0].latest_.conf_, quote.confidence);
         assert_eq!(
             price_data.comp_[0].latest_.status_,
-            check_confidence_too_big(quote.price, quote.confidence, quote.status).unwrap()
+            get_status_for_update(quote.price, quote.confidence, quote.status).unwrap()
         );
         assert_eq!(price_data.comp_[0].agg_.price_, 0);
         assert_eq!(price_data.comp_[0].agg_.conf_, 0);
@@ -115,14 +115,13 @@ async fn test_publish_batch() {
         assert_eq!(price_data.comp_[0].latest_.conf_, new_quote.confidence);
         assert_eq!(
             price_data.comp_[0].latest_.status_,
-            check_confidence_too_big(new_quote.price, new_quote.confidence, new_quote.status)
-                .unwrap()
+            get_status_for_update(new_quote.price, new_quote.confidence, new_quote.status).unwrap()
         );
         assert_eq!(price_data.comp_[0].agg_.price_, quote.price);
         assert_eq!(price_data.comp_[0].agg_.conf_, quote.confidence);
         assert_eq!(
             price_data.comp_[0].agg_.status_,
-            check_confidence_too_big(quote.price, quote.confidence, quote.status).unwrap()
+            get_status_for_update(quote.price, quote.confidence, quote.status).unwrap()
         );
     }
 }
