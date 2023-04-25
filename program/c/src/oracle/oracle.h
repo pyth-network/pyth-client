@@ -203,7 +203,7 @@ typedef struct pc_price
   pc_price_comp_t comp_[PC_COMP_SIZE];// component prices
 } pc_price_t;
 
-// static_assert( sizeof( pc_price_t ) == 3312, "" );
+static_assert( sizeof( pc_price_t ) == 3312 + 96 * (PC_COMP_SIZE - 32), "" );
 
 const uint64_t PRICE_ACCOUNT_SIZE = TIME_MACHINE_STRUCT_SIZE + EXTRA_PUBLISHER_SPACE + sizeof( pc_price_t );
 
