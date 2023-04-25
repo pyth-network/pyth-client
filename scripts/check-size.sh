@@ -1,6 +1,18 @@
 #!/usr/bin/env bash
 #
 
+set -eu
+
+PYTH_DIR=$( cd "${1:-.}" && pwd)
+
+if ! which cargo 2> /dev/null
+then
+  # shellcheck disable=SC1090
+  source "${CARGO_HOME:-$HOME/.cargo}/env"
+fi
+
+set -x
+
 cargo clean
 cargo-build-bpf -- -Z build-std=std,panic_abort -Z build-std-features=panic_immediate_abort
 
