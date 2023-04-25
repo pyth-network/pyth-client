@@ -12,20 +12,27 @@ use {
         deserialize::load,
         instruction::{
             AddPriceArgs,
+            AddPublisherArgs,
             CommandHeader,
             OracleCommand,
             UpdPermissionsArgs,
+            UpdPriceArgs,
         },
     },
     bytemuck::{
         bytes_of,
         Pod,
     },
+    serde::{
+        Deserialize,
+        Serialize,
+    },
     solana_program::{
         bpf_loader_upgradeable::{
             self,
             UpgradeableLoaderState,
         },
+        clock::Clock,
         hash::Hash,
         instruction::{
             AccountMeta,
@@ -37,13 +44,15 @@ use {
         stake_history::Epoch,
         system_instruction,
         system_program,
+        sysvar::SysvarId,
     },
     solana_program_test::{
         read_file,
-        BanksClient,
         BanksClientError,
         ProgramTest,
         ProgramTestBanksClientExt,
+        ProgramTestContext,
+        ProgramTestError,
     },
     solana_sdk::{
         account::Account,
@@ -54,6 +63,9 @@ use {
         transaction::Transaction,
     },
     std::{
+        collections::HashMap,
+        fs::File,
+        iter::once,
         mem::size_of,
         path::Path,
     },
@@ -64,7 +76,7 @@ use {
 /// this struct to test how pyth instructions execute in the Solana runtime.
 pub struct PythSimulator {
     program_id:            Pubkey,
-    banks_client:          BanksClient,
+    context:               ProgramTestContext,
     /// Hash used to submit the last transaction. The hash must be advanced for each new
     /// transaction; otherwise, replayed transactions in different states can return stale
     /// results.
@@ -72,6 +84,21 @@ pub struct PythSimulator {
     programdata_id:        Pubkey,
     pub upgrade_authority: Keypair,
     pub genesis_keypair:   Keypair,
+}
+
+pub struct Quote {
+    pub price:      i64,
+    pub confidence: u64,
+    pub status:     u32,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct ProductMetadata {
+    symbol:         String,
+    asset_type:     String,
+    country:        String,
+    quote_currency: String,
+    tenor:          String,
 }
 
 impl PythSimulator {
@@ -128,12 +155,13 @@ impl PythSimulator {
 
 
         // Start validator
-        let (banks_client, genesis_keypair, recent_blockhash) = program_test.start().await;
-
+        let context = program_test.start_with_context().await;
+        let genesis_keypair = copy_keypair(&context.payer);
+        let last_blockhash = context.last_blockhash;
         let mut result = PythSimulator {
             program_id: program_key,
-            banks_client,
-            last_blockhash: recent_blockhash,
+            context,
+            last_blockhash,
             programdata_id: programdata_key,
             upgrade_authority: upgrade_authority_keypair,
             genesis_keypair,
@@ -149,17 +177,18 @@ impl PythSimulator {
     }
 
 
-    /// Process a transaction containing `instruction` signed by `signers`.
+    /// Process a transaction containing `instructions` signed by `signers`.
     /// `payer` is used to pay for and sign the transaction.
-    async fn process_ix(
+    async fn process_ixs(
         &mut self,
-        instruction: Instruction,
+        instructions: &[Instruction],
         signers: &Vec<&Keypair>,
         payer: &Keypair,
     ) -> Result<(), BanksClientError> {
-        let mut transaction = Transaction::new_with_payer(&[instruction], Some(&payer.pubkey()));
+        let mut transaction = Transaction::new_with_payer(instructions, Some(&payer.pubkey()));
 
         let blockhash = self
+            .context
             .banks_client
             .get_new_latest_blockhash(&self.last_blockhash)
             .await
@@ -169,7 +198,10 @@ impl PythSimulator {
         transaction.partial_sign(&[payer], self.last_blockhash);
         transaction.partial_sign(signers, self.last_blockhash);
 
-        self.banks_client.process_transaction(transaction).await
+        self.context
+            .banks_client
+            .process_transaction(transaction)
+            .await
     }
 
     /// Create an account owned by the pyth program containing `size` bytes.
@@ -185,8 +217,8 @@ impl PythSimulator {
             &self.program_id,
         );
 
-        self.process_ix(
-            instruction,
+        self.process_ixs(
+            &[instruction],
             &vec![&keypair],
             &copy_keypair(&self.genesis_keypair),
         )
@@ -211,8 +243,8 @@ impl PythSimulator {
             ],
         );
 
-        self.process_ix(
-            instruction,
+        self.process_ixs(
+            &[instruction],
             &vec![&mapping_keypair],
             &copy_keypair(&self.genesis_keypair),
         )
@@ -239,8 +271,8 @@ impl PythSimulator {
             ],
         );
 
-        self.process_ix(
-            instruction,
+        self.process_ixs(
+            &[instruction],
             &vec![mapping_keypair, &product_keypair],
             &copy_keypair(&self.genesis_keypair),
         )
@@ -265,8 +297,8 @@ impl PythSimulator {
             ],
         );
 
-        self.process_ix(
-            instruction,
+        self.process_ixs(
+            &[instruction],
             &vec![mapping_keypair, product_keypair],
             &copy_keypair(&self.genesis_keypair),
         )
@@ -297,8 +329,8 @@ impl PythSimulator {
             ],
         );
 
-        self.process_ix(
-            instruction,
+        self.process_ixs(
+            &[instruction],
             &vec![product_keypair, &price_keypair],
             &copy_keypair(&self.genesis_keypair),
         )
@@ -306,7 +338,83 @@ impl PythSimulator {
         .map(|_| price_keypair)
     }
 
-    /// Delete a price account from an existing product account (using the del_price instruction).
+    /// Add a publisher to a price account (using the add_publisher instruction).
+    pub async fn add_publisher(
+        &mut self,
+        price_keypair: &Keypair,
+        publisher: Pubkey,
+    ) -> Result<(), BanksClientError> {
+        let cmd = AddPublisherArgs {
+            header: OracleCommand::AddPublisher.into(),
+            publisher,
+        };
+        let instruction = Instruction::new_with_bytes(
+            self.program_id,
+            bytes_of(&cmd),
+            vec![
+                AccountMeta::new(self.genesis_keypair.pubkey(), true),
+                AccountMeta::new(price_keypair.pubkey(), true),
+            ],
+        );
+
+        self.process_ixs(
+            &[instruction],
+            &vec![price_keypair],
+            &copy_keypair(&self.genesis_keypair),
+        )
+        .await
+    }
+
+    /// Update price of a component price account (using the upd_price instruction).
+    pub async fn upd_price(
+        &mut self,
+        publisher: &Keypair,
+        price_account: Pubkey,
+        quote: Quote,
+    ) -> Result<(), BanksClientError> {
+        self.upd_price_batch(
+            publisher,
+            &HashMap::from_iter(once(("".to_string(), price_account))),
+            &HashMap::from_iter(once(("".to_string(), quote))),
+        )
+        .await
+    }
+
+    /// Update price in multiple price account atomically (using the upd_price instruction)
+    pub async fn upd_price_batch(
+        &mut self,
+        publisher: &Keypair,
+        price_accounts: &HashMap<String, Pubkey>,
+        quotes: &HashMap<String, Quote>,
+    ) -> Result<(), BanksClientError> {
+        let slot = self.context.banks_client.get_sysvar::<Clock>().await?.slot;
+        let mut instructions: Vec<Instruction> = vec![];
+
+        for (key, price_account) in price_accounts {
+            let cmd = UpdPriceArgs {
+                header:          OracleCommand::UpdPriceNoFailOnError.into(),
+                status:          quotes[key].status,
+                unused_:         0,
+                price:           quotes[key].price,
+                confidence:      quotes[key].confidence,
+                publishing_slot: slot,
+            };
+            instructions.push(Instruction::new_with_bytes(
+                self.program_id,
+                bytes_of(&cmd),
+                vec![
+                    AccountMeta::new(publisher.pubkey(), true),
+                    AccountMeta::new(*price_account, false),
+                    AccountMeta::new(Clock::id(), false),
+                ],
+            ));
+        }
+
+        self.process_ixs(&instructions, &vec![publisher], publisher)
+            .await
+    }
+
+    // /// Delete a price account from an existing product account (using the del_price instruction).
     pub async fn del_price(
         &mut self,
         product_keypair: &Keypair,
@@ -323,8 +431,8 @@ impl PythSimulator {
             ],
         );
 
-        self.process_ix(
-            instruction,
+        self.process_ixs(
+            &[instruction],
             &vec![product_keypair, price_keypair],
             &copy_keypair(&self.genesis_keypair),
         )
@@ -351,14 +459,14 @@ impl PythSimulator {
             ],
         );
 
-        self.process_ix(instruction, &vec![], payer)
+        self.process_ixs(&[instruction], &vec![], payer)
             .await
             .map(|_| permissions_pubkey)
     }
 
     /// Get the account at `key`. Returns `None` if no such account exists.
     pub async fn get_account(&mut self, key: Pubkey) -> Option<Account> {
-        self.banks_client.get_account(key).await.unwrap()
+        self.context.banks_client.get_account(key).await.unwrap()
     }
 
 
@@ -380,14 +488,47 @@ impl PythSimulator {
         let instruction =
             system_instruction::transfer(&self.genesis_keypair.pubkey(), to, lamports);
 
-        self.process_ix(instruction, &vec![], &copy_keypair(&self.genesis_keypair))
-            .await
+        self.process_ixs(
+            &[instruction],
+            &vec![],
+            &copy_keypair(&self.genesis_keypair),
+        )
+        .await
     }
 
     pub fn get_permissions_pubkey(&self) -> Pubkey {
         let (permissions_pubkey, __bump) =
             Pubkey::find_program_address(&[PERMISSIONS_SEED.as_bytes()], &self.program_id);
         permissions_pubkey
+    }
+
+    /// Setup 3 product accounts with 1 price account each and add a publisher to all of them.
+    /// Returns the mapping of product symbol to price account pubkey.
+    /// TODO : this fixture doesn't set the product metadata
+    pub async fn setup_product_fixture(&mut self, publisher: Pubkey) -> HashMap<String, Pubkey> {
+        let result_file =
+            File::open("./test_data/publish/products.json").expect("Test file not found");
+
+        self.airdrop(&publisher, 100 * LAMPORTS_PER_SOL)
+            .await
+            .unwrap();
+
+        let product_metadatas: HashMap<String, ProductMetadata> =
+            serde_json::from_reader(&result_file).unwrap();
+        let mut price_accounts: HashMap<String, Pubkey> = HashMap::new();
+        let mapping_keypair: Keypair = self.init_mapping().await.unwrap();
+        for symbol in product_metadatas.keys() {
+            let product_keypair = self.add_product(&mapping_keypair).await.unwrap();
+            let price_keypair = self.add_price(&product_keypair, -5).await.unwrap();
+            self.add_publisher(&price_keypair, publisher).await.unwrap();
+            price_accounts.insert(symbol.to_string(), price_keypair.pubkey());
+        }
+        price_accounts
+    }
+
+    /// Advance clock to slot `slot`.
+    pub async fn warp_to_slot(&mut self, slot: u64) -> Result<(), ProgramTestError> {
+        self.context.warp_to_slot(slot)
     }
 }
 

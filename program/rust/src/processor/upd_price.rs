@@ -7,16 +7,13 @@ use {
             PriceInfo,
             UPD_PRICE_WRITE_SEED,
         },
-        c_oracle_header::{
-            MAX_CI_DIVISOR,
-            PC_STATUS_IGNORED,
-        },
         deserialize::{
             load,
             load_checked,
         },
         instruction::UpdPriceArgs,
         utils::{
+            check_confidence_too_big,
             check_valid_funding_account,
             check_valid_writable_account,
             is_component_update,
@@ -192,18 +189,11 @@ pub fn upd_price(
         }
     }
 
+
     // Try to update the publisher's price
     if is_component_update(cmd_args)? {
-        let mut status: u32 = cmd_args.status;
-        let mut threshold_conf = cmd_args.price / MAX_CI_DIVISOR;
-
-        if threshold_conf < 0 {
-            threshold_conf = -threshold_conf;
-        }
-
-        if cmd_args.confidence > try_convert::<_, u64>(threshold_conf)? {
-            status = PC_STATUS_IGNORED
-        }
+        let status: u32 =
+            check_confidence_too_big(cmd_args.price, cmd_args.confidence, cmd_args.status)?;
 
         {
             let mut price_data =

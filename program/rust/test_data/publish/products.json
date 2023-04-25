@@ -1,0 +1,23 @@
+{
+    "BTC": {
+        "symbol": "BTC/USD",
+        "asset_type": "Crypto",
+        "country": "US",
+        "quote_currency": "USD",
+        "tenor": "Spot"
+    },
+    "ETH": {
+        "symbol": "ETH/USD",
+        "asset_type": "Crypto",
+        "country": "US",
+        "quote_currency": "USD",
+        "tenor": "Spot"
+    },
+    "LTC": {
+        "symbol": "LTC/USD",
+        "asset_type": "Crypto",
+        "country": "US",
+        "quote_currency": "USD",
+        "tenor": "Spot"
+    }
+}
