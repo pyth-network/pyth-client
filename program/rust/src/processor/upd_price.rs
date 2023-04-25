@@ -29,12 +29,10 @@ use {
         account_info::AccountInfo,
         clock::Clock,
         entrypoint::ProgramResult,
-        hash::hashv,
         instruction::{
             AccountMeta,
             Instruction,
         },
-        log::sol_log,
         program::invoke_signed,
         program_error::ProgramError,
         pubkey::Pubkey,
@@ -102,14 +100,10 @@ pub fn upd_price(
         _ => Err(OracleError::InvalidNumberOfAccounts),
     }?;
 
-    sol_log("valid number of input accounts");
-
     check_valid_funding_account(funding_account)?;
     check_valid_writable_account(program_id, price_account)?;
     // Check clock
     let clock = Clock::from_account_info(clock_account)?;
-
-    sol_log("checked accounts");
 
     let mut publisher_index: usize = 0;
     let latest_aggregate_price: PriceInfo;
@@ -141,8 +135,6 @@ pub fn upd_price(
         )?;
     }
 
-    sol_log("before updating aggregate");
-
     // Try to update the aggregate
     #[allow(unused_variables)]
     let mut aggregate_updated = false;
@@ -156,8 +148,6 @@ pub fn upd_price(
             );
         }
     }
-
-    sol_log(&format!("aggregate updated: {}", aggregate_updated));
 
     if aggregate_updated {
         if let Some(accumulator_accounts) = maybe_accumulator_accounts {
@@ -173,10 +163,7 @@ pub fn upd_price(
                 OracleError::InvalidPda.into(),
             )?;
 
-            sol_log("trying to invoke accumulator");
-
             let account_metas = vec![
-                // AccountMeta::new(*funding_account.key, true),
                 AccountMeta::new_readonly(*accumulator_accounts.whitelist.key, false),
                 AccountMeta::new_readonly(*accumulator_accounts.oracle_auth_pda.key, true),
                 AccountMeta::new(*accumulator_accounts.accumulator_data.key, false),
@@ -189,25 +176,19 @@ pub fn upd_price(
             ))
             .as_bytes()?];
 
-            // TODO: craft instruction properly
-            // correct discriminator: [212, 225, 193, 91, 151, 238, 20, 93]
-            let discriminator = sighash("global", ACCUMULATOR_UPDATER_IX_NAME);
+            // anchor discriminator for "global:put_all"
+            let discriminator = [212, 225, 193, 91, 151, 238, 20, 93];
             let create_inputs_ix = Instruction::new_with_borsh(
                 *accumulator_accounts.accumulator_program.key,
                 &(discriminator, price_account.key.to_bytes(), data_to_send),
                 account_metas,
             );
-            sol_log(&format!(
-                "invoking CPI with discriminator {:?}",
-                discriminator
-            ));
 
             let mut auth_seeds_with_bump: Vec<&[u8]> = oracle_auth_seeds.to_vec();
             let bump_vec: Vec<u8> = vec![bump];
             auth_seeds_with_bump.push(&bump_vec);
 
-            let result = invoke_signed(&create_inputs_ix, accounts, &[&*auth_seeds_with_bump]);
-            sol_log(&format!("result: {:?}", result));
+            invoke_signed(&create_inputs_ix, accounts, &[&*auth_seeds_with_bump])?;
         }
     }
 
@@ -237,22 +218,6 @@ pub fn upd_price(
 
     Ok(())
 }
-
-/// Generate discriminator to be able to call anchor program's ix
-/// * `namespace` - "global" for instructions
-/// * `name` - name of ix to call CASE-SENSITIVE
-///
-/// Note: this could probably be converted into a constant hash value
-/// since it will always be the same.
-pub fn sighash(namespace: &str, name: &str) -> [u8; 8] {
-    let preimage = format!("{namespace}:{name}");
-
-    let mut sighash = [0u8; 8];
-    sighash.copy_from_slice(&hashv(&[preimage.as_bytes()]).to_bytes()[..8]);
-    sighash
-}
-
-pub const ACCUMULATOR_UPDATER_IX_NAME: &str = "put_all";
 
 
 // Wrapper struct for the accounts required to add data to the accumulator program.

@@ -134,12 +134,6 @@ pub fn update_clock_slot(clock_account: &mut AccountInfo, slot: u64) {
     clock_data.to_account_info(clock_account);
 }
 
-// pub fn update_clock_timestamp(clock_account: &mut AccountInfo, timestamp: i64) {
-//     let mut clock_data = clock::Clock::from_account_info(clock_account).unwrap();
-//     clock_data.unix_timestamp = timestamp;
-//     clock_data.to_account_info(clock_account);
-// }
-
 impl From<OracleCommand> for CommandHeader {
     fn from(val: OracleCommand) -> Self {
         CommandHeader {

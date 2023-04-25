@@ -138,21 +138,25 @@ pub struct PriceFeedPayload {
 }
 
 impl PriceFeedPayload {
-    pub fn from_price_account(key: &Pubkey, other: &PriceAccount) -> Self {
-        let (price, conf, publish_time) = if other.agg_.status_ == PC_STATUS_TRADING {
-            (other.agg_.price_, other.agg_.conf_, other.timestamp_)
+    pub fn from_price_account(key: &Pubkey, account: &PriceAccount) -> Self {
+        let (price, conf, publish_time) = if account.agg_.status_ == PC_STATUS_TRADING {
+            (account.agg_.price_, account.agg_.conf_, account.timestamp_)
         } else {
-            (other.prev_price_, other.prev_conf_, other.prev_timestamp_)
+            (
+                account.prev_price_,
+                account.prev_conf_,
+                account.prev_timestamp_,
+            )
         };
 
         Self {
             id: key.to_bytes(),
             price,
             conf,
-            exponent: other.exponent,
+            exponent: account.exponent,
             publish_time,
-            ema_price: other.twap_.val_,
-            ema_conf: other.twac_.val_ as u64,
+            ema_price: account.twap_.val_,
+            ema_conf: account.twac_.val_ as u64,
         }
     }
 }
