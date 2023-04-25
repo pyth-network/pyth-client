@@ -170,11 +170,9 @@ pub fn upd_price(
             sol_log("trying to invoke accumulator");
 
             let account_metas = vec![
-                AccountMeta::new(*funding_account.key, true),
+                // AccountMeta::new(*funding_account.key, true),
                 AccountMeta::new_readonly(*accumulator_accounts.whitelist.key, false),
                 AccountMeta::new_readonly(*accumulator_accounts.oracle_auth_pda.key, true),
-                // FIXME: this is still in the message buffer code but pretty sure it's not needed
-                // AccountMeta::new_readonly(*accumulator_accounts.system_program.key, false),
                 AccountMeta::new(*accumulator_accounts.accumulator_data.key, false),
             ];
 
