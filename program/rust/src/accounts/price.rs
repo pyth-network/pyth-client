@@ -1,3 +1,5 @@
+#[cfg(test)]
+use crate::c_oracle_header::PC_MAX_SEND_LATENCY;
 use {
     super::{
         AccountHeader,
@@ -6,7 +8,6 @@ use {
     crate::c_oracle_header::{
         PC_ACCTYPE_PRICE,
         PC_COMP_SIZE,
-        PC_MAX_SEND_LATENCY,
         PC_PRICE_T_COMP_OFFSET,
     },
     bytemuck::{
@@ -129,6 +130,7 @@ pub struct PriceCumulative {
     pub unused:   u64,
 }
 
+#[cfg(test)]
 impl PriceCumulative {
     pub fn update(&mut self, price: i64, conf: u64, slot_gap: u64) {
         self.price += i128::from(price) * i128::from(slot_gap);
