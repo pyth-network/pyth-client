@@ -40,11 +40,6 @@ mod permission;
 mod price;
 mod product;
 
-#[cfg(test)]
-pub use product::{
-    account_has_key_values,
-    create_pc_str_t,
-};
 pub use {
     mapping::MappingAccount,
     permission::PermissionAccount,
@@ -61,6 +56,14 @@ pub use {
         read_pc_str_t,
         update_product_metadata,
         ProductAccount,
+    },
+};
+#[cfg(test)]
+pub use {
+    price::PriceAccountNew,
+    product::{
+        account_has_key_values,
+        create_pc_str_t,
     },
 };
 

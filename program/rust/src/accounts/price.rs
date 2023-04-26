@@ -296,3 +296,10 @@ impl PriceFeedMessage {
         bytes
     }
 }
+
+#[cfg(test)]
+impl PythAccount for PriceAccountNew {
+    const ACCOUNT_TYPE: u32 = PC_ACCTYPE_PRICE;
+    /// Equal to the offset of `comp_` in `PriceAccount`, see the trait comment for more detail
+    const INITIAL_SIZE: u32 = PC_PRICE_T_COMP_OFFSET as u32;
+}
