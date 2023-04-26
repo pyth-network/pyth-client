@@ -52,7 +52,6 @@ pub use {
         PriceComponent,
         PriceEma,
         PriceInfo,
-        PriceAccountNew
     },
     product::{
         read_pc_str_t,
