@@ -35,7 +35,6 @@ pub struct PriceAccountWrapper {
 }
 
 
-#[derive(Debug)]
 pub struct DataPoint {
     pub previous_timestamp: i64,
     pub current_timestamp:  i64,
@@ -67,7 +66,7 @@ impl PriceAccountWrapper {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Copy, Clone)]
 #[repr(C)]
 pub struct SmaTracker<const NUM_BUCKETS: usize> {
     /// The maximum gap in slots for an epoch's sma to be valid

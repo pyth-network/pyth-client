@@ -92,7 +92,7 @@ pub struct Quote {
     pub status:     u32,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Deserialize, Serialize)]
 struct ProductMetadata {
     symbol:         String,
     asset_type:     String,

@@ -73,7 +73,7 @@ pub struct PriceComponent {
 }
 
 #[repr(C)]
-#[derive(Debug, Copy, Clone, Pod, Zeroable)]
+#[derive(Copy, Clone, Pod, Zeroable)]
 pub struct PriceInfo {
     pub price_:           i64,
     pub conf_:            u64,
@@ -83,7 +83,7 @@ pub struct PriceInfo {
 }
 
 #[repr(C)]
-#[derive(Debug, Copy, Clone, Pod, Zeroable)]
+#[derive(Copy, Clone, Pod, Zeroable)]
 pub struct PriceEma {
     pub val_:   i64,
     pub numer_: i64,
@@ -97,7 +97,7 @@ impl PythAccount for PriceAccount {
 }
 
 /// Message format for sending data to other chains via the accumulator program
-#[derive(Debug, Copy, Clone)]
+#[derive(Copy, Clone)]
 #[repr(u8)]
 pub enum Message {
     PriceFeed(PriceFeedPayload), // 0
@@ -126,7 +126,7 @@ impl Message {
 }
 
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Copy, Clone)]
 pub struct PriceFeedPayload {
     id:           [u8; 32],
     price:        i64,
