@@ -16,6 +16,7 @@ mod test_publish;
 mod test_publish_batch;
 mod test_set_min_pub;
 mod test_sizes;
+mod test_twap;
 mod test_upd_aggregate;
 mod test_upd_permissions;
 mod test_upd_price;
