@@ -1,3 +1,8 @@
+#[cfg(test)]
+use crate::accounts::{
+    PriceAccountNew,
+    PythAccount,
+};
 use {
     crate::{
         accounts::{
@@ -125,6 +130,18 @@ pub fn upd_price(
             );
         }
     }
+
+    #[cfg(test)]
+    // Cumulative sum feature disabled in production for now
+    {
+        let account_len = price_account.try_data_len()?;
+        if aggregate_updated && account_len >= PriceAccountNew::MINIMUM_SIZE {
+            let mut price_data =
+                load_checked::<PriceAccountNew>(price_account, cmd_args.header.version)?;
+            price_data.update_price_cumulative();
+        }
+    }
+
 
     // Try to update the publisher's price
     if is_component_update(cmd_args)? {
