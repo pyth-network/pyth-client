@@ -198,6 +198,8 @@ typedef struct pc_price
 
 static_assert( sizeof( pc_price_t ) == 3312, "" );
 
+const uint64_t PRICE_ACCOUNT_SIZE = 3312 + 42; // This constant needs to be an upper bound of the price account size, it is used within pythd for ztsd.
+
 // command enumeration
 typedef enum {
 
