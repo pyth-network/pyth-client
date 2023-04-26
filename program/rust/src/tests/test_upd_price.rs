@@ -1,7 +1,6 @@
 use {
     crate::{
         accounts::{
-            PriceAccount,
             PriceAccountNew,
             PythAccount,
         },
@@ -45,10 +44,10 @@ fn test_upd_price() {
     let mut price_setup = AccountSetup::new::<PriceAccountNew>(&program_id);
     let mut price_account = price_setup.as_account_info();
     price_account.is_signer = false;
-    PriceAccount::initialize(&price_account, PC_VERSION).unwrap();
+    PriceAccountNew::initialize(&price_account, PC_VERSION).unwrap();
 
     {
-        let mut price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        let mut price_data = load_checked::<PriceAccountNew>(&price_account, PC_VERSION).unwrap();
         price_data.num_ = 1;
         price_data.comp_[0].pub_ = *funding_account.key;
     }
