@@ -15,6 +15,7 @@ use {
             PC_COMP_SIZE,
             PC_MAP_TABLE_SIZE,
             PC_VERSION,
+            PRICE_ACCOUNT_SIZE,
         },
         deserialize::{
             load,
