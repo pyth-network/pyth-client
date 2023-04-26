@@ -115,7 +115,7 @@ impl PriceAccountNew {
         self.price_cumulative.update(
             self.agg_.price_,
             self.agg_.conf_,
-            self.agg_.pub_slot_ - self.prev_slot_,
+            self.agg_.pub_slot_.saturating_sub(self.prev_slot_),
         );
     }
 }
