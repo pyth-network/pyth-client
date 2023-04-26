@@ -60,7 +60,10 @@ pub use {
 };
 #[cfg(test)]
 pub use {
-    price::PriceAccountNew,
+    price::{
+        PriceAccountNew,
+        PriceCumulative,
+    },
     product::{
         account_has_key_values,
         create_pc_str_t,
