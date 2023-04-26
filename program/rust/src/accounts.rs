@@ -56,7 +56,6 @@ pub use {
         PriceEma,
         PriceFeedMessage,
         PriceInfo,
-        PriceAccountNew
     },
     product::{
         read_pc_str_t,
