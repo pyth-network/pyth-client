@@ -1,3 +1,7 @@
+use std::mem::size_of;
+
+use crate::{accounts::{PriceAccountNew, PythAccount}, deserialize::load_mut};
+
 use {
     crate::{
         accounts::{
@@ -127,18 +131,15 @@ pub fn upd_price(
     }
 
     #[cfg(test)]
-    // Sma feature disabled in production for now
+    // Cumulative sum feature disabled in production for now
     {
-        use crate::accounts::PythAccount;
         let account_len = price_account.try_data_len()?;
         if aggregate_updated
-            && account_len == crate::time_machine_types::PriceAccountWrapper::MINIMUM_SIZE
+            && account_len >= PriceAccountNew::MINIMUM_SIZE
         {
-            let mut price_account = load_checked::<crate::time_machine_types::PriceAccountWrapper>(
-                price_account,
-                cmd_args.header.version,
-            )?;
-            price_account.add_price_to_time_machine()?;
+            let mut price_data = load_checked::<PriceAccountNew>(
+                price_account, cmd_args.header.version)?;
+            price_data.price_cumulative.update(price_data.agg_.price_, price_data.agg_.conf_, price_data.agg_.conf_.checked_sub(price_data.prev_slot_).ok_or(OracleError::IntegerCastingError)?)
         }
     }
 

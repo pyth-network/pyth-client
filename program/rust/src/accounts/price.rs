@@ -4,6 +4,7 @@ use {
         PythAccount,
     },
     crate::c_oracle_header::{
+        PC_MAX_SEND_LATENCY,
         PC_ACCTYPE_PRICE,
         PC_COMP_SIZE,
         PC_PRICE_T_COMP_OFFSET,
@@ -62,6 +63,73 @@ pub struct PriceAccount {
 
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]
+pub struct PriceAccountNew {
+    pub header:             AccountHeader,
+    /// Type of the price account
+    pub price_type:         u32,
+    /// Exponent for the published prices
+    pub exponent:           i32,
+    /// Current number of authorized publishers
+    pub num_:               u32,
+    /// Number of valid quotes for the last aggregation
+    pub num_qt_:            u32,
+    /// Last slot with a succesful aggregation (status : TRADING)
+    pub last_slot_:         u64,
+    /// Second to last slot where aggregation was attempted
+    pub valid_slot_:        u64,
+    /// Ema for price
+    pub twap_:              PriceEma,
+    /// Ema for confidence
+    pub twac_:              PriceEma,
+    /// Last time aggregation was attempted
+    pub timestamp_:         i64,
+    /// Minimum valid publisher quotes for a succesful aggregation
+    pub min_pub_:           u8,
+    pub unused_1_:          i8,
+    pub unused_2_:          i16,
+    pub unused_3_:          i32,
+    /// Corresponding product account
+    pub product_account:    Pubkey,
+    /// Next price account in the list
+    pub next_price_account: Pubkey,
+    /// Second to last slot where aggregation was succesful (i.e. status : TRADING)
+    pub prev_slot_:         u64,
+    /// Aggregate price at prev_slot_
+    pub prev_price_:        i64,
+    /// Confidence interval at prev_slot_
+    pub prev_conf_:         u64,
+    /// Timestamp of prev_slot_
+    pub prev_timestamp_:    i64,
+    /// Last attempted aggregate results
+    pub agg_:               PriceInfo,
+    /// Publishers' price components
+    pub comp_:              [PriceComponent; PC_COMP_SIZE as usize],
+    pub price_cumulative : PriceCumulative
+}
+
+
+
+#[repr(C)]
+#[derive(Copy, Clone, Pod, Zeroable)]
+pub struct PriceCumulative{
+    pub price : i128,
+    pub conf : u128,
+    pub num_gaps : u64, // Cumulative number of gaps in the uptime since inception
+    pub unused : u64
+}
+
+impl PriceCumulative {
+    pub fn update(&mut self, price : i64, conf : u64, slot_gap : u64) {
+        self.price += i128::from(price) * i128::from(slot_gap);
+        self.conf += u128::from(conf) * u128::from(slot_gap);
+        if slot_gap > PC_MAX_SEND_LATENCY.into() {
+            self.num_gaps += 1;
+        }
+    }
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Pod, Zeroable)]
 pub struct PriceComponent {
     pub pub_:    Pubkey,
     pub agg_:    PriceInfo,
@@ -87,6 +155,12 @@ pub struct PriceEma {
 }
 
 impl PythAccount for PriceAccount {
+    const ACCOUNT_TYPE: u32 = PC_ACCTYPE_PRICE;
+    /// Equal to the offset of `comp_` in `PriceAccount`, see the trait comment for more detail
+    const INITIAL_SIZE: u32 = PC_PRICE_T_COMP_OFFSET as u32;
+}
+
+impl PythAccount for PriceAccountNew {
     const ACCOUNT_TYPE: u32 = PC_ACCTYPE_PRICE;
     /// Equal to the offset of `comp_` in `PriceAccount`, see the trait comment for more detail
     const INITIAL_SIZE: u32 = PC_PRICE_T_COMP_OFFSET as u32;
