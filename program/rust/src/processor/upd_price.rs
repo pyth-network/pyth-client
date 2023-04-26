@@ -132,7 +132,7 @@ pub fn upd_price(
     }
 
     #[cfg(test)]
-    // Cumulative sum feature disabled in production for now
+    // Cumulative sum feature disabled in production for now until we resize the accounts
     {
         let account_len = price_account.try_data_len()?;
         if aggregate_updated && account_len >= PriceAccountNew::MINIMUM_SIZE {

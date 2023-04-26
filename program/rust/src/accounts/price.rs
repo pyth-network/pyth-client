@@ -62,6 +62,9 @@ pub struct PriceAccount {
     pub comp_:              [PriceComponent; PC_COMP_SIZE as usize],
 }
 
+/// This is the new version of the PriceAccount.
+/// It will go live once we resize all the price accounts.
+/// It will include more publisher spots and will store cumulative sums to compute TWAPS.
 #[cfg(test)]
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]
@@ -106,28 +109,34 @@ pub struct PriceAccountNew {
     pub agg_:               PriceInfo,
     /// Publishers' price components
     pub comp_:              [PriceComponent; PC_COMP_SIZE as usize],
+    /// Cumulative sums of aggregative price and confidence used to compute arithmetic moving averages
     pub price_cumulative:   PriceCumulative,
 }
 
 #[cfg(test)]
 impl PriceAccountNew {
+    /// This function gets triggered when there's a succesful aggregation and updates the cumulative sums
     pub fn update_price_cumulative(&mut self) {
         self.price_cumulative.update(
             self.agg_.price_,
             self.agg_.conf_,
-            self.agg_.pub_slot_.saturating_sub(self.prev_slot_),
+            self.agg_.pub_slot_.saturating_sub(self.prev_slot_), // pub_slot should always be >= prev_slot, but we protect ourselves against underflow just in case
         );
     }
 }
 
+// This struct can't overflow since :
+// sum(price * slotgap) <= sum(|price * slotgap|) <= max(|price|) * sum(slotgap) <= i64::MAX * * current_slot <= i64::MAX * u64::MAX <= i128::MAX
+// sum(conf * slotgap) <= sum(|conf * slotgap|) <= max(|conf|) * sum(slotgap) <= u64::MAX * current_slot <= u64::MAX * u64::MAX <= u128::MAX
+// num_gaps <= current_slot <= u64::MAX
 #[cfg(test)]
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]
 pub struct PriceCumulative {
-    pub price:    i128,
-    pub conf:     u128,
-    pub num_gaps: u64, // Cumulative number of gaps in the uptime since inception
-    pub unused:   u64,
+    pub price:    i128, // Cumulative sum of price * slot_gap
+    pub conf:     u128, // Cumulative sum of conf * slot_gap
+    pub num_gaps: u64,  // Cumulative number of gaps in the uptime
+    pub unused:   u64,  // Padding for alignment
 }
 
 #[cfg(test)]

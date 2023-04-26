@@ -25,7 +25,7 @@ impl Arbitrary for DataEvent {
     }
 }
 
-/// This is a generative test for the sma struct. quickcheck will generate a series of
+/// This is a generative test for the PriceCumulative struct. quickcheck will generate a series of
 /// vectors of DataEvents of different length. The generation is based on the arbitrary trait
 /// above.
 /// For each DataEvent :
