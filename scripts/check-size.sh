@@ -13,7 +13,7 @@ fi
 
 set -x
 
-cargo clean
+# cargo clean
 cargo-build-bpf -- -Z build-std=std,panic_abort -Z build-std-features=panic_immediate_abort
 
 # While Solana doesn't support resizing programs, the oracle binary needs to be smaller than 81760 bytes

@@ -103,41 +103,21 @@ pub enum Message {
     PriceFeed(PriceFeedPayload), // 0
 }
 
-impl Message {
-    pub fn as_bytes(&self) -> Result<Vec<u8>, ProgramError> {
-        let mut bytes = vec![];
-        match &self {
-            Message::PriceFeed(m) => {
-                // discriminant
-                bytes.extend_from_slice(&[0u8]);
-                // payload
-                bytes.extend_from_slice(&m.id[..]);
-                bytes.extend_from_slice(&m.price.to_be_bytes());
-                bytes.extend_from_slice(&m.conf.to_be_bytes());
-                bytes.extend_from_slice(&m.exponent.to_be_bytes());
-                bytes.extend_from_slice(&m.publish_time.to_be_bytes());
-                bytes.extend_from_slice(&m.ema_price.to_be_bytes());
-                bytes.extend_from_slice(&m.ema_conf.to_be_bytes());
-            }
-        }
-
-        Ok(bytes)
-    }
-}
-
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct PriceFeedPayload {
-    id:           [u8; 32],
-    price:        i64,
-    conf:         u64,
-    exponent:     i32,
-    publish_time: i64,
-    ema_price:    i64,
-    ema_conf:     u64,
+    pub id:           [u8; 32],
+    pub price:        i64,
+    pub conf:         u64,
+    pub exponent:     i32,
+    pub publish_time: i64,
+    pub ema_price:    i64,
+    pub ema_conf:     u64,
 }
 
 impl PriceFeedPayload {
+    pub const MESSAGE_SIZE: usize = 1 + 32 + 8 + 8 + 4 + 8 + 8 + 8;
+
     pub fn from_price_account(key: &Pubkey, account: &PriceAccount) -> Self {
         let (price, conf, publish_time) = if account.agg_.status_ == PC_STATUS_TRADING {
             (account.agg_.price_, account.agg_.conf_, account.timestamp_)
@@ -158,5 +138,38 @@ impl PriceFeedPayload {
             ema_price: account.twap_.val_,
             ema_conf: account.twac_.val_ as u64,
         }
+    }
+
+    // NOTE: it would be more idiomatic to use a Vec, but that adds quite a bit to code size
+    pub fn as_bytes(&self) -> [u8; PriceFeedPayload::MESSAGE_SIZE] {
+        let mut bytes = [0u8; PriceFeedPayload::MESSAGE_SIZE];
+
+        let mut i: usize = 0;
+
+        bytes[i..i + 1].clone_from_slice(&[0u8]);
+        i += 1;
+
+        bytes[i..i + 32].clone_from_slice(&self.id[..]);
+        i += 32;
+
+        bytes[i..i + 8].clone_from_slice(&self.price.to_be_bytes());
+        i += 8;
+
+        bytes[i..i + 8].clone_from_slice(&self.conf.to_be_bytes());
+        i += 8;
+
+        bytes[i..i + 4].clone_from_slice(&self.exponent.to_be_bytes());
+        i += 4;
+
+        bytes[i..i + 8].clone_from_slice(&self.publish_time.to_be_bytes());
+        i += 8;
+
+        bytes[i..i + 8].clone_from_slice(&self.ema_price.to_be_bytes());
+        i += 8;
+
+        bytes[i..i + 8].clone_from_slice(&self.ema_conf.to_be_bytes());
+        i += 8;
+
+        bytes
     }
 }

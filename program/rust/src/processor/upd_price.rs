@@ -160,32 +160,58 @@ pub fn upd_price(
                 OracleError::InvalidPda.into(),
             )?;
 
+            // 81544
+
             let account_metas = vec![
-                AccountMeta::new_readonly(*accumulator_accounts.whitelist.key, false),
-                AccountMeta::new_readonly(*accumulator_accounts.oracle_auth_pda.key, true),
-                AccountMeta::new(*accumulator_accounts.accumulator_data.key, false),
+                AccountMeta {
+                    pubkey:      *accumulator_accounts.whitelist.key,
+                    is_signer:   false,
+                    is_writable: false,
+                },
+                AccountMeta {
+                    pubkey:      *accumulator_accounts.oracle_auth_pda.key,
+                    is_signer:   true,
+                    is_writable: false,
+                },
+                AccountMeta {
+                    pubkey:      *accumulator_accounts.accumulator_data.key,
+                    is_signer:   false,
+                    is_writable: true,
+                },
             ];
 
+            // 82376
+
             let price_data = load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
-            let data_to_send = vec![Message::PriceFeed(PriceFeedPayload::from_price_account(
-                price_account.key,
-                &price_data,
-            ))
-            .as_bytes()?];
+            let message =
+                vec![
+                    PriceFeedPayload::from_price_account(price_account.key, &price_data)
+                        .as_bytes()
+                        .to_vec(),
+                ];
+
+            // 83840
 
             // anchor discriminator for "global:put_all"
             let discriminator = [212, 225, 193, 91, 151, 238, 20, 93];
+
             let create_inputs_ix = Instruction::new_with_borsh(
                 *accumulator_accounts.accumulator_program.key,
-                &(discriminator, price_account.key.to_bytes(), data_to_send),
+                &(discriminator, price_account.key.to_bytes(), message),
                 account_metas,
             );
 
-            let mut auth_seeds_with_bump: Vec<&[u8]> = oracle_auth_seeds.to_vec();
-            let bump_vec: Vec<u8> = vec![bump];
-            auth_seeds_with_bump.push(&bump_vec);
+            // 86312
 
-            invoke_signed(&create_inputs_ix, accounts, &[&*auth_seeds_with_bump])?;
+            let auth_seeds_with_bump: &[&[u8]] = &[
+                UPD_PRICE_WRITE_SEED.as_bytes(),
+                &accumulator_accounts.accumulator_program.key.to_bytes(),
+                &[bump],
+            ];
+
+            invoke_signed(&create_inputs_ix, accounts, &[auth_seeds_with_bump])?;
+
+            // 86880
         }
     }
 
