@@ -33,7 +33,7 @@ use {
 };
 
 #[test]
-fn test_upd_price_twap() {
+fn test_upd_price() {
     let mut instruction_data = [0u8; size_of::<UpdPriceArgs>()];
     populate_instruction(&mut instruction_data, 42, 2, 1);
 
