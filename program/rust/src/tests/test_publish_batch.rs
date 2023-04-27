@@ -24,7 +24,10 @@ use {
 async fn test_publish_batch() {
     let mut sim = PythSimulator::new().await;
     let publisher = Keypair::new();
-    let price_accounts = sim.setup_product_fixture(publisher.pubkey()).await;
+    let security_authority = Keypair::new();
+    let price_accounts = sim
+        .setup_product_fixture(publisher.pubkey(), security_authority.pubkey())
+        .await;
 
     for price in price_accounts.values() {
         let price_data = sim
