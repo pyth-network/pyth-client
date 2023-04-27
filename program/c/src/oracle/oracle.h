@@ -7,13 +7,6 @@
 extern "C" {
 #endif
 
-// The size of the "time machine" account defined in the
-// Rust portion of the codebase.
-const uint64_t TIME_MACHINE_STRUCT_SIZE = 1200ULL;
-
-const uint64_t EXTRA_PUBLISHER_SPACE = 3072ULL;
-
-
 // magic number at head of account
 #define PC_MAGIC 0xa1b2c3d4
 
@@ -205,7 +198,10 @@ typedef struct pc_price
 
 static_assert( sizeof( pc_price_t ) == 3312, "" );
 
-const uint64_t PRICE_ACCOUNT_SIZE = TIME_MACHINE_STRUCT_SIZE + EXTRA_PUBLISHER_SPACE + sizeof( pc_price_t );
+// This constant needs to be an upper bound of the price account size, it is used within pythd for ztsd.
+// It is set tighly to the current price account + 96 component prices + 48 bytes for cumulative sums
+const uint64_t PRICE_ACCOUNT_SIZE = 3312 + 96 * sizeof( pc_price_comp_t) + 48;
+
 
 // command enumeration
 typedef enum {

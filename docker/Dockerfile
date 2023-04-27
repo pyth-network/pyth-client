@@ -24,8 +24,7 @@ RUN apt-get install -qq \
   qt5-qmake \
   qtbase5-dev-tools \
   libqt5websockets5-dev\
-  libclang-dev\
-  python3-pip 
+  libclang-dev
 
 # Install jcon-cpp library
 RUN git clone https://github.com/joncol/jcon-cpp.git /jcon-cpp && cd /jcon-cpp && git checkout 2235654e39c7af505d7158bf996e47e37a23d6e3 && mkdir build && cd build && cmake .. && make -j4 && make install
@@ -43,10 +42,6 @@ RUN mkdir /usr/bin/sdk/bpf/dependencies \
 USER pyth
 WORKDIR /home/pyth
 
-# Install poetry 
-RUN curl -sSL https://install.python-poetry.org | python3 -
-ENV PATH="${PATH}:/home/pyth/.local/bin:/home/pyth/pyth-client/build"
-
 #Install rust
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
   | sh -s -- -y 
@@ -63,7 +58,6 @@ RUN ./pyth-client/scripts/patch-solana.sh
 # Build and test the oracle program.
 RUN cd pyth-client && ./scripts/build-bpf.sh .
 RUN cd pyth-client && ./scripts/check-size.sh
-RUN cd pyth-client/pyth && poetry install && poetry run python -m pytest
 
 ENTRYPOINT []
 CMD []
