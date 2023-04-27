@@ -15,6 +15,7 @@ mod test_message;
 mod test_permission_migration;
 mod test_publish;
 mod test_publish_batch;
+mod test_resize_price_account;
 mod test_set_min_pub;
 mod test_sizes;
 mod test_twap;

@@ -15,6 +15,7 @@ use {
             check_valid_signable_account_or_permissioned_funding_account,
             get_rent,
             pyth_assert,
+            send_lamports,
             try_convert,
         },
         OracleError,
@@ -71,8 +72,12 @@ pub fn resize_price_account(
             .minimum_balance(try_convert(PRICE_ACCOUNT_SIZE)?)
             .saturating_sub(price_account.lamports());
         if lamports_needed > 0 {
-            **price_account.lamports.borrow_mut() += lamports_needed;
-            **funding_account.lamports.borrow_mut() -= lamports_needed;
+            send_lamports(
+                funding_account,
+                price_account,
+                system_program,
+                lamports_needed,
+            )?;
         }
         // We do not need to zero allocate because we won't access the data in the same
         // instruction
