@@ -84,6 +84,8 @@ This command runs a recent pyth-client docker image that already has the necessa
 Therefore, once the container is running, all you have to do is run `cd pyth-client && ./scripts/build.sh`.
 Note that updates to the `pyth-client` directory made inside the docker container will be persisted to the host filesystem (which is probably desirable).
 
+Alternatively, you can run `./scripts/start-docker-build-env.sh` && `cd pyth-client && cargo build --release`
+
 ### Fuzzing
 
 Build a docker image for running fuzz tests:
