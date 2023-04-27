@@ -73,7 +73,7 @@ fn test_sizes() {
     assert_eq!(size_of::<PriceComponent>(), 96);
     assert_eq!(size_of::<PriceEma>(), 24);
     assert_eq!(size_of::<PriceAccount>(), 3312);
-    assert_eq!(PRICE_ACCOUNT_SIZE, 12570);
+    assert_eq!(PRICE_ACCOUNT_SIZE, 12576);
     assert!(size_of::<PriceAccount>() <= try_convert::<_, usize>(PRICE_ACCOUNT_SIZE).unwrap());
     assert_eq!(size_of::<PermissionAccount>(), 112);
 }
