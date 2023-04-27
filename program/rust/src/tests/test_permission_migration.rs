@@ -21,6 +21,7 @@ use {
                 AddProduct,
                 AddPublisher,
                 DelPrice,
+                DelProduct,
                 DelPublisher,
                 InitMapping,
                 InitPrice,
@@ -256,7 +257,22 @@ fn test_permission_migration() {
         Err(OracleError::PermissionViolation.into())
     );
 
-    // Security authority can change minimum number of publishers
+    assert_eq!(
+        process_instruction(
+            &program_id,
+            &[
+                attacker_account.clone(),
+                mapping_account.clone(),
+                product_account.clone(),
+                permissions_account.clone()
+            ],
+            bytes_of::<CommandHeader>(&DelProduct.into())
+        ),
+        Err(OracleError::PermissionViolation.into())
+    );
+
+
+    // Security authority can't change minimum number of publishers
     assert_eq!(
         process_instruction(
             &program_id,
