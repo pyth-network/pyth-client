@@ -26,6 +26,7 @@ mod set_min_pub;
 mod upd_permissions;
 mod upd_price;
 mod upd_product;
+mod resize_price_account;
 
 pub use {
     add_mapping::add_mapping,
@@ -46,6 +47,7 @@ pub use {
         upd_price_no_fail_on_error,
     },
     upd_product::upd_product,
+    resize_price_account::resize_price_account
 };
 
 /// Dispatch to the right instruction in the oracle.
@@ -71,7 +73,7 @@ pub fn process_instruction(
         UpdTest => Err(OracleError::UnrecognizedInstruction.into()),
         SetMinPub => set_min_pub(program_id, accounts, instruction_data),
         UpdPriceNoFailOnError => upd_price_no_fail_on_error(program_id, accounts, instruction_data),
-        ResizePriceAccount => Err(OracleError::UnrecognizedInstruction.into()),
+        ResizePriceAccount => resize_price_account(program_id, accounts, instruction_data),
         DelPrice => del_price(program_id, accounts, instruction_data),
         DelProduct => del_product(program_id, accounts, instruction_data),
         UpdPermissions => upd_permissions(program_id, accounts, instruction_data),
