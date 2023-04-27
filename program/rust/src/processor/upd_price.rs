@@ -1,7 +1,6 @@
 use {
     crate::{
         accounts::{
-            Message,
             PriceAccount,
             PriceFeedPayload,
             PriceInfo,

@@ -97,12 +97,6 @@ impl PythAccount for PriceAccount {
 }
 
 /// Message format for sending data to other chains via the accumulator program
-#[derive(Copy, Clone)]
-#[repr(u8)]
-pub enum Message {
-    PriceFeed(PriceFeedPayload), // 0
-}
-
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct PriceFeedPayload {
@@ -117,6 +111,7 @@ pub struct PriceFeedPayload {
 
 impl PriceFeedPayload {
     pub const MESSAGE_SIZE: usize = 1 + 32 + 8 + 8 + 4 + 8 + 8 + 8;
+    pub const DISCRIMINATOR: u8 = 0;
 
     pub fn from_price_account(key: &Pubkey, account: &PriceAccount) -> Self {
         let (price, conf, publish_time) = if account.agg_.status_ == PC_STATUS_TRADING {
@@ -146,7 +141,7 @@ impl PriceFeedPayload {
 
         let mut i: usize = 0;
 
-        bytes[i..i + 1].clone_from_slice(&[0u8]);
+        bytes[i..i + 1].clone_from_slice(&[PriceFeedPayload::DISCRIMINATOR]);
         i += 1;
 
         bytes[i..i + 32].clone_from_slice(&self.id[..]);

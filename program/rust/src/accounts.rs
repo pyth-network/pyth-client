@@ -45,7 +45,6 @@ pub use {
     mapping::MappingAccount,
     permission::PermissionAccount,
     price::{
-        Message,
         PriceAccount,
         PriceComponent,
         PriceEma,

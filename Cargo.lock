@@ -2486,11 +2486,9 @@ version = "2.21.0"
 dependencies = [
  "bincode",
  "bindgen",
- "borsh",
  "bytemuck",
  "csv",
  "hex",
- "itertools",
  "num-derive",
  "num-traits",
  "quickcheck",
