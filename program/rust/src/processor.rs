@@ -22,11 +22,11 @@ mod del_product;
 mod del_publisher;
 mod init_mapping;
 mod init_price;
+mod resize_price_account;
 mod set_min_pub;
 mod upd_permissions;
 mod upd_price;
 mod upd_product;
-mod resize_price_account;
 
 pub use {
     add_mapping::add_mapping,
@@ -38,6 +38,7 @@ pub use {
     del_publisher::del_publisher,
     init_mapping::init_mapping,
     init_price::init_price,
+    resize_price_account::resize_price_account,
     set_min_pub::set_min_pub,
     upd_permissions::upd_permissions,
     upd_price::{
@@ -47,7 +48,6 @@ pub use {
         upd_price_no_fail_on_error,
     },
     upd_product::upd_product,
-    resize_price_account::resize_price_account
 };
 
 /// Dispatch to the right instruction in the oracle.
