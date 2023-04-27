@@ -13,10 +13,7 @@ use {
         Pod,
         Zeroable,
     },
-    solana_program::{
-        program_error::ProgramError,
-        pubkey::Pubkey,
-    },
+    solana_program::pubkey::Pubkey,
 };
 
 #[repr(C)]
@@ -43,7 +40,9 @@ pub struct PriceAccount {
     pub timestamp_:         i64,
     /// Minimum valid publisher quotes for a succesful aggregation
     pub min_pub_:           u8,
-    pub unused_1_:          i8,
+    /// Whether the current aggregate price has been sent as a message to the message buffer.
+    /// 0 = false, 1 = true. (this is a u8 to make the Pod trait happy)
+    pub message_sent_:      u8,
     pub unused_2_:          i16,
     pub unused_3_:          i32,
     /// Corresponding product account
@@ -97,9 +96,11 @@ impl PythAccount for PriceAccount {
 }
 
 /// Message format for sending data to other chains via the accumulator program
+/// When serialized, each message starts with a unique 1-byte discriminator, followed by the
+/// serialized struct data in the definition(s) below.
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct PriceFeedPayload {
+pub struct PriceFeedMessage {
     pub id:           [u8; 32],
     pub price:        i64,
     pub conf:         u64,
@@ -109,7 +110,7 @@ pub struct PriceFeedPayload {
     pub ema_conf:     u64,
 }
 
-impl PriceFeedPayload {
+impl PriceFeedMessage {
     pub const MESSAGE_SIZE: usize = 1 + 32 + 8 + 8 + 4 + 8 + 8 + 8;
     pub const DISCRIMINATOR: u8 = 0;
 
@@ -135,13 +136,16 @@ impl PriceFeedPayload {
         }
     }
 
-    // NOTE: it would be more idiomatic to use a Vec, but that adds quite a bit to code size
-    pub fn as_bytes(&self) -> [u8; PriceFeedPayload::MESSAGE_SIZE] {
-        let mut bytes = [0u8; PriceFeedPayload::MESSAGE_SIZE];
+    /// Serialize this message as an array of bytes (including the discriminator)
+    /// Note that it would be more idiomatic to return a `Vec`, but that approach adds
+    /// to the size of the compiled binary (which is already close to the size limit).
+    #[allow(unused_assignments)]
+    pub fn as_bytes(&self) -> [u8; PriceFeedMessage::MESSAGE_SIZE] {
+        let mut bytes = [0u8; PriceFeedMessage::MESSAGE_SIZE];
 
         let mut i: usize = 0;
 
-        bytes[i..i + 1].clone_from_slice(&[PriceFeedPayload::DISCRIMINATOR]);
+        bytes[i..i + 1].clone_from_slice(&[PriceFeedMessage::DISCRIMINATOR]);
         i += 1;
 
         bytes[i..i + 32].clone_from_slice(&self.id[..]);

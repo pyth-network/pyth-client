@@ -48,7 +48,7 @@ pub use {
         PriceAccount,
         PriceComponent,
         PriceEma,
-        PriceFeedPayload,
+        PriceFeedMessage,
         PriceInfo,
     },
     product::{
