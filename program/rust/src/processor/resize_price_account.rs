@@ -78,6 +78,7 @@ pub fn resize_price_account(
         // instruction
         price_account.realloc(try_convert(PRICE_ACCOUNT_SIZE)?, false)?;
 
+        // Check that we can still load the account
         {
             load_checked::<PriceAccount>(price_account, PC_VERSION)?;
         }

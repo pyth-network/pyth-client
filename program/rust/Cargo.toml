@@ -37,3 +37,6 @@ library = []
 
 [lib]
 crate-type = ["cdylib", "lib"]
+
+[profile.release.build-override]
+opt-level = "z"
