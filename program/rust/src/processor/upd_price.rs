@@ -126,23 +126,6 @@ pub fn upd_price(
         }
     }
 
-    #[cfg(test)]
-    // Sma feature disabled in production for now
-    {
-        use crate::accounts::PythAccount;
-        let account_len = price_account.try_data_len()?;
-        if aggregate_updated
-            && account_len == crate::time_machine_types::PriceAccountWrapper::MINIMUM_SIZE
-        {
-            let mut price_account = load_checked::<crate::time_machine_types::PriceAccountWrapper>(
-                price_account,
-                cmd_args.header.version,
-            )?;
-            price_account.add_price_to_time_machine()?;
-        }
-    }
-
-
     // Try to update the publisher's price
     if is_component_update(cmd_args)? {
         let status: u32 =
