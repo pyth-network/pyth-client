@@ -98,20 +98,36 @@ impl PythAccount for PriceAccount {
 /// Message format for sending data to other chains via the accumulator program
 /// When serialized, each message starts with a unique 1-byte discriminator, followed by the
 /// serialized struct data in the definition(s) below.
+///
+/// Messages are forward-compatible. You may add new fields to messages after all previously
+/// defined fields. All code for parsing messages must ignore any extraneous bytes at the end of
+/// the message (which could be fields that the code does not yet understand).
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct PriceFeedMessage {
-    pub id:           [u8; 32],
-    pub price:        i64,
-    pub conf:         u64,
-    pub exponent:     i32,
-    pub publish_time: i64,
-    pub ema_price:    i64,
-    pub ema_conf:     u64,
+    pub id:                [u8; 32],
+    pub price:             i64,
+    pub conf:              u64,
+    pub exponent:          i32,
+    /// The timestamp of this price update
+    pub publish_time:      i64,
+    /// The timestamp of the previous price update. This field is intended to allow users to
+    /// identify the single unique price update immediately after any moment in time:
+    /// for any time t, the unique update is the one such that prev_publish_time <= t < publish_time.
+    ///
+    /// Note that there may not be such an update while we are migrating to the new message-sending logic,
+    /// as some price updates on pythnet may not be sent to other chains (because the message-sending
+    /// logic may not have triggered). We can solve this problem by making the message-sending mandatory
+    /// (which we can do once publishers have migrated over).
+    pub prev_publish_time: i64,
+    pub ema_price:         i64,
+    pub ema_conf:          u64,
 }
 
 impl PriceFeedMessage {
-    pub const MESSAGE_SIZE: usize = 1 + 32 + 8 + 8 + 4 + 8 + 8 + 8;
+    // The size of the serialized message. Note that this is not the same as the size of the struct
+    // (because of the discriminator & struct padding/alignment).
+    pub const MESSAGE_SIZE: usize = 1 + 32 + 8 + 8 + 4 + 8 + 8 + 8 + 8;
     pub const DISCRIMINATOR: u8 = 0;
 
     pub fn from_price_account(key: &Pubkey, account: &PriceAccount) -> Self {
@@ -131,6 +147,7 @@ impl PriceFeedMessage {
             conf,
             exponent: account.exponent,
             publish_time,
+            prev_publish_time: account.prev_timestamp_,
             ema_price: account.twap_.val_,
             ema_conf: account.twac_.val_ as u64,
         }
@@ -161,6 +178,9 @@ impl PriceFeedMessage {
         i += 4;
 
         bytes[i..i + 8].clone_from_slice(&self.publish_time.to_be_bytes());
+        i += 8;
+
+        bytes[i..i + 8].clone_from_slice(&self.prev_publish_time.to_be_bytes());
         i += 8;
 
         bytes[i..i + 8].clone_from_slice(&self.ema_price.to_be_bytes());

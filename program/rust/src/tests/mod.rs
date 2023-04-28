@@ -11,6 +11,7 @@ mod test_del_publisher;
 mod test_ema;
 mod test_init_mapping;
 mod test_init_price;
+mod test_message;
 mod test_permission_migration;
 mod test_publish;
 mod test_publish_batch;
