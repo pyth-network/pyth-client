@@ -17,7 +17,7 @@ use {
             PC_COMP_SIZE,
             PC_MAP_TABLE_SIZE,
             PC_VERSION,
-            PRICE_ACCOUNT_SIZE,
+            ZSTD_UPPER_BOUND,
         },
         deserialize::{
             load,
@@ -79,10 +79,10 @@ fn test_sizes() {
     assert_eq!(size_of::<PriceAccountNew>(), 3360);
     assert_eq!(
         size_of::<PriceCumulative>() + 96 * size_of::<PriceComponent>() + size_of::<PriceAccount>(),
-        try_convert::<_, usize>(PRICE_ACCOUNT_SIZE).unwrap()
+        try_convert::<_, usize>(ZSTD_UPPER_BOUND).unwrap()
     );
-    assert!(size_of::<PriceAccount>() <= try_convert::<_, usize>(PRICE_ACCOUNT_SIZE).unwrap());
-    assert!(size_of::<PriceAccountNew>() <= try_convert::<_, usize>(PRICE_ACCOUNT_SIZE).unwrap());
+    assert!(size_of::<PriceAccount>() <= try_convert::<_, usize>(ZSTD_UPPER_BOUND).unwrap());
+    assert!(size_of::<PriceAccountNew>() <= try_convert::<_, usize>(ZSTD_UPPER_BOUND).unwrap());
     assert_eq!(size_of::<PermissionAccount>(), 112);
 }
 
