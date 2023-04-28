@@ -83,9 +83,10 @@ pub fn resize_price_account(
         // instruction
         price_account.realloc(try_convert(PRICE_ACCOUNT_SIZE)?, false)?;
 
-        // Check that we can still load the account
+        // Check that we can still load the account, update header size for homogeneity
         {
-            load_checked::<PriceAccount>(price_account, PC_VERSION)?;
+            let mut price_data = load_checked::<PriceAccount>(price_account, PC_VERSION)?;
+            price_data.header.size = try_convert(PRICE_ACCOUNT_SIZE)?; //TO DO, SET TO size_of::<PriceAccountV2>()?
         }
     }
 
