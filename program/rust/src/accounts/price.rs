@@ -62,9 +62,10 @@ pub struct PriceAccount {
     pub comp_:              [PriceComponent; PC_COMP_SIZE as usize],
 }
 
-/// This is the new version of the PriceAccount.
-/// It will go live once we resize all the price accounts.
-/// It will include more publisher spots and will store cumulative sums to compute TWAPS.
+/// We are currently out of space in our price accounts. We plan to resize them
+/// using the resize_price_account function. Until all the accounts have been resized, all instructions MUST work with either of the two versions.
+/// Operations may check the account size to determine whether the old or the new version has been passed.
+/// The new price accounts add more publishers and introduce PriceCumulative, a new struct designed to store cumulative sums for computing TWAPs.
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]
 pub struct PriceAccountV2 {
@@ -128,6 +129,9 @@ impl PriceAccountV2 {
 // |sum(price * slotgap)| <= sum(|price * slotgap|) <= max(|price|) * sum(slotgap) <= i64::MAX * * current_slot <= i64::MAX * u64::MAX <= i128::MAX
 // |sum(conf * slotgap)| <= sum(|conf * slotgap|) <= max(|conf|) * sum(slotgap) <= u64::MAX * current_slot <= u64::MAX * u64::MAX <= u128::MAX
 // num_gaps <= current_slot <= u64::MAX
+/// Contains cumulative sums of aggregative price and confidence used to compute arithmetic moving averages.
+/// Informally the TWAP between time t and time T can be computed as :
+/// `(T.price_cumulative.price - t.price_cumulative.price) / (T.last_slot_ - t.last_slot_)`
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]
 pub struct PriceCumulative {
