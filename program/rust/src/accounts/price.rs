@@ -3,12 +3,16 @@ use {
         AccountHeader,
         PythAccount,
     },
-    crate::c_oracle_header::{
-        PC_ACCTYPE_PRICE,
-        PC_COMP_SIZE,
-        PC_COMP_SIZE_V2,
-        PC_MAX_SEND_LATENCY,
-        PC_PRICE_T_COMP_OFFSET,
+    crate::{
+        c_oracle_header::{
+            PC_ACCTYPE_PRICE,
+            PC_COMP_SIZE,
+            PC_COMP_SIZE_V2,
+            PC_MAX_SEND_LATENCY,
+            PC_PRICE_T_COMP_OFFSET,
+            PC_STATUS_TRADING,
+        },
+        error::OracleError,
     },
     bytemuck::{
         Pod,
@@ -117,12 +121,17 @@ pub struct PriceAccountV2 {
 
 impl PriceAccountV2 {
     /// This function gets triggered when there's a succesful aggregation and updates the cumulative sums
-    pub fn update_price_cumulative(&mut self) {
-        self.price_cumulative.update(
-            self.agg_.price_,
-            self.agg_.conf_,
-            self.agg_.pub_slot_.saturating_sub(self.prev_slot_), // pub_slot should always be >= prev_slot, but we protect ourselves against underflow just in case
-        );
+    pub fn update_price_cumulative(&mut self) -> Result<(), OracleError> {
+        if self.agg_.status_ == PC_STATUS_TRADING {
+            self.price_cumulative.update(
+                self.agg_.price_,
+                self.agg_.conf_,
+                self.agg_.pub_slot_.saturating_sub(self.prev_slot_),
+            ); // pub_slot should always be >= prev_slot, but we protect ourselves against underflow just in case
+            Ok(())
+        } else {
+            Err(OracleError::NeedsSuccesfulAggregation)
+        }
     }
 }
 

@@ -50,6 +50,8 @@ pub enum OracleError {
     InvalidReadableAccount         = 618,
     #[error("PermissionViolation")]
     PermissionViolation            = 619,
+    #[error("NeedsSuccesfulAggregation")]
+    NeedsSuccesfulAggregation      = 620,
 }
 
 impl From<OracleError> for ProgramError {

@@ -134,7 +134,7 @@ pub fn upd_price(
         if aggregate_updated && account_len >= PriceAccountV2::MINIMUM_SIZE {
             let mut price_data =
                 load_checked::<PriceAccountV2>(price_account, cmd_args.header.version)?;
-            price_data.update_price_cumulative();
+            price_data.update_price_cumulative()?;
         }
     }
 
