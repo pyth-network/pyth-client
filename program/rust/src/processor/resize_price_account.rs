@@ -29,7 +29,7 @@ use {
     },
 };
 
-/// Resizes a price account so that it fits the Time Machine
+// Increase the size of an account allocated for a PriceAccount such that it can hold a PriceAccountV2
 // account[0] funding account       [signer writable]
 // account[1] price account         [signer writable]
 // account[2] system program        []

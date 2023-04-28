@@ -46,7 +46,7 @@ impl PermissionAccount {
             (pubkey, _) if pubkey == self.master_authority => true,
             (pubkey, OracleCommand::ResizePriceAccount) if pubkey == self.security_authority => {
                 true
-            } // Allow for a crank to resize the prices account
+            } // Allow for an admin key to resize the price account
             _ => false,
         }
     }
