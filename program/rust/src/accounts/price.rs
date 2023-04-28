@@ -1,5 +1,3 @@
-#[cfg(test)]
-use crate::c_oracle_header::PC_MAX_SEND_LATENCY;
 use {
     super::{
         AccountHeader,
@@ -8,6 +6,7 @@ use {
     crate::c_oracle_header::{
         PC_ACCTYPE_PRICE,
         PC_COMP_SIZE,
+        PC_MAX_SEND_LATENCY,
         PC_PRICE_T_COMP_OFFSET,
     },
     bytemuck::{
@@ -65,7 +64,6 @@ pub struct PriceAccount {
 /// This is the new version of the PriceAccount.
 /// It will go live once we resize all the price accounts.
 /// It will include more publisher spots and will store cumulative sums to compute TWAPS.
-#[cfg(test)]
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]
 pub struct PriceAccountNew {
@@ -113,7 +111,6 @@ pub struct PriceAccountNew {
     pub price_cumulative:   PriceCumulative,
 }
 
-#[cfg(test)]
 impl PriceAccountNew {
     /// This function gets triggered when there's a succesful aggregation and updates the cumulative sums
     pub fn update_price_cumulative(&mut self) {
@@ -129,7 +126,6 @@ impl PriceAccountNew {
 // |sum(price * slotgap)| <= sum(|price * slotgap|) <= max(|price|) * sum(slotgap) <= i64::MAX * * current_slot <= i64::MAX * u64::MAX <= i128::MAX
 // |sum(conf * slotgap)| <= sum(|conf * slotgap|) <= max(|conf|) * sum(slotgap) <= u64::MAX * current_slot <= u64::MAX * u64::MAX <= u128::MAX
 // num_gaps <= current_slot <= u64::MAX
-#[cfg(test)]
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]
 pub struct PriceCumulative {
@@ -139,7 +135,6 @@ pub struct PriceCumulative {
     pub unused:   u64,  // Padding for alignment
 }
 
-#[cfg(test)]
 impl PriceCumulative {
     pub fn update(&mut self, price: i64, conf: u64, slot_gap: u64) {
         self.price += i128::from(price) * i128::from(slot_gap);
@@ -183,7 +178,6 @@ impl PythAccount for PriceAccount {
     const INITIAL_SIZE: u32 = PC_PRICE_T_COMP_OFFSET as u32;
 }
 
-#[cfg(test)]
 impl PythAccount for PriceAccountNew {
     const ACCOUNT_TYPE: u32 = PC_ACCTYPE_PRICE;
     /// Equal to the offset of `comp_` in `PriceAccount`, see the trait comment for more detail

@@ -1,13 +1,10 @@
-#[cfg(test)]
-use crate::accounts::{
-    PriceAccountNew,
-    PythAccount,
-};
 use {
     crate::{
         accounts::{
             PriceAccount,
+            PriceAccountNew,
             PriceInfo,
+            PythAccount,
         },
         deserialize::{
             load,
@@ -131,7 +128,6 @@ pub fn upd_price(
         }
     }
 
-    #[cfg(test)]
     // Cumulative sum feature disabled in production for now until we resize the accounts
     {
         let account_len = price_account.try_data_len()?;

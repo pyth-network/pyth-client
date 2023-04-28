@@ -36,6 +36,11 @@ mod permission;
 mod price;
 mod product;
 
+#[cfg(test)]
+pub use product::{
+    account_has_key_values,
+    create_pc_str_t,
+};
 pub use {
     mapping::MappingAccount,
     permission::{
@@ -44,7 +49,9 @@ pub use {
     },
     price::{
         PriceAccount,
+        PriceAccountNew,
         PriceComponent,
+        PriceCumulative,
         PriceEma,
         PriceInfo,
     },
@@ -54,18 +61,6 @@ pub use {
         ProductAccount,
     },
 };
-#[cfg(test)]
-pub use {
-    price::{
-        PriceAccountNew,
-        PriceCumulative,
-    },
-    product::{
-        account_has_key_values,
-        create_pc_str_t,
-    },
-};
-
 #[repr(C)]
 #[derive(Copy, Clone, Zeroable, Pod)]
 pub struct AccountHeader {
