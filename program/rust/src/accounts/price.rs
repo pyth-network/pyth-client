@@ -66,7 +66,7 @@ pub struct PriceAccount {
 /// It will include more publisher spots and will store cumulative sums to compute TWAPS.
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]
-pub struct PriceAccountNew {
+pub struct PriceAccountV2 {
     pub header:             AccountHeader,
     /// Type of the price account
     pub price_type:         u32,
@@ -111,7 +111,7 @@ pub struct PriceAccountNew {
     pub price_cumulative:   PriceCumulative,
 }
 
-impl PriceAccountNew {
+impl PriceAccountV2 {
     /// This function gets triggered when there's a succesful aggregation and updates the cumulative sums
     pub fn update_price_cumulative(&mut self) {
         self.price_cumulative.update(
@@ -178,7 +178,7 @@ impl PythAccount for PriceAccount {
     const INITIAL_SIZE: u32 = PC_PRICE_T_COMP_OFFSET as u32;
 }
 
-impl PythAccount for PriceAccountNew {
+impl PythAccount for PriceAccountV2 {
     const ACCOUNT_TYPE: u32 = PC_ACCTYPE_PRICE;
     /// Equal to the offset of `comp_` in `PriceAccount`, see the trait comment for more detail
     const INITIAL_SIZE: u32 = PC_PRICE_T_COMP_OFFSET as u32;

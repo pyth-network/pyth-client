@@ -5,7 +5,7 @@ use {
             MappingAccount,
             PermissionAccount,
             PriceAccount,
-            PriceAccountNew,
+            PriceAccountV2,
             PriceComponent,
             PriceCumulative,
             PriceEma,
@@ -76,13 +76,13 @@ fn test_sizes() {
     assert_eq!(size_of::<PriceEma>(), 24);
     assert_eq!(size_of::<PriceCumulative>(), 48);
     assert_eq!(size_of::<PriceAccount>(), 3312);
-    assert_eq!(size_of::<PriceAccountNew>(), 3360);
+    assert_eq!(size_of::<PriceAccountV2>(), 3360);
     assert_eq!(
         size_of::<PriceCumulative>() + 96 * size_of::<PriceComponent>() + size_of::<PriceAccount>(),
         try_convert::<_, usize>(ZSTD_UPPER_BOUND).unwrap()
     );
     assert!(size_of::<PriceAccount>() <= try_convert::<_, usize>(ZSTD_UPPER_BOUND).unwrap());
-    assert!(size_of::<PriceAccountNew>() <= try_convert::<_, usize>(ZSTD_UPPER_BOUND).unwrap());
+    assert!(size_of::<PriceAccountV2>() <= try_convert::<_, usize>(ZSTD_UPPER_BOUND).unwrap());
     assert_eq!(size_of::<PermissionAccount>(), 112);
 }
 

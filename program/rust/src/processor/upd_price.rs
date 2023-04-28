@@ -2,7 +2,7 @@ use {
     crate::{
         accounts::{
             PriceAccount,
-            PriceAccountNew,
+            PriceAccountV2,
             PriceInfo,
             PythAccount,
         },
@@ -131,9 +131,9 @@ pub fn upd_price(
     // Cumulative sum feature disabled in production for now until we resize the accounts
     {
         let account_len = price_account.try_data_len()?;
-        if aggregate_updated && account_len >= PriceAccountNew::MINIMUM_SIZE {
+        if aggregate_updated && account_len >= PriceAccountV2::MINIMUM_SIZE {
             let mut price_data =
-                load_checked::<PriceAccountNew>(price_account, cmd_args.header.version)?;
+                load_checked::<PriceAccountV2>(price_account, cmd_args.header.version)?;
             price_data.update_price_cumulative();
         }
     }

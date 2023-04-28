@@ -49,7 +49,7 @@ pub use {
     },
     price::{
         PriceAccount,
-        PriceAccountNew,
+        PriceAccountV2,
         PriceComponent,
         PriceCumulative,
         PriceEma,
