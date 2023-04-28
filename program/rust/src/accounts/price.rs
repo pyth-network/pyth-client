@@ -109,11 +109,11 @@ pub struct PriceFeedMessage {
     pub price:             i64,
     pub conf:              u64,
     pub exponent:          i32,
-    /// The timestamp of this price update
+    /// The timestamp of this price update in seconds
     pub publish_time:      i64,
     /// The timestamp of the previous price update. This field is intended to allow users to
-    /// identify the single unique price update immediately after any moment in time:
-    /// for any time t, the unique update is the one such that prev_publish_time <= t < publish_time.
+    /// identify the single unique price update for any moment in time:
+    /// for any time t, the unique update is the one such that prev_publish_time < t <= publish_time.
     ///
     /// Note that there may not be such an update while we are migrating to the new message-sending logic,
     /// as some price updates on pythnet may not be sent to other chains (because the message-sending
