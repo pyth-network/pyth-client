@@ -571,7 +571,7 @@ impl PythSimulator {
             ],
         );
 
-        self.process_ixs(&[instruction], &vec![], &copy_keypair(security_authority))
+        self.process_ixs(&[instruction], &vec![], security_authority)
             .await
     }
 }
