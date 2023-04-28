@@ -144,13 +144,10 @@ impl From<OracleCommand> for CommandHeader {
 }
 
 impl From<OracleError> for TransactionError {
-    fn from(_: OracleError) -> Self {
+    fn from(error: OracleError) -> Self {
         TransactionError::InstructionError(
             0,
-            InstructionError::try_from(u64::from(ProgramError::from(
-                OracleError::InvalidUpgradeAuthority,
-            )))
-            .unwrap(),
+            InstructionError::try_from(u64::from(ProgramError::from(error))).unwrap(),
         )
     }
 }
