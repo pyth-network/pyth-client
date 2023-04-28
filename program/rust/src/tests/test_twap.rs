@@ -1,10 +1,22 @@
 use {
+    super::test_utils::AccountSetup,
     crate::{
-        accounts::PriceCumulative,
-        c_oracle_header::PC_MAX_SEND_LATENCY,
+        accounts::{
+            PriceAccountV2,
+            PriceCumulative,
+            PriceInfo,
+        },
+        c_oracle_header::{
+            PC_MAX_SEND_LATENCY,
+            PC_STATUS_TRADING,
+            PC_STATUS_UNKNOWN,
+        },
+        deserialize::load_account_as_mut,
+        error::OracleError,
     },
     quickcheck::Arbitrary,
     quickcheck_macros::quickcheck,
+    solana_program::pubkey::Pubkey,
 };
 
 #[derive(Clone, Debug, Copy)]
@@ -109,6 +121,11 @@ fn test_twap_unit() {
             conf:     u64::MAX,
             slot_gap: 1,
         },
+        DataEvent {
+            price:    -10,
+            conf:     4,
+            slot_gap: 30,
+        },
     ];
 
     price_cumulative.update(data[0].price, data[0].conf, data[0].slot_gap);
@@ -121,6 +138,12 @@ fn test_twap_unit() {
     assert_eq!(price_cumulative.price, 9_223_372_036_854_775_812i128);
     assert_eq!(price_cumulative.conf, 18_446_744_073_709_551_625u128);
     assert_eq!(price_cumulative.num_gaps, 3);
+    assert_eq!(price_cumulative.unused, 0);
+
+    price_cumulative.update(data[2].price, data[2].conf, data[2].slot_gap);
+    assert_eq!(price_cumulative.price, 9_223_372_036_854_775_512i128);
+    assert_eq!(price_cumulative.conf, 18_446_744_073_709_551_745u128);
+    assert_eq!(price_cumulative.num_gaps, 4);
     assert_eq!(price_cumulative.unused, 0);
 
     let mut price_cumulative_overflow = PriceCumulative {
@@ -140,4 +163,74 @@ fn test_twap_unit() {
     );
     assert_eq!(price_cumulative_overflow.num_gaps, 1);
     assert_eq!(price_cumulative_overflow.unused, 0);
+}
+
+#[test]
+fn test_twap_with_price_account() {
+    let program_id = Pubkey::new_unique();
+    let mut price_setup: AccountSetup = AccountSetup::new::<PriceAccountV2>(&program_id);
+    let price_account = price_setup.as_account_info();
+
+    // Normal behavior
+    let mut price_data = load_account_as_mut::<PriceAccountV2>(&price_account).unwrap();
+    price_data.agg_ = PriceInfo {
+        price_:           -10,
+        conf_:            5,
+        status_:          PC_STATUS_TRADING,
+        corp_act_status_: 0,
+        pub_slot_:        5,
+    };
+    price_data.price_cumulative = PriceCumulative {
+        price:    1,
+        conf:     2,
+        num_gaps: 3,
+        unused:   0,
+    };
+    price_data.prev_slot_ = 3;
+    price_data.update_price_cumulative().unwrap();
+
+    assert_eq!(price_data.price_cumulative.price, 1 - 2 * 10);
+    assert_eq!(price_data.price_cumulative.conf, 2 + 2 * 5);
+    assert_eq!(price_data.price_cumulative.num_gaps, 3);
+
+    // Slot decreases
+    price_data.agg_ = PriceInfo {
+        price_:           300,
+        conf_:            6,
+        status_:          PC_STATUS_TRADING,
+        corp_act_status_: 0,
+        pub_slot_:        1,
+    };
+    price_data.prev_slot_ = 5;
+
+    assert_eq!(price_data.price_cumulative.price, 1 - 2 * 10);
+    assert_eq!(price_data.price_cumulative.conf, 2 + 2 * 5);
+    assert_eq!(price_data.price_cumulative.num_gaps, 3);
+
+    // Status is not trading
+    price_data.agg_ = PriceInfo {
+        price_:           1,
+        conf_:            2,
+        status_:          PC_STATUS_UNKNOWN,
+        corp_act_status_: 0,
+        pub_slot_:        6,
+    };
+    price_data.prev_slot_ = 5;
+    assert_eq!(
+        price_data.update_price_cumulative(),
+        Err(OracleError::NeedsSuccesfulAggregation)
+    );
+
+
+    assert_eq!(price_data.price_cumulative.price, 1 - 2 * 10);
+    assert_eq!(price_data.price_cumulative.conf, 2 + 2 * 5);
+    assert_eq!(price_data.price_cumulative.num_gaps, 3);
+
+    // Back to normal behavior
+    price_data.agg_.status_ = PC_STATUS_TRADING;
+    price_data.update_price_cumulative().unwrap();
+
+    assert_eq!(price_data.price_cumulative.price, 1 - 2 * 10 + 1);
+    assert_eq!(price_data.price_cumulative.conf, 2 + 2 * 5 + 2);
+    assert_eq!(price_data.price_cumulative.num_gaps, 3);
 }

@@ -141,7 +141,7 @@ impl PriceAccountV2 {
 // num_gaps <= current_slot <= u64::MAX
 /// Contains cumulative sums of aggregative price and confidence used to compute arithmetic moving averages.
 /// Informally the TWAP between time t and time T can be computed as :
-/// `(T.price_cumulative.price - t.price_cumulative.price) / (T.last_slot_ - t.last_slot_)`
+/// `(T.price_cumulative.price - t.price_cumulative.price) / (T.agg_.pub_slot_ - t.agg_.pub_slot_)`
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]
 pub struct PriceCumulative {
