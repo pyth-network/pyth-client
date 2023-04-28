@@ -1,7 +1,7 @@
 use {
     crate::{
         accounts::{
-            PriceAccountNew,
+            PriceAccountV2,
             PythAccount,
         },
         c_oracle_header::{
@@ -41,13 +41,13 @@ fn test_upd_price() {
     let mut funding_setup = AccountSetup::new_funding();
     let funding_account = funding_setup.as_account_info();
 
-    let mut price_setup = AccountSetup::new::<PriceAccountNew>(&program_id);
+    let mut price_setup = AccountSetup::new::<PriceAccountV2>(&program_id);
     let mut price_account = price_setup.as_account_info();
     price_account.is_signer = false;
-    PriceAccountNew::initialize(&price_account, PC_VERSION).unwrap();
+    PriceAccountV2::initialize(&price_account, PC_VERSION).unwrap();
 
     {
-        let mut price_data = load_checked::<PriceAccountNew>(&price_account, PC_VERSION).unwrap();
+        let mut price_data = load_checked::<PriceAccountV2>(&price_account, PC_VERSION).unwrap();
         price_data.num_ = 1;
         price_data.comp_[0].pub_ = *funding_account.key;
     }
@@ -71,7 +71,7 @@ fn test_upd_price() {
     .is_ok());
 
     {
-        let price_data = load_checked::<PriceAccountNew>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<PriceAccountV2>(&price_account, PC_VERSION).unwrap();
         assert_eq!(price_data.comp_[0].latest_.price_, 42);
         assert_eq!(price_data.comp_[0].latest_.conf_, 2);
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 1);
@@ -104,7 +104,7 @@ fn test_upd_price() {
     );
 
     {
-        let price_data = load_checked::<PriceAccountNew>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<PriceAccountV2>(&price_account, PC_VERSION).unwrap();
         assert_eq!(price_data.comp_[0].latest_.price_, 42);
         assert_eq!(price_data.comp_[0].latest_.conf_, 2);
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 1);
@@ -136,7 +136,7 @@ fn test_upd_price() {
     .is_ok());
 
     {
-        let price_data = load_checked::<PriceAccountNew>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<PriceAccountV2>(&price_account, PC_VERSION).unwrap();
         assert_eq!(price_data.comp_[0].latest_.price_, 81);
         assert_eq!(price_data.comp_[0].latest_.conf_, 2);
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 2);
@@ -167,7 +167,7 @@ fn test_upd_price() {
     .is_ok());
 
     {
-        let price_data = load_checked::<PriceAccountNew>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<PriceAccountV2>(&price_account, PC_VERSION).unwrap();
         assert_eq!(price_data.comp_[0].latest_.price_, 81);
         assert_eq!(price_data.comp_[0].latest_.conf_, 2);
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 3);
@@ -198,7 +198,7 @@ fn test_upd_price() {
     .is_ok());
 
     {
-        let price_data = load_checked::<PriceAccountNew>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<PriceAccountV2>(&price_account, PC_VERSION).unwrap();
         assert_eq!(price_data.comp_[0].latest_.price_, 81);
         assert_eq!(price_data.comp_[0].latest_.conf_, 2);
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 4);
@@ -231,7 +231,7 @@ fn test_upd_price() {
     );
 
     {
-        let price_data = load_checked::<PriceAccountNew>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<PriceAccountV2>(&price_account, PC_VERSION).unwrap();
         assert_eq!(price_data.comp_[0].latest_.price_, 81);
         assert_eq!(price_data.comp_[0].latest_.conf_, 2);
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 4);
@@ -254,7 +254,7 @@ fn test_upd_price() {
 
     // check that someone doesn't accidentally break the test.
     {
-        let price_data = load_checked::<PriceAccountNew>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<PriceAccountV2>(&price_account, PC_VERSION).unwrap();
         assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_TRADING);
     }
 
@@ -270,7 +270,7 @@ fn test_upd_price() {
     .is_ok());
 
     {
-        let price_data = load_checked::<PriceAccountNew>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<PriceAccountV2>(&price_account, PC_VERSION).unwrap();
         assert_eq!(price_data.comp_[0].latest_.price_, 50);
         assert_eq!(price_data.comp_[0].latest_.conf_, 20);
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 5);
@@ -302,7 +302,7 @@ fn test_upd_price() {
     .is_ok());
 
     {
-        let price_data = load_checked::<PriceAccountNew>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<PriceAccountV2>(&price_account, PC_VERSION).unwrap();
         assert_eq!(price_data.comp_[0].latest_.price_, 50);
         assert_eq!(price_data.comp_[0].latest_.conf_, 20);
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 6);
@@ -334,7 +334,7 @@ fn test_upd_price() {
     .is_ok());
 
     {
-        let price_data = load_checked::<PriceAccountNew>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<PriceAccountV2>(&price_account, PC_VERSION).unwrap();
         assert_eq!(price_data.comp_[0].latest_.price_, -100);
         assert_eq!(price_data.comp_[0].latest_.conf_, 1);
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 7);
@@ -366,7 +366,7 @@ fn test_upd_price() {
     .is_ok());
 
     {
-        let price_data = load_checked::<PriceAccountNew>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<PriceAccountV2>(&price_account, PC_VERSION).unwrap();
         assert_eq!(price_data.comp_[0].latest_.price_, -100);
         assert_eq!(price_data.comp_[0].latest_.conf_, 1);
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 8);
@@ -399,7 +399,7 @@ fn test_upd_price() {
     .is_ok());
 
     {
-        let price_data = load_checked::<PriceAccountNew>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<PriceAccountV2>(&price_account, PC_VERSION).unwrap();
         assert_eq!(price_data.comp_[0].latest_.price_, 60);
         assert_eq!(price_data.comp_[0].latest_.conf_, 4);
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 50);
@@ -438,7 +438,7 @@ fn test_upd_price() {
     .is_ok());
 
     {
-        let price_data = load_checked::<PriceAccountNew>(&price_account, PC_VERSION).unwrap();
+        let price_data = load_checked::<PriceAccountV2>(&price_account, PC_VERSION).unwrap();
         assert_eq!(price_data.comp_[0].latest_.price_, 55);
         assert_eq!(price_data.comp_[0].latest_.conf_, 5);
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 51);
