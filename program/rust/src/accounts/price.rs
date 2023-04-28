@@ -1,5 +1,3 @@
-#[cfg(test)]
-use crate::c_oracle_header::PC_MAX_SEND_LATENCY;
 use {
     super::{
         AccountHeader,
@@ -154,7 +152,6 @@ pub struct PriceCumulative {
     pub unused:   u64,  // Padding for alignment
 }
 
-#[cfg(test)]
 impl PriceCumulative {
     pub fn update(&mut self, price: i64, conf: u64, slot_gap: u64) {
         self.price += i128::from(price) * i128::from(slot_gap);
@@ -300,7 +297,6 @@ impl PriceFeedMessage {
     }
 }
 
-#[cfg(test)]
 impl PythAccount for PriceAccountNew {
     const ACCOUNT_TYPE: u32 = PC_ACCTYPE_PRICE;
     /// Equal to the offset of `comp_` in `PriceAccount`, see the trait comment for more detail

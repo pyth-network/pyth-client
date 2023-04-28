@@ -1,8 +1,3 @@
-#[cfg(test)]
-use crate::accounts::{
-    PriceAccountNew,
-    PythAccount,
-};
 use {
     crate::{
         accounts::{
