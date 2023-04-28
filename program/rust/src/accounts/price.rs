@@ -6,6 +6,7 @@ use {
     crate::c_oracle_header::{
         PC_ACCTYPE_PRICE,
         PC_COMP_SIZE,
+        PC_COMP_SIZE_V2,
         PC_MAX_SEND_LATENCY,
         PC_PRICE_T_COMP_OFFSET,
     },
@@ -107,6 +108,7 @@ pub struct PriceAccountV2 {
     pub agg_:               PriceInfo,
     /// Publishers' price components
     pub comp_:              [PriceComponent; PC_COMP_SIZE as usize],
+    pub extra_comp_:        [PriceComponent; (PC_COMP_SIZE_V2 - PC_COMP_SIZE) as usize], // This space is empty until we update the aggregation to support more pubs
     /// Cumulative sums of aggregative price and confidence used to compute arithmetic moving averages
     pub price_cumulative:   PriceCumulative,
 }
