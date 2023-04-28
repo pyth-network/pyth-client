@@ -26,10 +26,7 @@ use {
         program_memory::sol_memset,
         pubkey::Pubkey,
     },
-    std::mem::{
-        size_of,
-        size_of_val,
-    },
+    std::mem::size_of,
 };
 
 /// Add publisher to symbol account
@@ -84,8 +81,5 @@ pub fn add_publisher(
     );
     price_data.comp_[current_index].pub_ = cmd_args.publisher;
     price_data.num_ += 1;
-    price_data.header.size =
-        try_convert::<_, u32>(size_of::<PriceAccount>() - size_of_val(&price_data.comp_))?
-            + price_data.num_ * try_convert::<_, u32>(size_of::<PriceComponent>())?;
     Ok(())
 }

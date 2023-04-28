@@ -25,10 +25,7 @@ use {
         program_memory::sol_memset,
         pubkey::Pubkey,
     },
-    std::mem::{
-        size_of,
-        size_of_val,
-    },
+    std::mem::size_of,
 };
 
 /// Delete publisher from symbol account
@@ -76,9 +73,6 @@ pub fn del_publisher(
                 0,
                 size_of::<PriceComponent>(),
             );
-            price_data.header.size =
-                try_convert::<_, u32>(size_of::<PriceAccount>() - size_of_val(&price_data.comp_))?
-                    + price_data.num_ * try_convert::<_, u32>(size_of::<PriceComponent>())?;
             return Ok(());
         }
     }

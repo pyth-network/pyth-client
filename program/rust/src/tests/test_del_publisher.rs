@@ -2,7 +2,6 @@ use {
     crate::{
         accounts::{
             PriceAccount,
-            PriceComponent,
             PriceInfo,
             PythAccount,
         },
@@ -114,10 +113,7 @@ fn test_del_publisher() {
         assert_eq!(price_data.comp_[1].latest_.status_, 0);
         assert_eq!(price_data.comp_[1].latest_.pub_slot_, 0);
         assert_eq!(price_data.comp_[1].latest_.corp_act_status_, 0);
-        assert_eq!(
-            price_data.header.size,
-            PriceAccount::INITIAL_SIZE + (size_of::<PriceComponent>() as u32)
-        );
+        assert_eq!(price_data.header.size, PriceAccount::INITIAL_SIZE);
         assert!(price_data.comp_[0].pub_ == publisher2);
         assert!(price_data.comp_[1].pub_ == Pubkey::default());
 
@@ -152,10 +148,7 @@ fn test_del_publisher() {
         assert_eq!(price_data.comp_[1].latest_.status_, 0);
         assert_eq!(price_data.comp_[1].latest_.pub_slot_, 0);
         assert_eq!(price_data.comp_[1].latest_.corp_act_status_, 0);
-        assert_eq!(
-            price_data.header.size,
-            PriceAccount::INITIAL_SIZE + (size_of::<PriceComponent>() as u32)
-        );
+        assert_eq!(price_data.header.size, PriceAccount::INITIAL_SIZE);
         assert!(price_data.comp_[0].pub_ == publisher2);
         assert!(price_data.comp_[1].pub_ == Pubkey::default());
     }

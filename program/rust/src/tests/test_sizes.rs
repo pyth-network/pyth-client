@@ -99,17 +99,6 @@ fn test_sizes() {
 fn test_offsets() {
     let program_id = Pubkey::new_unique();
 
-    let mut price_setup = AccountSetup::new::<PriceAccount>(&program_id);
-    let price_account = price_setup.as_account_info();
-
-    PriceAccount::initialize(&price_account, PC_VERSION).unwrap();
-    let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
-
-    assert_eq!(
-        size_of::<PriceAccount>() - size_of_val(&price_data.comp_),
-        try_convert::<_, usize>(PriceAccount::INITIAL_SIZE).unwrap()
-    );
-
     let mut mapping_setup = AccountSetup::new::<MappingAccount>(&program_id);
     let mapping_account = mapping_setup.as_account_info();
 
