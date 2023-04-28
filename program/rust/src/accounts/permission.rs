@@ -15,8 +15,6 @@ use {
     std::mem::size_of,
 };
 
-pub const PERMISSIONS_SEED: &str = "permissions";
-
 /// This account stores the pubkeys that can execute administrative instructions in the Pyth
 /// program. Only the upgrade authority of the program can update these permissions.
 #[repr(C)]

@@ -43,14 +43,12 @@ pub use product::{
 };
 pub use {
     mapping::MappingAccount,
-    permission::{
-        PermissionAccount,
-        PERMISSIONS_SEED,
-    },
+    permission::PermissionAccount,
     price::{
         PriceAccount,
         PriceComponent,
         PriceEma,
+        PriceFeedMessage,
         PriceInfo,
     },
     product::{
@@ -59,6 +57,15 @@ pub use {
         ProductAccount,
     },
 };
+
+// PDA seeds for accounts.
+/// There is a single permissions account under `PERMISSIONS_SEED` that stores which keys
+/// are authorized to perform certain adminsitrative actions.
+pub const PERMISSIONS_SEED: &str = "permissions";
+/// The update price instruction can optionally invoke another program via CPI. The
+/// CPI will be signed with the PDA `[UPD_PRICE_WRITE_SEED, invoked_program_public_key]`
+/// such that the caller can authenticate its origin.
+pub const UPD_PRICE_WRITE_SEED: &str = "upd_price_write";
 
 #[repr(C)]
 #[derive(Copy, Clone, Zeroable, Pod)]

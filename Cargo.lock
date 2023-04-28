@@ -2487,6 +2487,7 @@ dependencies = [
  "bincode",
  "bindgen",
  "bytemuck",
+ "byteorder",
  "csv",
  "hex",
  "num-derive",
