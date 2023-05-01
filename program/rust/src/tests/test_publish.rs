@@ -2,19 +2,18 @@ use {
     crate::{
         accounts::{
             PriceAccount,
+            PriceAccountV2,
             PythAccount,
         },
         c_oracle_header::{
             PC_STATUS_TRADING,
             PC_STATUS_UNKNOWN,
             PRICE_ACCOUNT_DEFAULT_MIN_PUB,
-            PRICE_ACCOUNT_SIZE,
         },
         tests::pyth_simulator::{
             PythSimulator,
             Quote,
         },
-        utils::try_convert,
     },
     solana_program::pubkey::Pubkey,
     solana_sdk::{
@@ -22,6 +21,7 @@ use {
         signature::Keypair,
         signer::Signer,
     },
+    std::mem::size_of,
 };
 
 
@@ -123,10 +123,7 @@ async fn test_publish() {
         .await
         .unwrap();
     let price_account: Account = sim.get_account(price).await.unwrap();
-    assert_eq!(
-        price_account.data.len(),
-        try_convert::<_, usize>(PRICE_ACCOUNT_SIZE).unwrap()
-    );
+    assert_eq!(price_account.data.len(), size_of::<PriceAccountV2>());
 
     sim.warp_to_slot(3).await.unwrap();
     sim.upd_price(

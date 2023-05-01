@@ -1,10 +1,11 @@
 use {
     crate::{
-        accounts::PriceAccount,
-        c_oracle_header::PRICE_ACCOUNT_SIZE,
+        accounts::{
+            PriceAccount,
+            PriceAccountV2,
+        },
         error::OracleError,
         tests::pyth_simulator::PythSimulator,
-        utils::try_convert,
     },
     solana_sdk::{
         account::Account,
@@ -44,10 +45,7 @@ async fn test_resize_price_account() {
         .is_ok());
     // Check new size
     let price_account: Account = sim.get_account(price).await.unwrap();
-    assert_eq!(
-        price_account.data.len(),
-        try_convert::<_, usize>(PRICE_ACCOUNT_SIZE).unwrap()
-    );
+    assert_eq!(price_account.data.len(), size_of::<PriceAccountV2>());
 
     // Future calls don't change the size
     assert!(sim
@@ -55,8 +53,5 @@ async fn test_resize_price_account() {
         .await
         .is_ok());
     let price_account = sim.get_account(price).await.unwrap();
-    assert_eq!(
-        price_account.data.len(),
-        try_convert::<_, usize>(PRICE_ACCOUNT_SIZE).unwrap()
-    );
+    assert_eq!(price_account.data.len(), size_of::<PriceAccountV2>());
 }
