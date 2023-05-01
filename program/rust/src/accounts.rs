@@ -109,7 +109,6 @@ pub trait PythAccount: Pod {
         )?;
 
         check_valid_fresh_account(account)?;
-        clear_account(account)?;
 
         {
             let mut account_header = load_account_as_mut::<AccountHeader>(account)?;
@@ -170,6 +169,7 @@ fn create<'a>(
 }
 
 /// Sets the data of account to all-zero
+#[cfg(test)]
 pub fn clear_account(account: &AccountInfo) -> Result<(), ProgramError> {
     let mut data = account
         .try_borrow_mut_data()
