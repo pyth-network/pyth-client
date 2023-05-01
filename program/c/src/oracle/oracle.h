@@ -21,6 +21,7 @@ extern "C" {
 #define PC_PUBKEY_SIZE_64   (PC_PUBKEY_SIZE/sizeof(uint64_t))
 #define PC_MAP_TABLE_SIZE   640
 #define PC_COMP_SIZE         32
+#define PC_COMP_SIZE_V2     128
 
 #define PC_PROD_ACC_SIZE    512
 #define PC_EXP_DECAY         -9
@@ -200,7 +201,7 @@ static_assert( sizeof( pc_price_t ) == 3312, "" );
 
 // This constant needs to be an upper bound of the price account size, it is used within pythd for ztsd.
 // It is set tighly to the current price account + 96 component prices + 48 bytes for cumulative sums
-const uint64_t PRICE_ACCOUNT_SIZE = 3312 + 96 * sizeof( pc_price_comp_t) + 48;
+const uint64_t ZSTD_UPPER_BOUND = 3312 + 96 * sizeof( pc_price_comp_t) + 48;
 
 
 // command enumeration

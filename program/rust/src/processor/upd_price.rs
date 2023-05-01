@@ -2,8 +2,10 @@ use {
     crate::{
         accounts::{
             PriceAccount,
+            PriceAccountV2,
             PriceFeedMessage,
             PriceInfo,
+            PythAccount,
             UPD_PRICE_WRITE_SEED,
         },
         deserialize::{
@@ -160,6 +162,15 @@ pub fn upd_price(
                 clock.slot,
                 clock.unix_timestamp,
             );
+        }
+    }
+
+    {
+        let account_len = price_account.try_data_len()?;
+        if aggregate_updated && account_len >= PriceAccountV2::MINIMUM_SIZE {
+            let mut price_data =
+                load_checked::<PriceAccountV2>(price_account, cmd_args.header.version)?;
+            price_data.update_price_cumulative()?;
         }
     }
 

@@ -5,7 +5,9 @@ use {
             MappingAccount,
             PermissionAccount,
             PriceAccount,
+            PriceAccountV2,
             PriceComponent,
+            PriceCumulative,
             PriceEma,
             PriceInfo,
             ProductAccount,
@@ -13,9 +15,10 @@ use {
         },
         c_oracle_header::{
             PC_COMP_SIZE,
+            PC_COMP_SIZE_V2,
             PC_MAP_TABLE_SIZE,
             PC_VERSION,
-            PRICE_ACCOUNT_SIZE,
+            ZSTD_UPPER_BOUND,
         },
         deserialize::{
             load,
@@ -59,6 +62,14 @@ fn test_sizes() {
             + size_of::<PriceInfo>()
             + (PC_COMP_SIZE as usize) * size_of::<PriceComponent>()
     );
+    assert_eq!(
+        size_of::<PriceAccountV2>(),
+        48 + u64::BITS as usize
+            + 3 * size_of::<Pubkey>()
+            + size_of::<PriceInfo>()
+            + (PC_COMP_SIZE_V2 as usize) * size_of::<PriceComponent>()
+            + size_of::<PriceCumulative>()
+    );
     assert_eq!(size_of::<CommandHeader>(), 8);
     assert_eq!(size_of::<AddPriceArgs>(), 16);
     assert_eq!(size_of::<InitPriceArgs>(), 16);
@@ -72,26 +83,21 @@ fn test_sizes() {
     assert_eq!(size_of::<ProductAccount>(), 48);
     assert_eq!(size_of::<PriceComponent>(), 96);
     assert_eq!(size_of::<PriceEma>(), 24);
+    assert_eq!(size_of::<PriceCumulative>(), 48);
     assert_eq!(size_of::<PriceAccount>(), 3312);
-    assert_eq!(PRICE_ACCOUNT_SIZE, 12576);
-    assert!(size_of::<PriceAccount>() <= try_convert::<_, usize>(PRICE_ACCOUNT_SIZE).unwrap());
+    assert_eq!(size_of::<PriceAccountV2>(), 12576);
+    assert_eq!(
+        size_of::<PriceAccountV2>(),
+        size_of::<PriceAccount>() + 96 * size_of::<PriceComponent>() + size_of::<PriceCumulative>()
+    );
+    assert!(size_of::<PriceAccount>() <= try_convert::<_, usize>(ZSTD_UPPER_BOUND).unwrap());
+    assert!(size_of::<PriceAccountV2>() == try_convert::<_, usize>(ZSTD_UPPER_BOUND).unwrap());
     assert_eq!(size_of::<PermissionAccount>(), 112);
 }
 
 #[test]
 fn test_offsets() {
     let program_id = Pubkey::new_unique();
-
-    let mut price_setup = AccountSetup::new::<PriceAccount>(&program_id);
-    let price_account = price_setup.as_account_info();
-
-    PriceAccount::initialize(&price_account, PC_VERSION).unwrap();
-    let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
-
-    assert_eq!(
-        size_of::<PriceAccount>() - size_of_val(&price_data.comp_),
-        try_convert::<_, usize>(PriceAccount::INITIAL_SIZE).unwrap()
-    );
 
     let mut mapping_setup = AccountSetup::new::<MappingAccount>(&program_id);
     let mapping_account = mapping_setup.as_account_info();

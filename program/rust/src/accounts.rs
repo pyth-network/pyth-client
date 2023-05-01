@@ -46,7 +46,9 @@ pub use {
     permission::PermissionAccount,
     price::{
         PriceAccount,
+        PriceAccountV2,
         PriceComponent,
+        PriceCumulative,
         PriceEma,
         PriceFeedMessage,
         PriceInfo,

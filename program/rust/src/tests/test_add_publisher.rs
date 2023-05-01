@@ -3,7 +3,6 @@ use {
         accounts::{
             clear_account,
             PriceAccount,
-            PriceComponent,
             PythAccount,
         },
         c_oracle_header::{
@@ -25,7 +24,6 @@ use {
         pubkey::Pubkey,
         rent::Rent,
     },
-    std::mem::size_of,
 };
 
 #[test]
@@ -74,10 +72,7 @@ fn test_add_publisher() {
     {
         let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
         assert_eq!(price_data.num_, 1);
-        assert_eq!(
-            price_data.header.size,
-            PriceAccount::INITIAL_SIZE + (size_of::<PriceComponent>() as u32)
-        );
+        assert_eq!(price_data.header.size, PriceAccount::INITIAL_SIZE);
         assert!(price_data.comp_[0].pub_ == publisher);
     }
 
@@ -121,10 +116,7 @@ fn test_add_publisher() {
             let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
             assert_eq!(price_data.num_, i + 1);
             assert!(price_data.comp_[i as usize].pub_ == cmd.publisher);
-            assert_eq!(
-                price_data.header.size,
-                PriceAccount::INITIAL_SIZE + (size_of::<PriceComponent>() as u32) * (i + 1)
-            );
+            assert_eq!(price_data.header.size, PriceAccount::INITIAL_SIZE);
         }
     }
 
