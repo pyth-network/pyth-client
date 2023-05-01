@@ -3,6 +3,7 @@ use {
         accounts::{
             PriceAccount,
             PriceComponent,
+            PythAccount,
         },
         deserialize::{
             load,
@@ -73,6 +74,7 @@ pub fn del_publisher(
                 0,
                 size_of::<PriceComponent>(),
             );
+            price_data.header.size = try_convert::<_, u32>(PriceAccount::INITIAL_SIZE)?;
             return Ok(());
         }
     }
