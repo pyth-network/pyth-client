@@ -20,16 +20,20 @@ use {
         account_info::AccountInfo,
         program::invoke_signed,
         program_error::ProgramError,
-        program_memory::sol_memset,
         pubkey::Pubkey,
         system_instruction::create_account,
     },
     std::{
-        borrow::BorrowMut,
         cell::RefMut,
         mem::size_of,
     },
 };
+#[cfg(test)]
+use {
+    solana_program::program_memory::sol_memset,
+    std::borrow::BorrowMut,
+};
+
 
 mod mapping;
 mod permission;
