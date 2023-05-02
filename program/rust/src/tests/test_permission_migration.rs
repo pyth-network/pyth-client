@@ -272,21 +272,23 @@ fn test_permission_migration() {
     );
 
 
-    // Security authority can change minimum number of publishers
-    process_instruction(
-        &program_id,
-        &[
-            security_auth_account.clone(),
-            price_account.clone(),
-            permissions_account.clone(),
-        ],
-        bytes_of::<SetMinPubArgs>(&SetMinPubArgs {
-            header:             SetMinPub.into(),
-            minimum_publishers: 5,
-            unused_:            [0; 3],
-        }),
-    )
-    .unwrap();
+    // Security authority can't change minimum number of publishers
+    assert_eq!(
+        process_instruction(
+            &program_id,
+            &[
+                security_auth_account.clone(),
+                price_account.clone(),
+                permissions_account.clone(),
+            ],
+            bytes_of::<SetMinPubArgs>(&SetMinPubArgs {
+                header:             SetMinPub.into(),
+                minimum_publishers: 5,
+                unused_:            [0; 3],
+            }),
+        ),
+        Err(OracleError::PermissionViolation.into())
+    );
 
     // Security authority can't add publishers
     assert_eq!(

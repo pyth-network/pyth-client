@@ -1,6 +1,10 @@
 use {
     crate::{
-        accounts::PriceAccount,
+        accounts::{
+            PriceAccount,
+            PriceAccountV2,
+            PythAccount,
+        },
         c_oracle_header::{
             PC_STATUS_TRADING,
             PC_STATUS_UNKNOWN,
@@ -13,9 +17,11 @@ use {
     },
     solana_program::pubkey::Pubkey,
     solana_sdk::{
+        account::Account,
         signature::Keypair,
         signer::Signer,
     },
+    std::mem::size_of,
 };
 
 
@@ -23,7 +29,10 @@ use {
 async fn test_publish() {
     let mut sim = PythSimulator::new().await;
     let publisher = Keypair::new();
-    let price_accounts = sim.setup_product_fixture(publisher.pubkey()).await;
+    let security_authority = Keypair::new();
+    let price_accounts = sim
+        .setup_product_fixture(publisher.pubkey(), security_authority.pubkey())
+        .await;
     let price = price_accounts["LTC"];
 
     // Check price account before publishing
@@ -105,6 +114,16 @@ async fn test_publish() {
         assert_eq!(price_data.comp_[0].agg_.conf_, 7);
         assert_eq!(price_data.comp_[0].agg_.status_, PC_STATUS_TRADING);
     }
+
+    // Resize, check if publishing still works
+    let price_account: Account = sim.get_account(price).await.unwrap();
+    assert_eq!(price_account.data.len(), PriceAccount::MINIMUM_SIZE);
+
+    sim.resize_price_account(price, &security_authority)
+        .await
+        .unwrap();
+    let price_account: Account = sim.get_account(price).await.unwrap();
+    assert_eq!(price_account.data.len(), size_of::<PriceAccountV2>());
 
     sim.warp_to_slot(3).await.unwrap();
     sim.upd_price(

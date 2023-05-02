@@ -111,9 +111,10 @@ pub trait PythAccount: Pod {
             account.data_len() >= Self::MINIMUM_SIZE,
             OracleError::AccountTooSmall.into(),
         )?;
-
+        // Solana accounts are guaranteed to be zeroed when given to the program by an external creator.
+        // Since all already initialized accounts of the program have a non-zero header, an account with a zeroed header
+        // is guaranteed to be all 0s. Therefore we only need to check the header here.
         check_valid_fresh_account(account)?;
-
         {
             let mut account_header = load_account_as_mut::<AccountHeader>(account)?;
             account_header.magic_number = PC_MAGIC;
