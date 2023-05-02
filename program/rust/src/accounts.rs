@@ -20,16 +20,20 @@ use {
         account_info::AccountInfo,
         program::invoke_signed,
         program_error::ProgramError,
-        program_memory::sol_memset,
         pubkey::Pubkey,
         system_instruction::create_account,
     },
     std::{
-        borrow::BorrowMut,
         cell::RefMut,
         mem::size_of,
     },
 };
+#[cfg(test)]
+use {
+    solana_program::program_memory::sol_memset,
+    std::borrow::BorrowMut,
+};
+
 
 mod mapping;
 mod permission;
@@ -109,7 +113,6 @@ pub trait PythAccount: Pod {
         )?;
 
         check_valid_fresh_account(account)?;
-        clear_account(account)?;
 
         {
             let mut account_header = load_account_as_mut::<AccountHeader>(account)?;
@@ -170,6 +173,7 @@ fn create<'a>(
 }
 
 /// Sets the data of account to all-zero
+#[cfg(test)]
 pub fn clear_account(account: &AccountInfo) -> Result<(), ProgramError> {
     let mut data = account
         .try_borrow_mut_data()
