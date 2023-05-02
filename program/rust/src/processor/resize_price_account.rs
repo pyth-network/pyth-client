@@ -87,7 +87,7 @@ pub fn resize_price_account(
         // Check that we can still load the account, update header size for homogeneity
         {
             let mut price_data = load_checked::<PriceAccount>(price_account, PC_VERSION)?;
-            price_data.header.size = try_convert(size_of::<PriceAccountV2>())?; //TO DO, SET TO size_of::<PriceAccountV2>()?
+            price_data.header.size = try_convert(size_of::<PriceAccountV2>())?;
         }
     }
 
