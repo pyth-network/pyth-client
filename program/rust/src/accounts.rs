@@ -63,17 +63,6 @@ pub use {
         ProductAccount,
     },
 };
-#[cfg(test)]
-pub use {
-    price::{
-        PriceAccountNew,
-        PriceCumulative,
-    },
-    product::{
-        account_has_key_values,
-        create_pc_str_t,
-    },
-};
 
 // PDA seeds for accounts.
 /// There is a single permissions account under `PERMISSIONS_SEED` that stores which keys

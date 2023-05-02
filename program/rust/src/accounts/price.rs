@@ -296,8 +296,3 @@ impl PriceFeedMessage {
         bytes
     }
 }
-
-impl PythAccount for PriceAccountV2 {
-    const ACCOUNT_TYPE: u32 = PC_ACCTYPE_PRICE;
-    const INITIAL_SIZE: u32 = size_of::<PriceAccountV2>() as u32;
-}

@@ -145,7 +145,7 @@ static inline bool upd_aggregate( pc_price_t *ptr, uint64_t slot, int64_t timest
 
   // Update the value of the previous price, if it had TRADING status.
   if ( ptr->agg_.status_ == PC_STATUS_TRADING ) {
-    ptr->prev_slot_      = ptr->last_slot_;
+    ptr->prev_slot_      = ptr->agg_.pub_slot_;
     ptr->prev_price_     = ptr->agg_.price_;
     ptr->prev_conf_      = ptr->agg_.conf_;
     ptr->prev_timestamp_ = ptr->timestamp_;
