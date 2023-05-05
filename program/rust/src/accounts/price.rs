@@ -11,14 +11,22 @@ use {
             PC_MAX_SEND_LATENCY,
             PC_STATUS_TRADING,
         },
+        deserialize::load_checked,
         error::OracleError,
     },
     bytemuck::{
         Pod,
         Zeroable,
     },
-    solana_program::pubkey::Pubkey,
-    std::mem::size_of,
+    solana_program::{
+        account_info::AccountInfo,
+        program_error::ProgramError,
+        pubkey::Pubkey,
+    },
+    std::{
+        cell::RefMut,
+        mem::size_of,
+    },
 };
 
 #[repr(C)]
@@ -242,6 +250,29 @@ impl PriceFeedMessage {
     pub const DISCRIMINATOR: u8 = 0;
 
     pub fn from_price_account(key: &Pubkey, account: &PriceAccountV2) -> Self {
+        let (price, conf, publish_time) = if account.agg_.status_ == PC_STATUS_TRADING {
+            (account.agg_.price_, account.agg_.conf_, account.timestamp_)
+        } else {
+            (
+                account.prev_price_,
+                account.prev_conf_,
+                account.prev_timestamp_,
+            )
+        };
+
+        Self {
+            id: key.to_bytes(),
+            price,
+            conf,
+            exponent: account.exponent,
+            publish_time,
+            prev_publish_time: account.prev_timestamp_,
+            ema_price: account.twap_.val_,
+            ema_conf: account.twac_.val_ as u64,
+        }
+    }
+
+    pub fn from_price_account_v2(key: &Pubkey, account: &PriceAccountV2) -> Self {
         let (price, conf, publish_time) = if account.agg_.status_ == PC_STATUS_TRADING {
             (account.agg_.price_, account.agg_.conf_, account.timestamp_)
         } else {

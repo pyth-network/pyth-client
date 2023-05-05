@@ -2,8 +2,7 @@ use {
     crate::{
         accounts::{
             PriceAccount,
-            PriceAccountV2,
-            PriceFeedMessage,
+            PriceAccountV1orV2,
             PriceInfo,
             PythAccount,
             TwapMessage,
@@ -246,19 +245,6 @@ pub fn upd_price(
 
     // Try to update the publisher's price
     if is_component_update(cmd_args)? {
-        let status: u32 =
-            get_status_for_update(cmd_args.price, cmd_args.confidence, cmd_args.status)?;
-
-        {
-            let publisher_price = &mut price_data.comp_[publisher_index].latest_;
-            publisher_price.price_ = cmd_args.price;
-            publisher_price.conf_ = cmd_args.confidence;
-            publisher_price.status_ = status;
-            publisher_price.pub_slot_ = cmd_args.publishing_slot;
-        }
-    }
-
-    Ok(())
 }
 
 
