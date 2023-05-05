@@ -50,12 +50,14 @@ pub use {
     permission::PermissionAccount,
     price::{
         PriceAccount,
+        PriceAccountV1orV2,
         PriceAccountV2,
         PriceComponent,
         PriceCumulative,
         PriceEma,
         PriceFeedMessage,
         PriceInfo,
+        TWAPMessage,
     },
     product::{
         read_pc_str_t,
