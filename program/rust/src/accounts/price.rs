@@ -11,14 +11,22 @@ use {
             PC_MAX_SEND_LATENCY,
             PC_STATUS_TRADING,
         },
+        deserialize::load_checked,
         error::OracleError,
     },
     bytemuck::{
         Pod,
         Zeroable,
     },
-    solana_program::pubkey::Pubkey,
-    std::mem::size_of,
+    solana_program::{
+        account_info::AccountInfo,
+        program_error::ProgramError,
+        pubkey::Pubkey,
+    },
+    std::{
+        cell::RefMut,
+        mem::size_of,
+    },
 };
 
 #[repr(C)]
@@ -96,7 +104,7 @@ pub struct PriceAccountV2 {
     pub timestamp_:         i64,
     /// Minimum valid publisher quotes for a succesful aggregation
     pub min_pub_:           u8,
-    pub unused_1_:          i8,
+    pub message_sent_:      u8,
     pub unused_2_:          i16,
     pub unused_3_:          i32,
     /// Corresponding product account
@@ -119,6 +127,7 @@ pub struct PriceAccountV2 {
     /// Cumulative sums of aggregative price and confidence used to compute arithmetic moving averages
     pub price_cumulative:   PriceCumulative,
 }
+
 
 impl PriceAccountV2 {
     /// This function gets triggered when there's a succesful aggregation and updates the cumulative sums
@@ -263,16 +272,39 @@ impl PriceFeedMessage {
         }
     }
 
+    pub fn from_price_account_v2(key: &Pubkey, account: &PriceAccountV2) -> Self {
+        let (price, conf, publish_time) = if account.agg_.status_ == PC_STATUS_TRADING {
+            (account.agg_.price_, account.agg_.conf_, account.timestamp_)
+        } else {
+            (
+                account.prev_price_,
+                account.prev_conf_,
+                account.prev_timestamp_,
+            )
+        };
+
+        Self {
+            id: key.to_bytes(),
+            price,
+            conf,
+            exponent: account.exponent,
+            publish_time,
+            prev_publish_time: account.prev_timestamp_,
+            ema_price: account.twap_.val_,
+            ema_conf: account.twac_.val_ as u64,
+        }
+    }
+
     /// Serialize this message as an array of bytes (including the discriminator)
     /// Note that it would be more idiomatic to return a `Vec`, but that approach adds
     /// to the size of the compiled binary (which is already close to the size limit).
     #[allow(unused_assignments)]
-    pub fn as_bytes(&self) -> [u8; PriceFeedMessage::MESSAGE_SIZE] {
-        let mut bytes = [0u8; PriceFeedMessage::MESSAGE_SIZE];
+    pub fn as_bytes(&self) -> [u8; Self::MESSAGE_SIZE] {
+        let mut bytes = [0u8; Self::MESSAGE_SIZE];
 
         let mut i: usize = 0;
 
-        bytes[i..i + 1].clone_from_slice(&[PriceFeedMessage::DISCRIMINATOR]);
+        bytes[i..i + 1].clone_from_slice(&[Self::DISCRIMINATOR]);
         i += 1;
 
         bytes[i..i + 32].clone_from_slice(&self.id[..]);
@@ -300,5 +332,153 @@ impl PriceFeedMessage {
         i += 8;
 
         bytes
+    }
+}
+
+/// Message format for sending data to other chains via the accumulator program
+/// When serialized, each message starts with a unique 1-byte discriminator, followed by the
+/// serialized struct data in the definition(s) below.
+///
+/// Messages are forward-compatible. You may add new fields to messages after all previously
+/// defined fields. All code for parsing messages must ignore any extraneous bytes at the end of
+/// the message (which could be fields that the code does not yet understand).
+#[repr(C)]
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct TWAPMessage {
+    pub id:                [u8; 32],
+    pub cumulative_price:  i128,
+    pub cumulative_conf:   u128,
+    pub num_gaps:          u64,
+    pub exponent:          i32,
+    pub publish_time:      i64,
+    pub prev_publish_time: i64,
+    pub publish_slot:      u64,
+}
+
+impl TWAPMessage {
+    // The size of the serialized message. Note that this is not the same as the size of the struct
+    // (because of the discriminator & struct padding/alignment).
+    pub const MESSAGE_SIZE: usize = 1 + 32 + 16 + 16 + 8 + 4 + 8 + 8 + 8;
+    pub const DISCRIMINATOR: u8 = 1;
+
+    pub fn from_price_account(key: &Pubkey, account: &PriceAccountV2) -> Self {
+        let publish_time = if account.agg_.status_ == PC_STATUS_TRADING {
+            account.timestamp_
+        } else {
+            account.prev_timestamp_
+        };
+
+        Self {
+            id: key.to_bytes(),
+            cumulative_price: account.price_cumulative.price,
+            cumulative_conf: account.price_cumulative.conf,
+            num_gaps: account.price_cumulative.num_gaps,
+            exponent: account.exponent,
+            publish_time,
+            prev_publish_time: account.prev_timestamp_,
+            publish_slot: account.last_slot_,
+        }
+    }
+
+    /// Serialize this message as an array of bytes (including the discriminator)
+    /// Note that it would be more idiomatic to return a `Vec`, but that approach adds
+    /// to the size of the compiled binary (which is already close to the size limit).
+    #[allow(unused_assignments)]
+    pub fn as_bytes(&self) -> [u8; Self::MESSAGE_SIZE] {
+        let mut bytes = [0u8; Self::MESSAGE_SIZE];
+
+        let mut i: usize = 0;
+
+        bytes[i..i + 1].clone_from_slice(&[Self::DISCRIMINATOR]);
+        i += 1;
+
+        bytes[i..i + 32].clone_from_slice(&self.id[..]);
+        i += 32;
+
+        bytes[i..i + 16].clone_from_slice(&self.cumulative_price.to_be_bytes());
+        i += 16;
+
+        bytes[i..i + 16].clone_from_slice(&self.cumulative_conf.to_be_bytes());
+        i += 16;
+
+        bytes[i..i + 8].clone_from_slice(&self.num_gaps.to_be_bytes());
+        i += 8;
+
+        bytes[i..i + 4].clone_from_slice(&self.exponent.to_be_bytes());
+        i += 4;
+
+        bytes[i..i + 8].clone_from_slice(&self.publish_time.to_be_bytes());
+        i += 8;
+
+        bytes[i..i + 8].clone_from_slice(&self.prev_publish_time.to_be_bytes());
+        i += 8;
+
+        bytes[i..i + 8].clone_from_slice(&self.publish_slot.to_be_bytes());
+        i += 8;
+
+        bytes
+    }
+}
+
+
+pub enum PriceAccountV1orV2<'a> {
+    PriceAccount(RefMut<'a, PriceAccount>),
+    PriceAccountV2(RefMut<'a, PriceAccountV2>),
+}
+
+impl<'a> PriceAccountV1orV2<'a> {
+    pub fn load_checked(account_info: &'a AccountInfo, version: u32) -> Result<Self, ProgramError> {
+        let account_len = account_info.try_data_len()?;
+        if account_len >= PriceAccountV2::MINIMUM_SIZE {
+            return Ok(PriceAccountV1orV2::PriceAccountV2(load_checked::<
+                PriceAccountV2,
+            >(
+                account_info, version
+            )?));
+        } else {
+            return Ok(PriceAccountV1orV2::PriceAccount(load_checked::<
+                PriceAccount,
+            >(
+                account_info, version
+            )?));
+        }
+    }
+    pub fn get_message_sent(&self) -> bool {
+        match self {
+            PriceAccountV1orV2::PriceAccount(price_data) => price_data.message_sent_ == 1,
+            PriceAccountV1orV2::PriceAccountV2(price_data) => price_data.message_sent_ == 1,
+        }
+    }
+
+    pub fn set_message_sent(&mut self, value: u8) {
+        match self {
+            PriceAccountV1orV2::PriceAccount(price_data) => price_data.message_sent_ = value,
+            PriceAccountV1orV2::PriceAccountV2(price_data) => price_data.message_sent_ = value,
+        }
+    }
+
+    pub fn get_messages(&mut self, price_account: &AccountInfo) -> Vec<Vec<u8>> {
+        match self {
+            PriceAccountV1orV2::PriceAccount(price_data) => vec![
+                PriceFeedMessage::from_price_account(price_account.key, price_data)
+                    .as_bytes()
+                    .to_vec(),
+            ],
+            PriceAccountV1orV2::PriceAccountV2(price_data) => vec![
+                PriceFeedMessage::from_price_account_v2(price_account.key, price_data)
+                    .as_bytes()
+                    .to_vec(),
+                TWAPMessage::from_price_account(price_account.key, price_data)
+                    .as_bytes()
+                    .to_vec(),
+            ],
+        }
+    }
+
+    pub fn update_price_cumulative_if_needed(&mut self) -> Result<(), ProgramError> {
+        if let PriceAccountV1orV2::PriceAccountV2(price_data) = self {
+            price_data.update_price_cumulative()?;
+        }
+        Ok(())
     }
 }
