@@ -50,7 +50,6 @@ pub use {
     permission::PermissionAccount,
     price::{
         PriceAccount,
-        PriceAccountV1orV2,
         PriceAccountV2,
         PriceComponent,
         PriceCumulative,

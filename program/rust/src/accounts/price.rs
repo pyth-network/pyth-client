@@ -11,22 +11,14 @@ use {
             PC_MAX_SEND_LATENCY,
             PC_STATUS_TRADING,
         },
-        deserialize::load_checked,
         error::OracleError,
     },
     bytemuck::{
         Pod,
         Zeroable,
     },
-    solana_program::{
-        account_info::AccountInfo,
-        program_error::ProgramError,
-        pubkey::Pubkey,
-    },
-    std::{
-        cell::RefMut,
-        mem::size_of,
-    },
+    solana_program::pubkey::Pubkey,
+    std::mem::size_of,
 };
 
 #[repr(C)]
@@ -243,30 +235,7 @@ impl PriceFeedMessage {
     pub const MESSAGE_SIZE: usize = 1 + 32 + 8 + 8 + 4 + 8 + 8 + 8 + 8;
     pub const DISCRIMINATOR: u8 = 0;
 
-    pub fn from_price_account(key: &Pubkey, account: &PriceAccount) -> Self {
-        let (price, conf, publish_time) = if account.agg_.status_ == PC_STATUS_TRADING {
-            (account.agg_.price_, account.agg_.conf_, account.timestamp_)
-        } else {
-            (
-                account.prev_price_,
-                account.prev_conf_,
-                account.prev_timestamp_,
-            )
-        };
-
-        Self {
-            id: key.to_bytes(),
-            price,
-            conf,
-            exponent: account.exponent,
-            publish_time,
-            prev_publish_time: account.prev_timestamp_,
-            ema_price: account.twap_.val_,
-            ema_conf: account.twac_.val_ as u64,
-        }
-    }
-
-    pub fn from_price_account_v2(key: &Pubkey, account: &PriceAccountV2) -> Self {
+    pub fn from_price_account(key: &Pubkey, account: &PriceAccountV2) -> Self {
         let (price, conf, publish_time) = if account.agg_.status_ == PC_STATUS_TRADING {
             (account.agg_.price_, account.agg_.conf_, account.timestamp_)
         } else {
@@ -411,68 +380,5 @@ impl TWAPMessage {
         i += 8;
 
         bytes
-    }
-}
-
-
-pub enum PriceAccountV1orV2<'a> {
-    PriceAccount(RefMut<'a, PriceAccount>),
-    PriceAccountV2(RefMut<'a, PriceAccountV2>),
-}
-
-impl<'a> PriceAccountV1orV2<'a> {
-    pub fn load_checked(account_info: &'a AccountInfo, version: u32) -> Result<Self, ProgramError> {
-        let account_len = account_info.try_data_len()?;
-        if account_len >= PriceAccountV2::MINIMUM_SIZE {
-            return Ok(PriceAccountV1orV2::PriceAccountV2(load_checked::<
-                PriceAccountV2,
-            >(
-                account_info, version
-            )?));
-        } else {
-            return Ok(PriceAccountV1orV2::PriceAccount(load_checked::<
-                PriceAccount,
-            >(
-                account_info, version
-            )?));
-        }
-    }
-    pub fn get_message_sent(&self) -> bool {
-        match self {
-            PriceAccountV1orV2::PriceAccount(price_data) => price_data.message_sent_ == 1,
-            PriceAccountV1orV2::PriceAccountV2(price_data) => price_data.message_sent_ == 1,
-        }
-    }
-
-    pub fn set_message_sent(&mut self, value: u8) {
-        match self {
-            PriceAccountV1orV2::PriceAccount(price_data) => price_data.message_sent_ = value,
-            PriceAccountV1orV2::PriceAccountV2(price_data) => price_data.message_sent_ = value,
-        }
-    }
-
-    pub fn get_messages(&mut self, price_account: &AccountInfo) -> Vec<Vec<u8>> {
-        match self {
-            PriceAccountV1orV2::PriceAccount(price_data) => vec![
-                PriceFeedMessage::from_price_account(price_account.key, price_data)
-                    .as_bytes()
-                    .to_vec(),
-            ],
-            PriceAccountV1orV2::PriceAccountV2(price_data) => vec![
-                PriceFeedMessage::from_price_account_v2(price_account.key, price_data)
-                    .as_bytes()
-                    .to_vec(),
-                TWAPMessage::from_price_account(price_account.key, price_data)
-                    .as_bytes()
-                    .to_vec(),
-            ],
-        }
-    }
-
-    pub fn update_price_cumulative_if_needed(&mut self) -> Result<(), ProgramError> {
-        if let PriceAccountV1orV2::PriceAccountV2(price_data) = self {
-            price_data.update_price_cumulative()?;
-        }
-        Ok(())
     }
 }
