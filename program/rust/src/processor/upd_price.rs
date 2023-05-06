@@ -2,7 +2,8 @@ use {
     crate::{
         accounts::{
             PriceAccount,
-            PriceAccountV1orV2,
+            PriceAccountV2,
+            PriceFeedMessage,
             PriceInfo,
             PythAccount,
             TwapMessage,
@@ -193,23 +194,13 @@ pub fn upd_price(
                     OracleError::InvalidPda.into(),
                 )?;
 
-                let account_metas = vec![
-                    AccountMeta {
-                        pubkey:      *accumulator_accounts.whitelist.key,
-                        is_signer:   false,
-                        is_writable: false,
-                    },
-                    AccountMeta {
-                        pubkey:      *accumulator_accounts.oracle_auth_pda.key,
-                        is_signer:   true,
-                        is_writable: false,
-                    },
-                    AccountMeta {
-                        pubkey:      *accumulator_accounts.message_buffer_data.key,
-                        is_signer:   false,
-                        is_writable: true,
-                    },
-                ];
+                    // anchor discriminator for "global:put_all"
+                    let discriminator = [212, 225, 193, 91, 151, 238, 20, 93];
+                    let create_inputs_ix = Instruction::new_with_borsh(
+                        *accumulator_accounts.program_id.key,
+                        &(discriminator, price_account.key.to_bytes(), message),
+                        account_metas,
+                    );
 
                 let message = vec![
                     PriceFeedMessage::from_price_account(price_account.key, &price_data)

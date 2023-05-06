@@ -11,22 +11,14 @@ use {
             PC_MAX_SEND_LATENCY,
             PC_STATUS_TRADING,
         },
-        deserialize::load_checked,
         error::OracleError,
     },
     bytemuck::{
         Pod,
         Zeroable,
     },
-    solana_program::{
-        account_info::AccountInfo,
-        program_error::ProgramError,
-        pubkey::Pubkey,
-    },
-    std::{
-        cell::RefMut,
-        mem::size_of,
-    },
+    solana_program::pubkey::Pubkey,
+    std::mem::size_of,
 };
 
 #[repr(C)]
