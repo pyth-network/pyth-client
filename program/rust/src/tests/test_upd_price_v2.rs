@@ -84,7 +84,7 @@ fn test_upd_price_v2() {
 
         assert_eq!(price_data.price_cumulative.price, 0);
         assert_eq!(price_data.price_cumulative.conf, 0);
-        assert_eq!(price_data.price_cumulative.num_gaps, 0);
+        assert_eq!(price_data.price_cumulative.num_down_slots, 0);
     }
 
     // add some prices for current slot - get rejected
@@ -117,7 +117,7 @@ fn test_upd_price_v2() {
 
         assert_eq!(price_data.price_cumulative.price, 0);
         assert_eq!(price_data.price_cumulative.conf, 0);
-        assert_eq!(price_data.price_cumulative.num_gaps, 0);
+        assert_eq!(price_data.price_cumulative.num_down_slots, 0);
     }
 
     // add next price in new slot triggering snapshot and aggregate calc
@@ -149,7 +149,7 @@ fn test_upd_price_v2() {
 
         assert_eq!(price_data.price_cumulative.price, 3 * 42);
         assert_eq!(price_data.price_cumulative.conf, 3 * 2);
-        assert_eq!(price_data.price_cumulative.num_gaps, 0);
+        assert_eq!(price_data.price_cumulative.num_down_slots, 0);
     }
 
     // next price doesnt change but slot does
@@ -180,7 +180,7 @@ fn test_upd_price_v2() {
 
         assert_eq!(price_data.price_cumulative.price, 3 * 42 + 81);
         assert_eq!(price_data.price_cumulative.conf, 3 * 2 + 2);
-        assert_eq!(price_data.price_cumulative.num_gaps, 0);
+        assert_eq!(price_data.price_cumulative.num_down_slots, 0);
     }
 
     // next price doesnt change and neither does aggregate but slot does
@@ -211,7 +211,7 @@ fn test_upd_price_v2() {
 
         assert_eq!(price_data.price_cumulative.price, 3 * 42 + 81 * 2);
         assert_eq!(price_data.price_cumulative.conf, 3 * 2 + 2 * 2);
-        assert_eq!(price_data.price_cumulative.num_gaps, 0);
+        assert_eq!(price_data.price_cumulative.num_down_slots, 0);
     }
 
     // try to publish back-in-time
@@ -244,7 +244,7 @@ fn test_upd_price_v2() {
 
         assert_eq!(price_data.price_cumulative.price, 3 * 42 + 81 * 2);
         assert_eq!(price_data.price_cumulative.conf, 3 * 2 + 2 * 2);
-        assert_eq!(price_data.price_cumulative.num_gaps, 0);
+        assert_eq!(price_data.price_cumulative.num_down_slots, 0);
     }
 
     populate_instruction(&mut instruction_data, 50, 20, 5);
@@ -283,7 +283,7 @@ fn test_upd_price_v2() {
 
         assert_eq!(price_data.price_cumulative.price, 3 * 42 + 81 * 3);
         assert_eq!(price_data.price_cumulative.conf, 3 * 2 + 2 * 3);
-        assert_eq!(price_data.price_cumulative.num_gaps, 0);
+        assert_eq!(price_data.price_cumulative.num_down_slots, 0);
     }
 
     // Crank one more time and aggregate should be unknown
@@ -315,7 +315,7 @@ fn test_upd_price_v2() {
 
         assert_eq!(price_data.price_cumulative.price, 3 * 42 + 81 * 3);
         assert_eq!(price_data.price_cumulative.conf, 3 * 2 + 2 * 3);
-        assert_eq!(price_data.price_cumulative.num_gaps, 0);
+        assert_eq!(price_data.price_cumulative.num_down_slots, 0);
     }
 
     // Negative prices are accepted
@@ -347,7 +347,7 @@ fn test_upd_price_v2() {
 
         assert_eq!(price_data.price_cumulative.price, 3 * 42 + 81 * 3);
         assert_eq!(price_data.price_cumulative.conf, 3 * 2 + 2 * 3);
-        assert_eq!(price_data.price_cumulative.num_gaps, 0);
+        assert_eq!(price_data.price_cumulative.num_down_slots, 0);
     }
 
     // Crank again for aggregate
@@ -379,7 +379,7 @@ fn test_upd_price_v2() {
 
         assert_eq!(price_data.price_cumulative.price, 3 * 42 + 81 * 3 - 100 * 3);
         assert_eq!(price_data.price_cumulative.conf, 3 * 2 + 2 * 3 + 3);
-        assert_eq!(price_data.price_cumulative.num_gaps, 0);
+        assert_eq!(price_data.price_cumulative.num_down_slots, 0);
     }
 
     // Big gap
@@ -412,14 +412,8 @@ fn test_upd_price_v2() {
 
         assert_eq!(price_data.price_cumulative.price, 3 * 42 + 81 * 3 - 100 * 3);
         assert_eq!(price_data.price_cumulative.conf, 3 * 2 + 2 * 3 + 3);
-        assert_eq!(price_data.price_cumulative.num_gaps, 0);
+        assert_eq!(price_data.price_cumulative.num_down_slots, 0);
     }
-
-    // Big gap
-
-    populate_instruction(&mut instruction_data, 60, 4, 50);
-    update_clock_slot(&mut clock_account, 50);
-
 
     // Crank again for aggregate
 
@@ -454,7 +448,7 @@ fn test_upd_price_v2() {
             3 * 42 + 81 * 3 - 100 * 3 + 42 * 60
         );
         assert_eq!(price_data.price_cumulative.conf, 3 * 2 + 2 * 3 + 3 + 42 * 4);
-        assert_eq!(price_data.price_cumulative.num_gaps, 1);
+        assert_eq!(price_data.price_cumulative.num_down_slots, 17);
     }
 }
 
