@@ -304,16 +304,10 @@ impl PriceFeedMessage {
     }
 }
 
-/// Message format for sending data to other chains via the accumulator program
-/// When serialized, each message starts with a unique 1-byte discriminator, followed by the
-/// serialized struct data in the definition(s) below.
-///
-/// Messages are forward-compatible. You may add new fields to messages after all previously
-/// defined fields. All code for parsing messages must ignore any extraneous bytes at the end of
-/// the message (which could be fields that the code does not yet understand).
+/// Message format for sending Twap data via the accumulator program
 #[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub struct TWAPMessage {
+pub struct TwapMessage {
     pub id:                [u8; 32],
     pub cumulative_price:  i128,
     pub cumulative_conf:   u128,
@@ -324,7 +318,7 @@ pub struct TWAPMessage {
     pub publish_slot:      u64,
 }
 
-impl TWAPMessage {
+impl TwapMessage {
     // The size of the serialized message. Note that this is not the same as the size of the struct
     // (because of the discriminator & struct padding/alignment).
     pub const MESSAGE_SIZE: usize = 1 + 32 + 16 + 16 + 8 + 4 + 8 + 8 + 8;

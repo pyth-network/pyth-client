@@ -6,7 +6,7 @@ use {
             PriceFeedMessage,
             PriceInfo,
             PythAccount,
-            TWAPMessage,
+            TwapMessage,
             UPD_PRICE_WRITE_SEED,
         },
         deserialize::{
@@ -173,9 +173,12 @@ pub fn upd_price(
                 load_checked::<PriceAccountV2>(price_account, cmd_args.header.version)?;
             price_data.update_price_cumulative()?;
 
-            if aggregate_updated {
-                price_data.message_sent_ = 0;
-            }
+            // We want to send a message every time the aggregate price updates. However, during the migration,
+            // not every publisher will necessarily provide the accumulator accounts. The message_sent_ flag
+            // ensures that after every aggregate update, the next publisher who provides the accumulator accounts
+            // will send the message.
+            price_data.message_sent_ = 0;
+
 
             if let Some(accumulator_accounts) = maybe_accumulator_accounts {
                 if price_data.message_sent_ == 0 {
@@ -213,7 +216,7 @@ pub fn upd_price(
                         PriceFeedMessage::from_price_account(price_account.key, &price_data)
                             .as_bytes()
                             .to_vec(),
-                        TWAPMessage::from_price_account(price_account.key, &price_data)
+                        TwapMessage::from_price_account(price_account.key, &price_data)
                             .as_bytes()
                             .to_vec(),
                     ];

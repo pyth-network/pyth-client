@@ -56,7 +56,7 @@ pub use {
         PriceEma,
         PriceFeedMessage,
         PriceInfo,
-        TWAPMessage,
+        TwapMessage,
     },
     product::{
         read_pc_str_t,
