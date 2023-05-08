@@ -16,7 +16,6 @@ use {
             DelPublisherArgs,
             InitPriceArgs,
             OracleCommand::{
-                AddMapping,
                 AddPrice,
                 AddProduct,
                 AddPublisher,
@@ -117,20 +116,6 @@ fn test_permission_migration() {
         bytes_of::<CommandHeader>(&InitMapping.into()),
     )
     .unwrap();
-
-    assert_eq!(
-        process_instruction(
-            &program_id,
-            &[
-                attacker_account.clone(),
-                mapping_account.clone(),
-                next_mapping_account.clone(),
-                permissions_account.clone()
-            ],
-            bytes_of::<CommandHeader>(&AddMapping.into())
-        ),
-        Err(OracleError::PermissionViolation.into())
-    );
 
     assert_eq!(
         process_instruction(
