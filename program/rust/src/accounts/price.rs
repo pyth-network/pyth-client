@@ -140,7 +140,7 @@ impl PriceAccountV2 {
 // This struct can't overflow since :
 // |sum(price * slotgap)| <= sum(|price * slotgap|) <= max(|price|) * sum(slotgap) <= i64::MAX * * current_slot <= i64::MAX * u64::MAX <= i128::MAX
 // |sum(conf * slotgap)| <= sum(|conf * slotgap|) <= max(|conf|) * sum(slotgap) <= u64::MAX * current_slot <= u64::MAX * u64::MAX <= u128::MAX
-// num_gaps <= current_slot <= u64::MAX
+// num_down_slots <= current_slot <= u64::MAX
 /// Contains cumulative sums of aggregative price and confidence used to compute arithmetic moving averages.
 /// Informally the TWAP between time t and time T can be computed as :
 /// `(T.price_cumulative.price - t.price_cumulative.price) / (T.agg_.pub_slot_ - t.agg_.pub_slot_)`
@@ -317,7 +317,7 @@ pub struct TWAPMessage {
     pub id:                [u8; 32],
     pub cumulative_price:  i128,
     pub cumulative_conf:   u128,
-    pub num_gaps:          u64,
+    pub num_down_slots:    u64,
     pub exponent:          i32,
     pub publish_time:      i64,
     pub prev_publish_time: i64,
@@ -341,7 +341,7 @@ impl TWAPMessage {
             id: key.to_bytes(),
             cumulative_price: account.price_cumulative.price,
             cumulative_conf: account.price_cumulative.conf,
-            num_gaps: account.price_cumulative.num_gaps,
+            num_down_slots: account.price_cumulative.num_down_slots,
             exponent: account.exponent,
             publish_time,
             prev_publish_time: account.prev_timestamp_,
@@ -370,7 +370,7 @@ impl TWAPMessage {
         bytes[i..i + 16].clone_from_slice(&self.cumulative_conf.to_be_bytes());
         i += 16;
 
-        bytes[i..i + 8].clone_from_slice(&self.num_gaps.to_be_bytes());
+        bytes[i..i + 8].clone_from_slice(&self.num_down_slots.to_be_bytes());
         i += 8;
 
         bytes[i..i + 4].clone_from_slice(&self.exponent.to_be_bytes());

@@ -52,7 +52,7 @@ impl Arbitrary for TWAPMessage {
             id,
             cumulative_price: i128::arbitrary(g),
             cumulative_conf: u128::arbitrary(g),
-            num_gaps: u64::arbitrary(g),
+            num_down_slots: u64::arbitrary(g),
             exponent: i32::arbitrary(g),
             publish_time,
             prev_publish_time: publish_time.saturating_sub(i64::arbitrary(g)),
@@ -98,7 +98,7 @@ impl TWAPMessage {
 
         let cumulative_price = cursor.read_i128::<BigEndian>().ok()?;
         let cumulative_conf = cursor.read_u128::<BigEndian>().ok()?;
-        let num_gaps = cursor.read_u64::<BigEndian>().ok()?;
+        let num_down_slots = cursor.read_u64::<BigEndian>().ok()?;
         let exponent = cursor.read_i32::<BigEndian>().ok()?;
         let publish_time = cursor.read_i64::<BigEndian>().ok()?;
         let prev_publish_time = cursor.read_i64::<BigEndian>().ok()?;
@@ -112,7 +112,7 @@ impl TWAPMessage {
                 id,
                 cumulative_price,
                 cumulative_conf,
-                num_gaps,
+                num_down_slots,
                 exponent,
                 publish_time,
                 prev_publish_time,
