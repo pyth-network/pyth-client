@@ -47,10 +47,10 @@ impl Arbitrary for DataEvent {
 #[quickcheck]
 fn test_twap(input: Vec<DataEvent>) -> bool {
     let mut price_cumulative = PriceCumulative {
-        price:    0,
-        conf:     0,
-        num_gaps: 0,
-        unused:   0,
+        price:          0,
+        conf:           0,
+        num_down_slots: 0,
+        unused:         0,
     };
 
     let mut data = Vec::<DataEvent>::new();
@@ -60,7 +60,7 @@ fn test_twap(input: Vec<DataEvent>) -> bool {
         data.push(data_event);
         price_cumulative.check_price(data.as_slice());
         price_cumulative.check_conf(data.as_slice());
-        price_cumulative.check_num_gaps(data.as_slice());
+        price_cumulative.check_num_down_slots(data.as_slice());
         price_cumulative.check_unused();
     }
 
@@ -85,15 +85,15 @@ impl PriceCumulative {
             self.conf
         );
     }
-    pub fn check_num_gaps(&self, data: &[DataEvent]) {
+    pub fn check_num_down_slots(&self, data: &[DataEvent]) {
         assert_eq!(
             data.iter()
                 .fold(0, |acc, x| if x.slot_gap > PC_MAX_SEND_LATENCY.into() {
-                    acc + 1
+                    acc + (x.slot_gap - PC_MAX_SEND_LATENCY as u64)
                 } else {
                     acc
                 }),
-            self.num_gaps
+            self.num_down_slots
         );
     }
     pub fn check_unused(&self) {
@@ -104,10 +104,10 @@ impl PriceCumulative {
 #[test]
 fn test_twap_unit() {
     let mut price_cumulative = PriceCumulative {
-        price:    1,
-        conf:     2,
-        num_gaps: 3,
-        unused:   0,
+        price:          1,
+        conf:           2,
+        num_down_slots: 3,
+        unused:         0,
     };
 
     let data = vec![
@@ -131,26 +131,26 @@ fn test_twap_unit() {
     price_cumulative.update(data[0].price, data[0].conf, data[0].slot_gap);
     assert_eq!(price_cumulative.price, 5);
     assert_eq!(price_cumulative.conf, 10);
-    assert_eq!(price_cumulative.num_gaps, 3);
+    assert_eq!(price_cumulative.num_down_slots, 3);
     assert_eq!(price_cumulative.unused, 0);
 
     price_cumulative.update(data[1].price, data[1].conf, data[1].slot_gap);
     assert_eq!(price_cumulative.price, 9_223_372_036_854_775_812i128);
     assert_eq!(price_cumulative.conf, 18_446_744_073_709_551_625u128);
-    assert_eq!(price_cumulative.num_gaps, 3);
+    assert_eq!(price_cumulative.num_down_slots, 3);
     assert_eq!(price_cumulative.unused, 0);
 
     price_cumulative.update(data[2].price, data[2].conf, data[2].slot_gap);
     assert_eq!(price_cumulative.price, 9_223_372_036_854_775_512i128);
     assert_eq!(price_cumulative.conf, 18_446_744_073_709_551_745u128);
-    assert_eq!(price_cumulative.num_gaps, 4);
+    assert_eq!(price_cumulative.num_down_slots, 8);
     assert_eq!(price_cumulative.unused, 0);
 
     let mut price_cumulative_overflow = PriceCumulative {
-        price:    0,
-        conf:     0,
-        num_gaps: 0,
-        unused:   0,
+        price:          0,
+        conf:           0,
+        num_down_slots: 0,
+        unused:         0,
     };
     price_cumulative_overflow.update(i64::MIN, u64::MAX, u64::MAX);
     assert_eq!(
@@ -161,7 +161,10 @@ fn test_twap_unit() {
         price_cumulative_overflow.conf,
         u128::MAX - 2 * u128::from(u64::MAX)
     );
-    assert_eq!(price_cumulative_overflow.num_gaps, 1);
+    assert_eq!(
+        price_cumulative_overflow.num_down_slots,
+        u64::MAX - PC_MAX_SEND_LATENCY as u64
+    );
     assert_eq!(price_cumulative_overflow.unused, 0);
 }
 
@@ -181,17 +184,17 @@ fn test_twap_with_price_account() {
         pub_slot_:        5,
     };
     price_data.price_cumulative = PriceCumulative {
-        price:    1,
-        conf:     2,
-        num_gaps: 3,
-        unused:   0,
+        price:          1,
+        conf:           2,
+        num_down_slots: 3,
+        unused:         0,
     };
     price_data.prev_slot_ = 3;
     price_data.update_price_cumulative().unwrap();
 
     assert_eq!(price_data.price_cumulative.price, 1 - 2 * 10);
     assert_eq!(price_data.price_cumulative.conf, 2 + 2 * 5);
-    assert_eq!(price_data.price_cumulative.num_gaps, 3);
+    assert_eq!(price_data.price_cumulative.num_down_slots, 3);
 
     // Slot decreases
     price_data.agg_ = PriceInfo {
@@ -205,7 +208,7 @@ fn test_twap_with_price_account() {
 
     assert_eq!(price_data.price_cumulative.price, 1 - 2 * 10);
     assert_eq!(price_data.price_cumulative.conf, 2 + 2 * 5);
-    assert_eq!(price_data.price_cumulative.num_gaps, 3);
+    assert_eq!(price_data.price_cumulative.num_down_slots, 3);
 
     // Status is not trading
     price_data.agg_ = PriceInfo {
@@ -224,7 +227,7 @@ fn test_twap_with_price_account() {
 
     assert_eq!(price_data.price_cumulative.price, 1 - 2 * 10);
     assert_eq!(price_data.price_cumulative.conf, 2 + 2 * 5);
-    assert_eq!(price_data.price_cumulative.num_gaps, 3);
+    assert_eq!(price_data.price_cumulative.num_down_slots, 3);
 
     // Back to normal behavior
     price_data.agg_.status_ = PC_STATUS_TRADING;
@@ -232,5 +235,5 @@ fn test_twap_with_price_account() {
 
     assert_eq!(price_data.price_cumulative.price, 1 - 2 * 10 + 1);
     assert_eq!(price_data.price_cumulative.conf, 2 + 2 * 5 + 2);
-    assert_eq!(price_data.price_cumulative.num_gaps, 3);
+    assert_eq!(price_data.price_cumulative.num_down_slots, 3);
 }

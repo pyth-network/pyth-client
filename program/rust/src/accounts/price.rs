@@ -146,19 +146,25 @@ impl PriceAccountV2 {
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]
 pub struct PriceCumulative {
-    pub price:    i128, // Cumulative sum of price * slot_gap
-    pub conf:     u128, // Cumulative sum of conf * slot_gap
-    pub num_gaps: u64,  // Cumulative number of gaps in the uptime
-    pub unused:   u64,  // Padding for alignment
+    /// Cumulative sum of price * slot_gap
+    pub price:          i128,
+    /// Cumulative sum of conf * slot_gap
+    pub conf:           u128,
+    /// Cumulative number of slots where the price wasn't recently updated (within
+    /// PC_MAX_SEND_LATENCY slots). This field should be used to calculate the downtime
+    /// as a percent of slots between two times `T` and `t` as follows:
+    /// `(T.num_down_slots - t.num_down_slots) / (T.agg_.pub_slot_ - t.agg_.pub_slot_)`
+    pub num_down_slots: u64,
+    /// Padding for alignment
+    pub unused:         u64,
 }
 
 impl PriceCumulative {
     pub fn update(&mut self, price: i64, conf: u64, slot_gap: u64) {
         self.price += i128::from(price) * i128::from(slot_gap);
         self.conf += u128::from(conf) * u128::from(slot_gap);
-        if slot_gap > PC_MAX_SEND_LATENCY.into() {
-            self.num_gaps += 1;
-        }
+        // This is expected to saturate at 0 most of the time (while the feed is up).
+        self.num_down_slots += slot_gap.saturating_sub(PC_MAX_SEND_LATENCY.into());
     }
 }
 
