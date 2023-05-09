@@ -96,7 +96,7 @@ pub struct PriceAccountV2 {
     pub timestamp_:         i64,
     /// Minimum valid publisher quotes for a succesful aggregation
     pub min_pub_:           u8,
-    pub unused_1_:          i8,
+    pub message_sent_:      u8,
     pub unused_2_:          i16,
     pub unused_3_:          i32,
     /// Corresponding product account
@@ -120,6 +120,7 @@ pub struct PriceAccountV2 {
     pub price_cumulative:   PriceCumulative,
 }
 
+
 impl PriceAccountV2 {
     /// This function gets triggered when there's a succesful aggregation and updates the cumulative sums
     pub fn update_price_cumulative(&mut self) -> Result<(), OracleError> {
@@ -139,7 +140,7 @@ impl PriceAccountV2 {
 // This struct can't overflow since :
 // |sum(price * slotgap)| <= sum(|price * slotgap|) <= max(|price|) * sum(slotgap) <= i64::MAX * * current_slot <= i64::MAX * u64::MAX <= i128::MAX
 // |sum(conf * slotgap)| <= sum(|conf * slotgap|) <= max(|conf|) * sum(slotgap) <= u64::MAX * current_slot <= u64::MAX * u64::MAX <= u128::MAX
-// num_gaps <= current_slot <= u64::MAX
+// num_down_slots <= current_slot <= u64::MAX
 /// Contains cumulative sums of aggregative price and confidence used to compute arithmetic moving averages.
 /// Informally the TWAP between time t and time T can be computed as :
 /// `(T.price_cumulative.price - t.price_cumulative.price) / (T.agg_.pub_slot_ - t.agg_.pub_slot_)`
@@ -240,7 +241,7 @@ impl PriceFeedMessage {
     pub const MESSAGE_SIZE: usize = 1 + 32 + 8 + 8 + 4 + 8 + 8 + 8 + 8;
     pub const DISCRIMINATOR: u8 = 0;
 
-    pub fn from_price_account(key: &Pubkey, account: &PriceAccount) -> Self {
+    pub fn from_price_account(key: &Pubkey, account: &PriceAccountV2) -> Self {
         let (price, conf, publish_time) = if account.agg_.status_ == PC_STATUS_TRADING {
             (account.agg_.price_, account.agg_.conf_, account.timestamp_)
         } else {
@@ -267,12 +268,12 @@ impl PriceFeedMessage {
     /// Note that it would be more idiomatic to return a `Vec`, but that approach adds
     /// to the size of the compiled binary (which is already close to the size limit).
     #[allow(unused_assignments)]
-    pub fn as_bytes(&self) -> [u8; PriceFeedMessage::MESSAGE_SIZE] {
-        let mut bytes = [0u8; PriceFeedMessage::MESSAGE_SIZE];
+    pub fn as_bytes(&self) -> [u8; Self::MESSAGE_SIZE] {
+        let mut bytes = [0u8; Self::MESSAGE_SIZE];
 
         let mut i: usize = 0;
 
-        bytes[i..i + 1].clone_from_slice(&[PriceFeedMessage::DISCRIMINATOR]);
+        bytes[i..i + 1].clone_from_slice(&[Self::DISCRIMINATOR]);
         i += 1;
 
         bytes[i..i + 32].clone_from_slice(&self.id[..]);
@@ -297,6 +298,85 @@ impl PriceFeedMessage {
         i += 8;
 
         bytes[i..i + 8].clone_from_slice(&self.ema_conf.to_be_bytes());
+        i += 8;
+
+        bytes
+    }
+}
+
+/// Message format for sending Twap data via the accumulator program
+#[repr(C)]
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct TwapMessage {
+    pub id:                [u8; 32],
+    pub cumulative_price:  i128,
+    pub cumulative_conf:   u128,
+    pub num_down_slots:    u64,
+    pub exponent:          i32,
+    pub publish_time:      i64,
+    pub prev_publish_time: i64,
+    pub publish_slot:      u64,
+}
+
+impl TwapMessage {
+    // The size of the serialized message. Note that this is not the same as the size of the struct
+    // (because of the discriminator & struct padding/alignment).
+    pub const MESSAGE_SIZE: usize = 1 + 32 + 16 + 16 + 8 + 4 + 8 + 8 + 8;
+    pub const DISCRIMINATOR: u8 = 1;
+
+    pub fn from_price_account(key: &Pubkey, account: &PriceAccountV2) -> Self {
+        let publish_time = if account.agg_.status_ == PC_STATUS_TRADING {
+            account.timestamp_
+        } else {
+            account.prev_timestamp_
+        };
+
+        Self {
+            id: key.to_bytes(),
+            cumulative_price: account.price_cumulative.price,
+            cumulative_conf: account.price_cumulative.conf,
+            num_down_slots: account.price_cumulative.num_down_slots,
+            exponent: account.exponent,
+            publish_time,
+            prev_publish_time: account.prev_timestamp_,
+            publish_slot: account.last_slot_,
+        }
+    }
+
+    /// Serialize this message as an array of bytes (including the discriminator)
+    /// Note that it would be more idiomatic to return a `Vec`, but that approach adds
+    /// to the size of the compiled binary (which is already close to the size limit).
+    #[allow(unused_assignments)]
+    pub fn as_bytes(&self) -> [u8; Self::MESSAGE_SIZE] {
+        let mut bytes = [0u8; Self::MESSAGE_SIZE];
+
+        let mut i: usize = 0;
+
+        bytes[i..i + 1].clone_from_slice(&[Self::DISCRIMINATOR]);
+        i += 1;
+
+        bytes[i..i + 32].clone_from_slice(&self.id[..]);
+        i += 32;
+
+        bytes[i..i + 16].clone_from_slice(&self.cumulative_price.to_be_bytes());
+        i += 16;
+
+        bytes[i..i + 16].clone_from_slice(&self.cumulative_conf.to_be_bytes());
+        i += 16;
+
+        bytes[i..i + 8].clone_from_slice(&self.num_down_slots.to_be_bytes());
+        i += 8;
+
+        bytes[i..i + 4].clone_from_slice(&self.exponent.to_be_bytes());
+        i += 4;
+
+        bytes[i..i + 8].clone_from_slice(&self.publish_time.to_be_bytes());
+        i += 8;
+
+        bytes[i..i + 8].clone_from_slice(&self.prev_publish_time.to_be_bytes());
+        i += 8;
+
+        bytes[i..i + 8].clone_from_slice(&self.publish_slot.to_be_bytes());
         i += 8;
 
         bytes
