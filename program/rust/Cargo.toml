@@ -34,6 +34,7 @@ csv = "1.1"
 [features]
 debug = []
 library = []
+pythnet = []
 
 [lib]
 crate-type = ["cdylib", "lib"]

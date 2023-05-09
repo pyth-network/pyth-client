@@ -206,6 +206,7 @@ impl PythAccount for PriceAccountV2 {
     const INITIAL_SIZE: u32 = size_of::<PriceAccountV2>() as u32;
 }
 
+#[cfg(feature = "pythnet")]
 /// Message format for sending data to other chains via the accumulator program
 /// When serialized, each message starts with a unique 1-byte discriminator, followed by the
 /// serialized struct data in the definition(s) below.
@@ -235,6 +236,7 @@ pub struct PriceFeedMessage {
     pub ema_conf:          u64,
 }
 
+#[cfg(feature = "pythnet")]
 impl PriceFeedMessage {
     // The size of the serialized message. Note that this is not the same as the size of the struct
     // (because of the discriminator & struct padding/alignment).
@@ -327,6 +329,7 @@ impl PriceFeedMessage {
     }
 }
 
+#[cfg(feature = "pythnet")]
 /// Message format for sending Twap data via the accumulator program
 #[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -340,7 +343,7 @@ pub struct TwapMessage {
     pub prev_publish_time: i64,
     pub publish_slot:      u64,
 }
-
+#[cfg(feature = "pythnet")]
 impl TwapMessage {
     // The size of the serialized message. Note that this is not the same as the size of the struct
     // (because of the discriminator & struct padding/alignment).

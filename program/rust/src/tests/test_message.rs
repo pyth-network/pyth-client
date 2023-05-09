@@ -1,3 +1,4 @@
+#![cfg(feature = "pythnet")]
 use {
     crate::accounts::{
         PriceFeedMessage,

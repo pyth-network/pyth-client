@@ -40,6 +40,11 @@ mod permission;
 mod price;
 mod product;
 
+#[cfg(feature = "pythnet")]
+pub use price::{
+    PriceFeedMessage,
+    TwapMessage,
+};
 #[cfg(test)]
 pub use product::{
     account_has_key_values,
@@ -54,9 +59,7 @@ pub use {
         PriceComponent,
         PriceCumulative,
         PriceEma,
-        PriceFeedMessage,
         PriceInfo,
-        TwapMessage,
     },
     product::{
         read_pc_str_t,
@@ -69,6 +72,8 @@ pub use {
 /// There is a single permissions account under `PERMISSIONS_SEED` that stores which keys
 /// are authorized to perform certain adminsitrative actions.
 pub const PERMISSIONS_SEED: &str = "permissions";
+
+#[cfg(feature = "pythnet")]
 /// The update price instruction can optionally invoke another program via CPI. The
 /// CPI will be signed with the PDA `[UPD_PRICE_WRITE_SEED, invoked_program_public_key]`
 /// such that the caller can authenticate its origin.
