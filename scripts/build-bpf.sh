@@ -19,7 +19,7 @@ set -x
 # Build both parts of the program (both C and rust) via Cargo
 cd "${PYTH_DIR}"
 cargo clean
-cargo test --locked --features pythnet
+cargo test --locked
 cargo clean
 cargo-build-bpf -- --locked -Z build-std=std,panic_abort -Z build-std-features=panic_immediate_abort
 ./scripts/check-size.sh 81760

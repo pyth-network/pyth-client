@@ -40,11 +40,7 @@ mod permission;
 mod price;
 mod product;
 
-#[cfg(feature = "pythnet")]
-pub use price::{
-    PriceFeedMessage,
-    TwapMessage,
-};
+
 #[cfg(test)]
 pub use product::{
     account_has_key_values,
@@ -59,7 +55,9 @@ pub use {
         PriceComponent,
         PriceCumulative,
         PriceEma,
+        PriceFeedMessage,
         PriceInfo,
+        TwapMessage,
     },
     product::{
         read_pc_str_t,
