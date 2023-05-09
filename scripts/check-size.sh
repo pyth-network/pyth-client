@@ -6,10 +6,8 @@
 ORACLE_SIZE=$(wc -c ./target/deploy/pyth_oracle.so | awk '{print $1}')
 if [ $ORACLE_SIZE -lt ${1} ]
 then
-    echo "Size of pyth_oracle.so is small enough to be deployed."
-    echo $ORACLE_SIZE
+    echo "Size of pyth_oracle.so is small enough to be deployed, since ${ORACLE_SIZE} is less than ${1}"
 else
-    echo "Size of pyth_oracle.so is too big to be deployed."
-    echo $ORACLE_SIZE
+    echo "Size of pyth_oracle.so is too big to be deployed, since ${ORACLE_SIZE} is greater than ${1}"
     exit 1
 fi
