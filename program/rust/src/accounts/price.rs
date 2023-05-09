@@ -232,8 +232,8 @@ pub struct PriceFeedMessage {
     /// (which we can do once publishers have migrated over).
     ///
     /// Additionally, this field may be equal to publish_time if the message is sent on a slot where
-    /// where the aggregation was unsuccesful. This problem can also be solved once all publishers have
-    /// migrated over.
+    /// where the aggregation was unsuccesful. This problem will go away once all publishers have
+    /// migrated over to a recent version of pyth-agent.
     pub prev_publish_time: i64,
     pub ema_price:         i64,
     pub ema_conf:          u64,
