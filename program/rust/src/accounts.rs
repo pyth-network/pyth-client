@@ -40,7 +40,6 @@ mod permission;
 mod price;
 mod product;
 
-
 #[cfg(test)]
 pub use product::{
     account_has_key_values,
@@ -70,7 +69,6 @@ pub use {
 /// There is a single permissions account under `PERMISSIONS_SEED` that stores which keys
 /// are authorized to perform certain adminsitrative actions.
 pub const PERMISSIONS_SEED: &str = "permissions";
-
 #[cfg(feature = "pythnet")]
 /// The update price instruction can optionally invoke another program via CPI. The
 /// CPI will be signed with the PDA `[UPD_PRICE_WRITE_SEED, invoked_program_public_key]`
