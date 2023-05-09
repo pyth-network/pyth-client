@@ -1,13 +1,23 @@
+#[cfg(feature = "pythnet")]
+use {
+    crate::accounts::{
+        PriceFeedMessage,
+        TwapMessage,
+        UPD_PRICE_WRITE_SEED,
+    },
+    solana_program::instruction::{
+        AccountMeta,
+        Instruction,
+    },
+    solana_program::program::invoke_signed,
+};
 use {
     crate::{
         accounts::{
             PriceAccount,
             PriceAccountV2,
-            PriceFeedMessage,
             PriceInfo,
             PythAccount,
-            TwapMessage,
-            UPD_PRICE_WRITE_SEED,
         },
         deserialize::{
             load,
@@ -28,16 +38,12 @@ use {
         account_info::AccountInfo,
         clock::Clock,
         entrypoint::ProgramResult,
-        instruction::{
-            AccountMeta,
-            Instruction,
-        },
-        program::invoke_signed,
         program_error::ProgramError,
         pubkey::Pubkey,
         sysvar::Sysvar,
     },
 };
+
 
 #[cfg(target_arch = "bpf")]
 #[link(name = "cpyth-bpf")]
@@ -97,6 +103,7 @@ pub fn upd_price(
 ) -> ProgramResult {
     let cmd_args = load::<UpdPriceArgs>(instruction_data)?;
 
+    #[allow(unused_variables)]
     let (funding_account, price_account, clock_account, maybe_accumulator_accounts) = match accounts
     {
         [x, y, z] => Ok((x, y, z, None)),
@@ -179,7 +186,7 @@ pub fn upd_price(
             price_data.message_sent_ = 0;
         }
 
-
+        #[cfg(feature = "pythnet")]
         if let Some(accumulator_accounts) = maybe_accumulator_accounts {
             if price_data.message_sent_ == 0 {
                 // Check that the oracle PDA is correctly configured for the program we are calling.
@@ -261,7 +268,7 @@ pub fn upd_price(
     Ok(())
 }
 
-
+#[allow(dead_code)]
 // Wrapper struct for the accounts required to add data to the accumulator program.
 struct MessageBufferAccounts<'a, 'b: 'a> {
     program_id:          &'a AccountInfo<'b>,

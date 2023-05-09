@@ -20,7 +20,15 @@ set -x
 cd "${PYTH_DIR}"
 cargo clean
 cargo test --locked
+
 cargo clean
 cargo-build-bpf -- --locked -Z build-std=std,panic_abort -Z build-std-features=panic_immediate_abort
-
 sha256sum ./target/**/*.so
+echo "Checking size of pyth_oracle.so for mainnet"
+./scripts/check-size.sh 81760
+
+cargo clean
+cargo-build-bpf -- --locked -Z build-std=std,panic_abort -Z build-std-features=panic_immediate_abort --features pythnet
+sha256sum ./target/**/*.so
+echo "Checking size of pyth_oracle.so for pythnet"
+./scripts/check-size.sh 88429
