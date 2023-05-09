@@ -168,16 +168,18 @@ pub fn upd_price(
 
     {
         let account_len = price_account.try_data_len()?;
-        if aggregate_updated && account_len >= PriceAccountV2::MINIMUM_SIZE {
+        if account_len >= PriceAccountV2::MINIMUM_SIZE {
             let mut price_data =
                 load_checked::<PriceAccountV2>(price_account, cmd_args.header.version)?;
-            price_data.update_price_cumulative()?;
 
-            // We want to send a message every time the aggregate price updates. However, during the migration,
-            // not every publisher will necessarily provide the accumulator accounts. The message_sent_ flag
-            // ensures that after every aggregate update, the next publisher who provides the accumulator accounts
-            // will send the message.
-            price_data.message_sent_ = 0;
+            if aggregate_updated {
+                price_data.update_price_cumulative()?;
+                // We want to send a message every time the aggregate price updates. However, during the migration,
+                // not every publisher will necessarily provide the accumulator accounts. The message_sent_ flag
+                // ensures that after every aggregate update, the next publisher who provides the accumulator accounts
+                // will send the message.
+                price_data.message_sent_ = 0;
+            }
 
 
             if let Some(accumulator_accounts) = maybe_accumulator_accounts {
