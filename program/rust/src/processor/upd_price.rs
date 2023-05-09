@@ -201,13 +201,23 @@ pub fn upd_price(
                     OracleError::InvalidPda.into(),
                 )?;
 
-                // anchor discriminator for "global:put_all"
-                let discriminator = [212, 225, 193, 91, 151, 238, 20, 93];
-                let create_inputs_ix = Instruction::new_with_borsh(
-                    *accumulator_accounts.program_id.key,
-                    &(discriminator, price_account.key.to_bytes(), message),
-                    account_metas,
-                );
+                let account_metas = vec![
+                    AccountMeta {
+                        pubkey:      *accumulator_accounts.whitelist.key,
+                        is_signer:   false,
+                        is_writable: false,
+                    },
+                    AccountMeta {
+                        pubkey:      *accumulator_accounts.oracle_auth_pda.key,
+                        is_signer:   true,
+                        is_writable: false,
+                    },
+                    AccountMeta {
+                        pubkey:      *accumulator_accounts.message_buffer_data.key,
+                        is_signer:   false,
+                        is_writable: true,
+                    },
+                ];
 
                 let message = vec![
                     PriceFeedMessage::from_price_account(price_account.key, &price_data)
@@ -243,6 +253,19 @@ pub fn upd_price(
 
     // Try to update the publisher's price
     if is_component_update(cmd_args)? {
+        let status: u32 =
+            get_status_for_update(cmd_args.price, cmd_args.confidence, cmd_args.status)?;
+
+        {
+            let publisher_price = &mut price_data.comp_[publisher_index].latest_;
+            publisher_price.price_ = cmd_args.price;
+            publisher_price.conf_ = cmd_args.confidence;
+            publisher_price.status_ = status;
+            publisher_price.pub_slot_ = cmd_args.publishing_slot;
+        }
+    }
+
+    Ok(())
 }
 
 #[allow(dead_code)]

@@ -266,29 +266,6 @@ impl PriceFeedMessage {
         }
     }
 
-    pub fn from_price_account_v2(key: &Pubkey, account: &PriceAccountV2) -> Self {
-        let (price, conf, publish_time) = if account.agg_.status_ == PC_STATUS_TRADING {
-            (account.agg_.price_, account.agg_.conf_, account.timestamp_)
-        } else {
-            (
-                account.prev_price_,
-                account.prev_conf_,
-                account.prev_timestamp_,
-            )
-        };
-
-        Self {
-            id: key.to_bytes(),
-            price,
-            conf,
-            exponent: account.exponent,
-            publish_time,
-            prev_publish_time: account.prev_timestamp_,
-            ema_price: account.twap_.val_,
-            ema_conf: account.twac_.val_ as u64,
-        }
-    }
-
     /// Serialize this message as an array of bytes (including the discriminator)
     /// Note that it would be more idiomatic to return a `Vec`, but that approach adds
     /// to the size of the compiled binary (which is already close to the size limit).
