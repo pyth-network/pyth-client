@@ -229,7 +229,7 @@ pub fn upd_price(
                 ];
 
                 // anchor discriminator for "global:put_all"
-                let discriminator = [212, 225, 193, 91, 151, 238, 20, 93];
+                let discriminator: [u8; 8] = [212, 225, 193, 91, 151, 238, 20, 93];
                 let create_inputs_ix = Instruction::new_with_borsh(
                     *accumulator_accounts.program_id.key,
                     &(discriminator, price_account.key.to_bytes(), message),
