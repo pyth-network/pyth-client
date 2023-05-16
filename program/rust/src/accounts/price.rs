@@ -246,7 +246,7 @@ impl PriceFeedMessage {
     pub const MESSAGE_SIZE: usize = 1 + 32 + 8 + 8 + 4 + 8 + 8 + 8 + 8;
     pub const DISCRIMINATOR: u8 = 0;
 
-    pub fn from_price_account(key: &Pubkey, account: &PriceAccountV2) -> Self {
+    pub fn from_price_account(key: &Pubkey, account: &PriceAccount) -> Self {
         let (price, conf, publish_time) = if account.agg_.status_ == PC_STATUS_TRADING {
             (account.agg_.price_, account.agg_.conf_, account.timestamp_)
         } else {

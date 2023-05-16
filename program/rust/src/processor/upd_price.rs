@@ -2,7 +2,6 @@
 use {
     crate::accounts::{
         PriceFeedMessage,
-        TwapMessage,
         UPD_PRICE_WRITE_SEED,
     },
     solana_program::instruction::{
@@ -179,14 +178,21 @@ pub fn upd_price(
 
         if aggregate_updated {
             price_data.update_price_cumulative()?;
-            // We want to send a message every time the aggregate price updates. However, during the migration,
-            // not every publisher will necessarily provide the accumulator accounts. The message_sent_ flag
-            // ensures that after every aggregate update, the next publisher who provides the accumulator accounts
-            // will send the message.
+        }
+    }
+
+    let mut price_data = load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
+
+
+    #[cfg(feature = "pythnet")]
+    {
+        // We want to send a message every time the aggregate price updates. However, during the migration,
+        // not every publisher will necessarily provide the accumulator accounts. The message_sent_ flag
+        // ensures that after every aggregate update, the next publisher who provides the accumulator accounts
+        // will send the message.
+        if aggregate_updated {
             price_data.message_sent_ = 0;
         }
-
-        #[cfg(feature = "pythnet")]
         if let Some(accumulator_accounts) = maybe_accumulator_accounts {
             if price_data.message_sent_ == 0 {
                 // Check that the oracle PDA is correctly configured for the program we are calling.
@@ -219,14 +225,12 @@ pub fn upd_price(
                     },
                 ];
 
-                let message = vec![
-                    PriceFeedMessage::from_price_account(price_account.key, &price_data)
-                        .as_bytes()
-                        .to_vec(),
-                    TwapMessage::from_price_account(price_account.key, &price_data)
-                        .as_bytes()
-                        .to_vec(),
-                ];
+                let message =
+                    vec![
+                        PriceFeedMessage::from_price_account(price_account.key, &price_data)
+                            .as_bytes()
+                            .to_vec(),
+                    ];
 
                 // anchor discriminator for "global:put_all"
                 let discriminator: [u8; 8] = [212, 225, 193, 91, 151, 238, 20, 93];
@@ -247,9 +251,6 @@ pub fn upd_price(
             }
         }
     }
-
-
-    let mut price_data = load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
 
     // Try to update the publisher's price
     if is_component_update(cmd_args)? {
