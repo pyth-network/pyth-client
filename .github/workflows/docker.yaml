@@ -3,6 +3,8 @@ name: Docker
 on:
   push:
     branches: [ main ]
+    tags : 
+      - oracle-v*
   pull_request:
     branches: [ main ]
 
