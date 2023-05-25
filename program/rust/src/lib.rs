@@ -27,13 +27,16 @@ mod log;
 pub use accounts::{
     AccountHeader,
     MappingAccount,
+    Message,
     PermissionAccount,
     PriceAccount,
     PriceComponent,
     PriceEma,
+    PriceFeedMessage,
     PriceInfo,
     ProductAccount,
     PythAccount,
+    TwapMessage,
 };
 use {
     crate::error::OracleError,

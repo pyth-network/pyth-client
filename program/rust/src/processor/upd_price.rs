@@ -228,7 +228,7 @@ pub fn upd_price(
                 let message =
                     vec![
                         PriceFeedMessage::from_price_account(price_account.key, &price_data)
-                            .as_bytes()
+                            .to_bytes()
                             .to_vec(),
                     ];
 

@@ -1,18 +1,11 @@
 use {
     crate::accounts::{
+        Message,
         PriceFeedMessage,
         TwapMessage,
     },
-    byteorder::{
-        BigEndian,
-        ReadBytesExt,
-    },
     quickcheck::Arbitrary,
     quickcheck_macros::quickcheck,
-    std::io::{
-        Cursor,
-        Read,
-    },
 };
 
 impl Arbitrary for PriceFeedMessage {
@@ -37,55 +30,15 @@ impl Arbitrary for PriceFeedMessage {
     }
 }
 
-/// TODO: move this parsing implementation to a separate data format library.
-impl PriceFeedMessage {
-    fn from_bytes(bytes: &[u8]) -> Option<Self> {
-        let mut cursor = Cursor::new(bytes);
-
-        let discriminator = cursor.read_u8().ok()?;
-        if discriminator != 0 {
-            return None;
-        }
-
-        let mut id = [0u8; 32];
-        cursor.read_exact(&mut id).ok()?;
-
-        let price = cursor.read_i64::<BigEndian>().ok()?;
-        let conf = cursor.read_u64::<BigEndian>().ok()?;
-        let exponent = cursor.read_i32::<BigEndian>().ok()?;
-        let publish_time = cursor.read_i64::<BigEndian>().ok()?;
-        let prev_publish_time = cursor.read_i64::<BigEndian>().ok()?;
-        let ema_price = cursor.read_i64::<BigEndian>().ok()?;
-        let ema_conf = cursor.read_u64::<BigEndian>().ok()?;
-
-
-        if cursor.position() as usize != bytes.len() {
-            // The message bytes are longer than expected
-            None
-        } else {
-            Some(Self {
-                id,
-                price,
-                conf,
-                exponent,
-                publish_time,
-                prev_publish_time,
-                ema_price,
-                ema_conf,
-            })
-        }
-    }
-}
-
 #[quickcheck]
 fn test_price_feed_message_roundtrip(input: PriceFeedMessage) -> bool {
-    let reconstructed = PriceFeedMessage::from_bytes(&input.as_bytes());
+    let reconstructed = PriceFeedMessage::try_from_bytes(&input.to_bytes());
 
     println!("Failed test case:");
     println!("{:?}", input);
     println!("{:?}", reconstructed);
 
-    reconstructed.is_some() && reconstructed.unwrap() == input
+    reconstructed == Ok(input)
 }
 
 
@@ -111,51 +64,34 @@ impl Arbitrary for TwapMessage {
     }
 }
 
-impl TwapMessage {
-    fn from_bytes(bytes: &[u8]) -> Option<Self> {
-        let mut cursor = Cursor::new(bytes);
-
-        let discriminator = cursor.read_u8().ok()?;
-        if discriminator != 1 {
-            return None;
-        }
-
-        let mut id = [0u8; 32];
-        cursor.read_exact(&mut id).ok()?;
-
-        let cumulative_price = cursor.read_i128::<BigEndian>().ok()?;
-        let cumulative_conf = cursor.read_u128::<BigEndian>().ok()?;
-        let num_down_slots = cursor.read_u64::<BigEndian>().ok()?;
-        let exponent = cursor.read_i32::<BigEndian>().ok()?;
-        let publish_time = cursor.read_i64::<BigEndian>().ok()?;
-        let prev_publish_time = cursor.read_i64::<BigEndian>().ok()?;
-        let publish_slot = cursor.read_u64::<BigEndian>().ok()?;
-
-        if cursor.position() as usize != bytes.len() {
-            // The message bytes are longer than expected
-            None
-        } else {
-            Some(Self {
-                id,
-                cumulative_price,
-                cumulative_conf,
-                num_down_slots,
-                exponent,
-                publish_time,
-                prev_publish_time,
-                publish_slot,
-            })
-        }
-    }
-}
-
 #[quickcheck]
 fn test_twap_message_roundtrip(input: TwapMessage) -> bool {
-    let reconstructed = TwapMessage::from_bytes(&input.as_bytes());
+    let reconstructed = TwapMessage::try_from_bytes(&input.to_bytes());
 
     println!("Failed test case:");
     println!("{:?}", input);
     println!("{:?}", reconstructed);
 
-    reconstructed.is_some() && reconstructed.unwrap() == input
+    reconstructed == Ok(input)
+}
+
+
+impl Arbitrary for Message {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
+        match u8::arbitrary(g) % 2 {
+            0 => Message::PriceFeedMessage(Arbitrary::arbitrary(g)),
+            _ => Message::TwapMessage(Arbitrary::arbitrary(g)),
+        }
+    }
+}
+
+#[quickcheck]
+fn test_message_roundtrip(input: Message) -> bool {
+    let reconstructed = Message::try_from_bytes(&input.to_bytes());
+
+    println!("Failed test case:");
+    println!("{:?}", input);
+    println!("{:?}", reconstructed);
+
+    reconstructed == Ok(input)
 }

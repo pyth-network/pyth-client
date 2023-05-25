@@ -17,8 +17,18 @@ use {
         Pod,
         Zeroable,
     },
+    byteorder::{
+        BigEndian,
+        ReadBytesExt,
+    },
     solana_program::pubkey::Pubkey,
-    std::mem::size_of,
+    std::{
+        io::{
+            Cursor,
+            Read,
+        },
+        mem::size_of,
+    },
 };
 
 #[repr(C)]
@@ -213,6 +223,39 @@ impl PythAccount for PriceAccountV2 {
 /// Messages are forward-compatible. You may add new fields to messages after all previously
 /// defined fields. All code for parsing messages must ignore any extraneous bytes at the end of
 /// the message (which could be fields that the code does not yet understand).
+///
+/// The oracle is not using the Message enum due to the contract size limit and
+/// some of the methods for PriceFeedMessage and TwapMessage are not used by the oracle
+/// for the same reason. Rust compiler doesn't include the unused methods in the contract.
+/// Once we start using the unused structs and methods, the contract size will increase.
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub enum Message {
+    PriceFeedMessage(PriceFeedMessage),
+    TwapMessage(TwapMessage),
+}
+
+#[allow(dead_code)]
+impl Message {
+    pub fn try_from_bytes(bytes: &[u8]) -> Result<Self, OracleError> {
+        match bytes[0] {
+            PriceFeedMessage::DISCRIMINATOR => Ok(Self::PriceFeedMessage(
+                PriceFeedMessage::try_from_bytes(bytes)?,
+            )),
+            TwapMessage::DISCRIMINATOR => {
+                Ok(Self::TwapMessage(TwapMessage::try_from_bytes(bytes)?))
+            }
+            _ => Err(OracleError::DeserializationError),
+        }
+    }
+    pub fn to_bytes(self) -> Vec<u8> {
+        match self {
+            Self::PriceFeedMessage(msg) => msg.to_bytes().to_vec(),
+            Self::TwapMessage(msg) => msg.to_bytes().to_vec(),
+        }
+    }
+}
+
 #[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct PriceFeedMessage {
@@ -273,7 +316,7 @@ impl PriceFeedMessage {
     /// Note that it would be more idiomatic to return a `Vec`, but that approach adds
     /// to the size of the compiled binary (which is already close to the size limit).
     #[allow(unused_assignments)]
-    pub fn as_bytes(&self) -> [u8; Self::MESSAGE_SIZE] {
+    pub fn to_bytes(self) -> [u8; Self::MESSAGE_SIZE] {
         let mut bytes = [0u8; Self::MESSAGE_SIZE];
 
         let mut i: usize = 0;
@@ -306,6 +349,60 @@ impl PriceFeedMessage {
         i += 8;
 
         bytes
+    }
+
+    /// Try to deserialize a message from an array of bytes (including the discriminator).
+    /// This method is forward-compatible and allows the size to be larger than the
+    /// size of the struct. As a side-effect, it will ignore newer fields that are
+    /// not yet present in the struct.
+    pub fn try_from_bytes(bytes: &[u8]) -> Result<Self, OracleError> {
+        let mut cursor = Cursor::new(bytes);
+
+        let discriminator = cursor
+            .read_u8()
+            .map_err(|_| OracleError::DeserializationError)?;
+        if discriminator != 0 {
+            return Err(OracleError::DeserializationError);
+        }
+
+        let mut id = [0u8; 32];
+        cursor
+            .read_exact(&mut id)
+            .map_err(|_| OracleError::DeserializationError)?;
+
+        let price = cursor
+            .read_i64::<BigEndian>()
+            .map_err(|_| OracleError::DeserializationError)?;
+        let conf = cursor
+            .read_u64::<BigEndian>()
+            .map_err(|_| OracleError::DeserializationError)?;
+        let exponent = cursor
+            .read_i32::<BigEndian>()
+            .map_err(|_| OracleError::DeserializationError)?;
+        let publish_time = cursor
+            .read_i64::<BigEndian>()
+            .map_err(|_| OracleError::DeserializationError)?;
+        let prev_publish_time = cursor
+            .read_i64::<BigEndian>()
+            .map_err(|_| OracleError::DeserializationError)?;
+        let ema_price = cursor
+            .read_i64::<BigEndian>()
+            .map_err(|_| OracleError::DeserializationError)?;
+        let ema_conf = cursor
+            .read_u64::<BigEndian>()
+            .map_err(|_| OracleError::DeserializationError)?;
+
+
+        Ok(Self {
+            id,
+            price,
+            conf,
+            exponent,
+            publish_time,
+            prev_publish_time,
+            ema_price,
+            ema_conf,
+        })
     }
 }
 
@@ -353,7 +450,7 @@ impl TwapMessage {
     /// Note that it would be more idiomatic to return a `Vec`, but that approach adds
     /// to the size of the compiled binary (which is already close to the size limit).
     #[allow(unused_assignments)]
-    pub fn as_bytes(&self) -> [u8; Self::MESSAGE_SIZE] {
+    pub fn to_bytes(self) -> [u8; Self::MESSAGE_SIZE] {
         let mut bytes = [0u8; Self::MESSAGE_SIZE];
 
         let mut i: usize = 0;
@@ -386,5 +483,58 @@ impl TwapMessage {
         i += 8;
 
         bytes
+    }
+
+    /// Try to deserialize a message from an array of bytes (including the discriminator).
+    /// This method is forward-compatible and allows the size to be larger than the
+    /// size of the struct. As a side-effect, it will ignore newer fields that are
+    /// not yet present in the struct.
+    pub fn try_from_bytes(bytes: &[u8]) -> Result<Self, OracleError> {
+        let mut cursor = Cursor::new(bytes);
+
+        let discriminator = cursor
+            .read_u8()
+            .map_err(|_| OracleError::DeserializationError)?;
+        if discriminator != 1 {
+            return Err(OracleError::DeserializationError);
+        }
+
+        let mut id = [0u8; 32];
+        cursor
+            .read_exact(&mut id)
+            .map_err(|_| OracleError::DeserializationError)?;
+
+        let cumulative_price = cursor
+            .read_i128::<BigEndian>()
+            .map_err(|_| OracleError::DeserializationError)?;
+        let cumulative_conf = cursor
+            .read_u128::<BigEndian>()
+            .map_err(|_| OracleError::DeserializationError)?;
+        let num_down_slots = cursor
+            .read_u64::<BigEndian>()
+            .map_err(|_| OracleError::DeserializationError)?;
+        let exponent = cursor
+            .read_i32::<BigEndian>()
+            .map_err(|_| OracleError::DeserializationError)?;
+        let publish_time = cursor
+            .read_i64::<BigEndian>()
+            .map_err(|_| OracleError::DeserializationError)?;
+        let prev_publish_time = cursor
+            .read_i64::<BigEndian>()
+            .map_err(|_| OracleError::DeserializationError)?;
+        let publish_slot = cursor
+            .read_u64::<BigEndian>()
+            .map_err(|_| OracleError::DeserializationError)?;
+
+        Ok(Self {
+            id,
+            cumulative_price,
+            cumulative_conf,
+            num_down_slots,
+            exponent,
+            publish_time,
+            prev_publish_time,
+            publish_slot,
+        })
     }
 }

@@ -49,6 +49,7 @@ pub use {
     mapping::MappingAccount,
     permission::PermissionAccount,
     price::{
+        Message,
         PriceAccount,
         PriceAccountV2,
         PriceComponent,

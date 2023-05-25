@@ -14,9 +14,9 @@ bytemuck = "1.11.0"
 thiserror = "1.0"
 num-derive = "0.3"
 num-traits = "0.2"
+byteorder = "1.4.3"
 
 [dev-dependencies]
-byteorder = "1.4.3"
 solana-program-test = "=1.13.3"
 solana-sdk = "=1.13.3"
 tokio = "1.14.1"
