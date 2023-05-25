@@ -223,6 +223,11 @@ impl PythAccount for PriceAccountV2 {
 /// Messages are forward-compatible. You may add new fields to messages after all previously
 /// defined fields. All code for parsing messages must ignore any extraneous bytes at the end of
 /// the message (which could be fields that the code does not yet understand).
+///
+/// The oracle is not using the Message enum due to the contract size limit and
+/// some of the methods for PriceFeedMessage and TwapMessage are not used by the oracle
+/// for the same reason. Rust compiler doesn't include the unused methods in the contract.
+/// Once we start using the unused structs and methods, the contract size will increase.
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Message {
