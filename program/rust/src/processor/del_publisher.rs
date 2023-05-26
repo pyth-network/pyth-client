@@ -78,5 +78,5 @@ pub fn del_publisher(
             return Ok(());
         }
     }
-    Err(ProgramError::InvalidArgument)
+    Ok(())
 }

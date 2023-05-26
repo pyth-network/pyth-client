@@ -65,12 +65,12 @@ pub fn add_publisher(
     let mut price_data = load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
 
     if price_data.num_ >= PC_COMP_SIZE {
-        return Err(ProgramError::InvalidArgument);
+        return Ok(());
     }
 
     for i in 0..(try_convert::<u32, usize>(price_data.num_)?) {
         if cmd_args.publisher == price_data.comp_[i].pub_ {
-            return Err(ProgramError::InvalidArgument);
+            return Ok(());
         }
     }
 
