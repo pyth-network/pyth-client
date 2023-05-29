@@ -153,7 +153,8 @@ pub fn upd_price(
         // Check that publisher is publishing a more recent price
         pyth_assert(
             !is_component_update(cmd_args)?
-                || cmd_args.publishing_slot > latest_publisher_price.pub_slot_,
+                || (cmd_args.publishing_slot > latest_publisher_price.pub_slot_
+                    && cmd_args.publishing_slot <= clock.slot),
             ProgramError::InvalidArgument,
         )?;
     }
