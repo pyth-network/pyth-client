@@ -23,6 +23,8 @@ mod log;
 // While we have `pyth-sdk-rs` which exposes a more friendly interface, this is still useful when a
 // downstream user wants to confirm for example that they can compile against the binary interface
 // of this program for their specific solana version.
+#[cfg(feature = "strum")]
+pub use accounts::MessageType;
 #[cfg(feature = "library")]
 pub use accounts::{
     AccountHeader,

@@ -2500,6 +2500,7 @@ dependencies = [
  "solana-program",
  "solana-program-test",
  "solana-sdk",
+ "strum",
  "test-generator",
  "thiserror",
  "tokio",
