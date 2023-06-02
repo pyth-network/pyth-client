@@ -230,6 +230,15 @@ impl PythAccount for PriceAccountV2 {
 /// Once we start using the unused structs and methods, the contract size will increase.
 
 #[derive(Debug, Copy, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "strum", derive(strum::EnumDiscriminants))]
+#[cfg_attr(feature = "strum", strum_discriminants(derive(strum::EnumIter, Hash)))]
+#[cfg_attr(feature = "strum", strum_discriminants(name(MessageType)))]
+#[cfg_attr(feature = "strum", strum_discriminants(vis(pub)))]
+#[cfg_attr(
+    all(feature = "strum", feature = "serde"),
+    strum_discriminants(derive(serde::Serialize, serde::Deserialize))
+)]
 pub enum Message {
     PriceFeedMessage(PriceFeedMessage),
     TwapMessage(TwapMessage),
@@ -248,16 +257,32 @@ impl Message {
             _ => Err(OracleError::DeserializationError),
         }
     }
+
     pub fn to_bytes(self) -> Vec<u8> {
         match self {
             Self::PriceFeedMessage(msg) => msg.to_bytes().to_vec(),
             Self::TwapMessage(msg) => msg.to_bytes().to_vec(),
         }
     }
+
+    pub fn publish_time(&self) -> i64 {
+        match self {
+            Self::PriceFeedMessage(msg) => msg.publish_time,
+            Self::TwapMessage(msg) => msg.publish_time,
+        }
+    }
+
+    pub fn id(&self) -> [u8; 32] {
+        match self {
+            Self::PriceFeedMessage(msg) => msg.id,
+            Self::TwapMessage(msg) => msg.id,
+        }
+    }
 }
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct PriceFeedMessage {
     pub id:                [u8; 32],
     pub price:             i64,
@@ -409,6 +434,7 @@ impl PriceFeedMessage {
 /// Message format for sending Twap data via the accumulator program
 #[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct TwapMessage {
     pub id:                [u8; 32],
     pub cumulative_price:  i128,
