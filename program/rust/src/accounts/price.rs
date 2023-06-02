@@ -231,13 +231,22 @@ impl PythAccount for PriceAccountV2 {
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[cfg_attr(feature = "strum", derive(strum::EnumDiscriminants))]
-#[cfg_attr(feature = "strum", strum_discriminants(derive(strum::EnumIter, Hash)))]
-#[cfg_attr(feature = "strum", strum_discriminants(name(MessageType)))]
-#[cfg_attr(feature = "strum", strum_discriminants(vis(pub)))]
 #[cfg_attr(
-    all(feature = "strum", feature = "serde"),
-    strum_discriminants(derive(serde::Serialize, serde::Deserialize))
+    feature = "strum",
+    derive(strum::EnumDiscriminants),
+    strum_discriminants(name(MessageType)),
+    strum_discriminants(vis(pub)),
+    strum_discriminants(derive(
+        Hash,
+        strum::EnumIter,
+        strum::EnumString,
+        strum::IntoStaticStr,
+        strum::ToString,
+    )),
+    cfg_attr(
+        feature = "serde",
+        strum_discriminants(derive(serde::Serialize, serde::Deserialize))
+    )
 )]
 pub enum Message {
     PriceFeedMessage(PriceFeedMessage),
