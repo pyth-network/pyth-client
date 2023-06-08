@@ -11,6 +11,7 @@ It consists of both C and Rust code, but everything can be built and tested usin
 
 First, make sure you have the [solana tool suite](https://docs.solana.com/cli/install-solana-cli-tools#use-solanas-install-tool)
 installed on your machine. (The build depends on some C makefiles that are in the tool suite.)
+Make sure you have installed the same solana version that is being used in [CI](.github/workflows/docker.yaml)
 
 Then, simply run `cargo build` to compile the oracle program as a native binary, or `cargo build-bpf` to build a BPF binary 
 that can be uploaded to the blockchain. This step will produce a program binary `target/deploy/pyth_oracle.so`.
