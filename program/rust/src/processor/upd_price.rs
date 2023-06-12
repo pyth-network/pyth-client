@@ -1,7 +1,7 @@
 #[cfg(feature = "pythnet")]
 use {
     crate::accounts::{
-        PriceFeedMessage,
+        PythOracleSerialize,
         UPD_PRICE_WRITE_SEED,
     },
     solana_program::instruction::{
@@ -225,13 +225,9 @@ pub fn upd_price(
                         is_writable: true,
                     },
                 ];
-
-                let message =
-                    vec![
-                        PriceFeedMessage::from_price_account(price_account.key, &price_data)
-                            .to_bytes()
-                            .to_vec(),
-                    ];
+                let message = vec![price_data
+                    .as_price_feed_message(price_account.key)
+                    .to_bytes()];
 
                 // anchor discriminator for "global:put_all"
                 let discriminator: [u8; 8] = [212, 225, 193, 91, 151, 238, 20, 93];
