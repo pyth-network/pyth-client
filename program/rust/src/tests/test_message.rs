@@ -27,11 +27,14 @@ fn test_price_feed_message_roundtrip(input: PriceFeedMessage) -> bool {
 
 #[quickcheck]
 fn test_twap_message_roundtrip(input: TwapMessage) -> bool {
-    let reconstructed = from_slice::<BigEndian, TwapMessage>(&input.to_bytes()).unwrap();
+    let reconstructed = from_slice::<BigEndian, Message>(&input.to_bytes()).unwrap();
 
     println!("Failed test case:");
     println!("{:?}", input);
     println!("{:?}", reconstructed);
 
-    reconstructed == input
+    match reconstructed {
+        Message::TwapMessage(reconstructed) => reconstructed == input,
+        _ => false,
+    }
 }
