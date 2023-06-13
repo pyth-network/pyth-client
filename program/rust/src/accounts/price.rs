@@ -17,18 +17,12 @@ use {
         Pod,
         Zeroable,
     },
-    byteorder::{
-        BigEndian,
-        ReadBytesExt,
+    pythnet_sdk::messages::{
+        PriceFeedMessage,
+        TwapMessage,
     },
     solana_program::pubkey::Pubkey,
-    std::{
-        io::{
-            Cursor,
-            Read,
-        },
-        mem::size_of,
-    },
+    std::mem::size_of,
 };
 
 #[repr(C)]
@@ -76,6 +70,28 @@ pub struct PriceAccount {
     pub agg_:               PriceInfo,
     /// Publishers' price components
     pub comp_:              [PriceComponent; PC_COMP_SIZE as usize],
+}
+
+impl PriceAccount {
+    #[allow(dead_code)]
+    pub fn as_price_feed_message(&self, key: &Pubkey) -> PriceFeedMessage {
+        let (price, conf, publish_time) = if self.agg_.status_ == PC_STATUS_TRADING {
+            (self.agg_.price_, self.agg_.conf_, self.timestamp_)
+        } else {
+            (self.prev_price_, self.prev_conf_, self.prev_timestamp_)
+        };
+
+        PriceFeedMessage {
+            id: key.to_bytes(),
+            price,
+            conf,
+            exponent: self.exponent,
+            publish_time,
+            prev_publish_time: self.prev_timestamp_,
+            ema_price: self.twap_.val_,
+            ema_conf: self.twac_.val_ as u64,
+        }
+    }
 }
 
 /// We are currently out of space in our price accounts. We plan to resize them
@@ -143,6 +159,26 @@ impl PriceAccountV2 {
             Ok(())
         } else {
             Err(OracleError::NeedsSuccesfulAggregation)
+        }
+    }
+
+    #[allow(dead_code)]
+    pub fn as_twap_message(&self, key: &Pubkey) -> TwapMessage {
+        let publish_time = if self.agg_.status_ == PC_STATUS_TRADING {
+            self.timestamp_
+        } else {
+            self.prev_timestamp_
+        };
+
+        TwapMessage {
+            id: key.to_bytes(),
+            cumulative_price: self.price_cumulative.price,
+            cumulative_conf: self.price_cumulative.conf,
+            num_down_slots: self.price_cumulative.num_down_slots,
+            exponent: self.exponent,
+            publish_time,
+            prev_publish_time: self.prev_timestamp_,
+            publish_slot: self.last_slot_,
         }
     }
 }
@@ -216,146 +252,23 @@ impl PythAccount for PriceAccountV2 {
     const INITIAL_SIZE: u32 = size_of::<PriceAccountV2>() as u32;
 }
 
-/// Message format for sending data to other chains via the accumulator program
-/// When serialized, each message starts with a unique 1-byte discriminator, followed by the
-/// serialized struct data in the definition(s) below.
-///
-/// Messages are forward-compatible. You may add new fields to messages after all previously
-/// defined fields. All code for parsing messages must ignore any extraneous bytes at the end of
-/// the message (which could be fields that the code does not yet understand).
-///
-/// The oracle is not using the Message enum due to the contract size limit and
-/// some of the methods for PriceFeedMessage and TwapMessage are not used by the oracle
-/// for the same reason. Rust compiler doesn't include the unused methods in the contract.
-/// Once we start using the unused structs and methods, the contract size will increase.
-
-#[derive(Debug, Copy, Clone, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[cfg_attr(
-    feature = "strum",
-    derive(strum::EnumDiscriminants),
-    strum_discriminants(name(MessageType)),
-    strum_discriminants(vis(pub)),
-    strum_discriminants(derive(
-        Hash,
-        strum::EnumIter,
-        strum::EnumString,
-        strum::IntoStaticStr,
-        strum::ToString,
-    )),
-    cfg_attr(
-        feature = "serde",
-        strum_discriminants(derive(serde::Serialize, serde::Deserialize))
-    )
-)]
-pub enum Message {
-    PriceFeedMessage(PriceFeedMessage),
-    TwapMessage(TwapMessage),
+pub trait PythOracleSerialize {
+    fn to_bytes(self) -> Vec<u8>;
 }
 
-#[allow(dead_code)]
-impl Message {
-    pub fn try_from_bytes(bytes: &[u8]) -> Result<Self, OracleError> {
-        match bytes[0] {
-            PriceFeedMessage::DISCRIMINATOR => Ok(Self::PriceFeedMessage(
-                PriceFeedMessage::try_from_bytes(bytes)?,
-            )),
-            TwapMessage::DISCRIMINATOR => {
-                Ok(Self::TwapMessage(TwapMessage::try_from_bytes(bytes)?))
-            }
-            _ => Err(OracleError::DeserializationError),
-        }
-    }
-
-    pub fn to_bytes(self) -> Vec<u8> {
-        match self {
-            Self::PriceFeedMessage(msg) => msg.to_bytes().to_vec(),
-            Self::TwapMessage(msg) => msg.to_bytes().to_vec(),
-        }
-    }
-
-    pub fn publish_time(&self) -> i64 {
-        match self {
-            Self::PriceFeedMessage(msg) => msg.publish_time,
-            Self::TwapMessage(msg) => msg.publish_time,
-        }
-    }
-
-    pub fn id(&self) -> [u8; 32] {
-        match self {
-            Self::PriceFeedMessage(msg) => msg.id,
-            Self::TwapMessage(msg) => msg.id,
-        }
-    }
-}
-
-#[repr(C)]
-#[derive(Debug, Copy, Clone, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct PriceFeedMessage {
-    pub id:                [u8; 32],
-    pub price:             i64,
-    pub conf:              u64,
-    pub exponent:          i32,
-    /// The timestamp of this price update in seconds
-    pub publish_time:      i64,
-    /// The timestamp of the previous price update. This field is intended to allow users to
-    /// identify the single unique price update for any moment in time:
-    /// for any time t, the unique update is the one such that prev_publish_time < t <= publish_time.
-    ///
-    /// Note that there may not be such an update while we are migrating to the new message-sending logic,
-    /// as some price updates on pythnet may not be sent to other chains (because the message-sending
-    /// logic may not have triggered). We can solve this problem by making the message-sending mandatory
-    /// (which we can do once publishers have migrated over).
-    ///
-    /// Additionally, this field may be equal to publish_time if the message is sent on a slot where
-    /// where the aggregation was unsuccesful. This problem will go away once all publishers have
-    /// migrated over to a recent version of pyth-agent.
-    pub prev_publish_time: i64,
-    pub ema_price:         i64,
-    pub ema_conf:          u64,
-}
-
-#[allow(dead_code)]
-impl PriceFeedMessage {
-    // The size of the serialized message. Note that this is not the same as the size of the struct
-    // (because of the discriminator & struct padding/alignment).
-    pub const MESSAGE_SIZE: usize = 1 + 32 + 8 + 8 + 4 + 8 + 8 + 8 + 8;
-    pub const DISCRIMINATOR: u8 = 0;
-
-    pub fn from_price_account(key: &Pubkey, account: &PriceAccount) -> Self {
-        let (price, conf, publish_time) = if account.agg_.status_ == PC_STATUS_TRADING {
-            (account.agg_.price_, account.agg_.conf_, account.timestamp_)
-        } else {
-            (
-                account.prev_price_,
-                account.prev_conf_,
-                account.prev_timestamp_,
-            )
-        };
-
-        Self {
-            id: key.to_bytes(),
-            price,
-            conf,
-            exponent: account.exponent,
-            publish_time,
-            prev_publish_time: account.prev_timestamp_,
-            ema_price: account.twap_.val_,
-            ema_conf: account.twac_.val_ as u64,
-        }
-    }
-
-    /// Serialize this message as an array of bytes (including the discriminator)
-    /// Note that it would be more idiomatic to return a `Vec`, but that approach adds
-    /// to the size of the compiled binary (which is already close to the size limit).
+impl PythOracleSerialize for PriceFeedMessage {
+    /// Ideally, this structure should not be aware of the discrminator and the Message enum
+    /// should handle serializing the discriminator. However, this method is kept as is in order
+    /// to avoid any further increase in the program binary size since we are close to the limit.
     #[allow(unused_assignments)]
-    pub fn to_bytes(self) -> [u8; Self::MESSAGE_SIZE] {
-        let mut bytes = [0u8; Self::MESSAGE_SIZE];
+    fn to_bytes(self) -> Vec<u8> {
+        const MESSAGE_SIZE: usize = 1 + 32 + 8 + 8 + 4 + 8 + 8 + 8 + 8;
+        const DISCRIMINATOR: u8 = 0;
+        let mut bytes = [0u8; MESSAGE_SIZE];
 
         let mut i: usize = 0;
 
-        bytes[i..i + 1].clone_from_slice(&[Self::DISCRIMINATOR]);
+        bytes[i..i + 1].clone_from_slice(&[DISCRIMINATOR]);
         i += 1;
 
         bytes[i..i + 32].clone_from_slice(&self.id[..]);
@@ -382,115 +295,23 @@ impl PriceFeedMessage {
         bytes[i..i + 8].clone_from_slice(&self.ema_conf.to_be_bytes());
         i += 8;
 
-        bytes
-    }
-
-    /// Try to deserialize a message from an array of bytes (including the discriminator).
-    /// This method is forward-compatible and allows the size to be larger than the
-    /// size of the struct. As a side-effect, it will ignore newer fields that are
-    /// not yet present in the struct.
-    pub fn try_from_bytes(bytes: &[u8]) -> Result<Self, OracleError> {
-        let mut cursor = Cursor::new(bytes);
-
-        let discriminator = cursor
-            .read_u8()
-            .map_err(|_| OracleError::DeserializationError)?;
-        if discriminator != 0 {
-            return Err(OracleError::DeserializationError);
-        }
-
-        let mut id = [0u8; 32];
-        cursor
-            .read_exact(&mut id)
-            .map_err(|_| OracleError::DeserializationError)?;
-
-        let price = cursor
-            .read_i64::<BigEndian>()
-            .map_err(|_| OracleError::DeserializationError)?;
-        let conf = cursor
-            .read_u64::<BigEndian>()
-            .map_err(|_| OracleError::DeserializationError)?;
-        let exponent = cursor
-            .read_i32::<BigEndian>()
-            .map_err(|_| OracleError::DeserializationError)?;
-        let publish_time = cursor
-            .read_i64::<BigEndian>()
-            .map_err(|_| OracleError::DeserializationError)?;
-        let prev_publish_time = cursor
-            .read_i64::<BigEndian>()
-            .map_err(|_| OracleError::DeserializationError)?;
-        let ema_price = cursor
-            .read_i64::<BigEndian>()
-            .map_err(|_| OracleError::DeserializationError)?;
-        let ema_conf = cursor
-            .read_u64::<BigEndian>()
-            .map_err(|_| OracleError::DeserializationError)?;
-
-
-        Ok(Self {
-            id,
-            price,
-            conf,
-            exponent,
-            publish_time,
-            prev_publish_time,
-            ema_price,
-            ema_conf,
-        })
+        bytes.to_vec()
     }
 }
 
-/// Message format for sending Twap data via the accumulator program
-#[repr(C)]
-#[derive(Debug, Copy, Clone, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct TwapMessage {
-    pub id:                [u8; 32],
-    pub cumulative_price:  i128,
-    pub cumulative_conf:   u128,
-    pub num_down_slots:    u64,
-    pub exponent:          i32,
-    pub publish_time:      i64,
-    pub prev_publish_time: i64,
-    pub publish_slot:      u64,
-}
-
-#[allow(dead_code)]
-impl TwapMessage {
-    // The size of the serialized message. Note that this is not the same as the size of the struct
-    // (because of the discriminator & struct padding/alignment).
-    pub const MESSAGE_SIZE: usize = 1 + 32 + 16 + 16 + 8 + 4 + 8 + 8 + 8;
-    pub const DISCRIMINATOR: u8 = 1;
-
-    pub fn from_price_account(key: &Pubkey, account: &PriceAccountV2) -> Self {
-        let publish_time = if account.agg_.status_ == PC_STATUS_TRADING {
-            account.timestamp_
-        } else {
-            account.prev_timestamp_
-        };
-
-        Self {
-            id: key.to_bytes(),
-            cumulative_price: account.price_cumulative.price,
-            cumulative_conf: account.price_cumulative.conf,
-            num_down_slots: account.price_cumulative.num_down_slots,
-            exponent: account.exponent,
-            publish_time,
-            prev_publish_time: account.prev_timestamp_,
-            publish_slot: account.last_slot_,
-        }
-    }
-
-    /// Serialize this message as an array of bytes (including the discriminator)
-    /// Note that it would be more idiomatic to return a `Vec`, but that approach adds
-    /// to the size of the compiled binary (which is already close to the size limit).
+impl PythOracleSerialize for TwapMessage {
+    /// Ideally, this structure should not be aware of the discrminator and the Message enum
+    /// should handle serializing the discriminator. However, this method is kept as is in order
+    /// to avoid any further increase in the program binary size since we are close to the limit.
     #[allow(unused_assignments)]
-    pub fn to_bytes(self) -> [u8; Self::MESSAGE_SIZE] {
-        let mut bytes = [0u8; Self::MESSAGE_SIZE];
+    fn to_bytes(self) -> Vec<u8> {
+        const MESSAGE_SIZE: usize = 1 + 32 + 16 + 16 + 8 + 4 + 8 + 8 + 8;
+        const DISCRIMINATOR: u8 = 1;
+        let mut bytes = [0u8; MESSAGE_SIZE];
 
         let mut i: usize = 0;
 
-        bytes[i..i + 1].clone_from_slice(&[Self::DISCRIMINATOR]);
+        bytes[i..i + 1].clone_from_slice(&[DISCRIMINATOR]);
         i += 1;
 
         bytes[i..i + 32].clone_from_slice(&self.id[..]);
@@ -517,59 +338,6 @@ impl TwapMessage {
         bytes[i..i + 8].clone_from_slice(&self.publish_slot.to_be_bytes());
         i += 8;
 
-        bytes
-    }
-
-    /// Try to deserialize a message from an array of bytes (including the discriminator).
-    /// This method is forward-compatible and allows the size to be larger than the
-    /// size of the struct. As a side-effect, it will ignore newer fields that are
-    /// not yet present in the struct.
-    pub fn try_from_bytes(bytes: &[u8]) -> Result<Self, OracleError> {
-        let mut cursor = Cursor::new(bytes);
-
-        let discriminator = cursor
-            .read_u8()
-            .map_err(|_| OracleError::DeserializationError)?;
-        if discriminator != 1 {
-            return Err(OracleError::DeserializationError);
-        }
-
-        let mut id = [0u8; 32];
-        cursor
-            .read_exact(&mut id)
-            .map_err(|_| OracleError::DeserializationError)?;
-
-        let cumulative_price = cursor
-            .read_i128::<BigEndian>()
-            .map_err(|_| OracleError::DeserializationError)?;
-        let cumulative_conf = cursor
-            .read_u128::<BigEndian>()
-            .map_err(|_| OracleError::DeserializationError)?;
-        let num_down_slots = cursor
-            .read_u64::<BigEndian>()
-            .map_err(|_| OracleError::DeserializationError)?;
-        let exponent = cursor
-            .read_i32::<BigEndian>()
-            .map_err(|_| OracleError::DeserializationError)?;
-        let publish_time = cursor
-            .read_i64::<BigEndian>()
-            .map_err(|_| OracleError::DeserializationError)?;
-        let prev_publish_time = cursor
-            .read_i64::<BigEndian>()
-            .map_err(|_| OracleError::DeserializationError)?;
-        let publish_slot = cursor
-            .read_u64::<BigEndian>()
-            .map_err(|_| OracleError::DeserializationError)?;
-
-        Ok(Self {
-            id,
-            cumulative_price,
-            cumulative_conf,
-            num_down_slots,
-            exponent,
-            publish_time,
-            prev_publish_time,
-            publish_slot,
-        })
+        bytes.to_vec()
     }
 }
