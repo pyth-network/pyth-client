@@ -20,7 +20,6 @@ use {
     },
     bytemuck::bytes_of,
     solana_program::{
-        program_error::ProgramError,
         pubkey::Pubkey,
         rent::Rent,
     },
@@ -76,15 +75,20 @@ fn test_add_publisher() {
         assert!(price_data.comp_[0].pub_ == publisher);
     }
 
-    // Can't add twice
-    assert_eq!(
-        process_instruction(
-            &program_id,
-            &[funding_account.clone(), price_account.clone(),],
-            instruction_data
-        ),
-        Err(ProgramError::InvalidArgument)
-    );
+    // The instruction is idempotent
+    assert!(process_instruction(
+        &program_id,
+        &[funding_account.clone(), price_account.clone(),],
+        instruction_data
+    )
+    .is_ok());
+
+    {
+        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        assert_eq!(price_data.num_, 1);
+        assert_eq!(price_data.header.size, PriceAccount::INITIAL_SIZE);
+        assert!(price_data.comp_[0].pub_ == publisher);
+    }
 
     clear_account(&price_account).unwrap();
 
@@ -111,7 +115,20 @@ fn test_add_publisher() {
         )
         .is_ok());
 
+        {
+            let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+            assert_eq!(price_data.num_, i + 1);
+            assert!(price_data.comp_[i as usize].pub_ == cmd.publisher);
+            assert_eq!(price_data.header.size, PriceAccount::INITIAL_SIZE);
+        }
 
+        // Check the function is idempotent
+        assert!(process_instruction(
+            &program_id,
+            &[funding_account.clone(), price_account.clone(),],
+            instruction_data
+        )
+        .is_ok());
         {
             let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
             assert_eq!(price_data.num_, i + 1);
@@ -128,6 +145,6 @@ fn test_add_publisher() {
             &[funding_account.clone(), price_account.clone(),],
             instruction_data
         ),
-        Err(ProgramError::InvalidArgument)
+        Ok(())
     );
 }
