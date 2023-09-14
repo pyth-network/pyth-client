@@ -1,3 +1,8 @@
+#[cfg(feature = "price_v2_resize")]
+use solana_program::{
+    program::invoke,
+    system_instruction::transfer,
+};
 use {
     crate::{
         accounts::{
@@ -29,15 +34,12 @@ use {
     solana_program::{
         account_info::AccountInfo,
         bpf_loader_upgradeable,
-        program::invoke,
         program_error::ProgramError,
         pubkey::Pubkey,
-        system_instruction::transfer,
         sysvar::rent::Rent,
     },
     std::cell::Ref,
 };
-
 
 pub fn pyth_assert(condition: bool, error_code: ProgramError) -> Result<(), ProgramError> {
     if !condition {
@@ -156,7 +158,6 @@ pub fn check_valid_writable_account(
     )
 }
 
-
 fn valid_readable_account(
     program_id: &Pubkey,
     account: &AccountInfo,
@@ -253,7 +254,6 @@ pub fn check_is_upgrade_authority_for_program(
         OracleError::InvalidUpgradeAuthority.into(),
     )?;
 
-
     // 2. upgrade_authority_account is actually the authority inside programdata_account
     pyth_assert(
         programdata_deserialized
@@ -278,6 +278,7 @@ pub fn get_rent() -> Result<Rent, ProgramError> {
     Ok(Rent::default())
 }
 
+#[cfg(feature = "price_v2_resize")]
 pub fn send_lamports<'a>(
     from: &AccountInfo<'a>,
     to: &AccountInfo<'a>,

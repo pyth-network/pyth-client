@@ -1,3 +1,5 @@
+#![cfg(feature = "price_v2_resize")]
+
 use {
     crate::{
         accounts::{

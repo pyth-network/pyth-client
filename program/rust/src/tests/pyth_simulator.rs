@@ -469,7 +469,6 @@ impl PythSimulator {
         self.context.banks_client.get_account(key).await.unwrap()
     }
 
-
     /// Get the content of an account as a value of type `T`. This function returns a copy of the
     /// account data -- you cannot mutate the result to mutate the on-chain account data.
     /// Returns None if the account does not exist. Panics if the account data cannot be read as a
@@ -554,6 +553,7 @@ impl PythSimulator {
 
     /// Resize a price account (using the resize_price_account
     /// instruction).
+    #[cfg(feature = "price_v2_resize")]
     pub async fn resize_price_account(
         &mut self,
         price_account: Pubkey,

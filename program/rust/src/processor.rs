@@ -27,6 +27,8 @@ mod upd_permissions;
 mod upd_price;
 mod upd_product;
 
+#[cfg(feature = "price_v2_resize")]
+pub use resize_price_account::resize_price_account;
 pub use {
     add_price::add_price,
     add_product::add_product,
@@ -36,7 +38,6 @@ pub use {
     del_publisher::del_publisher,
     init_mapping::init_mapping,
     init_price::init_price,
-    resize_price_account::resize_price_account,
     set_min_pub::set_min_pub,
     upd_permissions::upd_permissions,
     upd_price::{
@@ -71,7 +72,18 @@ pub fn process_instruction(
         UpdTest => Err(OracleError::UnrecognizedInstruction.into()),
         SetMinPub => set_min_pub(program_id, accounts, instruction_data),
         UpdPriceNoFailOnError => upd_price_no_fail_on_error(program_id, accounts, instruction_data),
-        ResizePriceAccount => resize_price_account(program_id, accounts, instruction_data),
+        ResizePriceAccount => {
+            #[cfg(feature = "price_v2_resize")]
+            {
+                resize_price_account(program_id, accounts, instruction_data)
+            }
+
+            #[cfg(not(feature = "price_v2_resize"))]
+            {
+                solana_program::msg!("Oracle built with price_v2_resize disabled. Bailing out!");
+                Err(OracleError::UnrecognizedInstruction.into())
+            }
+        }
         DelPrice => del_price(program_id, accounts, instruction_data),
         DelProduct => del_product(program_id, accounts, instruction_data),
         UpdPermissions => upd_permissions(program_id, accounts, instruction_data),

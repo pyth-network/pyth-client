@@ -1,6 +1,8 @@
 #[cfg(feature = "pythnet")]
 use {
     crate::accounts::{
+        PriceAccountV2,
+        PythAccount,
         PythOracleSerialize,
         UPD_PRICE_WRITE_SEED,
     },
@@ -14,9 +16,7 @@ use {
     crate::{
         accounts::{
             PriceAccount,
-            PriceAccountV2,
             PriceInfo,
-            PythAccount,
         },
         deserialize::{
             load,
@@ -160,7 +160,10 @@ pub fn upd_price(
     }
 
     // Try to update the aggregate
+    #[allow(unused_variables)]
     let mut aggregate_updated = false;
+
+    #[allow(unused_assignments)]
     if clock.slot > latest_aggregate_price.pub_slot_ {
         unsafe {
             aggregate_updated = c_upd_aggregate(
@@ -171,20 +174,39 @@ pub fn upd_price(
         }
     }
 
+    // TWAP message will be stored here if:
+    // * price_account is V2
+    // * accumulator accounts were passed
+    #[cfg(feature = "pythnet")]
+    let mut maybe_twap_msg = None;
 
-    let account_len = price_account.try_data_len()?;
-    if account_len >= PriceAccountV2::MINIMUM_SIZE {
-        let mut price_data =
+    // Feature-gated PriceAccountV2-specific processing, used only on pythnet/pythtest. May populate
+    // maybe_twap_msg for later use in accumulator message cross-call.
+    //
+    // NOTE: This is done here specifically in order to keep price
+    // account data available for borrowing as v1 for remaining v1 processing.
+    #[cfg(feature = "pythnet")]
+    if price_account.try_data_len()? >= PriceAccountV2::MINIMUM_SIZE {
+        let mut price_data_v2 =
             load_checked::<PriceAccountV2>(price_account, cmd_args.header.version)?;
 
         if aggregate_updated {
-            price_data.update_price_cumulative()?;
+            // Update PriceCumulative on aggregation. This is done
+            // here, because PriceCumulative must update
+            // regardless of accumulator accounts being passed.
+            price_data_v2.update_price_cumulative()?;
+        }
+
+        // Populate the TWAP message if accumulator will be used
+        if maybe_accumulator_accounts.is_some() {
+            maybe_twap_msg = Some(price_data_v2.as_twap_message(price_account.key));
         }
     }
 
+    // Reload as V1 for remaining V1-compatible processing
     let mut price_data = load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
 
-
+    // Feature-gated accumulator-specific code, used only on pythnet/pythtest
     #[cfg(feature = "pythnet")]
     {
         // We want to send a message every time the aggregate price updates. However, during the migration,
@@ -194,6 +216,7 @@ pub fn upd_price(
         if aggregate_updated {
             price_data.message_sent_ = 0;
         }
+
         if let Some(accumulator_accounts) = maybe_accumulator_accounts {
             if price_data.message_sent_ == 0 {
                 // Check that the oracle PDA is correctly configured for the program we are calling.
@@ -225,9 +248,15 @@ pub fn upd_price(
                         is_writable: true,
                     },
                 ];
-                let message = vec![price_data
+
+                let mut message = vec![price_data
                     .as_price_feed_message(price_account.key)
                     .to_bytes()];
+
+                // Append a TWAP message if available
+                if let Some(twap_msg) = maybe_twap_msg {
+                    message.push(twap_msg.to_bytes());
+                }
 
                 // anchor discriminator for "global:put_all"
                 let discriminator: [u8; 8] = [212, 225, 193, 91, 151, 238, 20, 93];

@@ -34,10 +34,17 @@ serde_json = "1.0"
 test-generator = "0.3.1"
 csv = "1.1"
 
+# IMPORTANT: Feature names on this crate must not use hyphens!
+#
+# Context: The -/_ info is lost when cargo changes - to _ before
+# defining CARGO_FEATURE_<feature> envs for build.rs. Our build.rs
+# uses these envs to retrieve feature names and propagate them to
+# cargo-build-bpf when building for tests.
 [features]
 debug = []
 library = []
 pythnet = []
+price_v2_resize = []
 
 [lib]
 crate-type = ["cdylib", "lib"]

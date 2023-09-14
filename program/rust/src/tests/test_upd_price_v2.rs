@@ -1,3 +1,5 @@
+#![cfg(feature = "pythnet")]
+
 use {
     crate::{
         accounts::{
@@ -32,7 +34,7 @@ use {
 };
 
 #[test]
-fn test_upd_price_v2() {
+fn test_upd_price_v2() -> Result<(), Box<dyn std::error::Error>> {
     let mut instruction_data = [0u8; size_of::<UpdPriceArgs>()];
     populate_instruction(&mut instruction_data, 42, 2, 1);
 
@@ -59,16 +61,15 @@ fn test_upd_price_v2() {
 
     update_clock_slot(&mut clock_account, 1);
 
-    assert!(process_instruction(
+    process_instruction(
         &program_id,
         &[
             funding_account.clone(),
             price_account.clone(),
-            clock_account.clone()
+            clock_account.clone(),
         ],
-        &instruction_data
-    )
-    .is_ok());
+        &instruction_data,
+    )?;
 
     {
         let price_data = load_checked::<PriceAccountV2>(&price_account, PC_VERSION).unwrap();
@@ -124,16 +125,15 @@ fn test_upd_price_v2() {
     populate_instruction(&mut instruction_data, 81, 2, 2);
     update_clock_slot(&mut clock_account, 3);
 
-    assert!(process_instruction(
+    process_instruction(
         &program_id,
         &[
             funding_account.clone(),
             price_account.clone(),
-            clock_account.clone()
+            clock_account.clone(),
         ],
-        &instruction_data
-    )
-    .is_ok());
+        &instruction_data,
+    )?;
 
     {
         let price_data = load_checked::<PriceAccountV2>(&price_account, PC_VERSION).unwrap();
@@ -155,16 +155,15 @@ fn test_upd_price_v2() {
     // next price doesnt change but slot does
     populate_instruction(&mut instruction_data, 81, 2, 3);
     update_clock_slot(&mut clock_account, 4);
-    assert!(process_instruction(
+    process_instruction(
         &program_id,
         &[
             funding_account.clone(),
             price_account.clone(),
-            clock_account.clone()
+            clock_account.clone(),
         ],
-        &instruction_data
-    )
-    .is_ok());
+        &instruction_data,
+    )?;
 
     {
         let price_data = load_checked::<PriceAccountV2>(&price_account, PC_VERSION).unwrap();
@@ -186,16 +185,15 @@ fn test_upd_price_v2() {
     // next price doesnt change and neither does aggregate but slot does
     populate_instruction(&mut instruction_data, 81, 2, 4);
     update_clock_slot(&mut clock_account, 5);
-    assert!(process_instruction(
+    process_instruction(
         &program_id,
         &[
             funding_account.clone(),
             price_account.clone(),
-            clock_account.clone()
+            clock_account.clone(),
         ],
-        &instruction_data
-    )
-    .is_ok());
+        &instruction_data,
+    )?;
 
     {
         let price_data = load_checked::<PriceAccountV2>(&price_account, PC_VERSION).unwrap();
@@ -258,16 +256,15 @@ fn test_upd_price_v2() {
         assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_TRADING);
     }
 
-    assert!(process_instruction(
+    process_instruction(
         &program_id,
         &[
             funding_account.clone(),
             price_account.clone(),
-            clock_account.clone()
+            clock_account.clone(),
         ],
-        &instruction_data
-    )
-    .is_ok());
+        &instruction_data,
+    )?;
 
     {
         let price_data = load_checked::<PriceAccountV2>(&price_account, PC_VERSION).unwrap();
@@ -290,16 +287,15 @@ fn test_upd_price_v2() {
     populate_instruction(&mut instruction_data, 50, 20, 6);
     update_clock_slot(&mut clock_account, 7);
 
-    assert!(process_instruction(
+    process_instruction(
         &program_id,
         &[
             funding_account.clone(),
             price_account.clone(),
-            clock_account.clone()
+            clock_account.clone(),
         ],
-        &instruction_data
-    )
-    .is_ok());
+        &instruction_data,
+    )?;
 
     {
         let price_data = load_checked::<PriceAccountV2>(&price_account, PC_VERSION).unwrap();
@@ -322,16 +318,15 @@ fn test_upd_price_v2() {
     populate_instruction(&mut instruction_data, -100, 1, 7);
     update_clock_slot(&mut clock_account, 8);
 
-    assert!(process_instruction(
+    process_instruction(
         &program_id,
         &[
             funding_account.clone(),
             price_account.clone(),
-            clock_account.clone()
+            clock_account.clone(),
         ],
-        &instruction_data
-    )
-    .is_ok());
+        &instruction_data,
+    )?;
 
     {
         let price_data = load_checked::<PriceAccountV2>(&price_account, PC_VERSION).unwrap();
@@ -354,16 +349,15 @@ fn test_upd_price_v2() {
     populate_instruction(&mut instruction_data, -100, 1, 8);
     update_clock_slot(&mut clock_account, 9);
 
-    assert!(process_instruction(
+    process_instruction(
         &program_id,
         &[
             funding_account.clone(),
             price_account.clone(),
-            clock_account.clone()
+            clock_account.clone(),
         ],
-        &instruction_data
-    )
-    .is_ok());
+        &instruction_data,
+    )?;
 
     {
         let price_data = load_checked::<PriceAccountV2>(&price_account, PC_VERSION).unwrap();
@@ -387,16 +381,15 @@ fn test_upd_price_v2() {
     populate_instruction(&mut instruction_data, 60, 4, 50);
     update_clock_slot(&mut clock_account, 50);
 
-    assert!(process_instruction(
+    process_instruction(
         &program_id,
         &[
             funding_account.clone(),
             price_account.clone(),
-            clock_account.clone()
+            clock_account.clone(),
         ],
-        &instruction_data
-    )
-    .is_ok());
+        &instruction_data,
+    )?;
 
     {
         let price_data = load_checked::<PriceAccountV2>(&price_account, PC_VERSION).unwrap();
@@ -420,16 +413,15 @@ fn test_upd_price_v2() {
     populate_instruction(&mut instruction_data, 55, 5, 51);
     update_clock_slot(&mut clock_account, 51);
 
-    assert!(process_instruction(
+    process_instruction(
         &program_id,
         &[
             funding_account.clone(),
             price_account.clone(),
-            clock_account.clone()
+            clock_account.clone(),
         ],
-        &instruction_data
-    )
-    .is_ok());
+        &instruction_data,
+    )?;
 
     {
         let price_data = load_checked::<PriceAccountV2>(&price_account, PC_VERSION).unwrap();
@@ -450,6 +442,8 @@ fn test_upd_price_v2() {
         assert_eq!(price_data.price_cumulative.conf, 3 * 2 + 2 * 3 + 3 + 42 * 4);
         assert_eq!(price_data.price_cumulative.num_down_slots, 17);
     }
+
+    Ok(())
 }
 
 // Create an upd_price instruction with the provided parameters
