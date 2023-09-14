@@ -35,12 +35,12 @@ test-generator = "0.3.1"
 csv = "1.1"
 lazy_static = "1.4.0"
 
-# IMPORTANT: Feature names on this crate must not use hyphens!
+# IMPORTANT: Features in this crate must be added to the `lazy_static` macro call in `pyth_simulator.rs`.
 #
-# Context: The -/_ info is lost when cargo changes - to _ before
-# defining CARGO_FEATURE_<feature> envs for build.rs. Our build.rs
-# uses these envs to retrieve feature names and propagate them to
-# cargo-build-bpf when building for tests.
+# Context: We perform a cargo-build-bpf call as part of running tests
+# to obtain a BPF binary for testing. Desired features are not known
+# to cargo-build-bpf at that point - we manually capture them at
+# compile-time and pass on to the child process.
 [features]
 debug = []
 library = []

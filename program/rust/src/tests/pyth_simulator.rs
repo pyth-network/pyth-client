@@ -77,8 +77,9 @@ lazy_static::lazy_static! {
     // run.
     static ref ORACLE_PROGRAM_BINARY_PATH: PathBuf = {
 
-    // Detect features and pass them onto cargo-build-bpf
-        let features: Vec<&str> = vec![
+    // Detect features and pass them onto cargo-build-bpf.
+    // IMPORTANT: All features of this crate must have gates added to this vector.
+    let features: Vec<&str> = vec![
     #[cfg(feature = "pythnet")]
     "pythnet",
 
