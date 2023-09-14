@@ -9,37 +9,6 @@ use {
 fn main() {
     let target_arch = std::env::var("CARGO_CFG_TARGET_ARCH").unwrap();
 
-    // The tests depend on the BPF build (because we load the BPF program into the solana simulator).
-    // Always build the bpf binary before doing anything else.
-    if target_arch != "bpf" {
-        // cargo-build-bpf does not get information about features
-        // from this script. We need to fish them out and pass them
-        // manually.
-        let mut features = vec![];
-        for (env, _val) in std::env::vars() {
-            if env.starts_with("CARGO_FEATURE_") {
-                features.push(env.trim().replace("CARGO_FEATURE_", "").to_lowercase());
-            }
-        }
-
-        let mut cmd = Command::new("cargo");
-        cmd.arg("build-bpf");
-
-        if !features.is_empty() {
-            cmd.arg("--features");
-            cmd.args(features);
-        }
-
-        let status = cmd.status().unwrap();
-
-        if !status.success() {
-            panic!(
-                "cargo-build-bpf did not exit with 0 (code {:?})",
-                status.code()
-            );
-        }
-    }
-
     // OUT_DIR is the path cargo provides to a build directory under `target/` specifically for
     // isolated build artifacts. We use this to build the C program and then link against the
     // resulting static library. This allows building the program when used as a dependency of

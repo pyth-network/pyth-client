@@ -67,10 +67,48 @@ use {
         fs::File,
         iter::once,
         mem::size_of,
-        path::Path,
+        path::PathBuf,
     },
 };
 
+lazy_static::lazy_static! {
+    // Build the oracle binary and make it available to the
+    // simulator. lazy_static makes this happen only once per test
+    // run.
+    static ref ORACLE_PROGRAM_BINARY_PATH: PathBuf = {
+
+    // Detect features and pass them onto cargo-build-bpf
+        let features: Vec<&str> = vec![
+    #[cfg(feature = "pythnet")]
+    "pythnet",
+
+    #[cfg(feature = "price_v2_resize")]
+    "price_v2_resize",
+
+    ];
+
+    let mut cmd = std::process::Command::new("cargo");
+    cmd.arg("build-bpf");
+
+    if !features.is_empty() {
+        cmd.arg("--features");
+        cmd.args(features);
+    }
+
+    let status = cmd.status().unwrap();
+
+    if !status.success() {
+        panic!(
+        "cargo-build-bpf did not exit with 0 (code {:?})",
+        status.code()
+        );
+    }
+
+    let target_dir = concat!(env!("CARGO_MANIFEST_DIR"), "/../../target");
+
+    PathBuf::from(target_dir).join("deploy/pyth_oracle.so")
+    };
+}
 
 /// Simulator for the state of the pyth program on Solana. You can run solana transactions against
 /// this struct to test how pyth instructions execute in the Solana runtime.
@@ -104,12 +142,7 @@ struct ProductMetadata {
 impl PythSimulator {
     /// Deploys the oracle program as upgradable
     pub async fn new() -> PythSimulator {
-        let mut bpf_data = read_file(
-            std::env::current_dir()
-                .unwrap()
-                .join(Path::new("../../target/deploy/pyth_oracle.so")),
-        );
-
+        let mut bpf_data = read_file(&*ORACLE_PROGRAM_BINARY_PATH);
 
         let mut program_test = ProgramTest::default();
         let program_key = Pubkey::new_unique();
@@ -153,7 +186,6 @@ impl PythSimulator {
         program_test.add_account(program_key, program_account);
         program_test.add_account(programdata_key, programdata_account);
 
-
         // Start validator
         let context = program_test.start_with_context().await;
         let genesis_keypair = copy_keypair(&context.payer);
@@ -175,7 +207,6 @@ impl PythSimulator {
 
         result
     }
-
 
     /// Process a transaction containing `instructions` signed by `signers`.
     /// `payer` is used to pay for and sign the transaction.
