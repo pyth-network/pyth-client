@@ -38,7 +38,6 @@ use {
     std::cell::Ref,
 };
 
-
 pub fn pyth_assert(condition: bool, error_code: ProgramError) -> Result<(), ProgramError> {
     if !condition {
         Result::Err(error_code)
@@ -156,7 +155,6 @@ pub fn check_valid_writable_account(
     )
 }
 
-
 fn valid_readable_account(
     program_id: &Pubkey,
     account: &AccountInfo,
@@ -253,7 +251,6 @@ pub fn check_is_upgrade_authority_for_program(
         OracleError::InvalidUpgradeAuthority.into(),
     )?;
 
-
     // 2. upgrade_authority_account is actually the authority inside programdata_account
     pyth_assert(
         programdata_deserialized
@@ -278,6 +275,7 @@ pub fn get_rent() -> Result<Rent, ProgramError> {
     Ok(Rent::default())
 }
 
+#[allow(dead_code)]
 pub fn send_lamports<'a>(
     from: &AccountInfo<'a>,
     to: &AccountInfo<'a>,

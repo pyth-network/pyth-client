@@ -146,7 +146,7 @@ pub struct PriceAccountV2 {
     pub price_cumulative:   PriceCumulative,
 }
 
-
+#[allow(dead_code)]
 impl PriceAccountV2 {
     /// This function gets triggered when there's a succesful aggregation and updates the cumulative sums
     pub fn update_price_cumulative(&mut self) -> Result<(), OracleError> {
@@ -162,7 +162,6 @@ impl PriceAccountV2 {
         }
     }
 
-    #[allow(dead_code)]
     pub fn as_twap_message(&self, key: &Pubkey) -> TwapMessage {
         let publish_time = if self.agg_.status_ == PC_STATUS_TRADING {
             self.timestamp_
@@ -214,7 +213,6 @@ impl PriceCumulative {
         self.num_down_slots += slot_gap.saturating_sub(PC_MAX_SEND_LATENCY.into());
     }
 }
-
 
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]

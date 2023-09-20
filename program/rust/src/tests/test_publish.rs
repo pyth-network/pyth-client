@@ -1,10 +1,15 @@
+#[cfg(feature = "price_v2_resize")]
+use {
+    crate::accounts::{
+        PriceAccountV2,
+        PythAccount,
+    },
+    solana_sdk::account::Account,
+    std::mem::size_of,
+};
 use {
     crate::{
-        accounts::{
-            PriceAccount,
-            PriceAccountV2,
-            PythAccount,
-        },
+        accounts::PriceAccount,
         c_oracle_header::{
             PC_STATUS_TRADING,
             PC_STATUS_UNKNOWN,
@@ -17,13 +22,10 @@ use {
     },
     solana_program::pubkey::Pubkey,
     solana_sdk::{
-        account::Account,
         signature::Keypair,
         signer::Signer,
     },
-    std::mem::size_of,
 };
-
 
 #[tokio::test]
 async fn test_publish() {
@@ -99,7 +101,6 @@ async fn test_publish() {
     .await
     .unwrap();
 
-
     {
         let price_data = sim
             .get_account_data_as::<PriceAccount>(price)
@@ -116,68 +117,71 @@ async fn test_publish() {
     }
 
     // Resize, check if publishing still works
-    let price_account: Account = sim.get_account(price).await.unwrap();
-    assert_eq!(price_account.data.len(), PriceAccount::MINIMUM_SIZE);
+    #[cfg(feature = "price_v2_resize")]
+    {
+        let price_account: Account = sim.get_account(price).await.unwrap();
+        assert_eq!(price_account.data.len(), PriceAccount::MINIMUM_SIZE);
 
-    sim.resize_price_account(price, &security_authority)
+        sim.resize_price_account(price, &security_authority)
+            .await
+            .unwrap();
+        let price_account: Account = sim.get_account(price).await.unwrap();
+        assert_eq!(price_account.data.len(), size_of::<PriceAccountV2>());
+
+        sim.warp_to_slot(3).await.unwrap();
+        sim.upd_price(
+            &publisher,
+            price,
+            Quote {
+                price:      100,
+                confidence: 1,
+                status:     PC_STATUS_TRADING,
+            },
+        )
         .await
         .unwrap();
-    let price_account: Account = sim.get_account(price).await.unwrap();
-    assert_eq!(price_account.data.len(), size_of::<PriceAccountV2>());
 
-    sim.warp_to_slot(3).await.unwrap();
-    sim.upd_price(
-        &publisher,
-        price,
-        Quote {
-            price:      100,
-            confidence: 1,
-            status:     PC_STATUS_TRADING,
-        },
-    )
-    .await
-    .unwrap();
+        {
+            let price_data = sim
+                .get_account_data_as::<PriceAccount>(price)
+                .await
+                .unwrap();
 
-    {
-        let price_data = sim
-            .get_account_data_as::<PriceAccount>(price)
-            .await
-            .unwrap();
+            assert_eq!(price_data.comp_[0].latest_.price_, 100);
+            assert_eq!(price_data.comp_[0].latest_.conf_, 1);
+            assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_TRADING);
 
-        assert_eq!(price_data.comp_[0].latest_.price_, 100);
-        assert_eq!(price_data.comp_[0].latest_.conf_, 1);
-        assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_TRADING);
+            assert_eq!(price_data.comp_[0].agg_.price_, 0);
+            assert_eq!(price_data.comp_[0].agg_.conf_, 0);
+            assert_eq!(price_data.comp_[0].agg_.status_, PC_STATUS_UNKNOWN);
+        }
 
-        assert_eq!(price_data.comp_[0].agg_.price_, 0);
-        assert_eq!(price_data.comp_[0].agg_.conf_, 0);
-        assert_eq!(price_data.comp_[0].agg_.status_, PC_STATUS_UNKNOWN);
-    }
+        sim.warp_to_slot(4).await.unwrap();
+        sim.upd_price(
+            &publisher,
+            price,
+            Quote {
+                price:      0,
+                confidence: 0,
+                status:     PC_STATUS_UNKNOWN,
+            },
+        )
+        .await
+        .unwrap();
 
-    sim.warp_to_slot(4).await.unwrap();
-    sim.upd_price(
-        &publisher,
-        price,
-        Quote {
-            price:      0,
-            confidence: 0,
-            status:     PC_STATUS_UNKNOWN,
-        },
-    )
-    .await
-    .unwrap();
+        {
+            let price_data = sim
+                .get_account_data_as::<PriceAccount>(price)
+                .await
+                .unwrap();
 
-    {
-        let price_data = sim
-            .get_account_data_as::<PriceAccount>(price)
-            .await
-            .unwrap();
+            assert_eq!(price_data.comp_[0].latest_.price_, 0);
+            assert_eq!(price_data.comp_[0].latest_.conf_, 0);
+            assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_UNKNOWN);
 
-        assert_eq!(price_data.comp_[0].latest_.price_, 0);
-        assert_eq!(price_data.comp_[0].latest_.conf_, 0);
-        assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_UNKNOWN);
-
-        assert_eq!(price_data.comp_[0].agg_.price_, 100);
-        assert_eq!(price_data.comp_[0].agg_.conf_, 1);
-        assert_eq!(price_data.comp_[0].agg_.status_, PC_STATUS_TRADING);
+            assert_eq!(price_data.comp_[0].agg_.price_, 100);
+            assert_eq!(price_data.comp_[0].agg_.conf_, 1);
+            assert_eq!(price_data.comp_[0].agg_.status_, PC_STATUS_TRADING);
+        }
     }
 }

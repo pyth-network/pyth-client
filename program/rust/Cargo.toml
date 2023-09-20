@@ -33,11 +33,19 @@ pythnet-sdk = { git = "https://github.com/pyth-network/pyth-crosschain", rev="60
 serde_json = "1.0"
 test-generator = "0.3.1"
 csv = "1.1"
+lazy_static = "1.4.0"
 
+# IMPORTANT: Features in this crate must be added to the `lazy_static` macro call in `pyth_simulator.rs`.
+#
+# Context: We perform a cargo-build-bpf call as part of running tests
+# to obtain a BPF binary for testing. Desired features are not known
+# to cargo-build-bpf at that point - we manually capture them at
+# compile-time and pass on to the child process.
 [features]
 debug = []
 library = []
 pythnet = []
+price_v2_resize = []
 
 [lib]
 crate-type = ["cdylib", "lib"]

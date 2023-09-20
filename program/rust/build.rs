@@ -8,11 +8,6 @@ use {
 
 fn main() {
     let target_arch = std::env::var("CARGO_CFG_TARGET_ARCH").unwrap();
-    // The tests depend on the BPF build (because we load the BPF program into the solana simulator).
-    // Always build the bpf binary before doing anything else.
-    if target_arch != "bpf" {
-        Command::new("cargo").arg("build-bpf").status().unwrap();
-    }
 
     // OUT_DIR is the path cargo provides to a build directory under `target/` specifically for
     // isolated build artifacts. We use this to build the C program and then link against the
@@ -28,7 +23,6 @@ fn main() {
         make_targets.push("cpyth-native");
     }
     make_targets.push("test");
-
 
     // We must forward OUT_DIR as an env variable to the make script otherwise it will output
     // its artifacts to the wrong place.
@@ -49,6 +43,13 @@ fn main() {
     println!("cargo:rustc-link-lib=static=cpyth-test");
     println!("cargo:rustc-link-search={}", out_dir.display());
 
+    std::fs::create_dir("./codegen").unwrap_or_else(|e| {
+        eprintln!(
+            "Could not create codegen directory (may exist which is fine), error: {}",
+            e
+        );
+    });
+
     // Generate and write bindings
     let bindings = Builder::default()
         .clang_arg(format!("-I{:}", get_solana_inc_path().display()))
@@ -57,7 +58,7 @@ fn main() {
         .generate()
         .expect("Unable to generate bindings");
     bindings
-        .write_to_file("./bindings.rs")
+        .write_to_file("./codegen/bindings.rs")
         .expect("Couldn't write bindings!");
 
     // Rerun the build script if either the rust or C code changes

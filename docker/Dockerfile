@@ -1,10 +1,10 @@
-ARG SOLANA_VERSION
-ARG SOLANA_DOCKER_IMAGE_HASH
+ARG SOLANA_VERSION=v1.14.7
+ARG SOLANA_DOCKER_IMAGE_HASH=9130b4a26ec00c4ba99c023da98c06abb0dba2904c990af7770928e0f7dfd2d5
+
 FROM solanalabs/solana:v${SOLANA_VERSION}@sha256:${SOLANA_DOCKER_IMAGE_HASH}
 
 # Redeclare SOLANA_VERSION in the new build stage.
 # Persist in env for docker run & inspect.
-ARG SOLANA_VERSION
 ENV SOLANA_VERSION="${SOLANA_VERSION}"
 
 RUN apt-get update
@@ -46,14 +46,34 @@ WORKDIR /home/pyth
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
   | sh -s -- -y 
 
-COPY --chown=pyth:pyth . pyth-client/
+ENV PATH=${PATH}:/home/pyth/.cargo/bin
 
-# Build off-chain binaries.
+COPY --chown=pyth:pyth ./scripts/get-bpf-tools.sh pyth-client/scripts/
+RUN ./pyth-client/scripts/get-bpf-tools.sh
+
+# Apply patch to solana
+COPY --chown=pyth:pyth ./scripts/patch-solana.sh ./scripts/solana.patch pyth-client/scripts/
+RUN ./pyth-client/scripts/patch-solana.sh
+
+# Copy C/C++ sources
+COPY --chown=pyth:pyth ./pc pyth-client/pc
+COPY --chown=pyth:pyth ./pctest pyth-client/pctest
+COPY --chown=pyth:pyth ./pcapps pyth-client/pcapps
+COPY --chown=pyth:pyth ./program/c pyth-client/program/c
+COPY --chown=pyth:pyth ./CMakeLists.txt pyth-client
+COPY --chown=pyth:pyth ./scripts/build.sh pyth-client/scripts/
+
+# Build C/C++ offchain binaries.
 RUN cd pyth-client && ./scripts/build.sh
 
-RUN ./pyth-client/scripts/get-bpf-tools.sh
-# Apply patch to solana
-RUN ./pyth-client/scripts/patch-solana.sh
+# layer-cache crates.io packages from Cargo.{toml|lock} and rustup toolchain
+COPY --chown=pyth:pyth program/rust/Cargo.toml pyth-client/program/rust/
+COPY --chown=pyth:pyth Cargo.toml Cargo.lock rust-toolchain pyth-client/
+RUN mkdir -p pyth-client/program/rust/src && touch pyth-client/program/rust/src/lib.rs
+RUN cd pyth-client && cargo fetch --locked
+
+# Do final source code copy to overwrite the placeholder lib.rs
+COPY --chown=pyth:pyth ./ pyth-client/
 
 # Build and test the oracle program.
 RUN cd pyth-client && ./scripts/build-bpf.sh .
