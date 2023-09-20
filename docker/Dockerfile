@@ -49,7 +49,7 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
 ENV PATH=${PATH}:/home/pyth/.cargo/bin
 
 COPY --chown=pyth:pyth ./scripts/get-bpf-tools.sh pyth-client/scripts/
-RUN ls pyth-client/scripts && ./pyth-client/scripts/get-bpf-tools.sh
+RUN ./pyth-client/scripts/get-bpf-tools.sh
 
 # Apply patch to solana
 COPY --chown=pyth:pyth ./scripts/patch-solana.sh ./scripts/solana.patch pyth-client/scripts/

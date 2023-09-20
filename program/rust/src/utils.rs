@@ -1,8 +1,3 @@
-#[cfg(feature = "price_v2_resize")]
-use solana_program::{
-    program::invoke,
-    system_instruction::transfer,
-};
 use {
     crate::{
         accounts::{
@@ -34,8 +29,10 @@ use {
     solana_program::{
         account_info::AccountInfo,
         bpf_loader_upgradeable,
+        program::invoke,
         program_error::ProgramError,
         pubkey::Pubkey,
+        system_instruction::transfer,
         sysvar::rent::Rent,
     },
     std::cell::Ref,
@@ -278,7 +275,7 @@ pub fn get_rent() -> Result<Rent, ProgramError> {
     Ok(Rent::default())
 }
 
-#[cfg(feature = "price_v2_resize")]
+#[allow(dead_code)]
 pub fn send_lamports<'a>(
     from: &AccountInfo<'a>,
     to: &AccountInfo<'a>,
