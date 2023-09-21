@@ -82,9 +82,6 @@ lazy_static::lazy_static! {
     #[cfg(feature = "pythnet")]
     "pythnet",
 
-    #[cfg(feature = "price_v2_resize")]
-    "price_v2_resize",
-
     ];
 
     let mut cmd = std::process::Command::new("cargo");
