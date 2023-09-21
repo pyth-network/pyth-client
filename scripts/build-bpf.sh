@@ -23,14 +23,12 @@ cargo test --locked
 
 # Re-run tests affected by features
 cargo test --locked --features pythnet -- \
+      test_add_price \
+      test_add_price_pythnet_fails_to_add_v1 \
+      test_add_publisher \
       test_upd_price \
       test_upd_price_v2 \
       test_upd_price_no_fail_on_error
-
-cargo test --locked --features price_v2_resize -- \
-      test_publish \
-      test_resize_price_account \
-      --skip test_publish_batch # This one is not relevant but still fuzzy-matched by the runner
 
 cargo-build-bpf -- --locked -Z build-std=std,panic_abort -Z build-std-features=panic_immediate_abort
 sha256sum ./target/**/*.so

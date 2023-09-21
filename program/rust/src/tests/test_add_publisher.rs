@@ -44,7 +44,6 @@ fn test_add_publisher() {
     let price_account = price_setup.as_account_info();
     PriceAccount::initialize(&price_account, PC_VERSION).unwrap();
 
-
     **price_account.try_borrow_mut_lamports().unwrap() = 100;
 
     // Expect the instruction to fail, because the price account isn't rent exempt
@@ -57,10 +56,14 @@ fn test_add_publisher() {
         Err(OracleError::InvalidSignableAccount.into())
     );
 
+    #[cfg(not(feature = "pythnet"))]
+    let price_size = PriceAccount::MINIMUM_SIZE;
+    #[cfg(feature = "pythnet")]
+    let price_size = crate::accounts::PriceAccountV2::MINIMUM_SIZE;
+
     // Now give the price account enough lamports to be rent exempt
     **price_account.try_borrow_mut_lamports().unwrap() =
-        Rent::minimum_balance(&Rent::default(), PriceAccount::MINIMUM_SIZE);
-
+        Rent::minimum_balance(&Rent::default(), price_size);
 
     assert!(process_instruction(
         &program_id,
@@ -110,7 +113,6 @@ fn test_add_publisher() {
             instruction_data
         )
         .is_ok());
-
 
         {
             let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();

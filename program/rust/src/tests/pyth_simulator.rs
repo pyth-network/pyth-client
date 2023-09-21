@@ -2,7 +2,6 @@ use {
     crate::{
         accounts::{
             MappingAccount,
-            PriceAccount,
             PERMISSIONS_SEED,
         },
         c_oracle_header::{
@@ -344,7 +343,14 @@ impl PythSimulator {
         product_keypair: &Keypair,
         expo: i32,
     ) -> Result<Keypair, BanksClientError> {
-        let price_keypair = self.create_pyth_account(size_of::<PriceAccount>()).await;
+        #[cfg(feature = "pythnet")]
+        let price_keypair = self
+            .create_pyth_account(size_of::<crate::accounts::PriceAccountV2>())
+            .await;
+        #[cfg(not(feature = "pythnet"))]
+        let price_keypair = self
+            .create_pyth_account(size_of::<crate::accounts::PriceAccount>())
+            .await;
 
         let cmd = AddPriceArgs {
             header:     OracleCommand::AddPrice.into(),
@@ -581,30 +587,6 @@ impl PythSimulator {
     /// Advance clock to slot `slot`.
     pub async fn warp_to_slot(&mut self, slot: u64) -> Result<(), ProgramTestError> {
         self.context.warp_to_slot(slot)
-    }
-
-    /// Resize a price account (using the resize_price_account
-    /// instruction).
-    #[cfg(feature = "price_v2_resize")]
-    pub async fn resize_price_account(
-        &mut self,
-        price_account: Pubkey,
-        security_authority: &Keypair,
-    ) -> Result<(), BanksClientError> {
-        let cmd: CommandHeader = OracleCommand::ResizePriceAccount.into();
-        let instruction = Instruction::new_with_bytes(
-            self.program_id,
-            bytes_of(&cmd),
-            vec![
-                AccountMeta::new(security_authority.pubkey(), true),
-                AccountMeta::new(price_account, false),
-                AccountMeta::new(system_program::id(), false),
-                AccountMeta::new_readonly(self.get_permissions_pubkey(), false),
-            ],
-        );
-
-        self.process_ixs(&[instruction], &vec![], security_authority)
-            .await
     }
 }
 

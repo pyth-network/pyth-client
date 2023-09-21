@@ -45,7 +45,6 @@ lazy_static = "1.4.0"
 debug = []
 library = []
 pythnet = []
-price_v2_resize = []
 
 [lib]
 crate-type = ["cdylib", "lib"]
