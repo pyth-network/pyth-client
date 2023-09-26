@@ -1,8 +1,9 @@
+#![cfg(feature = "pythnet")]
 use {
     super::test_utils::AccountSetup,
     crate::{
         accounts::{
-            PriceAccountV2,
+            PriceAccount,
             PriceCumulative,
             PriceInfo,
         },
@@ -171,11 +172,11 @@ fn test_twap_unit() {
 #[test]
 fn test_twap_with_price_account() {
     let program_id = Pubkey::new_unique();
-    let mut price_setup: AccountSetup = AccountSetup::new::<PriceAccountV2>(&program_id);
+    let mut price_setup: AccountSetup = AccountSetup::new::<PriceAccount>(&program_id);
     let price_account = price_setup.as_account_info();
 
     // Normal behavior
-    let mut price_data = load_account_as_mut::<PriceAccountV2>(&price_account).unwrap();
+    let mut price_data = load_account_as_mut::<PriceAccount>(&price_account).unwrap();
     price_data.agg_ = PriceInfo {
         price_:           -10,
         conf_:            5,

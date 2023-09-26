@@ -1,8 +1,6 @@
 #[cfg(feature = "pythnet")]
 use {
     crate::accounts::{
-        PriceAccountV2,
-        PythAccount,
         PythOracleSerialize,
         UPD_PRICE_WRITE_SEED,
     },
@@ -42,7 +40,6 @@ use {
         sysvar::Sysvar,
     },
 };
-
 
 #[cfg(target_arch = "bpf")]
 #[link(name = "cpyth-bpf")]
@@ -146,7 +143,6 @@ pub fn upd_price(
             OracleError::PermissionViolation.into(),
         )?;
 
-
         latest_aggregate_price = price_data.agg_;
         let latest_publisher_price = price_data.comp_[publisher_index].latest_;
 
@@ -174,35 +170,6 @@ pub fn upd_price(
         }
     }
 
-    // TWAP message will be stored here if:
-    // * price_account is V2
-    // * accumulator accounts were passed
-    #[cfg(feature = "pythnet")]
-    let mut maybe_twap_msg = None;
-
-    // Feature-gated PriceAccountV2-specific processing, used only on pythnet/pythtest. May populate
-    // maybe_twap_msg for later use in accumulator message cross-call.
-    //
-    // NOTE: This is done here specifically in order to keep price
-    // account data available for borrowing as v1 for remaining v1 processing.
-    #[cfg(feature = "pythnet")]
-    if price_account.try_data_len()? >= PriceAccountV2::MINIMUM_SIZE {
-        let mut price_data_v2 =
-            load_checked::<PriceAccountV2>(price_account, cmd_args.header.version)?;
-
-        if aggregate_updated {
-            // Update PriceCumulative on aggregation. This is done
-            // here, because PriceCumulative must update
-            // regardless of accumulator accounts being passed.
-            price_data_v2.update_price_cumulative()?;
-        }
-
-        // Populate the TWAP message if accumulator will be used
-        if maybe_accumulator_accounts.is_some() {
-            maybe_twap_msg = Some(price_data_v2.as_twap_message(price_account.key));
-        }
-    }
-
     // Reload as V1 for remaining V1-compatible processing
     let mut price_data = load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
 
@@ -215,6 +182,7 @@ pub fn upd_price(
         // will send the message.
         if aggregate_updated {
             price_data.message_sent_ = 0;
+            price_data.update_price_cumulative()?;
         }
 
         if let Some(accumulator_accounts) = maybe_accumulator_accounts {
@@ -249,14 +217,14 @@ pub fn upd_price(
                     },
                 ];
 
-                let mut message = vec![price_data
-                    .as_price_feed_message(price_account.key)
-                    .to_bytes()];
+                let message = vec![
+                    price_data
+                        .as_price_feed_message(price_account.key)
+                        .to_bytes(),
+                    price_data.as_twap_message(price_account.key).to_bytes(),
+                ];
 
                 // Append a TWAP message if available
-                if let Some(twap_msg) = maybe_twap_msg {
-                    message.push(twap_msg.to_bytes());
-                }
 
                 // anchor discriminator for "global:put_all"
                 let discriminator: [u8; 8] = [212, 225, 193, 91, 151, 238, 20, 93];

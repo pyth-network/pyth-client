@@ -340,11 +340,6 @@ impl PythSimulator {
         product_keypair: &Keypair,
         expo: i32,
     ) -> Result<Keypair, BanksClientError> {
-        #[cfg(feature = "pythnet")]
-        let price_keypair = self
-            .create_pyth_account(size_of::<crate::accounts::PriceAccountV2>())
-            .await;
-        #[cfg(not(feature = "pythnet"))]
         let price_keypair = self
             .create_pyth_account(size_of::<crate::accounts::PriceAccount>())
             .await;

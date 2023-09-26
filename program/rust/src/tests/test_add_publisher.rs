@@ -56,10 +56,7 @@ fn test_add_publisher() {
         Err(OracleError::InvalidSignableAccount.into())
     );
 
-    #[cfg(not(feature = "pythnet"))]
     let price_size = PriceAccount::MINIMUM_SIZE;
-    #[cfg(feature = "pythnet")]
-    let price_size = crate::accounts::PriceAccountV2::MINIMUM_SIZE;
 
     // Now give the price account enough lamports to be rent exempt
     **price_account.try_borrow_mut_lamports().unwrap() =

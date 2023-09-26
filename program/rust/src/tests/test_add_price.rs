@@ -52,16 +52,10 @@ fn test_add_price() {
     let mut product_setup = AccountSetup::new::<ProductAccount>(&program_id);
     let product_account = product_setup.as_account_info();
 
-    #[cfg(not(feature = "pythnet"))]
     let mut price_setup = AccountSetup::new::<PriceAccount>(&program_id);
-    #[cfg(feature = "pythnet")]
-    let mut price_setup = AccountSetup::new::<crate::accounts::PriceAccountV2>(&program_id);
     let mut price_account = price_setup.as_account_info();
 
-    #[cfg(not(feature = "pythnet"))]
     let mut price_setup_2 = AccountSetup::new::<PriceAccount>(&program_id);
-    #[cfg(feature = "pythnet")]
-    let mut price_setup_2 = AccountSetup::new::<crate::accounts::PriceAccountV2>(&program_id);
     let price_account_2 = price_setup_2.as_account_info();
 
     assert!(process_instruction(
@@ -204,59 +198,5 @@ fn test_add_price() {
             instruction_data_add_price
         ),
         Err(OracleError::InvalidAccountHeader.into())
-    );
-}
-
-#[cfg(feature = "pythnet")]
-#[test]
-pub fn test_add_price_pythnet_fails_to_add_v1() {
-    let hdr_add_product = OracleCommand::AddProduct.into();
-
-    let hdr_add_price = AddPriceArgs {
-        header:     OracleCommand::AddPrice.into(),
-        exponent:   1,
-        price_type: 1,
-    };
-    let instruction_data_add_product = bytes_of::<CommandHeader>(&hdr_add_product);
-    let instruction_data_add_price = bytes_of::<AddPriceArgs>(&hdr_add_price);
-
-    let program_id = Pubkey::new_unique();
-
-    let mut funding_setup = AccountSetup::new_funding();
-    let funding_account = funding_setup.as_account_info();
-
-    let mut mapping_setup = AccountSetup::new::<MappingAccount>(&program_id);
-    let mapping_account = mapping_setup.as_account_info();
-    MappingAccount::initialize(&mapping_account, PC_VERSION).unwrap();
-
-    let mut product_setup = AccountSetup::new::<ProductAccount>(&program_id);
-    let product_account = product_setup.as_account_info();
-
-    // Prepare a v1 account which should be recognized as too small
-    let mut price_setup = AccountSetup::new::<PriceAccount>(&program_id);
-    let price_account = price_setup.as_account_info();
-
-    assert!(process_instruction(
-        &program_id,
-        &[
-            funding_account.clone(),
-            mapping_account.clone(),
-            product_account.clone()
-        ],
-        instruction_data_add_product
-    )
-    .is_ok());
-
-    assert_eq!(
-        process_instruction(
-            &program_id,
-            &[
-                funding_account.clone(),
-                product_account.clone(),
-                price_account.clone()
-            ],
-            instruction_data_add_price
-        ),
-        Err(OracleError::AccountTooSmall.into())
     );
 }

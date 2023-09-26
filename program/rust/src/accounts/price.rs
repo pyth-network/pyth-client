@@ -1,17 +1,15 @@
+#[cfg(feature = "pythnet")]
+pub use price_pythnet::*;
+#[cfg(not(feature = "pythnet"))]
+pub use price_solana::*;
 use {
     super::{
         AccountHeader,
         PythAccount,
     },
-    crate::{
-        c_oracle_header::{
-            PC_ACCTYPE_PRICE,
-            PC_COMP_SIZE,
-            PC_COMP_SIZE_V2,
-            PC_MAX_SEND_LATENCY,
-            PC_STATUS_TRADING,
-        },
-        error::OracleError,
+    crate::c_oracle_header::{
+        PC_ACCTYPE_PRICE,
+        PC_COMP_SIZE,
     },
     bytemuck::{
         Pod,
@@ -25,192 +23,221 @@ use {
     std::mem::size_of,
 };
 
-#[repr(C)]
-#[derive(Copy, Clone, Pod, Zeroable)]
-pub struct PriceAccount {
-    pub header:             AccountHeader,
-    /// Type of the price account
-    pub price_type:         u32,
-    /// Exponent for the published prices
-    pub exponent:           i32,
-    /// Current number of authorized publishers
-    pub num_:               u32,
-    /// Number of valid quotes for the last aggregation
-    pub num_qt_:            u32,
-    /// Last slot with a succesful aggregation (status : TRADING)
-    pub last_slot_:         u64,
-    /// Second to last slot where aggregation was attempted
-    pub valid_slot_:        u64,
-    /// Ema for price
-    pub twap_:              PriceEma,
-    /// Ema for confidence
-    pub twac_:              PriceEma,
-    /// Last time aggregation was attempted
-    pub timestamp_:         i64,
-    /// Minimum valid publisher quotes for a succesful aggregation
-    pub min_pub_:           u8,
-    /// Whether the current aggregate price has been sent as a message to the message buffer.
-    /// 0 = false, 1 = true. (this is a u8 to make the Pod trait happy)
-    pub message_sent_:      u8,
-    pub unused_2_:          i16,
-    pub unused_3_:          i32,
-    /// Corresponding product account
-    pub product_account:    Pubkey,
-    /// Next price account in the list
-    pub next_price_account: Pubkey,
-    /// Second to last slot where aggregation was succesful (i.e. status : TRADING)
-    pub prev_slot_:         u64,
-    /// Aggregate price at prev_slot_
-    pub prev_price_:        i64,
-    /// Confidence interval at prev_slot_
-    pub prev_conf_:         u64,
-    /// Timestamp of prev_slot_
-    pub prev_timestamp_:    i64,
-    /// Last attempted aggregate results
-    pub agg_:               PriceInfo,
-    /// Publishers' price components
-    pub comp_:              [PriceComponent; PC_COMP_SIZE as usize],
-}
+#[cfg(feature = "pythnet")]
+mod price_pythnet {
+    pub type PriceAccount = PriceAccountPythnet;
 
-impl PriceAccount {
-    #[allow(dead_code)]
-    pub fn as_price_feed_message(&self, key: &Pubkey) -> PriceFeedMessage {
-        let (price, conf, publish_time) = if self.agg_.status_ == PC_STATUS_TRADING {
-            (self.agg_.price_, self.agg_.conf_, self.timestamp_)
-        } else {
-            (self.prev_price_, self.prev_conf_, self.prev_timestamp_)
-        };
+    use {
+        super::*,
+        crate::{
+            c_oracle_header::{
+                PC_COMP_SIZE_V2,
+                PC_MAX_SEND_LATENCY,
+                PC_STATUS_TRADING,
+            },
+            error::OracleError,
+        },
+    };
 
-        PriceFeedMessage {
-            id: key.to_bytes(),
-            price,
-            conf,
-            exponent: self.exponent,
-            publish_time,
-            prev_publish_time: self.prev_timestamp_,
-            ema_price: self.twap_.val_,
-            ema_conf: self.twac_.val_ as u64,
+    /// We are currently out of space in our price accounts. We plan to resize them
+    /// using the resize_price_account function. Until all the accounts have been resized, all instructions MUST work with either of the two versions.
+    /// Operations may check the account size to determine whether the old or the new version has been passed.
+    /// The new price accounts add more publishers and introduce PriceCumulative, a new struct designed to store cumulative sums for computing TWAPs.
+    #[repr(C)]
+    #[derive(Copy, Clone, Pod, Zeroable)]
+    pub struct PriceAccountPythnet {
+        pub header:             AccountHeader,
+        /// Type of the price account
+        pub price_type:         u32,
+        /// Exponent for the published prices
+        pub exponent:           i32,
+        /// Current number of authorized publishers
+        pub num_:               u32,
+        /// Number of valid quotes for the last aggregation
+        pub num_qt_:            u32,
+        /// Last slot with a succesful aggregation (status : TRADING)
+        pub last_slot_:         u64,
+        /// Second to last slot where aggregation was attempted
+        pub valid_slot_:        u64,
+        /// Ema for price
+        pub twap_:              PriceEma,
+        /// Ema for confidence
+        pub twac_:              PriceEma,
+        /// Last time aggregation was attempted
+        pub timestamp_:         i64,
+        /// Minimum valid publisher quotes for a succesful aggregation
+        pub min_pub_:           u8,
+        pub message_sent_:      u8,
+        pub unused_2_:          i16,
+        pub unused_3_:          i32,
+        /// Corresponding product account
+        pub product_account:    Pubkey,
+        /// Next price account in the list
+        pub next_price_account: Pubkey,
+        /// Second to last slot where aggregation was succesful (i.e. status : TRADING)
+        pub prev_slot_:         u64,
+        /// Aggregate price at prev_slot_
+        pub prev_price_:        i64,
+        /// Confidence interval at prev_slot_
+        pub prev_conf_:         u64,
+        /// Timestamp of prev_slot_
+        pub prev_timestamp_:    i64,
+        /// Last attempted aggregate results
+        pub agg_:               PriceInfo,
+        /// Publishers' price components
+        pub comp_:              [PriceComponent; PC_COMP_SIZE as usize],
+        pub extra_comp_:        [PriceComponent; (PC_COMP_SIZE_V2 - PC_COMP_SIZE) as usize], // This space is empty until we update the aggregation to support more pubs
+        /// Cumulative sums of aggregative price and confidence used to compute arithmetic moving averages
+        pub price_cumulative:   PriceCumulative,
+    }
+
+    impl PriceAccountPythnet {
+        pub fn as_price_feed_message(&self, key: &Pubkey) -> PriceFeedMessage {
+            let (price, conf, publish_time) = if self.agg_.status_ == PC_STATUS_TRADING {
+                (self.agg_.price_, self.agg_.conf_, self.timestamp_)
+            } else {
+                (self.prev_price_, self.prev_conf_, self.prev_timestamp_)
+            };
+
+            PriceFeedMessage {
+                id: key.to_bytes(),
+                price,
+                conf,
+                exponent: self.exponent,
+                publish_time,
+                prev_publish_time: self.prev_timestamp_,
+                ema_price: self.twap_.val_,
+                ema_conf: self.twac_.val_ as u64,
+            }
+        }
+        /// This function gets triggered when there's a succesful aggregation and updates the cumulative sums
+        pub fn update_price_cumulative(&mut self) -> Result<(), OracleError> {
+            if self.agg_.status_ == PC_STATUS_TRADING {
+                self.price_cumulative.update(
+                    self.agg_.price_,
+                    self.agg_.conf_,
+                    self.agg_.pub_slot_.saturating_sub(self.prev_slot_),
+                ); // pub_slot should always be >= prev_slot, but we protect ourselves against underflow just in case
+                Ok(())
+            } else {
+                Err(OracleError::NeedsSuccesfulAggregation)
+            }
+        }
+
+        pub fn as_twap_message(&self, key: &Pubkey) -> TwapMessage {
+            let publish_time = if self.agg_.status_ == PC_STATUS_TRADING {
+                self.timestamp_
+            } else {
+                self.prev_timestamp_
+            };
+
+            TwapMessage {
+                id: key.to_bytes(),
+                cumulative_price: self.price_cumulative.price,
+                cumulative_conf: self.price_cumulative.conf,
+                num_down_slots: self.price_cumulative.num_down_slots,
+                exponent: self.exponent,
+                publish_time,
+                prev_publish_time: self.prev_timestamp_,
+                publish_slot: self.last_slot_,
+            }
+        }
+    }
+
+    impl PythAccount for PriceAccountPythnet {
+        const ACCOUNT_TYPE: u32 = PC_ACCTYPE_PRICE;
+        const INITIAL_SIZE: u32 = size_of::<PriceAccountPythnet>() as u32;
+    }
+
+    // This struct can't overflow since :
+    // |sum(price * slotgap)| <= sum(|price * slotgap|) <= max(|price|) * sum(slotgap) <= i64::MAX * * current_slot <= i64::MAX * u64::MAX <= i128::MAX
+    // |sum(conf * slotgap)| <= sum(|conf * slotgap|) <= max(|conf|) * sum(slotgap) <= u64::MAX * current_slot <= u64::MAX * u64::MAX <= u128::MAX
+    // num_down_slots <= current_slot <= u64::MAX
+    /// Contains cumulative sums of aggregative price and confidence used to compute arithmetic moving averages.
+    /// Informally the TWAP between time t and time T can be computed as :
+    /// `(T.price_cumulative.price - t.price_cumulative.price) / (T.agg_.pub_slot_ - t.agg_.pub_slot_)`
+    #[repr(C)]
+    #[derive(Copy, Clone, Pod, Zeroable)]
+    pub struct PriceCumulative {
+        /// Cumulative sum of price * slot_gap
+        pub price:          i128,
+        /// Cumulative sum of conf * slot_gap
+        pub conf:           u128,
+        /// Cumulative number of slots where the price wasn't recently updated (within
+        /// PC_MAX_SEND_LATENCY slots). This field should be used to calculate the downtime
+        /// as a percent of slots between two times `T` and `t` as follows:
+        /// `(T.num_down_slots - t.num_down_slots) / (T.agg_.pub_slot_ - t.agg_.pub_slot_)`
+        pub num_down_slots: u64,
+        /// Padding for alignment
+        pub unused:         u64,
+    }
+
+    impl PriceCumulative {
+        pub fn update(&mut self, price: i64, conf: u64, slot_gap: u64) {
+            self.price += i128::from(price) * i128::from(slot_gap);
+            self.conf += u128::from(conf) * u128::from(slot_gap);
+            // This is expected to saturate at 0 most of the time (while the feed is up).
+            self.num_down_slots += slot_gap.saturating_sub(PC_MAX_SEND_LATENCY.into());
         }
     }
 }
 
-/// We are currently out of space in our price accounts. We plan to resize them
-/// using the resize_price_account function. Until all the accounts have been resized, all instructions MUST work with either of the two versions.
-/// Operations may check the account size to determine whether the old or the new version has been passed.
-/// The new price accounts add more publishers and introduce PriceCumulative, a new struct designed to store cumulative sums for computing TWAPs.
-#[repr(C)]
-#[derive(Copy, Clone, Pod, Zeroable)]
-pub struct PriceAccountV2 {
-    pub header:             AccountHeader,
-    /// Type of the price account
-    pub price_type:         u32,
-    /// Exponent for the published prices
-    pub exponent:           i32,
-    /// Current number of authorized publishers
-    pub num_:               u32,
-    /// Number of valid quotes for the last aggregation
-    pub num_qt_:            u32,
-    /// Last slot with a succesful aggregation (status : TRADING)
-    pub last_slot_:         u64,
-    /// Second to last slot where aggregation was attempted
-    pub valid_slot_:        u64,
-    /// Ema for price
-    pub twap_:              PriceEma,
-    /// Ema for confidence
-    pub twac_:              PriceEma,
-    /// Last time aggregation was attempted
-    pub timestamp_:         i64,
-    /// Minimum valid publisher quotes for a succesful aggregation
-    pub min_pub_:           u8,
-    pub message_sent_:      u8,
-    pub unused_2_:          i16,
-    pub unused_3_:          i32,
-    /// Corresponding product account
-    pub product_account:    Pubkey,
-    /// Next price account in the list
-    pub next_price_account: Pubkey,
-    /// Second to last slot where aggregation was succesful (i.e. status : TRADING)
-    pub prev_slot_:         u64,
-    /// Aggregate price at prev_slot_
-    pub prev_price_:        i64,
-    /// Confidence interval at prev_slot_
-    pub prev_conf_:         u64,
-    /// Timestamp of prev_slot_
-    pub prev_timestamp_:    i64,
-    /// Last attempted aggregate results
-    pub agg_:               PriceInfo,
-    /// Publishers' price components
-    pub comp_:              [PriceComponent; PC_COMP_SIZE as usize],
-    pub extra_comp_:        [PriceComponent; (PC_COMP_SIZE_V2 - PC_COMP_SIZE) as usize], // This space is empty until we update the aggregation to support more pubs
-    /// Cumulative sums of aggregative price and confidence used to compute arithmetic moving averages
-    pub price_cumulative:   PriceCumulative,
-}
+#[cfg(not(feature = "pythnet"))]
+// Use solana/pythnet modules to guard all PriceAccount* details with less cfg guards
+mod price_solana {
+    pub type PriceAccount = PriceAccountSolana;
 
-#[allow(dead_code)]
-impl PriceAccountV2 {
-    /// This function gets triggered when there's a succesful aggregation and updates the cumulative sums
-    pub fn update_price_cumulative(&mut self) -> Result<(), OracleError> {
-        if self.agg_.status_ == PC_STATUS_TRADING {
-            self.price_cumulative.update(
-                self.agg_.price_,
-                self.agg_.conf_,
-                self.agg_.pub_slot_.saturating_sub(self.prev_slot_),
-            ); // pub_slot should always be >= prev_slot, but we protect ourselves against underflow just in case
-            Ok(())
-        } else {
-            Err(OracleError::NeedsSuccesfulAggregation)
-        }
+    use super::*;
+    #[repr(C)]
+    #[derive(Copy, Clone, Pod, Zeroable)]
+    pub struct PriceAccountSolana {
+        pub header:             AccountHeader,
+        /// Type of the price account
+        pub price_type:         u32,
+        /// Exponent for the published prices
+        pub exponent:           i32,
+        /// Current number of authorized publishers
+        pub num_:               u32,
+        /// Number of valid quotes for the last aggregation
+        pub num_qt_:            u32,
+        /// Last slot with a succesful aggregation (status : TRADING)
+        pub last_slot_:         u64,
+        /// Second to last slot where aggregation was attempted
+        pub valid_slot_:        u64,
+        /// Ema for price
+        pub twap_:              PriceEma,
+        /// Ema for confidence
+        pub twac_:              PriceEma,
+        /// Last time aggregation was attempted
+        pub timestamp_:         i64,
+        /// Minimum valid publisher quotes for a succesful aggregation
+        pub min_pub_:           u8,
+        /// Whether the current aggregate price has been sent as a message to the message buffer.
+        /// 0 = false, 1 = true. (this is a u8 to make the Pod trait happy)
+        pub message_sent_:      u8,
+        pub unused_2_:          i16,
+        pub unused_3_:          i32,
+        /// Corresponding product account
+        pub product_account:    Pubkey,
+        /// Next price account in the list
+        pub next_price_account: Pubkey,
+        /// Second to last slot where aggregation was succesful (i.e. status : TRADING)
+        pub prev_slot_:         u64,
+        /// Aggregate price at prev_slot_
+        pub prev_price_:        i64,
+        /// Confidence interval at prev_slot_
+        pub prev_conf_:         u64,
+        /// Timestamp of prev_slot_
+        pub prev_timestamp_:    i64,
+        /// Last attempted aggregate results
+        pub agg_:               PriceInfo,
+        /// Publishers' price components
+        pub comp_:              [PriceComponent; PC_COMP_SIZE as usize],
     }
 
-    pub fn as_twap_message(&self, key: &Pubkey) -> TwapMessage {
-        let publish_time = if self.agg_.status_ == PC_STATUS_TRADING {
-            self.timestamp_
-        } else {
-            self.prev_timestamp_
-        };
-
-        TwapMessage {
-            id: key.to_bytes(),
-            cumulative_price: self.price_cumulative.price,
-            cumulative_conf: self.price_cumulative.conf,
-            num_down_slots: self.price_cumulative.num_down_slots,
-            exponent: self.exponent,
-            publish_time,
-            prev_publish_time: self.prev_timestamp_,
-            publish_slot: self.last_slot_,
-        }
-    }
-}
-
-// This struct can't overflow since :
-// |sum(price * slotgap)| <= sum(|price * slotgap|) <= max(|price|) * sum(slotgap) <= i64::MAX * * current_slot <= i64::MAX * u64::MAX <= i128::MAX
-// |sum(conf * slotgap)| <= sum(|conf * slotgap|) <= max(|conf|) * sum(slotgap) <= u64::MAX * current_slot <= u64::MAX * u64::MAX <= u128::MAX
-// num_down_slots <= current_slot <= u64::MAX
-/// Contains cumulative sums of aggregative price and confidence used to compute arithmetic moving averages.
-/// Informally the TWAP between time t and time T can be computed as :
-/// `(T.price_cumulative.price - t.price_cumulative.price) / (T.agg_.pub_slot_ - t.agg_.pub_slot_)`
-#[repr(C)]
-#[derive(Copy, Clone, Pod, Zeroable)]
-pub struct PriceCumulative {
-    /// Cumulative sum of price * slot_gap
-    pub price:          i128,
-    /// Cumulative sum of conf * slot_gap
-    pub conf:           u128,
-    /// Cumulative number of slots where the price wasn't recently updated (within
-    /// PC_MAX_SEND_LATENCY slots). This field should be used to calculate the downtime
-    /// as a percent of slots between two times `T` and `t` as follows:
-    /// `(T.num_down_slots - t.num_down_slots) / (T.agg_.pub_slot_ - t.agg_.pub_slot_)`
-    pub num_down_slots: u64,
-    /// Padding for alignment
-    pub unused:         u64,
-}
-
-impl PriceCumulative {
-    pub fn update(&mut self, price: i64, conf: u64, slot_gap: u64) {
-        self.price += i128::from(price) * i128::from(slot_gap);
-        self.conf += u128::from(conf) * u128::from(slot_gap);
-        // This is expected to saturate at 0 most of the time (while the feed is up).
-        self.num_down_slots += slot_gap.saturating_sub(PC_MAX_SEND_LATENCY.into());
+    impl PythAccount for PriceAccountSolana {
+        const ACCOUNT_TYPE: u32 = PC_ACCTYPE_PRICE;
+        const INITIAL_SIZE: u32 = size_of::<PriceAccountSolana>() as u32;
     }
 }
 
@@ -238,16 +265,6 @@ pub struct PriceEma {
     pub val_:   i64,
     pub numer_: i64,
     pub denom_: i64,
-}
-
-impl PythAccount for PriceAccount {
-    const ACCOUNT_TYPE: u32 = PC_ACCTYPE_PRICE;
-    const INITIAL_SIZE: u32 = size_of::<PriceAccount>() as u32;
-}
-
-impl PythAccount for PriceAccountV2 {
-    const ACCOUNT_TYPE: u32 = PC_ACCTYPE_PRICE;
-    const INITIAL_SIZE: u32 = size_of::<PriceAccountV2>() as u32;
 }
 
 pub trait PythOracleSerialize {

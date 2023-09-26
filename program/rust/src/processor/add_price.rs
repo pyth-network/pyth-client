@@ -74,13 +74,6 @@ pub fn add_price(
     let mut product_data =
         load_checked::<ProductAccount>(product_account, cmd_args.header.version)?;
 
-    // Forbid adding v1 prices on pythnet and co.
-    #[cfg(feature = "pythnet")]
-    pyth_assert(
-        price_account.data_len() >= crate::accounts::PriceAccountV2::MINIMUM_SIZE,
-        OracleError::AccountTooSmall.into(),
-    )?;
-
     let mut price_data = PriceAccount::initialize(price_account, cmd_args.header.version)?;
     price_data.exponent = cmd_args.exponent;
     price_data.price_type = cmd_args.price_type;
