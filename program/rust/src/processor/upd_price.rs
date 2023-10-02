@@ -127,6 +127,10 @@ pub fn upd_price(
 
     let mut publisher_index: usize = 0;
     let latest_aggregate_price: PriceInfo;
+
+    // The price_data borrow happens in a scope because it must be
+    // dropped before we borrow again as raw data pointer for the C
+    // aggregation logic.
     {
         // Verify that symbol account is initialized
         let price_data = load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
@@ -159,6 +163,9 @@ pub fn upd_price(
     #[allow(unused_variables)]
     let mut aggregate_updated = false;
 
+    // NOTE: c_upd_aggregate must use a raw pointer to price
+    // data. Solana's `<account>.borrow_*` methods require exclusive
+    // access, i.e. no other borrow can exist for the account.
     #[allow(unused_assignments)]
     if clock.slot > latest_aggregate_price.pub_slot_ {
         unsafe {
@@ -170,7 +177,7 @@ pub fn upd_price(
         }
     }
 
-    // Reload as V1 for remaining V1-compatible processing
+    // Reload price data as a struct after c_upd_aggregate() borrow is dropped
     let mut price_data = load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
 
     // Feature-gated accumulator-specific code, used only on pythnet/pythtest

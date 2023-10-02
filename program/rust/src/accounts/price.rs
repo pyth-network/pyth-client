@@ -23,6 +23,7 @@ use {
     std::mem::size_of,
 };
 
+/// Pythnet-specific PriceAccount implementation
 #[cfg(feature = "pythnet")]
 mod price_pythnet {
     pub type PriceAccount = PriceAccountPythnet;
@@ -39,10 +40,9 @@ mod price_pythnet {
         },
     };
 
-    /// We are currently out of space in our price accounts. We plan to resize them
-    /// using the resize_price_account function. Until all the accounts have been resized, all instructions MUST work with either of the two versions.
-    /// Operations may check the account size to determine whether the old or the new version has been passed.
-    /// The new price accounts add more publishers and introduce PriceCumulative, a new struct designed to store cumulative sums for computing TWAPs.
+    /// Pythnet-only extended price account format. This is extension
+    /// is an append-only change that adds extra publisher slots and
+    /// PriceCumulative for TWAP processing.
     #[repr(C)]
     #[derive(Copy, Clone, Pod, Zeroable)]
     pub struct PriceAccountPythnet {
@@ -182,12 +182,20 @@ mod price_pythnet {
     }
 }
 
+/// Solana-specific PriceAccount implementation
 #[cfg(not(feature = "pythnet"))]
-// Use solana/pythnet modules to guard all PriceAccount* details with less cfg guards
 mod price_solana {
     pub type PriceAccount = PriceAccountSolana;
 
     use super::*;
+
+    /// Legacy Solana-only price account format. This price account
+    /// schema is maintained for compatibility reasons.
+    ///
+    /// The main source of incompatibility on mainnet/devnet is the
+    /// possibility of strict account size checks which could break
+    /// existing users if they encountered a longer struct like
+    /// PriceAccountPythnet (see mod price_pythnet for details)
     #[repr(C)]
     #[derive(Copy, Clone, Pod, Zeroable)]
     pub struct PriceAccountSolana {
