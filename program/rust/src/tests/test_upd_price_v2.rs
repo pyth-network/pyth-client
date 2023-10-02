@@ -1,5 +1,3 @@
-#![cfg(feature = "pythnet")]
-
 use {
     crate::{
         accounts::{

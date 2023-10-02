@@ -1,4 +1,3 @@
-#![cfg(feature = "pythnet")]
 use {
     super::test_utils::AccountSetup,
     crate::{
