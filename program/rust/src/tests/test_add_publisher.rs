@@ -56,11 +56,9 @@ fn test_add_publisher() {
         Err(OracleError::InvalidSignableAccount.into())
     );
 
-    let price_size = PriceAccount::MINIMUM_SIZE;
-
     // Now give the price account enough lamports to be rent exempt
     **price_account.try_borrow_mut_lamports().unwrap() =
-        Rent::minimum_balance(&Rent::default(), price_size);
+        Rent::minimum_balance(&Rent::default(), PriceAccount::MINIMUM_SIZE);
 
     assert!(process_instruction(
         &program_id,
