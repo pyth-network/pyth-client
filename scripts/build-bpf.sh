@@ -28,8 +28,12 @@ cargo-build-bpf -- --locked -Z build-std=std,panic_abort -Z build-std-features=p
 sha256sum ./target/**/*.so
 echo "Checking size of pyth_oracle.so for mainnet"
 ./scripts/check-size.sh 81760
+mkdir -p target/pyth/solana/
+mv target/deploy/pyth_oracle.so target/pyth/solana/pyth_oracle_solana.so
 
 cargo-build-bpf -- --locked -Z build-std=std,panic_abort -Z build-std-features=panic_immediate_abort --features pythnet
 sha256sum ./target/**/*.so
 echo "Checking size of pyth_oracle.so for pythnet"
 ./scripts/check-size.sh 88429
+mkdir -p target/pyth/pythnet/
+mv target/deploy/pyth_oracle.so target/pyth/pythnet/pyth_oracle_pythnet.so
