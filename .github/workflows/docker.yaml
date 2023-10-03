@@ -15,7 +15,8 @@ env:
   DOCKER_USER: ${{ secrets.DOCKER_IO_USER }}
   IS_RELEASE: ${{
     startsWith( github.ref, 'refs/tags/pythd-' ) ||
-    startsWith( github.ref, 'refs/tags/oracle-' ) }}
+    startsWith( github.ref, 'refs/tags/mainnet-' ) }} ||
+    startsWith( github.ref, 'refs/tags/pythnet-' ) }}
   IS_MAINNET_RELEASE: ${{
     startsWith( github.ref, 'refs/tags/mainnet-' ) }}
   IS_PYTHNET_RELEASE: ${{
