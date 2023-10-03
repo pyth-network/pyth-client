@@ -147,7 +147,6 @@ fn test_add_price() {
     };
     instruction_data_add_price = bytes_of::<AddPriceArgs>(&hdr_add_price);
 
-
     assert_eq!(
         process_instruction(
             &program_id,
@@ -160,7 +159,6 @@ fn test_add_price() {
         ),
         Err(ProgramError::InvalidArgument)
     );
-
 
     // Price not signing
     hdr_add_price = AddPriceArgs {
@@ -188,7 +186,6 @@ fn test_add_price() {
     // Fresh product account
     price_account.is_signer = true;
     clear_account(&product_account).unwrap();
-
 
     assert_eq!(
         process_instruction(

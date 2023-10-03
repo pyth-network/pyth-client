@@ -35,7 +35,8 @@ test-generator = "0.3.1"
 csv = "1.1"
 lazy_static = "1.4.0"
 
-# IMPORTANT: Features in this crate must be added to the `lazy_static` macro call in `pyth_simulator.rs`.
+# IMPORTANT: Features which affect oracle business logic must be added
+# to the `lazy_static` macro call in `pyth_simulator.rs`.
 #
 # Context: We perform a cargo-build-bpf call as part of running tests
 # to obtain a BPF binary for testing. Desired features are not known
@@ -44,8 +45,7 @@ lazy_static = "1.4.0"
 [features]
 debug = []
 library = []
-pythnet = []
-price_v2_resize = []
+pythnet = [] # logic-affecting features start with this one
 
 [lib]
 crate-type = ["cdylib", "lib"]
