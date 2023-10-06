@@ -9,6 +9,8 @@ use {
 fn main() {
     let target_arch = std::env::var("CARGO_CFG_TARGET_ARCH").unwrap();
 
+    let has_feat_pythnet = std::env::var("CARGO_FEATURE_PYTHNET").is_ok();
+
     // OUT_DIR is the path cargo provides to a build directory under `target/` specifically for
     // isolated build artifacts. We use this to build the C program and then link against the
     // resulting static library. This allows building the program when used as a dependency of
@@ -16,23 +18,41 @@ fn main() {
     let out_dir = std::env::var("OUT_DIR").unwrap();
     let out_dir = PathBuf::from(out_dir);
 
+    let mut make_extra_flags = vec![];
+
+    if has_feat_pythnet {
+        make_extra_flags.push("CFLAGS=-DPC_PYTHNET=1");
+    }
+
     let mut make_targets = vec![];
     if target_arch == "bpf" {
         make_targets.push("cpyth-bpf");
     } else {
         make_targets.push("cpyth-native");
     }
+
     make_targets.push("test");
 
     // We must forward OUT_DIR as an env variable to the make script otherwise it will output
     // its artifacts to the wrong place.
-    std::process::Command::new("make")
+    let make_output = std::process::Command::new("make")
         .env("VERBOSE", "1")
         .env("OUT_DIR", out_dir.display().to_string())
         .current_dir("../c")
+        .args(make_extra_flags)
         .args(make_targets)
-        .status()
-        .expect("Failed to build C program");
+        .output()
+        .expect("Failed to run make for C oracle program");
+
+    if !make_output.status.success() {
+        panic!(
+            "C oracle make build did not exit with 0 (code
+	({:?}).\n\nstdout:\n{}\n\nstderr:\n{}",
+            make_output.status.code(),
+            String::from_utf8(make_output.stdout).unwrap_or("<non-utf8>".to_owned()),
+            String::from_utf8(make_output.stderr).unwrap_or("<non-utf8>".to_owned())
+        );
+    }
 
     // Link against the right library for the architecture
     if target_arch == "bpf" {

@@ -20,8 +20,14 @@ extern "C" {
 #define PC_PUBKEY_SIZE       32
 #define PC_PUBKEY_SIZE_64   (PC_PUBKEY_SIZE/sizeof(uint64_t))
 #define PC_MAP_TABLE_SIZE   640
-#define PC_COMP_SIZE         32
-#define PC_COMP_SIZE_V2     128
+#define PC_COMP_SIZE_SOLANA      32
+#define PC_COMP_SIZE_PYTHNET     128
+
+#ifdef PC_PYTHNET
+#define PC_COMP_SIZE 64 // Not using full PC_COMP_SIZE_PYTHNET due to stack problems
+#else
+#define PC_COMP_SIZE PC_COMP_SIZE_SOLANA
+#endif
 
 #define PC_PROD_ACC_SIZE    512
 #define PC_EXP_DECAY         -9
@@ -197,7 +203,20 @@ typedef struct pc_price
   pc_price_comp_t comp_[PC_COMP_SIZE];// component prices
 } pc_price_t;
 
+#ifdef PC_PYTHNET
+
+// Replace Solana component size's contribution with Pythnet's
+#define PC_EXPECTED_PRICE_T_SIZE_PYTHNET (3312 \
+					- PC_COMP_SIZE_SOLANA * sizeof(pc_price_comp_t) \
+					+ PC_COMP_SIZE * sizeof(pc_price_comp_t) \
+					)
+
+static_assert( sizeof( pc_price_t ) == PC_EXPECTED_PRICE_T_SIZE_PYTHNET, "" );
+#undef PC_EXPECTED_PRICE_SIZE_PYTHNET
+
+#else
 static_assert( sizeof( pc_price_t ) == 3312, "" );
+#endif
 
 // This constant needs to be an upper bound of the price account size, it is used within pythd for ztsd.
 // It is set tighly to the current price account + 96 component prices + 48 bytes for cumulative sums
@@ -394,7 +413,27 @@ typedef struct cmd_upd_test
   uint64_t     conf_[PC_COMP_SIZE];
 } cmd_upd_test_t;
 
+#ifdef PC_PYTHNET
+
+// Replace Solana component size's contribution with Pythnet's.
+//
+// Note: Make sure to account here for all PC_COMP_SIZE-sized arrays in the struct.
+#define PC_EXPECTED_CMD_UPD_TEST_T_SIZE_PYTHNET (560 \
+						 - PC_COMP_SIZE_SOLANA * sizeof(int8_t) \
+						 - PC_COMP_SIZE_SOLANA * sizeof(int64_t) \
+						 - PC_COMP_SIZE_SOLANA * sizeof(uint64_t) \
+						 + PC_COMP_SIZE * sizeof(int8_t) \
+						 + PC_COMP_SIZE * sizeof(int64_t) \
+						 + PC_COMP_SIZE * sizeof(uint64_t) \
+						 )
+
+static_assert( sizeof( cmd_upd_test_t ) == PC_EXPECTED_CMD_UPD_TEST_T_SIZE_PYTHNET, "" );
+
+#undef PC_EXPECTED_CMD_UPD_TEST_T_SIZE_PYTHNET
+
+#else
 static_assert( sizeof( cmd_upd_test_t ) == 560, "" );
+#endif
 
 // structure of clock sysvar account
 typedef struct sysvar_clock

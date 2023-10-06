@@ -25,7 +25,7 @@ cpyth-bpf: all
 # 2) Bundle C code compiled to system architecture for use by rust's cargo test
 .PHONY: cpyth-native
 cpyth-native:
-	gcc -c ./src/oracle/native/upd_aggregate.c -o $(OUT_DIR)/cpyth-native.o -fPIC
+	gcc $(CFLAGS) -c ./src/oracle/native/upd_aggregate.c -o $(OUT_DIR)/cpyth-native.o -fPIC
 	ar rcs $(OUT_DIR)/libcpyth-native.a $(OUT_DIR)/cpyth-native.o
 
 
@@ -33,12 +33,12 @@ cpyth-native:
 .PHONY: test
 test:
 	mkdir -p $(OUT_DIR)/test/
-	gcc -c ./src/oracle/model/test_price_model.c -o $(OUT_DIR)/test/test_price_model.o -fPIC
-	gcc -c ./src/oracle/sort/test_sort_stable.c -o $(OUT_DIR)/test/test_sort_stable.o -fPIC
-	gcc -c ./src/oracle/util/test_align.c -o $(OUT_DIR)/test/test_align.o -fPIC
-	gcc -c ./src/oracle/util/test_avg.c -o $(OUT_DIR)/test/test_avg.o -fPIC
-	gcc -c ./src/oracle/util/test_hash.c -o $(OUT_DIR)/test/test_hash.o -fPIC
-	gcc -c ./src/oracle/util/test_prng.c -o $(OUT_DIR)/test/test_prng.o -fPIC
-	gcc -c ./src/oracle/util/test_round.c -o $(OUT_DIR)/test/test_round.o -fPIC
-	gcc -c ./src/oracle/util/test_sar.c -o $(OUT_DIR)/test/test_sar.o -fPIC
+	gcc $(CFLAGS) -c ./src/oracle/model/test_price_model.c -o $(OUT_DIR)/test/test_price_model.o -fPIC
+	gcc $(CFLAGS) -c ./src/oracle/sort/test_sort_stable.c -o $(OUT_DIR)/test/test_sort_stable.o -fPIC
+	gcc $(CFLAGS) -c ./src/oracle/util/test_align.c -o $(OUT_DIR)/test/test_align.o -fPIC
+	gcc $(CFLAGS) -c ./src/oracle/util/test_avg.c -o $(OUT_DIR)/test/test_avg.o -fPIC
+	gcc $(CFLAGS) -c ./src/oracle/util/test_hash.c -o $(OUT_DIR)/test/test_hash.o -fPIC
+	gcc $(CFLAGS) -c ./src/oracle/util/test_prng.c -o $(OUT_DIR)/test/test_prng.o -fPIC
+	gcc $(CFLAGS) -c ./src/oracle/util/test_round.c -o $(OUT_DIR)/test/test_round.o -fPIC
+	gcc $(CFLAGS) -c ./src/oracle/util/test_sar.c -o $(OUT_DIR)/test/test_sar.o -fPIC
 	ar rcs $(OUT_DIR)/libcpyth-test.a $(OUT_DIR)/test/*.o

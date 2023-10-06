@@ -55,7 +55,7 @@ fn test_sizes() {
     {
         use crate::{
             accounts::PriceCumulative,
-            c_oracle_header::PC_COMP_SIZE_V2,
+            c_oracle_header::PC_COMP_SIZE_PYTHNET,
         };
 
         assert_eq!(
@@ -63,7 +63,7 @@ fn test_sizes() {
             48 + u64::BITS as usize
                 + 3 * size_of::<Pubkey>()
                 + size_of::<PriceInfo>()
-                + (PC_COMP_SIZE_V2 as usize) * size_of::<PriceComponent>()
+                + (PC_COMP_SIZE_PYTHNET as usize) * size_of::<PriceComponent>()
                 + size_of::<PriceCumulative>()
         );
         assert_eq!(size_of::<PriceAccount>(), 12576);
@@ -74,13 +74,13 @@ fn test_sizes() {
 
     #[cfg(not(feature = "pythnet"))]
     {
-        use crate::c_oracle_header::PC_COMP_SIZE;
+        use crate::c_oracle_header::PC_COMP_SIZE_SOLANA;
         assert_eq!(
             size_of::<PriceAccount>(),
             48 + u64::BITS as usize
                 + 3 * size_of::<Pubkey>()
                 + size_of::<PriceInfo>()
-                + (PC_COMP_SIZE as usize) * size_of::<PriceComponent>()
+                + (PC_COMP_SIZE_SOLANA as usize) * size_of::<PriceComponent>()
         );
         assert_eq!(size_of::<PriceAccount>(), 3312);
         assert!(size_of::<PriceAccount>() <= try_convert::<_, usize>(ZSTD_UPPER_BOUND).unwrap());

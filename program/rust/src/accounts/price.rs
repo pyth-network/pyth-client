@@ -7,10 +7,7 @@ use {
         AccountHeader,
         PythAccount,
     },
-    crate::c_oracle_header::{
-        PC_ACCTYPE_PRICE,
-        PC_COMP_SIZE,
-    },
+    crate::c_oracle_header::PC_ACCTYPE_PRICE,
     bytemuck::{
         Pod,
         Zeroable,
@@ -32,7 +29,7 @@ mod price_pythnet {
         super::*,
         crate::{
             c_oracle_header::{
-                PC_COMP_SIZE_V2,
+                PC_COMP_SIZE_PYTHNET,
                 PC_MAX_SEND_LATENCY,
                 PC_STATUS_TRADING,
             },
@@ -41,7 +38,7 @@ mod price_pythnet {
     };
 
     /// Pythnet-only extended price account format. This is extension
-    /// is an append-only change that adds extra publisher slots and
+    /// is an append-only change that extra publisher slots and
     /// PriceCumulative for TWAP processing.
     #[repr(C)]
     #[derive(Copy, Clone, Pod, Zeroable)]
@@ -84,9 +81,11 @@ mod price_pythnet {
         pub prev_timestamp_:    i64,
         /// Last attempted aggregate results
         pub agg_:               PriceInfo,
-        /// Publishers' price components
-        pub comp_:              [PriceComponent; PC_COMP_SIZE as usize],
-        pub extra_comp_:        [PriceComponent; (PC_COMP_SIZE_V2 - PC_COMP_SIZE) as usize], // This space is empty until we update the aggregation to support more pubs
+        /// Publishers' price components. NOTE(2023-10-06): On Pythnet, not all
+        /// PC_COMP_SIZE_PYTHNET slots are used due to stack size
+        /// issues in the C code. For iterating over price components,
+        /// PC_COMP_SIZE must be used.
+        pub comp_:              [PriceComponent; PC_COMP_SIZE_PYTHNET as usize],
         /// Cumulative sums of aggregative price and confidence used to compute arithmetic moving averages
         pub price_cumulative:   PriceCumulative,
     }
@@ -187,7 +186,10 @@ mod price_pythnet {
 mod price_solana {
     pub type PriceAccount = PriceAccountSolana;
 
-    use super::*;
+    use {
+        super::*,
+        crate::c_oracle_header::PC_COMP_SIZE_SOLANA,
+    };
 
     /// Legacy Solana-only price account format. This price account
     /// schema is maintained for compatibility reasons.
@@ -240,7 +242,7 @@ mod price_solana {
         /// Last attempted aggregate results
         pub agg_:               PriceInfo,
         /// Publishers' price components
-        pub comp_:              [PriceComponent; PC_COMP_SIZE as usize],
+        pub comp_:              [PriceComponent; PC_COMP_SIZE_SOLANA as usize],
     }
 
     impl PythAccount for PriceAccountSolana {
