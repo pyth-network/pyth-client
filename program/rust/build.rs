@@ -1,15 +1,13 @@
 use {
     bindgen::Builder,
-    std::{
-        path::PathBuf,
-        process::Command,
-    },
+    std::{path::{PathBuf, Path}, process::Command},
 };
 
 fn main() {
     let target_arch = std::env::var("CARGO_CFG_TARGET_ARCH").unwrap();
 
     let has_feat_pythnet = std::env::var("CARGO_FEATURE_PYTHNET").is_ok();
+    let has_feat_check = std::env::var("CARGO_FEATURE_CHECK").is_ok();
 
     // OUT_DIR is the path cargo provides to a build directory under `target/` specifically for
     // isolated build artifacts. We use this to build the C program and then link against the
@@ -38,35 +36,24 @@ fn main() {
 
     make_targets.push("test");
 
-    // We must forward OUT_DIR as an env variable to the make script otherwise it will output
-    // its artifacts to the wrong place.
-    let make_output = std::process::Command::new("make")
-        .env("VERBOSE", "1")
-        .env("OUT_DIR", out_dir.display().to_string())
-        .current_dir("../c")
-        .args(make_extra_flags)
-        .args(make_targets)
-        .output()
-        .expect("Failed to run make for C oracle program");
-
-    if !make_output.status.success() {
-        panic!(
-            "C oracle make build did not exit with 0 (code
-	({:?}).\n\nstdout:\n{}\n\nstderr:\n{}",
-            make_output.status.code(),
-            String::from_utf8(make_output.stdout).unwrap_or("<non-utf8>".to_owned()),
-            String::from_utf8(make_output.stderr).unwrap_or("<non-utf8>".to_owned())
-        );
-    }
-
-    // Link against the right library for the architecture
-    if target_arch == "bpf" {
-        println!("cargo:rustc-link-lib=static=cpyth-bpf");
+    // When the `check` feature is active, we skip the make
+    // build. This is used in pre-commit checks to avoid requiring
+    // Solana in its GitHub Action.
+    if has_feat_check {
+        eprintln!("WARNING: `check` feature active, make build is skipped");
     } else {
-        println!("cargo:rustc-link-lib=static=cpyth-native");
+        do_make_build(make_extra_flags, make_targets, &out_dir);
+
+        // Link against the right library for the architecture
+        if target_arch == "bpf" {
+            println!("cargo:rustc-link-lib=static=cpyth-bpf");
+        } else {
+            println!("cargo:rustc-link-lib=static=cpyth-native");
+        }
+
+        println!("cargo:rustc-link-lib=static=cpyth-test");
+        println!("cargo:rustc-link-search={}", out_dir.display());
     }
-    println!("cargo:rustc-link-lib=static=cpyth-test");
-    println!("cargo:rustc-link-search={}", out_dir.display());
 
     std::fs::create_dir("./codegen").unwrap_or_else(|e| {
         eprintln!(
@@ -90,6 +77,29 @@ fn main() {
 
     // Rerun the build script if either the rust or C code changes
     println!("cargo:rerun-if-changed=../")
+}
+
+fn do_make_build(extra_flags: Vec<&str>, targets: Vec<&str>, out_dir: &Path) {
+    // We must forward OUT_DIR as an env variable to the make script otherwise it will output
+    // its artifacts to the wrong place.
+    let make_output = std::process::Command::new("make")
+        .env("VERBOSE", "1")
+        .env("OUT_DIR", out_dir.display().to_string())
+        .current_dir("../c")
+        .args(extra_flags)
+        .args(targets)
+        .output()
+        .expect("Failed to run make for C oracle program");
+
+    if !make_output.status.success() {
+        panic!(
+            "C oracle make build did not exit with 0 (code
+	({:?}).\n\nstdout:\n{}\n\nstderr:\n{}",
+            make_output.status.code(),
+            String::from_utf8(make_output.stdout).unwrap_or("<non-utf8>".to_owned()),
+            String::from_utf8(make_output.stderr).unwrap_or("<non-utf8>".to_owned())
+        );
+    }
 }
 
 /// Find the Solana C header bindgen
