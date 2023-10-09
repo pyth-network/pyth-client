@@ -37,8 +37,8 @@ mod price_pythnet {
         },
     };
 
-    /// Pythnet-only extended price account format. This is extension
-    /// is an append-only change that extra publisher slots and
+    /// Pythnet-only extended price account format. This extension is
+    /// an append-only change that adds extra publisher slots and
     /// PriceCumulative for TWAP processing.
     #[repr(C)]
     #[derive(Copy, Clone, Pod, Zeroable)]
