@@ -12,6 +12,7 @@ use {
             PythAccount,
         },
         c_oracle_header::{
+            PC_COMP_SIZE,
             PC_MAP_TABLE_SIZE,
             PC_VERSION,
             ZSTD_UPPER_BOUND,
@@ -58,6 +59,9 @@ fn test_sizes() {
             c_oracle_header::PC_COMP_SIZE_PYTHNET,
         };
 
+        // Sanity-check the Pythnet PC_COMP_SIZE
+        assert_eq!(PC_COMP_SIZE, 64);
+
         assert_eq!(
             size_of::<PriceAccount>(),
             48 + u64::BITS as usize
@@ -75,6 +79,10 @@ fn test_sizes() {
     #[cfg(not(feature = "pythnet"))]
     {
         use crate::c_oracle_header::PC_COMP_SIZE_SOLANA;
+
+        // Sanity-check the Solana PC_COMP_SIZE
+        assert_eq!(PC_COMP_SIZE, PC_COMP_SIZE_SOLANA);
+
         assert_eq!(
             size_of::<PriceAccount>(),
             48 + u64::BITS as usize

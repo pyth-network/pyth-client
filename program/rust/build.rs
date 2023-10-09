@@ -19,9 +19,14 @@ fn main() {
     let out_dir = PathBuf::from(out_dir);
 
     let mut make_extra_flags = vec![];
+    let mut clang_extra_flags = vec![];
 
     if has_feat_pythnet {
+        // Define PC_PYTHNET for the *.so build
         make_extra_flags.push("CFLAGS=-DPC_PYTHNET=1");
+
+        // Define PC_PYTHNET for the bindings build
+        clang_extra_flags.push("-DPC_PYTHNET=1");
     }
 
     let mut make_targets = vec![];
@@ -73,10 +78,12 @@ fn main() {
     // Generate and write bindings
     let bindings = Builder::default()
         .clang_arg(format!("-I{:}", get_solana_inc_path().display()))
+        .clang_args(clang_extra_flags)
         .header("./src/bindings.h")
         .rustfmt_bindings(true)
         .generate()
         .expect("Unable to generate bindings");
+
     bindings
         .write_to_file("./codegen/bindings.rs")
         .expect("Couldn't write bindings!");
