@@ -1,6 +1,12 @@
 use {
     bindgen::Builder,
-    std::{path::{PathBuf, Path}, process::Command},
+    std::{
+        path::{
+            Path,
+            PathBuf,
+        },
+        process::Command,
+    },
 };
 
 fn main() {
