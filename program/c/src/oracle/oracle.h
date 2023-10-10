@@ -402,39 +402,6 @@ typedef struct cmd_upd_price
 
 static_assert( sizeof( cmd_upd_price_t ) == 40, "" );
 
-typedef struct cmd_upd_test
-{
-  uint32_t     ver_;
-  int32_t      cmd_;
-  uint32_t     num_;
-  int32_t      expo_;
-  int8_t       slot_diff_[PC_COMP_SIZE];
-  int64_t      price_[PC_COMP_SIZE];
-  uint64_t     conf_[PC_COMP_SIZE];
-} cmd_upd_test_t;
-
-#ifdef PC_PYTHNET
-
-// Replace Solana component size's contribution with Pythnet's.
-//
-// Note: Make sure to account here for all PC_COMP_SIZE-sized arrays in the struct.
-#define PC_EXPECTED_CMD_UPD_TEST_T_SIZE_PYTHNET (560 \
-						 - PC_COMP_SIZE_SOLANA * sizeof(int8_t) \
-						 - PC_COMP_SIZE_SOLANA * sizeof(int64_t) \
-						 - PC_COMP_SIZE_SOLANA * sizeof(uint64_t) \
-						 + PC_COMP_SIZE * sizeof(int8_t) \
-						 + PC_COMP_SIZE * sizeof(int64_t) \
-						 + PC_COMP_SIZE * sizeof(uint64_t) \
-						 )
-
-static_assert( sizeof( cmd_upd_test_t ) == PC_EXPECTED_CMD_UPD_TEST_T_SIZE_PYTHNET, "" );
-
-#undef PC_EXPECTED_CMD_UPD_TEST_T_SIZE_PYTHNET
-
-#else
-static_assert( sizeof( cmd_upd_test_t ) == 560, "" );
-#endif
-
 // structure of clock sysvar account
 typedef struct sysvar_clock
 {
