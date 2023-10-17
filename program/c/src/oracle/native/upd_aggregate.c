@@ -7,8 +7,13 @@ char heap_start[8192];
 #define static_assert _Static_assert
 
 #include "../upd_aggregate.h"
+#include "features.h"
 
-extern bool c_upd_aggregate( pc_price_t *ptr, uint64_t slot, int64_t timestamp ){
+#ifdef PC_PYTHNET
+extern bool c_upd_aggregate_pythnet( pc_price_t *ptr, uint64_t slot, int64_t timestamp ){
+#else
+extern bool c_upd_aggregate_solana( pc_price_t *ptr, uint64_t slot, int64_t timestamp ){
+#endif
   return upd_aggregate(ptr, slot, timestamp );
 }
 
