@@ -44,7 +44,11 @@ use {
 #[cfg(target_arch = "bpf")]
 #[link(name = "cpyth-bpf")]
 extern "C" {
-    pub fn c_upd_aggregate(_input: *mut u8, clock_slot: u64, clock_timestamp: i64) -> bool;
+    #[cfg(feature = "pythnet")]
+    pub fn c_upd_aggregate_pythnet(_input: *mut u8, clock_slot: u64, clock_timestamp: i64) -> bool;
+    #[cfg(not(feature = "pythnet"))]
+    pub fn c_upd_aggregate_solana(_input: *mut u8, clock_slot: u64, clock_timestamp: i64) -> bool;
+
     #[allow(unused)]
     pub fn c_upd_twap(_input: *mut u8, nslots: i64);
 }
@@ -52,9 +56,22 @@ extern "C" {
 #[cfg(not(target_arch = "bpf"))]
 #[link(name = "cpyth-native")]
 extern "C" {
-    pub fn c_upd_aggregate(_input: *mut u8, clock_slot: u64, clock_timestamp: i64) -> bool;
+    #[cfg(feature = "pythnet")]
+    pub fn c_upd_aggregate_pythnet(_input: *mut u8, clock_slot: u64, clock_timestamp: i64) -> bool;
+    #[cfg(not(feature = "pythnet"))]
+    pub fn c_upd_aggregate_solana(_input: *mut u8, clock_slot: u64, clock_timestamp: i64) -> bool;
+
     #[allow(unused)]
     pub fn c_upd_twap(_input: *mut u8, nslots: i64);
+}
+
+#[inline]
+pub unsafe fn c_upd_aggregate(input: *mut u8, clock_slot: u64, clock_timestamp: i64) -> bool {
+    solana_program::msg!("before upd_aggregate_call");
+    #[cfg(feature = "pythnet")]
+    return c_upd_aggregate_pythnet(input, clock_slot, clock_timestamp);
+    #[cfg(not(feature = "pythnet"))]
+    return c_upd_aggregate_solana(input, clock_slot, clock_timestamp);
 }
 
 /// Publish component price, never returning an error even if the update failed
@@ -175,6 +192,7 @@ pub fn upd_price(
                 clock.unix_timestamp,
             );
         }
+        solana_program::msg!("After c_upd_aggregate call");
     }
 
     // Reload price data as a struct after c_upd_aggregate() borrow is dropped

@@ -83,7 +83,7 @@ void csv_print::print_header()
             << ",prev_slot"
             << ",prev_price"
             << ",prev_conf";
-  for(unsigned i=0; i != PC_COMP_SIZE; ++i ) {
+  for(unsigned i=0; i != PC_NUM_COMP; ++i ) {
     std::cout << ",comp_status_" << i
               << ",comp_price_" << i
               << ",comp_conf_" << i
@@ -156,7 +156,7 @@ void csv_print::parse_price( replay& rep )
               << ',' << cptr->agg_.conf_
               << ',' << cptr->agg_.pub_slot_;
   }
-  for( unsigned i=ptr->num_; i != PC_COMP_SIZE; ++i ) {
+  for( unsigned i=ptr->num_; i != PC_NUM_COMP; ++i ) {
     std::cout << ",,,,";
   }
   std::cout << std::endl;

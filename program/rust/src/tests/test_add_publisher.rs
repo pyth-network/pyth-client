@@ -6,7 +6,7 @@ use {
             PythAccount,
         },
         c_oracle_header::{
-            PC_COMP_SIZE,
+            PC_NUM_COMP,
             PC_VERSION,
         },
         deserialize::load_checked,
@@ -99,7 +99,7 @@ fn test_add_publisher() {
     PriceAccount::initialize(&price_account, PC_VERSION).unwrap();
 
     // Fill up price node
-    for i in 0..PC_COMP_SIZE {
+    for i in 0..PC_NUM_COMP {
         cmd.publisher = Pubkey::new_unique();
         instruction_data = bytes_of::<AddPublisherArgs>(&cmd);
         assert!(process_instruction(

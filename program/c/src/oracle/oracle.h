@@ -2,6 +2,7 @@
 
 #include <stdbool.h>
 #include "util/compat_stdint.h"
+#include "features.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -20,13 +21,17 @@ extern "C" {
 #define PC_PUBKEY_SIZE       32
 #define PC_PUBKEY_SIZE_64   (PC_PUBKEY_SIZE/sizeof(uint64_t))
 #define PC_MAP_TABLE_SIZE   640
-#define PC_COMP_SIZE_SOLANA      32
-#define PC_COMP_SIZE_PYTHNET     128
 
+  // Total price component slots available
+#define PC_NUM_COMP_SOLANA      32
+#define PC_NUM_COMP_PYTHNET     128
+
+// PC_NUM_COMP - number of price components in use
 #ifdef PC_PYTHNET
-#define PC_COMP_SIZE 64 // Not using full PC_COMP_SIZE_PYTHNET due to stack problems
+// Not whole PC_NUM_COMP_PYTHNET because of stack issues appearing in upd_aggregate()
+#define PC_NUM_COMP 64
 #else
-#define PC_COMP_SIZE PC_COMP_SIZE_SOLANA
+#define PC_NUM_COMP PC_NUM_COMP_SOLANA
 #endif
 
 #define PC_PROD_ACC_SIZE    512
@@ -200,15 +205,15 @@ typedef struct pc_price
   uint64_t        prev_conf_;         // confidence interval of previous aggregate with TRADING status
   int64_t         prev_timestamp_;    // unix timestamp of previous aggregate with TRADING status
   pc_price_info_t agg_;               // aggregate price information
-  pc_price_comp_t comp_[PC_COMP_SIZE];// component prices
+  pc_price_comp_t comp_[PC_NUM_COMP];// component prices
 } pc_price_t;
 
 #ifdef PC_PYTHNET
 
 // Replace Solana component size's contribution with Pythnet's
 #define PC_EXPECTED_PRICE_T_SIZE_PYTHNET (3312 \
-					- PC_COMP_SIZE_SOLANA * sizeof(pc_price_comp_t) \
-					+ PC_COMP_SIZE * sizeof(pc_price_comp_t) \
+					- PC_NUM_COMP_SOLANA * sizeof(pc_price_comp_t) \
+					+ PC_NUM_COMP * sizeof(pc_price_comp_t) \
 					)
 
 static_assert( sizeof( pc_price_t ) == PC_EXPECTED_PRICE_T_SIZE_PYTHNET, "" );

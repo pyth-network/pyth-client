@@ -29,8 +29,8 @@ mod price_pythnet {
         super::*,
         crate::{
             c_oracle_header::{
-                PC_COMP_SIZE_PYTHNET,
                 PC_MAX_SEND_LATENCY,
+                PC_NUM_COMP_PYTHNET,
                 PC_STATUS_TRADING,
             },
             error::OracleError,
@@ -82,10 +82,10 @@ mod price_pythnet {
         /// Last attempted aggregate results
         pub agg_:               PriceInfo,
         /// Publishers' price components. NOTE(2023-10-06): On Pythnet, not all
-        /// PC_COMP_SIZE_PYTHNET slots are used due to stack size
+        /// PC_NUM_COMP_PYTHNET slots are used due to stack size
         /// issues in the C code. For iterating over price components,
-        /// PC_COMP_SIZE must be used.
-        pub comp_:              [PriceComponent; PC_COMP_SIZE_PYTHNET as usize],
+        /// PC_NUM_COMP must be used.
+        pub comp_:              [PriceComponent; PC_NUM_COMP_PYTHNET as usize],
         /// Cumulative sums of aggregative price and confidence used to compute arithmetic moving averages
         pub price_cumulative:   PriceCumulative,
     }
@@ -188,7 +188,7 @@ mod price_solana {
 
     use {
         super::*,
-        crate::c_oracle_header::PC_COMP_SIZE_SOLANA,
+        crate::c_oracle_header::PC_NUM_COMP_SOLANA,
     };
 
     /// Legacy Solana-only price account format. This price account
@@ -242,7 +242,7 @@ mod price_solana {
         /// Last attempted aggregate results
         pub agg_:               PriceInfo,
         /// Publishers' price components
-        pub comp_:              [PriceComponent; PC_COMP_SIZE_SOLANA as usize],
+        pub comp_:              [PriceComponent; PC_NUM_COMP_SOLANA as usize],
     }
 
     impl PythAccount for PriceAccountSolana {
