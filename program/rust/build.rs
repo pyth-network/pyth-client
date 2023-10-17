@@ -20,6 +20,9 @@ fn main() {
     // resulting static library. This allows building the program when used as a dependency of
     // another crate.
     let out_dir = std::env::var("OUT_DIR").unwrap();
+
+    // Useful for C binary debugging, not printed without -vv cargo flag
+    eprintln!("OUT_DIR is {}", out_dir);
     let out_dir = PathBuf::from(out_dir);
 
     let mut make_extra_flags = vec![];
@@ -27,7 +30,7 @@ fn main() {
 
     if has_feat_pythnet {
         // Define PC_PYTHNET for the *.so build
-        make_extra_flags.push("CFLAGS=-DPC_PYTHNET=1");
+        make_extra_flags.push("PC_PYTHNET=1");
 
         // Define PC_PYTHNET for the bindings build
         clang_extra_flags.push("-DPC_PYTHNET=1");
@@ -82,7 +85,7 @@ fn main() {
         .expect("Couldn't write bindings!");
 
     // Rerun the build script if either the rust or C code changes
-    println!("cargo:rerun-if-changed=../")
+    println!("cargo:rerun-if-changed=../");
 }
 
 fn do_make_build(extra_flags: Vec<&str>, targets: Vec<&str>, out_dir: &Path) {
