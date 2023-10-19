@@ -29,7 +29,7 @@ fn main() {
     let mut clang_extra_flags = vec![];
 
     if has_feat_pythnet {
-        // Define PC_PYTHNET for the *.so build
+        // Define PC_PYTHNET for the C binary build
         make_extra_flags.push("PC_PYTHNET=1");
 
         // Define PC_PYTHNET for the bindings build
