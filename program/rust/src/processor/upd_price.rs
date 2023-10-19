@@ -67,7 +67,6 @@ extern "C" {
 
 #[inline]
 pub unsafe fn c_upd_aggregate(input: *mut u8, clock_slot: u64, clock_timestamp: i64) -> bool {
-    solana_program::msg!("before upd_aggregate_call");
     #[cfg(feature = "pythnet")]
     return c_upd_aggregate_pythnet(input, clock_slot, clock_timestamp);
     #[cfg(not(feature = "pythnet"))]
