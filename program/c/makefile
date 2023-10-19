@@ -11,11 +11,25 @@ else
   include $(SOLANA)/sdk/sbf/c/sbf.mk
 endif
 
+# Propagate the PC_PYTHNET feature by conditionally defining it in a
+# features.h header. The makefile included from Solana SDK does not
+# have an easy way to pass extra C flags which motivates this approach.
+ifdef PC_PYTHNET
+  FEATURES_H_BODY:="\#pragma once\n\#define PC_PYTHNET 1"
+else
+  FEATURES_H_BODY:="\#pragma once"
+endif
+
+
+.PHONY: features.h # Putting this in .PHONY makes sure the header is always regenerated
+features.h:
+	echo $(FEATURES_H_BODY) > src/oracle/features.h
+
 
 # Bundle C code compiled to bpf for use by rust
 # The all target is defined by the solana makefile included above and generates the needed .o file.
 .PHONY: cpyth-bpf
-cpyth-bpf: all
+cpyth-bpf: features.h all
 	bash -c "ar rc $(OUT_DIR)/libcpyth-bpf.a $(OUT_DIR)/oracle/*.o"
 
 
@@ -24,14 +38,14 @@ cpyth-bpf: all
 # 1) Compile C code to system architecture for use by rust's cargo test
 # 2) Bundle C code compiled to system architecture for use by rust's cargo test
 .PHONY: cpyth-native
-cpyth-native:
+cpyth-native: features.h
 	gcc -c ./src/oracle/native/upd_aggregate.c -o $(OUT_DIR)/cpyth-native.o -fPIC
 	ar rcs $(OUT_DIR)/libcpyth-native.a $(OUT_DIR)/cpyth-native.o
 
 
 # Note: there's probably a smart way to do this with wildcards but I (jayant) can't figure it out
 .PHONY: test
-test:
+test: features.h
 	mkdir -p $(OUT_DIR)/test/
 	gcc -c ./src/oracle/model/test_price_model.c -o $(OUT_DIR)/test/test_price_model.o -fPIC
 	gcc -c ./src/oracle/sort/test_sort_stable.c -o $(OUT_DIR)/test/test_sort_stable.o -fPIC

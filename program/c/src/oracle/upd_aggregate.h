@@ -5,17 +5,16 @@
 #include "model/price_model.c" /* FIXME: HACK TO DEAL WITH DOCKER LINKAGE ISSUES */
 #include "pd.h"
 
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 typedef struct pc_qset
 {
-  pd_t      iprice_[PC_COMP_SIZE];
-  pd_t      uprice_[PC_COMP_SIZE];
-  pd_t      lprice_[PC_COMP_SIZE];
-  pd_t      weight_[PC_COMP_SIZE];
+  pd_t      iprice_[PC_NUM_COMP];
+  pd_t      uprice_[PC_NUM_COMP];
+  pd_t      lprice_[PC_NUM_COMP];
+  pd_t      weight_[PC_NUM_COMP];
   int64_t   decay_[1+PC_MAX_SEND_LATENCY];
   int64_t   fact_[PC_FACTOR_SIZE];
 } pc_qset_t;
@@ -163,7 +162,7 @@ static inline bool upd_aggregate( pc_price_t *ptr, uint64_t slot, int64_t timest
   {
     uint32_t numv  = 0;
     uint32_t nprcs = (uint32_t)0;
-    int64_t  prcs[ PC_COMP_SIZE * 3 ]; // ~0.75KiB for current PC_COMP_SIZE (FIXME: DOUBLE CHECK THIS FITS INTO STACK FRAME LIMIT)
+    int64_t  prcs[ PC_NUM_COMP * 3 ]; // ~0.75KiB for current PC_NUM_COMP (FIXME: DOUBLE CHECK THIS FITS INTO STACK FRAME LIMIT)
     for ( uint32_t i = 0; i != ptr->num_; ++i ) {
       pc_price_comp_t *iptr = &ptr->comp_[i];
       // copy contributing price to aggregate snapshot
@@ -195,7 +194,7 @@ static inline bool upd_aggregate( pc_price_t *ptr, uint64_t slot, int64_t timest
     // note: numv>0 and nprcs = 3*numv at this point
     int64_t agg_p25;
     int64_t agg_p75;
-    int64_t scratch[ PC_COMP_SIZE * 3 ]; // ~0.75KiB for current PC_COMP_SIZE (FIXME: DOUBLE CHECK THIS FITS INTO STACK FRAME LIMIT)
+    int64_t scratch[ PC_NUM_COMP * 3 ]; // ~0.75KiB for current PC_NUM_COMP (FIXME: DOUBLE CHECK THIS FITS INTO STACK FRAME LIMIT)
     price_model_core( (uint64_t)nprcs, prcs, &agg_p25, &agg_price, &agg_p75, scratch );
 
     // get the left and right confidences

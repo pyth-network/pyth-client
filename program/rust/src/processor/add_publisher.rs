@@ -5,7 +5,7 @@ use {
             PriceComponent,
             PythAccount,
         },
-        c_oracle_header::PC_COMP_SIZE,
+        c_oracle_header::PC_NUM_COMP,
         deserialize::{
             load,
             load_checked,
@@ -64,7 +64,7 @@ pub fn add_publisher(
 
     let mut price_data = load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
 
-    if price_data.num_ >= PC_COMP_SIZE {
+    if price_data.num_ >= PC_NUM_COMP {
         return Err(ProgramError::InvalidArgument);
     }
 

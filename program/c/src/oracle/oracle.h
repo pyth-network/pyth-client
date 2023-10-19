@@ -2,6 +2,7 @@
 
 #include <stdbool.h>
 #include "util/compat_stdint.h"
+#include "features.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -20,8 +21,18 @@ extern "C" {
 #define PC_PUBKEY_SIZE       32
 #define PC_PUBKEY_SIZE_64   (PC_PUBKEY_SIZE/sizeof(uint64_t))
 #define PC_MAP_TABLE_SIZE   640
-#define PC_COMP_SIZE         32
-#define PC_COMP_SIZE_V2     128
+
+  // Total price component slots available
+#define PC_NUM_COMP_SOLANA      32
+#define PC_NUM_COMP_PYTHNET     128
+
+// PC_NUM_COMP - number of price components in use
+#ifdef PC_PYTHNET
+// Not whole PC_NUM_COMP_PYTHNET because of stack issues appearing in upd_aggregate()
+#define PC_NUM_COMP 64
+#else
+#define PC_NUM_COMP PC_NUM_COMP_SOLANA
+#endif
 
 #define PC_PROD_ACC_SIZE    512
 #define PC_EXP_DECAY         -9
@@ -194,10 +205,23 @@ typedef struct pc_price
   uint64_t        prev_conf_;         // confidence interval of previous aggregate with TRADING status
   int64_t         prev_timestamp_;    // unix timestamp of previous aggregate with TRADING status
   pc_price_info_t agg_;               // aggregate price information
-  pc_price_comp_t comp_[PC_COMP_SIZE];// component prices
+  pc_price_comp_t comp_[PC_NUM_COMP];// component prices
 } pc_price_t;
 
+#ifdef PC_PYTHNET
+
+// Replace Solana component size's contribution with Pythnet's
+#define PC_EXPECTED_PRICE_T_SIZE_PYTHNET (3312 \
+					- PC_NUM_COMP_SOLANA * sizeof(pc_price_comp_t) \
+					+ PC_NUM_COMP * sizeof(pc_price_comp_t) \
+					)
+
+static_assert( sizeof( pc_price_t ) == PC_EXPECTED_PRICE_T_SIZE_PYTHNET, "" );
+#undef PC_EXPECTED_PRICE_SIZE_PYTHNET
+
+#else
 static_assert( sizeof( pc_price_t ) == 3312, "" );
+#endif
 
 // This constant needs to be an upper bound of the price account size, it is used within pythd for ztsd.
 // It is set tighly to the current price account + 96 component prices + 48 bytes for cumulative sums
@@ -382,19 +406,6 @@ typedef struct cmd_upd_price
 } cmd_upd_price_t;
 
 static_assert( sizeof( cmd_upd_price_t ) == 40, "" );
-
-typedef struct cmd_upd_test
-{
-  uint32_t     ver_;
-  int32_t      cmd_;
-  uint32_t     num_;
-  int32_t      expo_;
-  int8_t       slot_diff_[PC_COMP_SIZE];
-  int64_t      price_[PC_COMP_SIZE];
-  uint64_t     conf_[PC_COMP_SIZE];
-} cmd_upd_test_t;
-
-static_assert( sizeof( cmd_upd_test_t ) == 560, "" );
 
 // structure of clock sysvar account
 typedef struct sysvar_clock

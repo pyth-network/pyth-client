@@ -43,6 +43,7 @@ lazy_static = "1.4.0"
 # to cargo-build-bpf at that point - we manually capture them at
 # compile-time and pass on to the child process.
 [features]
+check = [] # Skips make build in build.rs, use with cargo-clippy and cargo-check
 debug = []
 library = []
 pythnet = [] # logic-affecting features start with this one
