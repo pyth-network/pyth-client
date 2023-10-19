@@ -191,7 +191,6 @@ pub fn upd_price(
                 clock.unix_timestamp,
             );
         }
-        solana_program::msg!("After c_upd_aggregate call");
     }
 
     // Reload price data as a struct after c_upd_aggregate() borrow is dropped
