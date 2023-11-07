@@ -121,7 +121,7 @@ async fn test_full_publisher_set() -> Result<(), Box<dyn std::error::Error>> {
             sim.upd_price(last_kp, price, last_quote).await?;
 
             slot += 1;
-            // sim.warp_to_slot(slot).await?;
+            sim.warp_to_slot(slot).await?;
         }
     }
 
