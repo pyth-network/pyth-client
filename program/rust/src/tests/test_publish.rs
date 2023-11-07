@@ -24,7 +24,7 @@ async fn test_publish() {
     let publisher = Keypair::new();
     let security_authority = Keypair::new();
     let price_accounts = sim
-        .setup_product_fixture(publisher.pubkey(), security_authority.pubkey())
+        .setup_product_fixture(&[publisher.pubkey()], security_authority.pubkey())
         .await;
     let price = price_accounts["LTC"];
 

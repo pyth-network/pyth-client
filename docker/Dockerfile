@@ -76,7 +76,9 @@ RUN cd pyth-client && cargo fetch --locked
 COPY --chown=pyth:pyth ./ pyth-client/
 
 # Build and test the oracle program.
-RUN cd pyth-client && ./scripts/build-bpf.sh .
+# RUN --mount=type=cache,target=/home/pyth/pyth-client/target,uid=1000 \
+#     --mount=type=cache,target=/home/pyth/pyth-client/program/rust/codegen,uid=1000 \
+RUN    cd pyth-client && ./scripts/build-bpf.sh .
 
 ENTRYPOINT []
 CMD []

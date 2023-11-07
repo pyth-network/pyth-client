@@ -8,6 +8,7 @@ mod test_del_price;
 mod test_del_product;
 mod test_del_publisher;
 mod test_ema;
+mod test_full_publisher_set;
 mod test_init_mapping;
 mod test_init_price;
 mod test_message;

@@ -422,7 +422,7 @@ impl PythSimulator {
 
         for (key, price_account) in price_accounts {
             let cmd = UpdPriceArgs {
-                header:          OracleCommand::UpdPriceNoFailOnError.into(),
+                header:          OracleCommand::UpdPrice.into(),
                 status:          quotes[key].status,
                 unused_:         0,
                 price:           quotes[key].price,
@@ -536,15 +536,17 @@ impl PythSimulator {
     /// TODO : this fixture doesn't set the product metadata
     pub async fn setup_product_fixture(
         &mut self,
-        publisher: Pubkey,
+        publishers: &[Pubkey],
         security_authority: Pubkey,
     ) -> HashMap<String, Pubkey> {
         let result_file =
             File::open("./test_data/publish/products.json").expect("Test file not found");
 
-        self.airdrop(&publisher, 100 * LAMPORTS_PER_SOL)
-            .await
-            .unwrap();
+        for publisher in publishers {
+            self.airdrop(&publisher, 100 * LAMPORTS_PER_SOL)
+                .await
+                .unwrap();
+        }
 
         self.airdrop(&security_authority, 100 * LAMPORTS_PER_SOL)
             .await
@@ -570,7 +572,11 @@ impl PythSimulator {
         for symbol in product_metadatas.keys() {
             let product_keypair = self.add_product(&mapping_keypair).await.unwrap();
             let price_keypair = self.add_price(&product_keypair, -5).await.unwrap();
-            self.add_publisher(&price_keypair, publisher).await.unwrap();
+            for publisher in publishers.iter() {
+                self.add_publisher(&price_keypair, *publisher)
+                    .await
+                    .unwrap();
+            }
             price_accounts.insert(symbol.to_string(), price_keypair.pubkey());
         }
         price_accounts

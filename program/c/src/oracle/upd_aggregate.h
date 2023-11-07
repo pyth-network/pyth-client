@@ -131,6 +131,12 @@ static inline void upd_twap(
   upd_ema( &ptr->twac_, conf, conf, nslots, qs, ptr->expo_ );
 }
 
+#ifdef PC_PYTHNET
+  static_assert(PC_NUM_COMP == 64, "PC_NUM_COMP mismatch, should be 64");
+#else
+    static_assert(PC_NUM_COMP == 32, "PC_NUM_COMP mismatch, should be 32");
+#endif
+
 // update aggregate price
 static inline bool upd_aggregate( pc_price_t *ptr, uint64_t slot, int64_t timestamp )
 {
