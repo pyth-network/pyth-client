@@ -19,7 +19,7 @@ set -x
 # Build both parts of the program (both C and rust) via Cargo
 cd "${PYTH_DIR}"
 
-cargo test --locked -- test_full_publisher_set --nocapture
+cargo test --locked
 
 # Re-run tests affected by features
 cargo test --locked --features pythnet
