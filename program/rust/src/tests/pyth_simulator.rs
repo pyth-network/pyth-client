@@ -543,7 +543,7 @@ impl PythSimulator {
             File::open("./test_data/publish/products.json").expect("Test file not found");
 
         for publisher in publishers {
-            self.airdrop(&publisher, 100 * LAMPORTS_PER_SOL)
+            self.airdrop(publisher, 100 * LAMPORTS_PER_SOL)
                 .await
                 .unwrap();
         }
