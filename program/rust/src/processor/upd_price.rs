@@ -193,11 +193,6 @@ pub fn upd_price(
         }
     }
 
-    solana_program::msg!(
-        "Aggregate {}updated",
-        if aggregate_updated { "" } else { "not " },
-    );
-
     // Reload price data as a struct after c_upd_aggregate() borrow is dropped
     let mut price_data = load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
 
