@@ -41,17 +41,14 @@ async fn test_full_publisher_set_two_thirds() -> Result<(), Box<dyn std::error::
         .await;
     let price = price_accounts["LTC"];
 
-    let mut slot = 1;
 
     let n_pubs = pub_keypairs.len();
 
-    // Divide publishers into three ~even parts +/- 1 pub. The '+ 1'
-    // ensures that for Solana oracle, any two of the parts form a
-    // subset that's larger than default min_pub_ value (currently
-    // 20).
+    // Divide publishers into two even parts
     let (first_half, second_half) = pub_keypairs.split_at(n_pubs / 2);
 
-    for (idx, (first_kp, second_kp)) in first_half.iter().zip(second_half.iter()).enumerate() {
+    // Starting with the first publisher in each half, publish an update
+    for (first_kp, second_kp) in first_half.iter().zip(second_half.iter()) {
         let first_quote = Quote {
             price:      100,
             confidence: 30,
@@ -67,14 +64,19 @@ async fn test_full_publisher_set_two_thirds() -> Result<(), Box<dyn std::error::
         };
 
         sim.upd_price(second_kp, price, second_quote).await?;
-
-
-        // Advance every 10th slot
-        if idx % 2 == 0 {
-            slot += 1;
-            sim.warp_to_slot(slot).await?;
-        }
     }
+
+    // Advance slot once from 1 to 2
+    sim.warp_to_slot(2).await?;
+
+    // Final price update to trigger aggregation
+    let first_kp = pub_keypairs.first().unwrap();
+    let first_quote = Quote {
+        price:      100,
+        confidence: 30,
+        status:     PC_STATUS_TRADING,
+    };
+    sim.upd_price(first_kp, price, first_quote).await?;
 
     {
         let price_data = sim
@@ -85,7 +87,6 @@ async fn test_full_publisher_set_two_thirds() -> Result<(), Box<dyn std::error::
         assert_eq!(price_data.agg_.price_, 110);
         assert_eq!(price_data.agg_.conf_, 20);
     }
-
 
     Ok(())
 }
