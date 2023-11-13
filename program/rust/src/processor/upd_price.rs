@@ -24,7 +24,7 @@ use {
         utils::{
             check_valid_funding_account,
             check_valid_writable_account,
-            get_status_for_update,
+            get_status_for_conf_price_ratio,
             is_component_update,
             pyth_assert,
             try_convert,
@@ -271,8 +271,11 @@ pub fn upd_price(
 
     // Try to update the publisher's price
     if is_component_update(cmd_args)? {
+        // IMPORTANT: If the publisher does not meet the price/conf
+        // ratio condition, its price will not count for the next
+        // aggregate.
         let status: u32 =
-            get_status_for_update(cmd_args.price, cmd_args.confidence, cmd_args.status)?;
+            get_status_for_conf_price_ratio(cmd_args.price, cmd_args.confidence, cmd_args.status)?;
 
         {
             let publisher_price = &mut price_data.comp_[publisher_index].latest_;
