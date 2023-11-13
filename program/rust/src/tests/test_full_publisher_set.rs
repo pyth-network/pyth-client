@@ -21,16 +21,11 @@ use {
 // publisher slots on Pythnet are working. Here's how this works:
 //
 // * Fill all publisher slots on a price
-// * Divide the price component array into three parts roughly the
-// same size: first_third, middle_third and last_third
-// * Publish two distinct price values to first/mid third
+// * Divide the price component array into two even halves: first_half, second_half
+// * Publish two distinct price values to either half
 // * Verify that the aggregate averages out to an expected value in the middle
-// * Publish PC_STATUS_UNKNOWN prices to first_third to make sure it does not affect later aggregates
-// * Repeat the two-price-value publishing step, using completely
-// different values, this time using mid_third and last_third without first_third
-// * Verify again for the new values meeting in the middle as aggregate.
 #[tokio::test]
-async fn test_full_publisher_set_two_thirds() -> Result<(), Box<dyn std::error::Error>> {
+async fn test_full_publisher_set() -> Result<(), Box<dyn std::error::Error>> {
     let mut sim = PythSimulator::new().await;
     let pub_keypairs: Vec<_> = (0..PC_NUM_COMP).map(|_idx| Keypair::new()).collect();
     let pub_pubkeys: Vec<_> = pub_keypairs.iter().map(|kp| kp.pubkey()).collect();
@@ -44,7 +39,7 @@ async fn test_full_publisher_set_two_thirds() -> Result<(), Box<dyn std::error::
 
     let n_pubs = pub_keypairs.len();
 
-    // Divide publishers into two even parts
+    // Divide publishers into two even parts (assuming the max PC_NUM_COMP size is even)
     let (first_half, second_half) = pub_keypairs.split_at(n_pubs / 2);
 
     // Starting with the first publisher in each half, publish an update
