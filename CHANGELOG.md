@@ -77,5 +77,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.0] - 2021-07-14
 Initial public release
-- fix to proxy soolana node reconnect logic in reinitializing slot leaders (origin/v2)
+- fix to proxy Solana node reconnect logic in reinitializing slot leaders (origin/v2)
 - show tx errors in get_block
