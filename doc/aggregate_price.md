@@ -77,9 +77,9 @@ The details of each `product` account and their corresponding `price` accounts a
 
 Each `product` may have a slightly different set of reference attributes, depending on their type, but all have "symbol", "asset_type", "quote_currency" and "tenor". US equity products, for example, include various additional reference symbology that is useful for mapping pyth products to other industry-standard identifiers.
 
-Each `price` contains a "price" and "conf" value. "conf" represents a confidence interval on price and broadly corresponds to bid-offer spread.  All "price"s are stored as 64bit integers with a fixed, implied number of decimal places defined by the "exponent" field. The AAPL price of 12276250 above, therefore, respresents a value of 122.76250 because the "exponent" is set at -5 or 5 decimal places.
+Each `price` contains a "price" and "conf" value. "conf" represents a confidence interval on price and broadly corresponds to bid-offer spread.  All "price"s are stored as 64bit integers with a fixed, implied number of decimal places defined by the "exponent" field. The AAPL price of 12276250 above, therefore, represents a value of 122.76250 because the "exponent" is set at -5 or 5 decimal places.
 
-Each `price` has a "status" which is an enumeration of the following values: "trading", "halted", "auction" or "unknown".  Only "trading" prices are valid.  Equity products also contain a "corp_act" status to notify users of any ongoing corprate action event that may affect a product's price or symbology.
+Each `price` has a "status" which is an enumeration of the following values: "trading", "halted", "auction" or "unknown".  Only "trading" prices are valid.  Equity products also contain a "corp_act" status to notify users of any ongoing corporate action event that may affect a product's price or symbology.
 
 The "valid_slot" and "publish_slot" fields correspond to which solana slots the aggregate price was published in.  More on this in the next section.
 
