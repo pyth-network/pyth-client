@@ -1,6 +1,7 @@
 use {
     crate::{
         accounts::{
+            PermissionAccount,
             PriceAccount,
             PriceInfo,
             PythAccount,
@@ -64,9 +65,24 @@ fn test_del_publisher() {
         price_data.comp_[0].pub_ = publisher
     }
 
+    let mut permissions_setup = AccountSetup::new_permission(&program_id);
+    let permissions_account = permissions_setup.as_account_info();
+
+    {
+        let mut permissions_account_data =
+            PermissionAccount::initialize(&permissions_account, PC_VERSION).unwrap();
+        permissions_account_data.master_authority = *funding_account.key;
+        permissions_account_data.data_curation_authority = *funding_account.key;
+        permissions_account_data.security_authority = *funding_account.key;
+    }
+
     assert!(process_instruction(
         &program_id,
-        &[funding_account.clone(), price_account.clone(),],
+        &[
+            funding_account.clone(),
+            price_account.clone(),
+            permissions_account.clone(),
+        ],
         &instruction_data
     )
     .is_ok());
@@ -92,7 +108,11 @@ fn test_del_publisher() {
     // Delete publisher at position 0
     assert!(process_instruction(
         &program_id,
-        &[funding_account.clone(), price_account.clone(),],
+        &[
+            funding_account.clone(),
+            price_account.clone(),
+            permissions_account.clone(),
+        ],
         &instruction_data
     )
     .is_ok());
@@ -127,7 +147,11 @@ fn test_del_publisher() {
     // Delete publisher at position 1
     assert!(process_instruction(
         &program_id,
-        &[funding_account.clone(), price_account.clone(),],
+        &[
+            funding_account.clone(),
+            price_account.clone(),
+            permissions_account.clone(),
+        ],
         &instruction_data
     )
     .is_ok());

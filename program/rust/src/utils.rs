@@ -81,7 +81,7 @@ pub fn check_valid_signable_account_or_permissioned_funding_account(
         )?;
         check_valid_writable_account(program_id, account)
     } else {
-        OracleError::InvalidSignableAccount.into()
+        Err(OracleError::InvalidSignableAccount.into())
     }
 }
 

@@ -179,7 +179,7 @@ impl PythSimulator {
             rent_epoch: Epoch::default(),
         };
 
-        // Add to both accounts to program test, now the program is deploy as upgradable
+        // Add accounts to program test, now the program is deploy as upgradable
         program_test.add_account(program_key, program_account);
         program_test.add_account(programdata_key, programdata_account);
 
@@ -193,7 +193,7 @@ impl PythSimulator {
             last_blockhash,
             programdata_id: programdata_key,
             upgrade_authority: upgrade_authority_keypair,
-            genesis_keypair,
+            genesis_keypair: copy_keypair(&genesis_keypair),
         };
 
         // Transfer money to upgrade_authority so it can call the instructions
@@ -201,6 +201,20 @@ impl PythSimulator {
             .airdrop(&result.upgrade_authority.pubkey(), 1000 * LAMPORTS_PER_SOL)
             .await
             .unwrap();
+
+        result
+            .upd_permissions(
+                UpdPermissionsArgs {
+                    header:                  OracleCommand::UpdPermissions.into(),
+                    master_authority:        genesis_keypair.pubkey(),
+                    data_curation_authority: genesis_keypair.pubkey(),
+                    security_authority:      genesis_keypair.pubkey(),
+                },
+                &copy_keypair(&result.upgrade_authority),
+            )
+            .await
+            .unwrap();
+
 
         result
     }
@@ -268,6 +282,7 @@ impl PythSimulator {
             vec![
                 AccountMeta::new(self.genesis_keypair.pubkey(), true),
                 AccountMeta::new(mapping_keypair.pubkey(), true),
+                AccountMeta::new(self.get_permissions_pubkey(), false),
             ],
         );
 
@@ -296,6 +311,7 @@ impl PythSimulator {
                 AccountMeta::new(self.genesis_keypair.pubkey(), true),
                 AccountMeta::new(mapping_keypair.pubkey(), true),
                 AccountMeta::new(product_keypair.pubkey(), true),
+                AccountMeta::new(self.get_permissions_pubkey(), false),
             ],
         );
 
@@ -322,6 +338,7 @@ impl PythSimulator {
                 AccountMeta::new(self.genesis_keypair.pubkey(), true),
                 AccountMeta::new(mapping_keypair.pubkey(), true),
                 AccountMeta::new(product_keypair.pubkey(), true),
+                AccountMeta::new(self.get_permissions_pubkey(), false),
             ],
         );
 
@@ -356,6 +373,7 @@ impl PythSimulator {
                 AccountMeta::new(self.genesis_keypair.pubkey(), true),
                 AccountMeta::new(product_keypair.pubkey(), true),
                 AccountMeta::new(price_keypair.pubkey(), true),
+                AccountMeta::new(self.get_permissions_pubkey(), false),
             ],
         );
 
@@ -384,6 +402,7 @@ impl PythSimulator {
             vec![
                 AccountMeta::new(self.genesis_keypair.pubkey(), true),
                 AccountMeta::new(price_keypair.pubkey(), true),
+                AccountMeta::new(self.get_permissions_pubkey(), false),
             ],
         );
 
@@ -458,6 +477,7 @@ impl PythSimulator {
                 AccountMeta::new(self.genesis_keypair.pubkey(), true),
                 AccountMeta::new(product_keypair.pubkey(), true),
                 AccountMeta::new(price_keypair.pubkey(), true),
+                AccountMeta::new(self.get_permissions_pubkey(), false),
             ],
         );
 
@@ -551,18 +571,6 @@ impl PythSimulator {
         self.airdrop(&security_authority, 100 * LAMPORTS_PER_SOL)
             .await
             .unwrap();
-
-        self.upd_permissions(
-            UpdPermissionsArgs {
-                header: OracleCommand::UpdPermissions.into(),
-                master_authority: self.upgrade_authority.pubkey(),
-                data_curation_authority: self.upgrade_authority.pubkey(),
-                security_authority,
-            },
-            &copy_keypair(&self.upgrade_authority),
-        )
-        .await
-        .unwrap();
 
         let product_metadatas: HashMap<String, ProductMetadata> =
             serde_json::from_reader(&result_file).unwrap();

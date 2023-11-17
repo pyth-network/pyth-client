@@ -5,6 +5,7 @@ use {
             clear_account,
             create_pc_str_t,
             MappingAccount,
+            PermissionAccount,
             ProductAccount,
             PythAccount,
         },
@@ -57,13 +58,25 @@ fn test_add_product() {
     let mut product_setup_2 = AccountSetup::new::<ProductAccount>(&program_id);
     let product_account_2 = product_setup_2.as_account_info();
 
+    let mut permissions_setup = AccountSetup::new_permission(&program_id);
+    let permissions_account = permissions_setup.as_account_info();
+
+    {
+        let mut permissions_account_data =
+            PermissionAccount::initialize(&permissions_account, PC_VERSION).unwrap();
+        permissions_account_data.master_authority = *funding_account.key;
+        permissions_account_data.data_curation_authority = *funding_account.key;
+        permissions_account_data.security_authority = *funding_account.key;
+    }
+
     let mut size = populate_instruction(&mut instruction_data, &[]);
     assert!(process_instruction(
         &program_id,
         &[
             funding_account.clone(),
             mapping_account.clone(),
-            product_account.clone()
+            product_account.clone(),
+            permissions_account.clone()
         ],
         &instruction_data[..size]
     )
@@ -93,7 +106,8 @@ fn test_add_product() {
         &[
             funding_account.clone(),
             mapping_account.clone(),
-            product_account_2.clone()
+            product_account_2.clone(),
+            permissions_account.clone()
         ],
         &instruction_data[..size]
     )
@@ -131,7 +145,8 @@ fn test_add_product() {
             &[
                 funding_account.clone(),
                 mapping_account.clone(),
-                product_account_3.clone()
+                product_account_3.clone(),
+                permissions_account.clone()
             ],
             &instruction_data[..size]
         ),
@@ -151,7 +166,8 @@ fn test_add_product() {
             &[
                 funding_account.clone(),
                 mapping_account.clone(),
-                product_account.clone()
+                product_account.clone(),
+                permissions_account.clone()
             ],
             &instruction_data[..size]
         )
@@ -173,7 +189,8 @@ fn test_add_product() {
             &[
                 funding_account.clone(),
                 mapping_account.clone(),
-                product_account.clone()
+                product_account.clone(),
+                permissions_account.clone()
             ],
             &instruction_data[..size]
         ),

@@ -3,6 +3,7 @@ use {
         accounts::{
             clear_account,
             MappingAccount,
+            PermissionAccount,
             PriceAccount,
             ProductAccount,
             PythAccount,
@@ -53,17 +54,29 @@ fn test_add_price() {
     let product_account = product_setup.as_account_info();
 
     let mut price_setup = AccountSetup::new::<PriceAccount>(&program_id);
-    let mut price_account = price_setup.as_account_info();
+    let price_account = price_setup.as_account_info();
 
     let mut price_setup_2 = AccountSetup::new::<PriceAccount>(&program_id);
     let price_account_2 = price_setup_2.as_account_info();
+
+    let mut permissions_setup = AccountSetup::new_permission(&program_id);
+    let permissions_account = permissions_setup.as_account_info();
+
+    {
+        let mut permissions_account_data =
+            PermissionAccount::initialize(&permissions_account, PC_VERSION).unwrap();
+        permissions_account_data.master_authority = *funding_account.key;
+        permissions_account_data.data_curation_authority = *funding_account.key;
+        permissions_account_data.security_authority = *funding_account.key;
+    }
 
     assert!(process_instruction(
         &program_id,
         &[
             funding_account.clone(),
             mapping_account.clone(),
-            product_account.clone()
+            product_account.clone(),
+            permissions_account.clone(),
         ],
         instruction_data_add_product
     )
@@ -74,7 +87,8 @@ fn test_add_price() {
         &[
             funding_account.clone(),
             product_account.clone(),
-            price_account.clone()
+            price_account.clone(),
+            permissions_account.clone(),
         ],
         instruction_data_add_price
     )
@@ -96,7 +110,8 @@ fn test_add_price() {
         &[
             funding_account.clone(),
             product_account.clone(),
-            price_account_2.clone()
+            price_account_2.clone(),
+            permissions_account.clone(),
         ],
         instruction_data_add_price
     )
@@ -117,7 +132,13 @@ fn test_add_price() {
     assert_eq!(
         process_instruction(
             &program_id,
-            &[funding_account.clone(), product_account.clone()],
+            &[
+                funding_account.clone(),
+                product_account.clone(),
+                price_account.clone(),
+                permissions_account.clone(),
+                permissions_account.clone(),
+            ],
             instruction_data_add_price
         ),
         Err(OracleError::InvalidNumberOfAccounts.into())
@@ -130,7 +151,8 @@ fn test_add_price() {
             &[
                 funding_account.clone(),
                 product_account.clone(),
-                price_account.clone()
+                price_account.clone(),
+                permissions_account.clone(),
             ],
             instruction_data_add_price
         ),
@@ -153,14 +175,17 @@ fn test_add_price() {
             &[
                 funding_account.clone(),
                 product_account.clone(),
-                price_account.clone()
+                price_account.clone(),
+                permissions_account.clone(),
             ],
             instruction_data_add_price
         ),
         Err(ProgramError::InvalidArgument)
     );
 
-    // Price not signing
+    // Fresh product account
+    clear_account(&product_account).unwrap();
+
     hdr_add_price = AddPriceArgs {
         header:     OracleCommand::AddPrice.into(),
         exponent:   6,
@@ -168,7 +193,6 @@ fn test_add_price() {
     };
 
     instruction_data_add_price = bytes_of::<AddPriceArgs>(&hdr_add_price);
-    price_account.is_signer = false;
 
     assert_eq!(
         process_instruction(
@@ -176,24 +200,8 @@ fn test_add_price() {
             &[
                 funding_account.clone(),
                 product_account.clone(),
-                price_account.clone()
-            ],
-            instruction_data_add_price
-        ),
-        Err(OracleError::InvalidSignableAccount.into())
-    );
-
-    // Fresh product account
-    price_account.is_signer = true;
-    clear_account(&product_account).unwrap();
-
-    assert_eq!(
-        process_instruction(
-            &program_id,
-            &[
-                funding_account.clone(),
-                product_account.clone(),
-                price_account.clone()
+                price_account.clone(),
+                permissions_account.clone(),
             ],
             instruction_data_add_price
         ),
