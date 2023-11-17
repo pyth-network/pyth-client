@@ -57,26 +57,6 @@ pub fn check_valid_funding_account(account: &AccountInfo) -> Result<(), ProgramE
     )
 }
 
-pub fn valid_signable_account(
-    program_id: &Pubkey,
-    account: &AccountInfo,
-) -> Result<bool, ProgramError> {
-    Ok(account.is_signer
-        && account.is_writable
-        && account.owner == program_id
-        && get_rent()?.is_exempt(account.lamports(), account.data_len()))
-}
-
-pub fn check_valid_signable_account(
-    program_id: &Pubkey,
-    account: &AccountInfo,
-) -> Result<(), ProgramError> {
-    pyth_assert(
-        valid_signable_account(program_id, account)?,
-        OracleError::InvalidSignableAccount.into(),
-    )
-}
-
 /// Check that `account` is a valid signable pyth account or
 /// that `funding_account` is a signer and is permissioned by the `permission_account`
 pub fn check_valid_signable_account_or_permissioned_funding_account(
@@ -101,7 +81,7 @@ pub fn check_valid_signable_account_or_permissioned_funding_account(
         )?;
         check_valid_writable_account(program_id, account)
     } else {
-        check_valid_signable_account(program_id, account)
+        OracleError::InvalidSignableAccount.into()
     }
 }
 
