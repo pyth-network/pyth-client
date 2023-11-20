@@ -45,9 +45,24 @@ fn test_init_mapping() {
     let mut mapping_setup = AccountSetup::new::<MappingAccount>(&program_id);
     let mut mapping_account = mapping_setup.as_account_info();
 
+    let mut permissions_setup = AccountSetup::new_permission(&program_id);
+    let permissions_account = permissions_setup.as_account_info();
+
+    {
+        let mut permissions_account_data =
+            PermissionAccount::initialize(&permissions_account, PC_VERSION).unwrap();
+        permissions_account_data.master_authority = *funding_account.key;
+        permissions_account_data.data_curation_authority = *funding_account.key;
+        permissions_account_data.security_authority = *funding_account.key;
+    }
+
     assert!(process_instruction(
         &program_id,
-        &[funding_account.clone(), mapping_account.clone()],
+        &[
+            funding_account.clone(),
+            mapping_account.clone(),
+            permissions_account.clone(),
+        ],
         instruction_data
     )
     .is_ok());
@@ -64,7 +79,11 @@ fn test_init_mapping() {
     assert_eq!(
         process_instruction(
             &program_id,
-            &[funding_account.clone(), mapping_account.clone()],
+            &[
+                funding_account.clone(),
+                mapping_account.clone(),
+                permissions_account.clone(),
+            ],
             instruction_data
         ),
         Err(OracleError::InvalidFreshAccount.into())
@@ -73,7 +92,7 @@ fn test_init_mapping() {
     clear_account(&mapping_account).unwrap();
 
     assert_eq!(
-        process_instruction(&program_id, &[funding_account.clone()], instruction_data),
+        process_instruction(&program_id, &[funding_account.clone(),], instruction_data),
         Err(OracleError::InvalidNumberOfAccounts.into())
     );
 
@@ -82,31 +101,27 @@ fn test_init_mapping() {
     assert_eq!(
         process_instruction(
             &program_id,
-            &[funding_account.clone(), mapping_account.clone()],
+            &[
+                funding_account.clone(),
+                mapping_account.clone(),
+                permissions_account.clone(),
+            ],
             instruction_data
         ),
         Err(OracleError::InvalidFundingAccount.into())
     );
 
     funding_account.is_signer = true;
-    mapping_account.is_signer = false;
-
-    assert_eq!(
-        process_instruction(
-            &program_id,
-            &[funding_account.clone(), mapping_account.clone()],
-            instruction_data
-        ),
-        Err(OracleError::InvalidSignableAccount.into())
-    );
-
-    mapping_account.is_signer = true;
     funding_account.is_writable = false;
 
     assert_eq!(
         process_instruction(
             &program_id,
-            &[funding_account.clone(), mapping_account.clone()],
+            &[
+                funding_account.clone(),
+                mapping_account.clone(),
+                permissions_account.clone(),
+            ],
             instruction_data
         ),
         Err(OracleError::InvalidFundingAccount.into())
@@ -118,10 +133,14 @@ fn test_init_mapping() {
     assert_eq!(
         process_instruction(
             &program_id,
-            &[funding_account.clone(), mapping_account.clone()],
+            &[
+                funding_account.clone(),
+                mapping_account.clone(),
+                permissions_account.clone(),
+            ],
             instruction_data
         ),
-        Err(OracleError::InvalidSignableAccount.into())
+        Err(OracleError::InvalidWritableAccount.into())
     );
 
     mapping_account.is_writable = true;
@@ -130,10 +149,14 @@ fn test_init_mapping() {
     assert_eq!(
         process_instruction(
             &program_id,
-            &[funding_account.clone(), mapping_account.clone()],
+            &[
+                funding_account.clone(),
+                mapping_account.clone(),
+                permissions_account.clone(),
+            ],
             instruction_data
         ),
-        Err(OracleError::InvalidSignableAccount.into())
+        Err(OracleError::InvalidWritableAccount.into())
     );
 
     mapping_account.owner = &program_id;
@@ -143,7 +166,11 @@ fn test_init_mapping() {
     assert_eq!(
         process_instruction(
             &program_id,
-            &[funding_account.clone(), mapping_account.clone()],
+            &[
+                funding_account.clone(),
+                mapping_account.clone(),
+                permissions_account.clone(),
+            ],
             instruction_data
         ),
         Err(OracleError::AccountTooSmall.into())
@@ -153,7 +180,11 @@ fn test_init_mapping() {
 
     assert!(process_instruction(
         &program_id,
-        &[funding_account.clone(), mapping_account.clone()],
+        &[
+            funding_account.clone(),
+            mapping_account.clone(),
+            permissions_account.clone(),
+        ],
         instruction_data
     )
     .is_ok());

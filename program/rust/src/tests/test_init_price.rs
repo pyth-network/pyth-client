@@ -1,6 +1,7 @@
 use {
     crate::{
         accounts::{
+            PermissionAccount,
             PriceAccount,
             PythAccount,
         },
@@ -46,13 +47,28 @@ fn test_init_price() {
     let funding_account = funding_setup.as_account_info();
 
     let mut price_setup = AccountSetup::new::<PriceAccount>(&program_id);
-    let mut price_account = price_setup.as_account_info();
+    let price_account = price_setup.as_account_info();
+
+    let mut permissions_setup = AccountSetup::new_permission(&program_id);
+    let permissions_account = permissions_setup.as_account_info();
+
+    {
+        let mut permissions_account_data =
+            PermissionAccount::initialize(&permissions_account, PC_VERSION).unwrap();
+        permissions_account_data.master_authority = *funding_account.key;
+        permissions_account_data.data_curation_authority = *funding_account.key;
+        permissions_account_data.security_authority = *funding_account.key;
+    }
 
     // Price account must be initialized
     assert_eq!(
         process_instruction(
             &program_id,
-            &[funding_account.clone(), price_account.clone()],
+            &[
+                funding_account.clone(),
+                price_account.clone(),
+                permissions_account.clone()
+            ],
             instruction_data
         ),
         Err(OracleError::InvalidAccountHeader.into())
@@ -95,7 +111,11 @@ fn test_init_price() {
 
     assert!(process_instruction(
         &program_id,
-        &[funding_account.clone(), price_account.clone()],
+        &[
+            funding_account.clone(),
+            price_account.clone(),
+            permissions_account.clone()
+        ],
         instruction_data
     )
     .is_ok());
@@ -135,17 +155,6 @@ fn test_init_price() {
         assert_eq!(price_data.comp_[num_components - 1].latest_.price_, 0);
     }
 
-    price_account.is_signer = false;
-    assert_eq!(
-        process_instruction(
-            &program_id,
-            &[funding_account.clone(), price_account.clone()],
-            instruction_data
-        ),
-        Err(OracleError::InvalidSignableAccount.into())
-    );
-
-    price_account.is_signer = true;
     let cmd: InitPriceArgs = InitPriceArgs {
         header:     OracleCommand::InitPrice.into(),
         exponent:   -MAX_NUM_DECIMALS - 1,
@@ -155,7 +164,11 @@ fn test_init_price() {
     assert_eq!(
         process_instruction(
             &program_id,
-            &[funding_account.clone(), price_account.clone()],
+            &[
+                funding_account.clone(),
+                price_account.clone(),
+                permissions_account.clone()
+            ],
             instruction_data
         ),
         Err(ProgramError::InvalidArgument)

@@ -1,6 +1,7 @@
 use {
     crate::{
         accounts::{
+            PermissionAccount,
             PriceAccount,
             PythAccount,
         },
@@ -37,12 +38,27 @@ fn test_set_min_pub() {
     let price_account = price_setup.as_account_info();
     PriceAccount::initialize(&price_account, PC_VERSION).unwrap();
 
+    let mut permissions_setup = AccountSetup::new_permission(&program_id);
+    let permissions_account = permissions_setup.as_account_info();
+
+    {
+        let mut permissions_account_data =
+            PermissionAccount::initialize(&permissions_account, PC_VERSION).unwrap();
+        permissions_account_data.master_authority = *funding_account.key;
+        permissions_account_data.data_curation_authority = *funding_account.key;
+        permissions_account_data.security_authority = *funding_account.key;
+    }
+
     assert_eq!(get_min_pub(&price_account), Ok(0));
 
     populate_instruction(&mut instruction_data, 10);
     assert!(process_instruction(
         &program_id,
-        &[funding_account.clone(), price_account.clone()],
+        &[
+            funding_account.clone(),
+            price_account.clone(),
+            permissions_account.clone()
+        ],
         &instruction_data
     )
     .is_ok());
@@ -51,7 +67,11 @@ fn test_set_min_pub() {
     populate_instruction(&mut instruction_data, 2);
     assert!(process_instruction(
         &program_id,
-        &[funding_account.clone(), price_account.clone()],
+        &[
+            funding_account.clone(),
+            price_account.clone(),
+            permissions_account.clone()
+        ],
         &instruction_data
     )
     .is_ok());

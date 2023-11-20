@@ -3,6 +3,7 @@ use {
         accounts::{
             account_has_key_values,
             create_pc_str_t,
+            PermissionAccount,
             ProductAccount,
             PythAccount,
         },
@@ -42,11 +43,26 @@ fn test_upd_product() {
 
     ProductAccount::initialize(&product_account, PC_VERSION).unwrap();
 
+    let mut permissions_setup = AccountSetup::new_permission(&program_id);
+    let permissions_account = permissions_setup.as_account_info();
+
+    {
+        let mut permissions_account_data =
+            PermissionAccount::initialize(&permissions_account, PC_VERSION).unwrap();
+        permissions_account_data.master_authority = *funding_account.key;
+        permissions_account_data.data_curation_authority = *funding_account.key;
+        permissions_account_data.security_authority = *funding_account.key;
+    }
+
     let kvs = ["foo", "barz"];
     let size = populate_instruction(&mut instruction_data, &kvs);
     assert!(process_instruction(
         &program_id,
-        &[funding_account.clone(), product_account.clone()],
+        &[
+            funding_account.clone(),
+            product_account.clone(),
+            permissions_account.clone()
+        ],
         &instruction_data[..size]
     )
     .is_ok());
@@ -56,13 +72,16 @@ fn test_upd_product() {
         let product_data = load_checked::<ProductAccount>(&product_account, PC_VERSION).unwrap();
         assert_eq!(product_data.header.size, ProductAccount::INITIAL_SIZE + 9);
     }
-
     // bad size on the 1st string in the key-value pair list
     instruction_data[size_of::<CommandHeader>()] = 2;
     assert_eq!(
         process_instruction(
             &program_id,
-            &[funding_account.clone(), product_account.clone()],
+            &[
+                funding_account.clone(),
+                product_account.clone(),
+                permissions_account.clone()
+            ],
             &instruction_data[..size]
         ),
         Err(ProgramError::InvalidArgument)
@@ -73,7 +92,11 @@ fn test_upd_product() {
     let size = populate_instruction(&mut instruction_data, &kvs);
     assert!(process_instruction(
         &program_id,
-        &[funding_account.clone(), product_account.clone()],
+        &[
+            funding_account.clone(),
+            product_account.clone(),
+            permissions_account.clone()
+        ],
         &instruction_data[..size]
     )
     .is_ok());
@@ -89,7 +112,11 @@ fn test_upd_product() {
     assert_eq!(
         process_instruction(
             &program_id,
-            &[funding_account.clone(), product_account.clone()],
+            &[
+                funding_account.clone(),
+                product_account.clone(),
+                permissions_account.clone()
+            ],
             &instruction_data[..size]
         ),
         Err(ProgramError::InvalidArgument)
