@@ -2,7 +2,7 @@
 
 ## Bug Bounty Program
 
-Pyth operates a self hosted [bug bounty program](https://pyth.network/bounty) to financially incentivize independent researchers (with up to $500,000 USDC) for finding and responsibly disclosing security issues.
+Pyth operates a self hosted [bug bounty program](https://pyth.network/bounty) to financially incentivize independent researchers (with up to $250,000 USDC) for finding and responsibly disclosing security issues.
 
 - **Scopes**
     - [Pyth Oracle](https://github.com/pyth-network/pyth-client/tree/main/program)
@@ -11,8 +11,8 @@ Pyth operates a self hosted [bug bounty program](https://pyth.network/bounty) to
     - [Pyth Crosschain Sui](https://github.com/pyth-network/pyth-crosschain/tree/main/target_chains/sui/contracts)
     - [Pyth Governance](https://github.com/pyth-network/governance/tree/master/staking/programs/staking)
 - **Rewards**
-    - Critical: Up to $500,000
-    - High: Up to $100,000
+    - Critical: Up to $250,000
+    - High: Up to $50,000
 
 If you find a security issue in Pyth, please [report the issue](https://yyyf63zqhtu.typeform.com/to/dBV4qcP0) immediately to our security team.
 
