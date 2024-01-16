@@ -195,7 +195,7 @@ fn test_init_mapping() {
     let mut permissions_setup = AccountSetup::new_permission(&program_id);
     let permissions_account = permissions_setup.as_account_info();
 
-    // Permissions account is unitialized
+    // Permissions account is uninitialized
     assert_eq!(
         process_instruction(
             &program_id,

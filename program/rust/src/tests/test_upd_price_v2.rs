@@ -150,7 +150,7 @@ fn test_upd_price_v2() -> Result<(), Box<dyn std::error::Error>> {
         assert_eq!(price_data.price_cumulative.num_down_slots, 0);
     }
 
-    // next price doesnt change but slot does
+    // next price doesn't change but slot does
     populate_instruction(&mut instruction_data, 81, 2, 3);
     update_clock_slot(&mut clock_account, 4);
     process_instruction(
@@ -180,7 +180,7 @@ fn test_upd_price_v2() -> Result<(), Box<dyn std::error::Error>> {
         assert_eq!(price_data.price_cumulative.num_down_slots, 0);
     }
 
-    // next price doesnt change and neither does aggregate but slot does
+    // next price doesn't change and neither does aggregate but slot does
     populate_instruction(&mut instruction_data, 81, 2, 4);
     update_clock_slot(&mut clock_account, 5);
     process_instruction(
