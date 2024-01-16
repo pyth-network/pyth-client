@@ -69,7 +69,7 @@ pub use {
 
 // PDA seeds for accounts.
 /// There is a single permissions account under `PERMISSIONS_SEED` that stores which keys
-/// are authorized to perform certain adminsitrative actions.
+/// are authorized to perform certain administrative actions.
 pub const PERMISSIONS_SEED: &str = "permissions";
 
 #[cfg(feature = "pythnet")]
