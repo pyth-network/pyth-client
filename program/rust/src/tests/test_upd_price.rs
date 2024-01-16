@@ -137,7 +137,7 @@ fn test_upd_price() {
         assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
     }
 
-    // next price doesnt change but slot does
+    // next price doesn't change but slot does
     populate_instruction(&mut instruction_data, 81, 2, 3);
     update_clock_slot(&mut clock_account, 4);
     assert!(process_instruction(
