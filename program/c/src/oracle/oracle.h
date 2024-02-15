@@ -195,8 +195,9 @@ typedef struct pc_price
   pc_ema_t        twac_;              // time-weighted average conf interval
   int64_t         timestamp_;         // unix timestamp of aggregate price
   uint8_t         min_pub_;           // min publishers for valid price
-  int8_t          drv2_;              // space for future derived values
-  int16_t         drv3_;              // space for future derived values
+  int8_t          message_sent_;      // flag to indicate if the current aggregate price has been sent as a message to the message buffer, 0 if not sent, 1 if sent
+  uint8_t         max_latency_;       // configurable max latency in slots between send and receive
+  int8_t          drv3_;              // space for future derived values
   int32_t         drv4_;              // space for future derived values
   pc_pub_key_t    prod_;              // product id/ref-account
   pc_pub_key_t    next_;              // next price account in list
