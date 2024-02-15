@@ -21,18 +21,20 @@ use {
 
 #[derive(Clone, Debug, Copy)]
 pub struct DataEvent {
-    price:    i64,
-    conf:     u64,
-    slot_gap: u64,
+    price:       i64,
+    conf:        u64,
+    slot_gap:    u64,
+    max_latency: u8,
 }
 
 impl Arbitrary for DataEvent {
     fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         DataEvent {
-            slot_gap: u64::from(u8::arbitrary(g)) + 1, /* Slot gap is always > 1, because there
-                                                        * has been a succesful aggregation */
-            price:    i64::arbitrary(g),
-            conf:     u64::arbitrary(g),
+            slot_gap:    u64::from(u8::arbitrary(g)) + 1, /* Slot gap is always > 1, because there
+                                                           * has been a succesful aggregation */
+            price:       i64::arbitrary(g),
+            conf:        u64::arbitrary(g),
+            max_latency: u8::arbitrary(g),
         }
     }
 }
@@ -56,7 +58,12 @@ fn test_twap(input: Vec<DataEvent>) -> bool {
     let mut data = Vec::<DataEvent>::new();
 
     for data_event in input {
-        price_cumulative.update(data_event.price, data_event.conf, data_event.slot_gap);
+        price_cumulative.update(
+            data_event.price,
+            data_event.conf,
+            data_event.slot_gap,
+            data_event.max_latency,
+        );
         data.push(data_event);
         price_cumulative.check_price(data.as_slice());
         price_cumulative.check_conf(data.as_slice());
@@ -112,35 +119,53 @@ fn test_twap_unit() {
 
     let data = vec![
         DataEvent {
-            price:    1,
-            conf:     2,
-            slot_gap: 4,
+            price:       1,
+            conf:        2,
+            slot_gap:    4,
+            max_latency: 1,
         },
         DataEvent {
-            price:    i64::MAX,
-            conf:     u64::MAX,
-            slot_gap: 1,
+            price:       i64::MAX,
+            conf:        u64::MAX,
+            slot_gap:    1,
+            max_latency: 2,
         },
         DataEvent {
-            price:    -10,
-            conf:     4,
-            slot_gap: 30,
+            price:       -10,
+            conf:        4,
+            slot_gap:    30,
+            max_latency: 3,
         },
     ];
 
-    price_cumulative.update(data[0].price, data[0].conf, data[0].slot_gap);
+    price_cumulative.update(
+        data[0].price,
+        data[0].conf,
+        data[0].slot_gap,
+        data[0].max_latency,
+    );
     assert_eq!(price_cumulative.price, 5);
     assert_eq!(price_cumulative.conf, 10);
     assert_eq!(price_cumulative.num_down_slots, 3);
     assert_eq!(price_cumulative.unused, 0);
 
-    price_cumulative.update(data[1].price, data[1].conf, data[1].slot_gap);
+    price_cumulative.update(
+        data[1].price,
+        data[1].conf,
+        data[1].slot_gap,
+        data[1].max_latency,
+    );
     assert_eq!(price_cumulative.price, 9_223_372_036_854_775_812i128);
     assert_eq!(price_cumulative.conf, 18_446_744_073_709_551_625u128);
     assert_eq!(price_cumulative.num_down_slots, 3);
     assert_eq!(price_cumulative.unused, 0);
 
-    price_cumulative.update(data[2].price, data[2].conf, data[2].slot_gap);
+    price_cumulative.update(
+        data[2].price,
+        data[2].conf,
+        data[2].slot_gap,
+        data[2].max_latency,
+    );
     assert_eq!(price_cumulative.price, 9_223_372_036_854_775_512i128);
     assert_eq!(price_cumulative.conf, 18_446_744_073_709_551_745u128);
     assert_eq!(price_cumulative.num_down_slots, 8);
@@ -152,7 +177,7 @@ fn test_twap_unit() {
         num_down_slots: 0,
         unused:         0,
     };
-    price_cumulative_overflow.update(i64::MIN, u64::MAX, u64::MAX);
+    price_cumulative_overflow.update(i64::MIN, u64::MAX, u64::MAX, u8::MAX);
     assert_eq!(
         price_cumulative_overflow.price,
         i128::MIN - i128::from(i64::MIN)

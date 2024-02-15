@@ -176,13 +176,17 @@ mod price_pythnet {
     }
 
     impl PriceCumulative {
-        pub fn update(&mut self, price: i64, conf: u64, slot_gap: u64, max_latency: i16) {
+        pub fn update(&mut self, price: i64, conf: u64, slot_gap: u64, max_latency: u8) {
             self.price += i128::from(price) * i128::from(slot_gap);
             self.conf += u128::from(conf) * u128::from(slot_gap);
             // Use PC_MAX_SEND_LATENCY if max_latency is 0, otherwise use max_latency
-            let latency = if max_latency == 0 { PC_MAX_SEND_LATENCY.into() } else { max_latency.into() };
+            let latency = if max_latency == 0 {
+                u64::from(PC_MAX_SEND_LATENCY)
+            } else {
+                u64::from(max_latency)
+            };
             // This is expected to saturate at 0 most of the time (while the feed is up).
-            self.num_down_slots += slot_gap.saturating_sub(latency as u64);
+            self.num_down_slots += slot_gap.saturating_sub(latency);
         }
     }
 }
