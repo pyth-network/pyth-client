@@ -208,7 +208,6 @@ fn test_twap_unit() {
         price_cumulative_overflow.num_down_slots,
         u64::MAX - u64::from(u8::MAX)
     );
-    // u64::MAX - u64::from(u8::MAX)
     assert_eq!(price_cumulative_overflow.unused, 0);
 
     let mut price_cumulative_nonzero_max_latency = PriceCumulative {

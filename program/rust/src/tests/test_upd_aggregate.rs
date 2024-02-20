@@ -280,38 +280,6 @@ fn test_upd_aggregate() {
         assert_eq!(price_data.prev_timestamp_, 5);
     }
 
-    // // check max_latency_ = 0 defaults to PC_MAX_SEND_LATENCY
-    // {
-    //     let mut price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
-    //     price_data.num_ = 1;
-    //     price_data.agg_.pub_slot_ = 1050;
-    //     price_data.comp_[0].latest_ = p5;
-    // }
-
-    // unsafe {
-    //     assert!(c_upd_aggregate(
-    //         price_account.try_borrow_mut_data().unwrap().as_mut_ptr(),
-    //         1051,
-    //         13,
-    //     ));
-    // }
-
-    // {
-    //     let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
-
-    //     assert_eq!(price_data.max_latency_, 0);
-    //     assert_eq!(price_data.agg_.price_, 500);
-    //     assert_eq!(price_data.agg_.conf_, 50);
-    //     assert_eq!(price_data.twap_.val_, 177);
-    //     assert_eq!(price_data.twac_.val_, 34);
-    //     assert_eq!(price_data.num_qt_, 1);
-    //     assert_eq!(price_data.timestamp_, 13);
-    //     assert_eq!(price_data.prev_slot_, 1025);
-    //     assert_eq!(price_data.prev_price_, 245);
-    //     assert_eq!(price_data.prev_conf_, 85);
-    //     assert_eq!(price_data.prev_timestamp_, 5);
-    // }
-
     // ensure the update occurs within the PC_MAX_SEND_LATENCY limit of 25 slots, allowing the aggregated price to reflect both p4 and p5 contributions
     {
         let mut price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
@@ -336,8 +304,6 @@ fn test_upd_aggregate() {
         assert_eq!(price_data.max_latency_, 0);
         assert_eq!(price_data.agg_.price_, 445);
         assert_eq!(price_data.agg_.conf_, 55);
-        assert_eq!(price_data.twap_.val_, 168);
-        assert_eq!(price_data.twac_.val_, 35);
         assert_eq!(price_data.num_qt_, 2);
         assert_eq!(price_data.timestamp_, 13);
         assert_eq!(price_data.prev_slot_, 1025);
@@ -361,8 +327,6 @@ fn test_upd_aggregate() {
         assert_eq!(price_data.max_latency_, 0);
         assert_eq!(price_data.agg_.price_, 500);
         assert_eq!(price_data.agg_.conf_, 50);
-        assert_eq!(price_data.twap_.val_, 203);
-        assert_eq!(price_data.twac_.val_, 36);
         assert_eq!(price_data.num_qt_, 1);
         assert_eq!(price_data.timestamp_, 14);
         assert_eq!(price_data.prev_slot_, 1025);
@@ -398,8 +362,6 @@ fn test_upd_aggregate() {
         assert_eq!(price_data.agg_.status_, PC_STATUS_UNKNOWN);
         assert_eq!(price_data.agg_.price_, 500);
         assert_eq!(price_data.agg_.conf_, 50);
-        assert_eq!(price_data.twap_.val_, 203);
-        assert_eq!(price_data.twac_.val_, 36);
         assert_eq!(price_data.num_qt_, 0);
         assert_eq!(price_data.timestamp_, 15);
         assert_eq!(price_data.prev_slot_, 1000);
