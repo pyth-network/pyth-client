@@ -19,8 +19,6 @@ use {
     solana_program::pubkey::Pubkey,
 };
 
-pub const TEST_MAX_LATENCY: u8 = 5;
-
 #[derive(Clone, Debug, Copy)]
 pub struct DataEvent {
     price:       i64,
@@ -36,7 +34,7 @@ impl Arbitrary for DataEvent {
                                                            * has been a succesful aggregation */
             price:       i64::arbitrary(g),
             conf:        u64::arbitrary(g),
-            max_latency: 0,
+            max_latency: u8::arbitrary(g),
         }
     }
 }
@@ -48,6 +46,7 @@ impl Arbitrary for DataEvent {
 /// - slot_gap is a random number between 1 and u8::MAX + 1 (256)
 /// - price is a random i64
 /// - conf is a random u64
+/// - max_latency is a random u8
 #[quickcheck]
 fn test_twap(input: Vec<DataEvent>) -> bool {
     let mut price_cumulative = PriceCumulative {
@@ -76,7 +75,6 @@ fn test_twap(input: Vec<DataEvent>) -> bool {
     true
 }
 
-
 impl PriceCumulative {
     pub fn check_price(&self, data: &[DataEvent]) {
         assert_eq!(
@@ -100,7 +98,7 @@ impl PriceCumulative {
                 let latency_threshold = if x.max_latency == 0 {
                     PC_MAX_SEND_LATENCY.into()
                 } else {
-                    x.max_latency as u64
+                    x.max_latency.into()
                 };
                 if x.slot_gap > latency_threshold {
                     acc + (x.slot_gap - latency_threshold)
@@ -130,19 +128,31 @@ fn test_twap_unit() {
             price:       1,
             conf:        2,
             slot_gap:    4,
-            max_latency: TEST_MAX_LATENCY,
+            max_latency: 0,
         },
         DataEvent {
             price:       i64::MAX,
             conf:        u64::MAX,
             slot_gap:    1,
-            max_latency: TEST_MAX_LATENCY,
+            max_latency: 0,
         },
         DataEvent {
             price:       -10,
             conf:        4,
             slot_gap:    30,
-            max_latency: TEST_MAX_LATENCY,
+            max_latency: 0,
+        },
+        DataEvent {
+            price:       1,
+            conf:        2,
+            slot_gap:    4,
+            max_latency: 5,
+        },
+        DataEvent {
+            price:       6,
+            conf:        7,
+            slot_gap:    8,
+            max_latency: 5,
         },
     ];
 
@@ -176,9 +186,7 @@ fn test_twap_unit() {
     );
     assert_eq!(price_cumulative.price, 9_223_372_036_854_775_512i128);
     assert_eq!(price_cumulative.conf, 18_446_744_073_709_551_745u128);
-    // self.num_down_slots + (30 - TEST_MAX_LATENCY), using saturating subtraction to avoid negative values
-    // in this case, the result is 28 because TEST_MAX_LATENCY is 5 and self.num_down_slots is 3
-    assert_eq!(price_cumulative.num_down_slots, 28);
+    assert_eq!(price_cumulative.num_down_slots, 8);
     assert_eq!(price_cumulative.unused, 0);
 
     let mut price_cumulative_overflow = PriceCumulative {
@@ -198,14 +206,39 @@ fn test_twap_unit() {
     );
     assert_eq!(
         price_cumulative_overflow.num_down_slots,
-        u64::MAX
-            - if TEST_MAX_LATENCY == 0 {
-                u64::from(PC_MAX_SEND_LATENCY)
-            } else {
-                u64::from(u8::MAX)
-            }
+        u64::MAX - u64::from(u8::MAX)
     );
+    // u64::MAX - u64::from(u8::MAX)
     assert_eq!(price_cumulative_overflow.unused, 0);
+
+    let mut price_cumulative_nonzero_max_latency = PriceCumulative {
+        price:          1,
+        conf:           2,
+        num_down_slots: 3,
+        unused:         0,
+    };
+
+    price_cumulative_nonzero_max_latency.update(
+        data[3].price,
+        data[3].conf,
+        data[3].slot_gap,
+        data[3].max_latency,
+    );
+    assert_eq!(price_cumulative_nonzero_max_latency.price, 5);
+    assert_eq!(price_cumulative_nonzero_max_latency.conf, 10);
+    assert_eq!(price_cumulative_nonzero_max_latency.num_down_slots, 3);
+    assert_eq!(price_cumulative_nonzero_max_latency.unused, 0);
+
+    price_cumulative_nonzero_max_latency.update(
+        data[4].price,
+        data[4].conf,
+        data[4].slot_gap,
+        data[4].max_latency,
+    );
+    assert_eq!(price_cumulative_nonzero_max_latency.price, 53);
+    assert_eq!(price_cumulative_nonzero_max_latency.conf, 66);
+    assert_eq!(price_cumulative_nonzero_max_latency.num_down_slots, 6);
+    assert_eq!(price_cumulative_nonzero_max_latency.unused, 0);
 }
 
 #[test]
@@ -263,7 +296,6 @@ fn test_twap_with_price_account() {
         price_data.update_price_cumulative(),
         Err(OracleError::NeedsSuccesfulAggregation)
     );
-
 
     assert_eq!(price_data.price_cumulative.price, 1 - 2 * 10);
     assert_eq!(price_data.price_cumulative.conf, 2 + 2 * 5);
