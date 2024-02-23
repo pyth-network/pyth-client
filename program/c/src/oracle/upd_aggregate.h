@@ -171,11 +171,13 @@ static inline bool upd_aggregate( pc_price_t *ptr, uint64_t slot, int64_t timest
       int64_t slot_diff = ( int64_t )slot - ( int64_t )( iptr->agg_.pub_slot_ );
       int64_t price     = iptr->agg_.price_;
       int64_t conf      = ( int64_t )( iptr->agg_.conf_ );
+      int64_t max_latency = ptr->max_latency_ ? ptr->max_latency_ : PC_MAX_SEND_LATENCY;
       if ( iptr->agg_.status_ == PC_STATUS_TRADING &&
            // No overflow for INT64_MIN+conf or INT64_MAX-conf as 0 < conf < INT64_MAX
            // These checks ensure that price - conf and price + conf do not overflow.
            (int64_t)0 < conf && (INT64_MIN + conf) <= price && price <= (INT64_MAX-conf) &&
-           slot_diff >= 0 && slot_diff <= PC_MAX_SEND_LATENCY ) {
+           // slot_diff is implicitly >= 0 due to the check in Rust code ensuring publishing_slot is always less than or equal to the current slot.
+           slot_diff <= max_latency ) {
         numv += 1;
         prcs[ nprcs++ ] = price - conf;
         prcs[ nprcs++ ] = price;

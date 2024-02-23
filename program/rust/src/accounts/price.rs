@@ -65,7 +65,10 @@ mod price_pythnet {
         /// Minimum valid publisher quotes for a succesful aggregation
         pub min_pub_:           u8,
         pub message_sent_:      u8,
-        pub unused_2_:          i16,
+        /// Configurable max latency in slots between send and receive
+        pub max_latency_:       u8,
+        /// Unused placeholder for alignment
+        pub unused_2_:          i8,
         pub unused_3_:          i32,
         /// Corresponding product account
         pub product_account:    Pubkey,
@@ -116,6 +119,7 @@ mod price_pythnet {
                     self.agg_.price_,
                     self.agg_.conf_,
                     self.agg_.pub_slot_.saturating_sub(self.prev_slot_),
+                    self.max_latency_,
                 ); // pub_slot should always be >= prev_slot, but we protect ourselves against underflow just in case
                 Ok(())
             } else {
@@ -172,11 +176,17 @@ mod price_pythnet {
     }
 
     impl PriceCumulative {
-        pub fn update(&mut self, price: i64, conf: u64, slot_gap: u64) {
+        pub fn update(&mut self, price: i64, conf: u64, slot_gap: u64, max_latency: u8) {
             self.price += i128::from(price) * i128::from(slot_gap);
             self.conf += u128::from(conf) * u128::from(slot_gap);
+            // Use PC_MAX_SEND_LATENCY if max_latency is 0, otherwise use max_latency
+            let latency = if max_latency == 0 {
+                u64::from(PC_MAX_SEND_LATENCY)
+            } else {
+                u64::from(max_latency)
+            };
             // This is expected to saturate at 0 most of the time (while the feed is up).
-            self.num_down_slots += slot_gap.saturating_sub(PC_MAX_SEND_LATENCY.into());
+            self.num_down_slots += slot_gap.saturating_sub(latency);
         }
     }
 }
@@ -225,7 +235,10 @@ mod price_solana {
         /// Whether the current aggregate price has been sent as a message to the message buffer.
         /// 0 = false, 1 = true. (this is a u8 to make the Pod trait happy)
         pub message_sent_:      u8,
-        pub unused_2_:          i16,
+        /// Configurable max latency in slots between send and receive
+        pub max_latency_:       u8,
+        /// Unused placeholder for alignment
+        pub unused_2_:          i8,
         pub unused_3_:          i32,
         /// Corresponding product account
         pub product_account:    Pubkey,
