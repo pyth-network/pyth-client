@@ -11,9 +11,8 @@ use {
             CommandHeader,
             OracleCommand,
         },
-        utils::check_valid_signable_account_or_permissioned_funding_account,
+        utils::check_permissioned_funding_account,
     },
-    solana_program::program_error::ProgramError,
     solana_sdk::signature::{
         Keypair,
         Signer,
@@ -53,29 +52,12 @@ pub fn test_permissions_account_mandatory() {
         permissions_account_data.security_authority = *funding_account.key;
     }
 
-    // Permissions account not specified, but signer statuses correct
-    // for deprecated privkey flow.
     assert_eq!(
-        check_valid_signable_account_or_permissioned_funding_account(
+        check_permissioned_funding_account(
             &program_kp.pubkey(),
             &prod_account,
             &funding_account,
-            None,
-            &CommandHeader {
-                version: PC_VERSION,
-                command: OracleCommand::UpdProduct as i32,
-            },
-        ),
-        Err(ProgramError::Custom(605))
-    );
-
-    // Identical, but permission account is specified
-    assert_eq!(
-        check_valid_signable_account_or_permissioned_funding_account(
-            &program_kp.pubkey(),
-            &prod_account,
-            &funding_account,
-            Some(&permissions_account),
+            &permissions_account,
             &CommandHeader {
                 version: PC_VERSION,
                 command: OracleCommand::UpdProduct as i32,

@@ -10,8 +10,8 @@ use {
         },
         instruction::CommandHeader,
         utils::{
+            check_permissioned_funding_account,
             check_valid_funding_account,
-            check_valid_signable_account_or_permissioned_funding_account,
         },
         OracleError,
     },
@@ -31,20 +31,19 @@ pub fn upd_product(
     accounts: &[AccountInfo],
     instruction_data: &[u8],
 ) -> ProgramResult {
-    let (funding_account, product_account, permissions_account_option) = match accounts {
-        [x, y] => Ok((x, y, None)),
-        [x, y, p] => Ok((x, y, Some(p))),
+    let (funding_account, product_account, permissions_account) = match accounts {
+        [x, y, p] => Ok((x, y, p)),
         _ => Err(OracleError::InvalidNumberOfAccounts),
     }?;
 
     let hdr = load::<CommandHeader>(instruction_data)?;
 
     check_valid_funding_account(funding_account)?;
-    check_valid_signable_account_or_permissioned_funding_account(
+    check_permissioned_funding_account(
         program_id,
         product_account,
         funding_account,
-        permissions_account_option,
+        permissions_account,
         hdr,
     )?;
 

@@ -16,8 +16,8 @@ use {
         instruction::AddPriceArgs,
         utils::{
             check_exponent_range,
+            check_permissioned_funding_account,
             check_valid_funding_account,
-            check_valid_signable_account_or_permissioned_funding_account,
             pyth_assert,
         },
         OracleError,
@@ -48,26 +48,24 @@ pub fn add_price(
     )?;
 
 
-    let (funding_account, product_account, price_account, permissions_account_option) =
-        match accounts {
-            [x, y, z] => Ok((x, y, z, None)),
-            [x, y, z, p] => Ok((x, y, z, Some(p))),
-            _ => Err(OracleError::InvalidNumberOfAccounts),
-        }?;
+    let (funding_account, product_account, price_account, permissions_account) = match accounts {
+        [x, y, z, p] => Ok((x, y, z, p)),
+        _ => Err(OracleError::InvalidNumberOfAccounts),
+    }?;
 
     check_valid_funding_account(funding_account)?;
-    check_valid_signable_account_or_permissioned_funding_account(
+    check_permissioned_funding_account(
         program_id,
         product_account,
         funding_account,
-        permissions_account_option,
+        permissions_account,
         &cmd_args.header,
     )?;
-    check_valid_signable_account_or_permissioned_funding_account(
+    check_permissioned_funding_account(
         program_id,
         price_account,
         funding_account,
-        permissions_account_option,
+        permissions_account,
         &cmd_args.header,
     )?;
 
