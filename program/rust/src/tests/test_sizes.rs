@@ -27,6 +27,7 @@ use {
             CommandHeader,
             DelPublisherArgs,
             InitPriceArgs,
+            SetMaxLatencyArgs,
             SetMinPubArgs,
             UpdPriceArgs,
         },
@@ -98,6 +99,7 @@ fn test_sizes() {
     assert_eq!(size_of::<AddPriceArgs>(), 16);
     assert_eq!(size_of::<InitPriceArgs>(), 16);
     assert_eq!(size_of::<SetMinPubArgs>(), 12);
+    assert_eq!(size_of::<SetMaxLatencyArgs>(), 12);
     assert_eq!(size_of::<AddPublisherArgs>(), 40);
     assert_eq!(size_of::<DelPublisherArgs>(), 40);
     assert_eq!(size_of::<UpdPriceArgs>(), 40);
