@@ -24,9 +24,11 @@ use {
                 DelPublisher,
                 InitMapping,
                 InitPrice,
+                SetMaxLatency,
                 SetMinPub,
                 UpdProduct,
             },
+            SetMaxLatencyArgs,
             SetMinPubArgs,
         },
         processor::process_instruction,
@@ -65,12 +67,10 @@ fn test_permission_migration() {
     let mut price_account = price_setup.as_account_info();
     PriceAccount::initialize(&price_account, PC_VERSION).unwrap();
 
-
     product_account.is_signer = false;
     mapping_account.is_signer = false;
     price_account.is_signer = false;
     next_mapping_account.is_signer = false;
-
 
     {
         let mut permissions_account_data =
@@ -91,7 +91,6 @@ fn test_permission_migration() {
         ),
         Err(OracleError::PermissionViolation.into())
     );
-
 
     assert_eq!(
         process_instruction(
@@ -219,6 +218,23 @@ fn test_permission_migration() {
                 price_account.clone(),
                 permissions_account.clone()
             ],
+            bytes_of::<SetMaxLatencyArgs>(&SetMaxLatencyArgs {
+                header:      SetMaxLatency.into(),
+                max_latency: 5,
+                unused_:     [0; 3],
+            })
+        ),
+        Err(OracleError::PermissionViolation.into())
+    );
+
+    assert_eq!(
+        process_instruction(
+            &program_id,
+            &[
+                attacker_account.clone(),
+                price_account.clone(),
+                permissions_account.clone()
+            ],
             bytes_of::<SetMinPubArgs>(&SetMinPubArgs {
                 header:             SetMinPub.into(),
                 minimum_publishers: 3,
@@ -256,7 +272,6 @@ fn test_permission_migration() {
         Err(OracleError::PermissionViolation.into())
     );
 
-
     // Security authority can't change minimum number of publishers
     assert_eq!(
         process_instruction(
@@ -270,6 +285,24 @@ fn test_permission_migration() {
                 header:             SetMinPub.into(),
                 minimum_publishers: 5,
                 unused_:            [0; 3],
+            }),
+        ),
+        Err(OracleError::PermissionViolation.into())
+    );
+
+    // Security authority can't change maximum latency
+    assert_eq!(
+        process_instruction(
+            &program_id,
+            &[
+                security_auth_account.clone(),
+                price_account.clone(),
+                permissions_account.clone(),
+            ],
+            bytes_of::<SetMaxLatencyArgs>(&SetMaxLatencyArgs {
+                header:      SetMaxLatency.into(),
+                max_latency: 5,
+                unused_:     [0; 3],
             }),
         ),
         Err(OracleError::PermissionViolation.into())

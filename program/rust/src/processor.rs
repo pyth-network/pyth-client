@@ -21,6 +21,7 @@ mod del_product;
 mod del_publisher;
 mod init_mapping;
 mod init_price;
+mod set_max_latency;
 mod set_min_pub;
 mod upd_permissions;
 mod upd_price;
@@ -35,6 +36,7 @@ pub use {
     del_publisher::del_publisher,
     init_mapping::init_mapping,
     init_price::init_price,
+    set_max_latency::set_max_latency,
     set_min_pub::set_min_pub,
     upd_permissions::upd_permissions,
     upd_price::{
@@ -76,5 +78,6 @@ pub fn process_instruction(
         DelPrice => del_price(program_id, accounts, instruction_data),
         DelProduct => del_product(program_id, accounts, instruction_data),
         UpdPermissions => upd_permissions(program_id, accounts, instruction_data),
+        SetMaxLatency => set_max_latency(program_id, accounts, instruction_data),
     }
 }

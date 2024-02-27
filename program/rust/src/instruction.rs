@@ -99,6 +99,10 @@ pub enum OracleCommand {
     // key[2] permissions account       [writable]
     // key[3] system program            []
     UpdPermissions        = 17,
+    /// Set max latency
+    // account[0] funding account       [signer writable]
+    // account[1] price account         [signer writable]
+    SetMaxLatency         = 18,
 }
 
 #[repr(C)]
@@ -161,4 +165,12 @@ pub struct UpdPermissionsArgs {
     pub master_authority:        Pubkey,
     pub data_curation_authority: Pubkey,
     pub security_authority:      Pubkey,
+}
+
+#[repr(C)]
+#[derive(Zeroable, Clone, Copy, Pod)]
+pub struct SetMaxLatencyArgs {
+    pub header:      CommandHeader,
+    pub max_latency: u8,
+    pub unused_:     [u8; 3],
 }

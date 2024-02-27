@@ -8,3 +8,6 @@ cmake-build-*
 # IntelliJ / CLion configuration
 .idea
 *.iml
+
+# CMake files
+features.h
