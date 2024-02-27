@@ -153,14 +153,14 @@ Finally, in docker extension inside VS Code click right and choose "Attach VS Co
 
 ## Deployment
 
-Oracle program upgrades are managed by the Pythian Council multisig. The steps are:
+Oracle program upgrades are managed by the Pythian Council multisig. The steps to deploy a new version are:
 
-1. Create a release branch from `main`.
-2. Include binaries for both the Solana mainnet and Pythnet oracle programs (`pyth_oracle_solana.so` and `pyth_oracle_pythnet.so`).
-3. [Install Solana CLI](https://docs.solana.com/cli/install-solana-cli-tools#use-solanas-install-tool) if not already installed.
-4. Set Solana config for the target network, e.g., devnet: `solana config set --url https://api.devnet.solana.com`.
-5. Execute `solana program write-buffer pyth_oracle_solana.so` to obtain the buffer address.
-6. Use `solana program set-buffer-authority` to assign the upgrade authority to the buffer address.
-7. Submit a proposal with [`xc-admin`](https://github.com/pyth-network/pyth-crosschain/tree/main/governance/xc_admin/packages/xc_admin_cli) for program upgrade, including the buffer address and new authority.
+1. Create a release branch from `main`. This should include binaries for both the Solana mainnet and Pythnet oracle programs (`pyth_oracle_solana.so` and `pyth_oracle_pythnet.so`).
+2. [Install Solana CLI](https://docs.solana.com/cli/install-solana-cli-tools#use-solanas-install-tool) if not already installed.
+3. Set Solana config for the target network, e.g., devnet: `solana config set --url https://api.devnet.solana.com`.
+4. Execute `solana program write-buffer <ORACLE_PROGRAM_BINARY_FILENAME>` where `<ORACLE_PROGRAM_BINARY_FILENAME>` can be `pyth_oracle_solana.so` or `pyth_oracle_pythnet.so` to obtain the buffer address.
+5. Run `solana program show <ORACLE_PROGRAM_PUBKEY>` to obtain the authority of the current program.
+6. Use `solana program set-buffer-authority <BUFFER_PUBKEY> --new-buffer-authority <NEW_BUFFER_AUTHORITY>` to assign the upgrade authority from the previous step to the buffer address.
+7. Submit a proposal with [`xc-admin`](https://github.com/pyth-network/pyth-crosschain/tree/main/governance/xc_admin/packages/xc_admin_cli) for program upgrade using the `upgrade-program` command.
 8. Verify the buffer by running `solana program dump <BUFFER> temp_file && shasum -a 256 temp_file && rm temp_file`, comparing the hash with the one from [build-bpf.sh#L35](https://github.com/pyth-network/pyth-client/blob/main/scripts/build-bpf.sh#L35).
 9. Once the proposal secures enough signatures, it will be automatically relayed to the target network, upgrading the program.
