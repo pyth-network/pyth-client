@@ -13,14 +13,14 @@ First, make sure you have the [solana tool suite](https://docs.solana.com/cli/in
 installed on your machine. (The build depends on some C makefiles that are in the tool suite.)
 Make sure you have installed the same solana version that is being used in [CI](.github/workflows/docker.yaml)
 
-Then, simply run `cargo build` to compile the oracle program as a native binary, or `cargo build-bpf` to build a BPF binary 
+Then, simply run `cargo build` to compile the oracle program as a native binary, or `cargo build-bpf` to build a BPF binary
 that can be uploaded to the blockchain. This step will produce a program binary `target/deploy/pyth_oracle.so`.
 
 ### Testing
 
-Simply run `cargo test`. This command will run several sets of tests:  
+Simply run `cargo test`. This command will run several sets of tests:
 
-- Unit tests of individual functions 
+- Unit tests of individual functions
 - Simulated transaction tests against the BPF binary running on a solana simulator
 - Exhaustive / randomized test batteries for core oracle functionality
 
@@ -30,6 +30,7 @@ The C tests are linked into the rust binary so they run as part of `cargo test` 
 You can also run `cargo test-bpf`, which runs the same tests as `cargo test`, though it's slightly slower and the UX is worse.
 
 ### pre-commit hooks
+
 pre-commit is a tool that checks and fixes simple issues (formatting, ...) before each commit. You can install it by following [their website](https://pre-commit.com/). In order to enable checks for this repo run `pre-commit install` from command-line in the root of this repo.
 
 The checks are also performed in the CI to ensure the code follows consistent formatting. Formatting is only currently enforced in the `program/` directory.
@@ -38,7 +39,7 @@ You might also need to install the nightly toolchain to run the formatting by ru
 ## pythd (off-chain client API)
 
 > :warning: pythd is deprecated and has been replaced by [pyth-agent](https://github.com/pyth-network/pyth-agent).
-> This new client is backward compatible with pythd, but more stable and configurable. 
+> This new client is backward compatible with pythd, but more stable and configurable.
 
 `pythd` provides exposes a web API for interacting with the on-chain oracle program.
 
@@ -139,6 +140,7 @@ docker run --name pyth-dev -d \\
 ```
 
 Default user in the image is `pyth` which may not have access to your directories. Assign your user id and group id to it to enable access.
+
 ```
 host@host$ id $USER # Shows user_id, group_id, and group names
 host@host$ docker exec -ti pyth-dev bash
@@ -148,3 +150,17 @@ root@pyth-dev# usermod -u 1002 -g 1004 -s /bin/bash pyth
 ```
 
 Finally, in docker extension inside VS Code click right and choose "Attach VS Code". If you're using a remote host in VS Code make sure to let this connection be open.
+
+## Deployment
+
+Oracle program upgrades are managed by the Pythian Council multisig. The steps to deploy a new version are:
+
+1. Create a release branch from `main`. This should include binaries for both the Solana mainnet and Pythnet oracle programs (`pyth_oracle_solana.so` and `pyth_oracle_pythnet.so`).
+2. [Install Solana CLI](https://docs.solana.com/cli/install-solana-cli-tools#use-solanas-install-tool) if not already installed.
+3. Set Solana config for the target network, e.g., devnet: `solana config set --url https://api.devnet.solana.com`.
+4. Execute `solana program write-buffer <ORACLE_PROGRAM_BINARY_FILENAME>` where `<ORACLE_PROGRAM_BINARY_FILENAME>` can be `pyth_oracle_solana.so` or `pyth_oracle_pythnet.so` to obtain the buffer address.
+5. Run `solana program show <ORACLE_PROGRAM_PUBKEY>` to obtain the authority of the current program.
+6. Use `solana program set-buffer-authority <BUFFER_PUBKEY> --new-buffer-authority <NEW_BUFFER_AUTHORITY>` to assign the upgrade authority from the previous step to the buffer address.
+7. Submit a proposal with [`xc-admin`](https://github.com/pyth-network/pyth-crosschain/tree/main/governance/xc_admin/packages/xc_admin_cli) for program upgrade using the `upgrade-program` command.
+8. Verify the buffer by running `solana program dump <BUFFER> temp_file && shasum -a 256 temp_file && rm temp_file`, comparing the hash with the one from [build-bpf.sh#L35](https://github.com/pyth-network/pyth-client/blob/main/scripts/build-bpf.sh#L35).
+9. Once the proposal secures enough signatures, it will be automatically relayed to the target network, upgrading the program.
