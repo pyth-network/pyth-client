@@ -13,8 +13,8 @@ use {
         },
         instruction::CommandHeader,
         utils::{
+            check_permissioned_funding_account,
             check_valid_funding_account,
-            check_valid_signable_account_or_permissioned_funding_account,
             pyth_assert,
             try_convert,
         },
@@ -41,28 +41,27 @@ pub fn add_product(
     accounts: &[AccountInfo],
     instruction_data: &[u8],
 ) -> ProgramResult {
-    let (funding_account, tail_mapping_account, new_product_account, permissions_account_option) =
+    let (funding_account, tail_mapping_account, new_product_account, permissions_account) =
         match accounts {
-            [x, y, z] => Ok((x, y, z, None)),
-            [x, y, z, p] => Ok((x, y, z, Some(p))),
+            [x, y, z, p] => Ok((x, y, z, p)),
             _ => Err(OracleError::InvalidNumberOfAccounts),
         }?;
 
     let hdr = load::<CommandHeader>(instruction_data)?;
 
     check_valid_funding_account(funding_account)?;
-    check_valid_signable_account_or_permissioned_funding_account(
+    check_permissioned_funding_account(
         program_id,
         tail_mapping_account,
         funding_account,
-        permissions_account_option,
+        permissions_account,
         hdr,
     )?;
-    check_valid_signable_account_or_permissioned_funding_account(
+    check_permissioned_funding_account(
         program_id,
         new_product_account,
         funding_account,
-        permissions_account_option,
+        permissions_account,
         hdr,
     )?;
 

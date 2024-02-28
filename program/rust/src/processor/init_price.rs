@@ -12,8 +12,8 @@ use {
         instruction::InitPriceArgs,
         utils::{
             check_exponent_range,
+            check_permissioned_funding_account,
             check_valid_funding_account,
-            check_valid_signable_account_or_permissioned_funding_account,
             pyth_assert,
         },
         OracleError,
@@ -41,18 +41,17 @@ pub fn init_price(
 
     check_exponent_range(cmd_args.exponent)?;
 
-    let (funding_account, price_account, permissions_account_option) = match accounts {
-        [x, y] => Ok((x, y, None)),
-        [x, y, p] => Ok((x, y, Some(p))),
+    let (funding_account, price_account, permissions_account) = match accounts {
+        [x, y, p] => Ok((x, y, p)),
         _ => Err(OracleError::InvalidNumberOfAccounts),
     }?;
 
     check_valid_funding_account(funding_account)?;
-    check_valid_signable_account_or_permissioned_funding_account(
+    check_permissioned_funding_account(
         program_id,
         price_account,
         funding_account,
-        permissions_account_option,
+        permissions_account,
         &cmd_args.header,
     )?;
 

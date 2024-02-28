@@ -10,8 +10,8 @@ use {
         },
         instruction::CommandHeader,
         utils::{
+            check_permissioned_funding_account,
             check_valid_funding_account,
-            check_valid_signable_account_or_permissioned_funding_account,
             pyth_assert,
             try_convert,
         },
@@ -44,29 +44,27 @@ pub fn del_product(
     accounts: &[AccountInfo],
     instruction_data: &[u8],
 ) -> ProgramResult {
-    let (funding_account, mapping_account, product_account, permissions_account_option) =
-        match accounts {
-            [w, x, y] => Ok((w, x, y, None)),
-            [w, x, y, p] => Ok((w, x, y, Some(p))),
-            _ => Err(OracleError::InvalidNumberOfAccounts),
-        }?;
+    let (funding_account, mapping_account, product_account, permissions_account) = match accounts {
+        [w, x, y, p] => Ok((w, x, y, p)),
+        _ => Err(OracleError::InvalidNumberOfAccounts),
+    }?;
 
     let cmd_args = load::<CommandHeader>(instruction_data)?;
 
     check_valid_funding_account(funding_account)?;
-    check_valid_signable_account_or_permissioned_funding_account(
+    check_permissioned_funding_account(
         program_id,
         mapping_account,
         funding_account,
-        permissions_account_option,
+        permissions_account,
         cmd_args,
     )?;
 
-    check_valid_signable_account_or_permissioned_funding_account(
+    check_permissioned_funding_account(
         program_id,
         product_account,
         funding_account,
-        permissions_account_option,
+        permissions_account,
         cmd_args,
     )?;
 
