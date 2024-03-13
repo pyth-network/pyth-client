@@ -151,10 +151,8 @@ static inline bool upd_aggregate( pc_price_t *ptr, uint64_t slot, int64_t timest
   }
 
   // update aggregate details ready for next slot
-  ptr->valid_slot_ = ptr->agg_.pub_slot_;// valid slot-time of agg. price
-  // only update twap if the slot is in the future
-  bool update_twap = slot > ptr->agg_.pub_slot_;
-  ptr->agg_.pub_slot_ = slot;            // publish slot-time of agg. price
+  ptr->valid_slot_ = ptr->agg_.pub_slot_; // valid slot-time of agg. price
+  ptr->agg_.pub_slot_ = slot;             // publish slot-time of agg. price
   ptr->timestamp_ = timestamp;
 
   // identify valid quotes
@@ -226,9 +224,6 @@ static inline bool upd_aggregate( pc_price_t *ptr, uint64_t slot, int64_t timest
   ptr->agg_.price_  = agg_price;
   ptr->agg_.conf_   = (uint64_t)agg_conf;
 
-  if ( update_twap ) {
-    upd_twap( ptr, agg_diff );
-  }
   return true;
 }
 

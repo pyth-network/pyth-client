@@ -67,7 +67,6 @@ fn test_upd_aggregate() {
         corp_act_status_: 0,
     };
 
-
     let mut instruction_data = [0u8; size_of::<UpdPriceArgs>()];
     populate_instruction(&mut instruction_data, 42, 2, 1);
 
@@ -109,17 +108,57 @@ fn test_upd_aggregate() {
         assert_eq!(price_data.prev_timestamp_, 0);
     }
 
+    // test that same slot aggregate works but for twap and twac it should be based on the previous slot data and not the current slot
+    {
+        let mut price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        price_data.num_ = 2;
+        price_data.comp_[1].latest_ = p2;
+    }
+
+    unsafe {
+        assert!(c_upd_aggregate(
+            price_account.try_borrow_mut_data().unwrap().as_mut_ptr(),
+            1001,
+            2,
+        ));
+    }
+
+    {
+        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+
+        assert_eq!(price_data.agg_.price_, 145);
+        assert_eq!(price_data.agg_.conf_, 55);
+        assert_eq!(price_data.twap_.val_, 100);
+        assert_eq!(price_data.twac_.val_, 10);
+        assert_eq!(price_data.num_qt_, 2);
+        assert_eq!(price_data.timestamp_, 2);
+        assert_eq!(price_data.prev_slot_, 1000);
+        assert_eq!(price_data.prev_price_, 100);
+        assert_eq!(price_data.prev_conf_, 10);
+        assert_eq!(price_data.prev_timestamp_, 1);
+    }
+
     // single publisher
     {
         let mut price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
         price_data.num_ = 1;
+        price_data.num_qt_ = 0;
         price_data.last_slot_ = 1000;
+        price_data.twap_.val_ = 0;
+        price_data.twap_.numer_ = 0;
+        price_data.twap_.denom_ = 0;
+        price_data.twac_.val_ = 0;
+        price_data.twac_.numer_ = 0;
+        price_data.twac_.denom_ = 0;
+        price_data.timestamp_ = 0;
         price_data.agg_.pub_slot_ = 1000;
         price_data.comp_[0].latest_ = p1;
         price_data.prev_slot_ = 0;
         price_data.prev_price_ = 0;
         price_data.prev_conf_ = 0;
         price_data.prev_timestamp_ = 0;
+        price_data.agg_.price_ = 0;
+        price_data.agg_.conf_ = 0;
         price_data.agg_.status_ = PC_STATUS_UNKNOWN;
     }
 
@@ -136,8 +175,8 @@ fn test_upd_aggregate() {
 
         assert_eq!(price_data.agg_.price_, 100);
         assert_eq!(price_data.agg_.conf_, 10);
-        assert_eq!(price_data.twap_.val_, 100);
-        assert_eq!(price_data.twac_.val_, 10);
+        assert_eq!(price_data.twap_.val_, 0);
+        assert_eq!(price_data.twac_.val_, 0);
         assert_eq!(price_data.num_qt_, 1);
         assert_eq!(price_data.timestamp_, 1);
         assert_eq!(price_data.prev_slot_, 0);
