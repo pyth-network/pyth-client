@@ -180,24 +180,39 @@ pub fn upd_price(
 
     // Try to update the aggregate
     #[allow(unused_variables)]
-    let aggregate_updated = unsafe {
-        c_upd_aggregate(
-            price_account.try_borrow_mut_data()?.as_mut_ptr(),
-            clock.slot,
-            clock.unix_timestamp,
-        )
-    };
+    let mut aggregate_updated = false;
+
+    // NOTE: c_upd_aggregate must use a raw pointer to price
+    // data. Solana's `<account>.borrow_*` methods require exclusive
+    // access, i.e. no other borrow can exist for the account.
+    #[allow(unused_assignments)]
+    if slots_since_last_update > 0 {
+        unsafe {
+            aggregate_updated = c_upd_aggregate(
+                price_account.try_borrow_mut_data()?.as_mut_ptr(),
+                clock.slot,
+                clock.unix_timestamp,
+            );
+        }
+    }
 
     if aggregate_updated {
-        // get price data here
-        let mut price_data = load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
-        // check if its the first price update in the slot
-        if slots_since_last_update > 0 {
-            price_data.prev_twap_ = price_data.twap_;
-            price_data.prev_twac_ = price_data.twac_;
+        // The price_data borrow happens in a scope because it must be
+        // dropped before we borrow again as raw data pointer for the C
+        // aggregation logic.
+        #[cfg(feature = "pythnet")]
+        {
+            // get price data here
+            let mut price_data =
+                load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
+            // check if its the first price update in the slot
+            if slots_since_last_update > 0 {
+                price_data.prev_twap_ = price_data.twap_;
+                price_data.prev_twac_ = price_data.twac_;
+            }
+            price_data.twap_ = price_data.prev_twap_;
+            price_data.twac_ = price_data.prev_twac_;
         }
-        price_data.twap_ = price_data.prev_twap_;
-        price_data.twac_ = price_data.prev_twac_;
         unsafe {
             c_upd_twap(
                 price_account.try_borrow_mut_data()?.as_mut_ptr(),
