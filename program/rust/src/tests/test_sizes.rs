@@ -69,6 +69,9 @@ fn test_sizes() {
                 + 3 * size_of::<Pubkey>()
                 + size_of::<PriceInfo>()
                 + (PC_NUM_COMP_PYTHNET as usize) * size_of::<PriceComponent>()
+                + size_of::<PriceEma>()
+                + size_of::<PriceEma>()
+                + size_of::<PriceCumulative>()
                 + size_of::<PriceCumulative>()
         );
         assert_eq!(size_of::<PriceAccount>(), 12576);
