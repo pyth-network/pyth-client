@@ -139,9 +139,6 @@ static inline bool upd_aggregate( pc_price_t *ptr, uint64_t slot, int64_t timest
     return false;
   }
 
-  // get number of slots from last published valid price
-  int64_t agg_diff = ( int64_t )slot - ( int64_t )( ptr->last_slot_ );
-
   // Update the value of the previous price, if it had TRADING status.
   if ( ptr->agg_.status_ == PC_STATUS_TRADING ) {
     ptr->prev_slot_      = ptr->agg_.pub_slot_;
