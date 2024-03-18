@@ -134,11 +134,6 @@ static inline void upd_twap(
 // update aggregate price
 static inline bool upd_aggregate( pc_price_t *ptr, uint64_t slot, int64_t timestamp )
 {
-  // only re-compute aggregate in current or future slots
-  if ( slot < ptr->agg_.pub_slot_ ) {
-    return false;
-  }
-
   // Update the value of the previous price, if it had TRADING status.
   if ( ptr->agg_.status_ == PC_STATUS_TRADING ) {
     ptr->prev_slot_      = ptr->agg_.pub_slot_;

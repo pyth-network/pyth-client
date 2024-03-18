@@ -144,6 +144,7 @@ pub fn upd_price(
     let mut publisher_index: usize = 0;
     let latest_aggregate_price: PriceInfo;
 
+    #[cfg(feature = "pythnet")]
     // The price_data borrow happens in a scope because it must be
     // dropped before we borrow again as raw data pointer for the C
     // aggregation logic.
@@ -175,26 +176,51 @@ pub fn upd_price(
         )?;
     }
 
-    // get number of slots from last update
-    let slots_since_last_update = clock.slot - latest_aggregate_price.pub_slot_;
+    {
+        // Reload price data as a struct after c_upd_aggregate() borrow is dropped
+        let mut price_data = load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
 
-    // Try to update the aggregate
-    #[allow(unused_variables)]
-    let mut aggregate_updated = false;
+        // Try to update the publisher's price
+        if is_component_update(cmd_args)? {
+            // IMPORTANT: If the publisher does not meet the price/conf
+            // ratio condition, its price will not count for the next
+            // aggregate.
+            let status: u32 = get_status_for_conf_price_ratio(
+                cmd_args.price,
+                cmd_args.confidence,
+                cmd_args.status,
+            )?;
 
-    // NOTE: c_upd_aggregate must use a raw pointer to price
-    // data. Solana's `<account>.borrow_*` methods require exclusive
-    // access, i.e. no other borrow can exist for the account.
-    #[allow(unused_assignments)]
-    if slots_since_last_update > 0 {
+            {
+                let publisher_price = &mut price_data.comp_[publisher_index].latest_;
+                publisher_price.price_ = cmd_args.price;
+                publisher_price.conf_ = cmd_args.confidence;
+                publisher_price.status_ = status;
+                publisher_price.pub_slot_ = cmd_args.publishing_slot;
+            }
+        }
+    }
+
+    let should_call_c_upd_aggregate: bool = if cfg!(feature = "pythnet") {
+        clock.slot >= latest_aggregate_price.pub_slot_
+    } else {
+        clock.slot > latest_aggregate_price.pub_slot_
+    };
+
+    let aggregate_updated = if should_call_c_upd_aggregate {
         unsafe {
-            aggregate_updated = c_upd_aggregate(
+            c_upd_aggregate(
                 price_account.try_borrow_mut_data()?.as_mut_ptr(),
                 clock.slot,
                 clock.unix_timestamp,
-            );
+            )
         }
-    }
+    } else {
+        false // Do not call c_upd_aggregate and set aggregate_updated to false
+    };
+
+    // get number of slots from last update
+    let slots_since_last_update = clock.slot - latest_aggregate_price.pub_slot_;
 
     if aggregate_updated {
         // The price_data borrow happens in a scope because it must be
@@ -209,15 +235,23 @@ pub fn upd_price(
             if slots_since_last_update > 0 {
                 price_data.prev_twap_ = price_data.twap_;
                 price_data.prev_twac_ = price_data.twac_;
+                price_data.prev_price_cumulative = price_data.price_cumulative;
             }
             price_data.twap_ = price_data.prev_twap_;
             price_data.twac_ = price_data.prev_twac_;
+            price_data.price_cumulative = price_data.prev_price_cumulative;
         }
         unsafe {
             c_upd_twap(
                 price_account.try_borrow_mut_data()?.as_mut_ptr(),
                 slots_since_last_update as i64, // Ensure slots_since_last_update is cast to i64, as expected by the function signature
             );
+            #[cfg(feature = "pythnet")]
+            {
+                let mut price_data =
+                    load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
+                price_data.update_price_cumulative()?;
+            }
         }
     }
 
@@ -233,7 +267,6 @@ pub fn upd_price(
         // will send the message.
         if aggregate_updated {
             price_data.message_sent_ = 0;
-            price_data.update_price_cumulative()?;
         }
 
         if let Some(accumulator_accounts) = maybe_accumulator_accounts {
@@ -297,6 +330,7 @@ pub fn upd_price(
         }
     }
 
+    #[cfg(not(feature = "pythnet"))]
     // Try to update the publisher's price
     if is_component_update(cmd_args)? {
         // IMPORTANT: If the publisher does not meet the price/conf

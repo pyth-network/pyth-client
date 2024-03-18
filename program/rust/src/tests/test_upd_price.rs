@@ -70,6 +70,7 @@ fn test_upd_price() {
     )
     .is_ok());
 
+    #[cfg(not(feature = "pythnet"))]
     {
         let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
         assert_eq!(price_data.comp_[0].latest_.price_, 42);
@@ -80,6 +81,19 @@ fn test_upd_price() {
         assert_eq!(price_data.agg_.pub_slot_, 1);
         assert_eq!(price_data.agg_.price_, 0);
         assert_eq!(price_data.agg_.status_, PC_STATUS_UNKNOWN);
+    }
+
+    #[cfg(feature = "pythnet")]
+    {
+        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        assert_eq!(price_data.comp_[0].latest_.price_, 42);
+        assert_eq!(price_data.comp_[0].latest_.conf_, 2);
+        assert_eq!(price_data.comp_[0].latest_.pub_slot_, 1);
+        assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_TRADING);
+        assert_eq!(price_data.valid_slot_, 0);
+        assert_eq!(price_data.agg_.pub_slot_, 1);
+        assert_eq!(price_data.agg_.price_, 42);
+        assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
     }
 
     // add some prices for current slot - get rejected
@@ -98,6 +112,7 @@ fn test_upd_price() {
         Err(ProgramError::InvalidArgument)
     );
 
+    #[cfg(not(feature = "pythnet"))]
     {
         let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
         assert_eq!(price_data.comp_[0].latest_.price_, 42);
@@ -108,6 +123,19 @@ fn test_upd_price() {
         assert_eq!(price_data.agg_.pub_slot_, 1);
         assert_eq!(price_data.agg_.price_, 0);
         assert_eq!(price_data.agg_.status_, PC_STATUS_UNKNOWN);
+    }
+
+    #[cfg(feature = "pythnet")]
+    {
+        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        assert_eq!(price_data.comp_[0].latest_.price_, 42);
+        assert_eq!(price_data.comp_[0].latest_.conf_, 2);
+        assert_eq!(price_data.comp_[0].latest_.pub_slot_, 1);
+        assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_TRADING);
+        assert_eq!(price_data.valid_slot_, 0);
+        assert_eq!(price_data.agg_.pub_slot_, 1);
+        assert_eq!(price_data.agg_.price_, 42);
+        assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
     }
 
     // add next price in new slot triggering snapshot and aggregate calc
@@ -125,6 +153,7 @@ fn test_upd_price() {
     )
     .is_ok());
 
+    #[cfg(not(feature = "pythnet"))]
     {
         let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
         assert_eq!(price_data.comp_[0].latest_.price_, 81);
@@ -134,6 +163,19 @@ fn test_upd_price() {
         assert_eq!(price_data.valid_slot_, 1);
         assert_eq!(price_data.agg_.pub_slot_, 3);
         assert_eq!(price_data.agg_.price_, 42);
+        assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
+    }
+
+    #[cfg(feature = "pythnet")]
+    {
+        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        assert_eq!(price_data.comp_[0].latest_.price_, 81);
+        assert_eq!(price_data.comp_[0].latest_.conf_, 2);
+        assert_eq!(price_data.comp_[0].latest_.pub_slot_, 2);
+        assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_TRADING);
+        assert_eq!(price_data.valid_slot_, 1);
+        assert_eq!(price_data.agg_.pub_slot_, 3);
+        assert_eq!(price_data.agg_.price_, 81);
         assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
     }
 
@@ -239,6 +281,7 @@ fn test_upd_price() {
     )
     .is_ok());
 
+    #[cfg(not(feature = "pythnet"))]
     {
         let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
         assert_eq!(price_data.comp_[0].latest_.price_, 50);
@@ -249,6 +292,19 @@ fn test_upd_price() {
         assert_eq!(price_data.agg_.pub_slot_, 6);
         assert_eq!(price_data.agg_.price_, 81);
         assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
+    }
+
+    #[cfg(feature = "pythnet")]
+    {
+        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        assert_eq!(price_data.comp_[0].latest_.price_, 50);
+        assert_eq!(price_data.comp_[0].latest_.conf_, 20);
+        assert_eq!(price_data.comp_[0].latest_.pub_slot_, 5);
+        assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_IGNORED);
+        assert_eq!(price_data.valid_slot_, 5);
+        assert_eq!(price_data.agg_.pub_slot_, 6);
+        assert_eq!(price_data.agg_.price_, 81);
+        assert_eq!(price_data.agg_.status_, PC_STATUS_UNKNOWN); // in pythnet aggregation is on the same slot so status turns to unknown
     }
 
     // Crank one more time and aggregate should be unknown
@@ -293,6 +349,7 @@ fn test_upd_price() {
     )
     .is_ok());
 
+    #[cfg(not(feature = "pythnet"))]
     {
         let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
         assert_eq!(price_data.comp_[0].latest_.price_, -100);
@@ -303,6 +360,19 @@ fn test_upd_price() {
         assert_eq!(price_data.agg_.pub_slot_, 8);
         assert_eq!(price_data.agg_.price_, 81);
         assert_eq!(price_data.agg_.status_, PC_STATUS_UNKNOWN);
+    }
+
+    #[cfg(feature = "pythnet")]
+    {
+        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        assert_eq!(price_data.comp_[0].latest_.price_, -100);
+        assert_eq!(price_data.comp_[0].latest_.conf_, 1);
+        assert_eq!(price_data.comp_[0].latest_.pub_slot_, 7);
+        assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_TRADING);
+        assert_eq!(price_data.valid_slot_, 7);
+        assert_eq!(price_data.agg_.pub_slot_, 8);
+        assert_eq!(price_data.agg_.price_, -100);
+        assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
     }
 
     // Crank again for aggregate
