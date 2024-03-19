@@ -84,9 +84,22 @@ async fn test_publish_batch() {
             price_data.comp_[0].latest_.status_,
             get_status_for_conf_price_ratio(quote.price, quote.confidence, quote.status).unwrap()
         );
-        assert_eq!(price_data.comp_[0].agg_.price_, 0);
-        assert_eq!(price_data.comp_[0].agg_.conf_, 0);
-        assert_eq!(price_data.comp_[0].agg_.status_, PC_STATUS_UNKNOWN);
+        #[cfg(not(feature = "pythnet"))]
+        {
+            assert_eq!(price_data.comp_[0].agg_.price_, 0);
+            assert_eq!(price_data.comp_[0].agg_.conf_, 0);
+            assert_eq!(price_data.comp_[0].agg_.status_, PC_STATUS_UNKNOWN);
+        }
+        #[cfg(feature = "pythnet")]
+        {
+            assert_eq!(price_data.comp_[0].agg_.price_, quote.price);
+            assert_eq!(price_data.comp_[0].agg_.conf_, quote.confidence);
+            assert_eq!(
+                price_data.comp_[0].agg_.status_,
+                get_status_for_conf_price_ratio(quote.price, quote.confidence, quote.status)
+                    .unwrap()
+            );
+        }
     }
 
     sim.warp_to_slot(2).await.unwrap();
@@ -111,7 +124,6 @@ async fn test_publish_batch() {
             .get_account_data_as::<PriceAccount>(*price)
             .await
             .unwrap();
-        let quote = quotes.get(key).unwrap();
         let new_quote = new_quotes.get(key).unwrap();
 
         assert_eq!(price_data.comp_[0].latest_.price_, new_quote.price);
@@ -125,11 +137,30 @@ async fn test_publish_batch() {
             )
             .unwrap()
         );
-        assert_eq!(price_data.comp_[0].agg_.price_, quote.price);
-        assert_eq!(price_data.comp_[0].agg_.conf_, quote.confidence);
-        assert_eq!(
-            price_data.comp_[0].agg_.status_,
-            get_status_for_conf_price_ratio(quote.price, quote.confidence, quote.status).unwrap()
-        );
+        #[cfg(not(feature = "pythnet"))]
+        {
+            let quote = quotes.get(key).unwrap();
+            assert_eq!(price_data.comp_[0].agg_.price_, quote.price);
+            assert_eq!(price_data.comp_[0].agg_.conf_, quote.confidence);
+            assert_eq!(
+                price_data.comp_[0].agg_.status_,
+                get_status_for_conf_price_ratio(quote.price, quote.confidence, quote.status)
+                    .unwrap()
+            );
+        }
+        #[cfg(feature = "pythnet")]
+        {
+            assert_eq!(price_data.comp_[0].agg_.price_, new_quote.price);
+            assert_eq!(price_data.comp_[0].agg_.conf_, new_quote.confidence);
+            assert_eq!(
+                price_data.comp_[0].agg_.status_,
+                get_status_for_conf_price_ratio(
+                    new_quote.price,
+                    new_quote.confidence,
+                    new_quote.status
+                )
+                .unwrap()
+            );
+        }
     }
 }
