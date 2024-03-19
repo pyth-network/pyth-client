@@ -77,12 +77,11 @@ fn test_upd_price_v2() -> Result<(), Box<dyn std::error::Error>> {
         assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_TRADING);
         assert_eq!(price_data.valid_slot_, 0);
         assert_eq!(price_data.agg_.pub_slot_, 1);
-        assert_eq!(price_data.agg_.price_, 0);
-        assert_eq!(price_data.agg_.conf_, 0);
-        assert_eq!(price_data.agg_.status_, PC_STATUS_UNKNOWN);
-
-        assert_eq!(price_data.price_cumulative.price, 0);
-        assert_eq!(price_data.price_cumulative.conf, 0);
+        assert_eq!(price_data.agg_.price_, 42);
+        assert_eq!(price_data.agg_.conf_, 2);
+        assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
+        assert_eq!(price_data.price_cumulative.price, 42);
+        assert_eq!(price_data.price_cumulative.conf, 2);
         assert_eq!(price_data.price_cumulative.num_down_slots, 0);
     }
 
@@ -110,12 +109,11 @@ fn test_upd_price_v2() -> Result<(), Box<dyn std::error::Error>> {
         assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_TRADING);
         assert_eq!(price_data.valid_slot_, 0);
         assert_eq!(price_data.agg_.pub_slot_, 1);
-        assert_eq!(price_data.agg_.price_, 0);
-        assert_eq!(price_data.agg_.conf_, 0);
-        assert_eq!(price_data.agg_.status_, PC_STATUS_UNKNOWN);
-
-        assert_eq!(price_data.price_cumulative.price, 0);
-        assert_eq!(price_data.price_cumulative.conf, 0);
+        assert_eq!(price_data.agg_.price_, 42);
+        assert_eq!(price_data.agg_.conf_, 2);
+        assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
+        assert_eq!(price_data.price_cumulative.price, 42);
+        assert_eq!(price_data.price_cumulative.conf, 2);
         assert_eq!(price_data.price_cumulative.num_down_slots, 0);
     }
 
@@ -141,11 +139,10 @@ fn test_upd_price_v2() -> Result<(), Box<dyn std::error::Error>> {
         assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_TRADING);
         assert_eq!(price_data.valid_slot_, 1);
         assert_eq!(price_data.agg_.pub_slot_, 3);
-        assert_eq!(price_data.agg_.price_, 42);
+        assert_eq!(price_data.agg_.price_, 81);
         assert_eq!(price_data.agg_.conf_, 2);
         assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
-
-        assert_eq!(price_data.price_cumulative.price, 3 * 42);
+        assert_eq!(price_data.price_cumulative.price, 42 + 2 * 81);
         assert_eq!(price_data.price_cumulative.conf, 3 * 2);
         assert_eq!(price_data.price_cumulative.num_down_slots, 0);
     }
@@ -174,9 +171,8 @@ fn test_upd_price_v2() -> Result<(), Box<dyn std::error::Error>> {
         assert_eq!(price_data.agg_.price_, 81);
         assert_eq!(price_data.agg_.conf_, 2);
         assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
-
-        assert_eq!(price_data.price_cumulative.price, 3 * 42 + 81);
-        assert_eq!(price_data.price_cumulative.conf, 3 * 2 + 2);
+        assert_eq!(price_data.price_cumulative.price, 42 + 3 * 81);
+        assert_eq!(price_data.price_cumulative.conf, 4 * 2);
         assert_eq!(price_data.price_cumulative.num_down_slots, 0);
     }
 
@@ -204,9 +200,8 @@ fn test_upd_price_v2() -> Result<(), Box<dyn std::error::Error>> {
         assert_eq!(price_data.agg_.price_, 81);
         assert_eq!(price_data.agg_.conf_, 2);
         assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
-
-        assert_eq!(price_data.price_cumulative.price, 3 * 42 + 81 * 2);
-        assert_eq!(price_data.price_cumulative.conf, 3 * 2 + 2 * 2);
+        assert_eq!(price_data.price_cumulative.price, 42 + 81 * 4);
+        assert_eq!(price_data.price_cumulative.conf, 5 * 2);
         assert_eq!(price_data.price_cumulative.num_down_slots, 0);
     }
 
@@ -237,9 +232,8 @@ fn test_upd_price_v2() -> Result<(), Box<dyn std::error::Error>> {
         assert_eq!(price_data.agg_.price_, 81);
         assert_eq!(price_data.agg_.conf_, 2);
         assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
-
-        assert_eq!(price_data.price_cumulative.price, 3 * 42 + 81 * 2);
-        assert_eq!(price_data.price_cumulative.conf, 3 * 2 + 2 * 2);
+        assert_eq!(price_data.price_cumulative.price, 42 + 81 * 4);
+        assert_eq!(price_data.price_cumulative.conf, 5 * 2);
         assert_eq!(price_data.price_cumulative.num_down_slots, 0);
     }
 
@@ -274,10 +268,9 @@ fn test_upd_price_v2() -> Result<(), Box<dyn std::error::Error>> {
         assert_eq!(price_data.agg_.pub_slot_, 6);
         assert_eq!(price_data.agg_.price_, 81);
         assert_eq!(price_data.agg_.conf_, 2);
-        assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
-
-        assert_eq!(price_data.price_cumulative.price, 3 * 42 + 81 * 3);
-        assert_eq!(price_data.price_cumulative.conf, 3 * 2 + 2 * 3);
+        assert_eq!(price_data.agg_.status_, PC_STATUS_UNKNOWN);
+        assert_eq!(price_data.price_cumulative.price, 42 + 81 * 4);
+        assert_eq!(price_data.price_cumulative.conf, 2 * 5);
         assert_eq!(price_data.price_cumulative.num_down_slots, 0);
     }
 
@@ -306,9 +299,8 @@ fn test_upd_price_v2() -> Result<(), Box<dyn std::error::Error>> {
         assert_eq!(price_data.agg_.price_, 81);
         assert_eq!(price_data.agg_.conf_, 2);
         assert_eq!(price_data.agg_.status_, PC_STATUS_UNKNOWN);
-
-        assert_eq!(price_data.price_cumulative.price, 3 * 42 + 81 * 3);
-        assert_eq!(price_data.price_cumulative.conf, 3 * 2 + 2 * 3);
+        assert_eq!(price_data.price_cumulative.price, 42 + 81 * 4);
+        assert_eq!(price_data.price_cumulative.conf, 2 * 5);
         assert_eq!(price_data.price_cumulative.num_down_slots, 0);
     }
 
@@ -334,12 +326,11 @@ fn test_upd_price_v2() -> Result<(), Box<dyn std::error::Error>> {
         assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_TRADING);
         assert_eq!(price_data.valid_slot_, 7);
         assert_eq!(price_data.agg_.pub_slot_, 8);
-        assert_eq!(price_data.agg_.price_, 81);
-        assert_eq!(price_data.agg_.conf_, 2);
-        assert_eq!(price_data.agg_.status_, PC_STATUS_UNKNOWN);
-
-        assert_eq!(price_data.price_cumulative.price, 3 * 42 + 81 * 3);
-        assert_eq!(price_data.price_cumulative.conf, 3 * 2 + 2 * 3);
+        assert_eq!(price_data.agg_.price_, -100);
+        assert_eq!(price_data.agg_.conf_, 1);
+        assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
+        assert_eq!(price_data.price_cumulative.price, 42 + 81 * 4 - 100 * 3);
+        assert_eq!(price_data.price_cumulative.conf, 2 * 5 + 3);
         assert_eq!(price_data.price_cumulative.num_down_slots, 0);
     }
 
@@ -368,9 +359,8 @@ fn test_upd_price_v2() -> Result<(), Box<dyn std::error::Error>> {
         assert_eq!(price_data.agg_.price_, -100);
         assert_eq!(price_data.agg_.conf_, 1);
         assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
-
-        assert_eq!(price_data.price_cumulative.price, 3 * 42 + 81 * 3 - 100 * 3);
-        assert_eq!(price_data.price_cumulative.conf, 3 * 2 + 2 * 3 + 3);
+        assert_eq!(price_data.price_cumulative.price, 42 + 81 * 4 - 100 * 4);
+        assert_eq!(price_data.price_cumulative.conf, 2 * 5 + 4);
         assert_eq!(price_data.price_cumulative.num_down_slots, 0);
     }
 
@@ -397,13 +387,15 @@ fn test_upd_price_v2() -> Result<(), Box<dyn std::error::Error>> {
         assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_TRADING);
         assert_eq!(price_data.valid_slot_, 9);
         assert_eq!(price_data.agg_.pub_slot_, 50);
-        assert_eq!(price_data.agg_.price_, -100);
-        assert_eq!(price_data.agg_.conf_, 1);
-        assert_eq!(price_data.agg_.status_, PC_STATUS_UNKNOWN);
-
-        assert_eq!(price_data.price_cumulative.price, 3 * 42 + 81 * 3 - 100 * 3);
-        assert_eq!(price_data.price_cumulative.conf, 3 * 2 + 2 * 3 + 3);
-        assert_eq!(price_data.price_cumulative.num_down_slots, 0);
+        assert_eq!(price_data.agg_.price_, 60);
+        assert_eq!(price_data.agg_.conf_, 4);
+        assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
+        assert_eq!(
+            price_data.price_cumulative.price,
+            42 + 81 * 4 - 100 * 4 + 60 * 41
+        );
+        assert_eq!(price_data.price_cumulative.conf, 2 * 5 + 4 + 41 * 4);
+        assert_eq!(price_data.price_cumulative.num_down_slots, 16);
     }
 
     // Crank again for aggregate
@@ -429,16 +421,15 @@ fn test_upd_price_v2() -> Result<(), Box<dyn std::error::Error>> {
         assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_TRADING);
         assert_eq!(price_data.valid_slot_, 50);
         assert_eq!(price_data.agg_.pub_slot_, 51);
-        assert_eq!(price_data.agg_.price_, 60);
-        assert_eq!(price_data.agg_.conf_, 4);
+        assert_eq!(price_data.agg_.price_, 55);
+        assert_eq!(price_data.agg_.conf_, 5);
         assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
-
         assert_eq!(
             price_data.price_cumulative.price,
-            3 * 42 + 81 * 3 - 100 * 3 + 42 * 60
+            42 + 81 * 4 - 100 * 4 + 60 * 41 + 55
         );
-        assert_eq!(price_data.price_cumulative.conf, 3 * 2 + 2 * 3 + 3 + 42 * 4);
-        assert_eq!(price_data.price_cumulative.num_down_slots, 17);
+        assert_eq!(price_data.price_cumulative.conf, 2 * 5 + 4 + 41 * 4 + 5);
+        assert_eq!(price_data.price_cumulative.num_down_slots, 16);
     }
 
     Ok(())
