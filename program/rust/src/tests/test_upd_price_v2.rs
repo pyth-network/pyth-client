@@ -432,6 +432,64 @@ fn test_upd_price_v2() -> Result<(), Box<dyn std::error::Error>> {
         assert_eq!(price_data.price_cumulative.num_down_slots, 16);
     }
 
+    let mut funding_setup_two = AccountSetup::new_funding();
+    let funding_account_two = funding_setup_two.as_account_info();
+
+    {
+        let mut price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        price_data.num_ = 2;
+        price_data.comp_[1].pub_ = *funding_account_two.key;
+    }
+
+    populate_instruction(&mut instruction_data, 10, 1, 100);
+    update_clock_slot(&mut clock_account, 100);
+    process_instruction(
+        &program_id,
+        &[
+            funding_account.clone(),
+            price_account.clone(),
+            clock_account.clone(),
+        ],
+        &instruction_data,
+    )?;
+
+    populate_instruction(&mut instruction_data, 20, 2, 100);
+    process_instruction(
+        &program_id,
+        &[
+            funding_account_two.clone(),
+            price_account.clone(),
+            clock_account.clone(),
+        ],
+        &instruction_data,
+    )?;
+
+    {
+        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        assert_eq!(price_data.comp_[0].latest_.price_, 10);
+        assert_eq!(price_data.comp_[0].latest_.conf_, 1);
+        assert_eq!(price_data.comp_[0].latest_.pub_slot_, 100);
+        assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_TRADING);
+        assert_eq!(price_data.comp_[1].latest_.price_, 20);
+        assert_eq!(price_data.comp_[1].latest_.conf_, 2);
+        assert_eq!(price_data.comp_[1].latest_.pub_slot_, 100);
+        assert_eq!(price_data.comp_[1].latest_.status_, PC_STATUS_TRADING);
+        assert_eq!(price_data.valid_slot_, 100);
+        assert_eq!(price_data.agg_.pub_slot_, 100);
+        assert_eq!(price_data.agg_.price_, 14);
+        assert_eq!(price_data.agg_.conf_, 6);
+        assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
+        assert_eq!(
+            price_data.price_cumulative.price,
+            42 + 81 * 4 - 100 * 4 + 60 * 41 + 55 + 14 * 49
+        );
+        assert_eq!(
+            price_data.price_cumulative.conf,
+            2 * 5 + 4 + 41 * 4 + 5 + 6 * 49
+        );
+        assert_eq!(price_data.price_cumulative.num_down_slots, 40); // prev num_down_slots was 16 and since pub slot is 100 and last pub slot was 51, slot_gap is 49 and default latency is 25, so num_down_slots = 49 - 25 = 24, so total num_down_slots = 16 + 24 = 40
+    }
+
     Ok(())
 }
 

@@ -16,6 +16,7 @@ use {
             PriceAccount,
             PriceInfo,
         },
+        c_oracle_header::PC_STATUS_TRADING,
         deserialize::{
             load,
             load_checked,
@@ -207,7 +208,18 @@ pub fn upd_price(
         clock.slot > latest_aggregate_price.pub_slot_
     };
 
+    // get number of slots from last update
+    let slots_since_last_update = clock.slot - latest_aggregate_price.pub_slot_;
+
     let aggregate_updated = if should_call_c_upd_aggregate {
+        if slots_since_last_update > 0 && latest_aggregate_price.status_ == PC_STATUS_TRADING {
+            let mut price_data =
+                load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
+            price_data.prev_slot_ = price_data.agg_.pub_slot_;
+            price_data.prev_price_ = price_data.agg_.price_;
+            price_data.prev_conf_ = price_data.agg_.conf_;
+            price_data.prev_timestamp_ = clock.unix_timestamp;
+        }
         unsafe {
             c_upd_aggregate(
                 price_account.try_borrow_mut_data()?.as_mut_ptr(),
@@ -218,9 +230,6 @@ pub fn upd_price(
     } else {
         false // Do not call c_upd_aggregate and set aggregate_updated to false
     };
-
-    // get number of slots from last update
-    let slots_since_last_update = clock.slot - latest_aggregate_price.pub_slot_;
 
     if aggregate_updated {
         // The price_data borrow happens in a scope because it must be
