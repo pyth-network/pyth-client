@@ -88,9 +88,9 @@ pub fn upd_price_no_fail_on_error(
     }
 }
 
-/// Update a publisher's price for the provided product. If this update is
-/// the first update in a slot, this operation will also trigger price aggregation
-/// and result in a new aggregate price in the account.
+/// Update a publisher's price for the provided product. This operation's behavior varies based on the feature flag:
+/// - For `feature = "pythnet"`, price aggregation will trigger on the same slot for every price update, resulting in a new aggregate price in the account.
+/// - For non-`pythnet` configurations, the first price update in a slot triggers price aggregation for the prices of the previous slot, resulting in a new aggregate price in the account.
 ///
 /// account[0] the publisher's account (funds the tx) [signer writable]
 ///            fails if the publisher's public key is not permissioned for the price account.
