@@ -144,7 +144,6 @@ pub fn upd_price(
     let mut publisher_index: usize = 0;
     let latest_aggregate_price: PriceInfo;
 
-    #[cfg(feature = "pythnet")]
     // The price_data borrow happens in a scope because it must be
     // dropped before we borrow again as raw data pointer for the C
     // aggregation logic.
@@ -176,6 +175,7 @@ pub fn upd_price(
         )?;
     }
 
+    #[cfg(feature = "pythnet")]
     {
         // Reload price data as a struct after c_upd_aggregate() borrow is dropped
         let mut price_data = load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
