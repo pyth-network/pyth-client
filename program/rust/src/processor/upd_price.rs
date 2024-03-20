@@ -240,18 +240,13 @@ pub fn upd_price(
             price_data.twap_ = price_data.prev_twap_;
             price_data.twac_ = price_data.prev_twac_;
             price_data.price_cumulative = price_data.prev_price_cumulative;
+            price_data.update_price_cumulative()?;
         }
         unsafe {
             c_upd_twap(
                 price_account.try_borrow_mut_data()?.as_mut_ptr(),
                 slots_since_last_update as i64, // Ensure slots_since_last_update is cast to i64, as expected by the function signature
             );
-            #[cfg(feature = "pythnet")]
-            {
-                let mut price_data =
-                    load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
-                price_data.update_price_cumulative()?;
-            }
         }
     }
 
