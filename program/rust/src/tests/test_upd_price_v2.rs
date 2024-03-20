@@ -432,6 +432,7 @@ fn test_upd_price_v2() -> Result<(), Box<dyn std::error::Error>> {
         assert_eq!(price_data.price_cumulative.num_down_slots, 16);
     }
 
+    // add new test for multiple publishers and ensure that price_cumulative is updated correctly
     let mut funding_setup_two = AccountSetup::new_funding();
     let funding_account_two = funding_setup_two.as_account_info();
 
