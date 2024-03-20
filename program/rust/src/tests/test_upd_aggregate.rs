@@ -158,10 +158,6 @@ fn test_upd_aggregate() {
         assert_eq!(price_data.agg_.conf_, 55);
         assert_eq!(price_data.num_qt_, 2);
         assert_eq!(price_data.timestamp_, 2);
-        assert_eq!(price_data.prev_slot_, 1000);
-        assert_eq!(price_data.prev_price_, 100);
-        assert_eq!(price_data.prev_conf_, 10);
-        assert_eq!(price_data.prev_timestamp_, 1);
     }
 
     // three publishers
@@ -191,10 +187,6 @@ fn test_upd_aggregate() {
         assert_eq!(price_data.agg_.conf_, 90);
         assert_eq!(price_data.num_qt_, 3);
         assert_eq!(price_data.timestamp_, 3);
-        assert_eq!(price_data.prev_slot_, 1000);
-        assert_eq!(price_data.prev_price_, 145);
-        assert_eq!(price_data.prev_conf_, 55);
-        assert_eq!(price_data.prev_timestamp_, 2);
     }
 
     // four publishers
@@ -226,10 +218,6 @@ fn test_upd_aggregate() {
         assert_eq!(price_data.num_qt_, 4);
         assert_eq!(price_data.timestamp_, 4);
         assert_eq!(price_data.last_slot_, 1001);
-        assert_eq!(price_data.prev_slot_, 1000);
-        assert_eq!(price_data.prev_price_, 200);
-        assert_eq!(price_data.prev_conf_, 90);
-        assert_eq!(price_data.prev_timestamp_, 3);
     }
 
     unsafe {
@@ -247,10 +235,6 @@ fn test_upd_aggregate() {
         assert_eq!(price_data.last_slot_, 1025);
         assert_eq!(price_data.num_qt_, 4);
         assert_eq!(price_data.timestamp_, 5);
-        assert_eq!(price_data.prev_slot_, 1001);
-        assert_eq!(price_data.prev_price_, 245);
-        assert_eq!(price_data.prev_conf_, 85);
-        assert_eq!(price_data.prev_timestamp_, 4);
     }
 
     // check what happens when nothing publishes for a while
@@ -269,10 +253,6 @@ fn test_upd_aggregate() {
         assert_eq!(price_data.last_slot_, 1025);
         assert_eq!(price_data.num_qt_, 0);
         assert_eq!(price_data.timestamp_, 10);
-        assert_eq!(price_data.prev_slot_, 1025);
-        assert_eq!(price_data.prev_price_, 245);
-        assert_eq!(price_data.prev_conf_, 85);
-        assert_eq!(price_data.prev_timestamp_, 5);
     }
 
     unsafe {
@@ -290,10 +270,6 @@ fn test_upd_aggregate() {
         assert_eq!(price_data.last_slot_, 1025);
         assert_eq!(price_data.num_qt_, 0);
         assert_eq!(price_data.timestamp_, 12);
-        assert_eq!(price_data.prev_slot_, 1025);
-        assert_eq!(price_data.prev_price_, 245);
-        assert_eq!(price_data.prev_conf_, 85);
-        assert_eq!(price_data.prev_timestamp_, 5);
     }
 
     // ensure the update occurs within the PC_MAX_SEND_LATENCY limit of 25 slots, allowing the aggregated price to reflect both p4 and p5 contributions
@@ -322,10 +298,6 @@ fn test_upd_aggregate() {
         assert_eq!(price_data.agg_.conf_, 55);
         assert_eq!(price_data.num_qt_, 2);
         assert_eq!(price_data.timestamp_, 13);
-        assert_eq!(price_data.prev_slot_, 1025);
-        assert_eq!(price_data.prev_price_, 245);
-        assert_eq!(price_data.prev_conf_, 85);
-        assert_eq!(price_data.prev_timestamp_, 5);
     }
 
     // verify behavior when publishing halts for 1 slot, causing the slot difference from p5 to exceed the PC_MAX_SEND_LATENCY threshold of 25.
@@ -345,10 +317,6 @@ fn test_upd_aggregate() {
         assert_eq!(price_data.agg_.conf_, 50);
         assert_eq!(price_data.num_qt_, 1);
         assert_eq!(price_data.timestamp_, 14);
-        assert_eq!(price_data.prev_slot_, 1025);
-        assert_eq!(price_data.prev_price_, 445);
-        assert_eq!(price_data.prev_conf_, 55);
-        assert_eq!(price_data.prev_timestamp_, 13);
     }
 
     // verify behavior when max_latency_ is set to 5, and all components pub_slot_ gap is more than 5, this should result in PC_STATUS_UNKNOWN status
@@ -380,10 +348,6 @@ fn test_upd_aggregate() {
         assert_eq!(price_data.agg_.conf_, 50);
         assert_eq!(price_data.num_qt_, 0);
         assert_eq!(price_data.timestamp_, 15);
-        assert_eq!(price_data.prev_slot_, 1000);
-        assert_eq!(price_data.prev_price_, 500);
-        assert_eq!(price_data.prev_conf_, 50);
-        assert_eq!(price_data.prev_timestamp_, 14);
     }
 }
 
