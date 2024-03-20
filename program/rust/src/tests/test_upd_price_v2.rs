@@ -484,6 +484,15 @@ fn test_upd_price_v2() -> Result<(), Box<dyn std::error::Error>> {
         assert_eq!(price_data.prev_price_, 55);
         assert_eq!(price_data.prev_conf_, 5);
         assert_eq!(
+            price_data.prev_price_cumulative.price,
+            42 + 81 * 4 - 100 * 4 + 60 * 41 + 55
+        );
+        assert_eq!(
+            price_data.prev_price_cumulative.conf,
+            2 * 5 + 4 + 41 * 4 + 5
+        );
+        assert_eq!(price_data.prev_price_cumulative.num_down_slots, 16);
+        assert_eq!(
             price_data.price_cumulative.price,
             42 + 81 * 4 - 100 * 4 + 60 * 41 + 55 + 14 * 49
         ); // (42 + 81 * 4 - 100 * 4 + 60 * 41 + 55) is the price cumulative from the previous test and 14 * 49 (slot_gap) is the price cumulative from this test
