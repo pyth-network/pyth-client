@@ -252,9 +252,15 @@ pub fn upd_price(
             price_data.update_price_cumulative()?;
         }
         unsafe {
+            let prev_slot = {
+                // get price data here
+                let new_price_data =
+                    load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
+                new_price_data.prev_slot_
+            };
             c_upd_twap(
                 price_account.try_borrow_mut_data()?.as_mut_ptr(),
-                slots_since_last_update as i64, // Ensure slots_since_last_update is cast to i64, as expected by the function signature
+                (clock.slot - prev_slot) as i64, // Ensure slots_since_last_update is cast to i64, as expected by the function signature
             );
         }
     }
