@@ -196,10 +196,7 @@ pub fn upd_price(
                 clock.slot,
                 clock.unix_timestamp,
             );
-            c_upd_twap(
-                price_account.try_borrow_mut_data()?.as_mut_ptr(),
-                agg_diff, // Ensure slots_since_last_update is cast to i64, as expected by the function signature
-            );
+            c_upd_twap(price_account.try_borrow_mut_data()?.as_mut_ptr(), agg_diff);
         }
     }
 
