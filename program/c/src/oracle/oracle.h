@@ -24,7 +24,7 @@ extern "C" {
 
 // Total price component slots available
 #define PC_NUM_COMP_SOLANA      32
-#define PC_NUM_COMP_PYTHNET     64
+#define PC_NUM_COMP_PYTHNET     127
 
 // PC_NUM_COMP - number of price components in use
 #ifdef PC_PYTHNET

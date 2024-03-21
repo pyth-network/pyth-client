@@ -35,7 +35,53 @@ mod price_pythnet {
             },
             error::OracleError,
         },
+        std::ops::{
+            Deref,
+            DerefMut,
+            Index,
+            IndexMut,
+        },
     };
+
+    #[repr(C)]
+    #[derive(Copy, Clone)]
+    pub struct PriceComponentArrayWrapper([PriceComponent; PC_NUM_COMP_PYTHNET as usize]);
+
+    // Implementing Index and IndexMut allows PriceComponentArrayWrapper to use array indexing directly,
+    // such as price_account.comp_[i], making it behave more like a native array or slice.
+    impl Index<usize> for PriceComponentArrayWrapper {
+        type Output = PriceComponent;
+
+        fn index(&self, index: usize) -> &Self::Output {
+            &self.0[index]
+        }
+    }
+    impl IndexMut<usize> for PriceComponentArrayWrapper {
+        fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+            &mut self.0[index]
+        }
+    }
+
+    // Implementing Deref and DerefMut allows PriceComponentArrayWrapper to use slice methods directly,
+    // such as len(), making it behave more like a native array or slice.
+    impl Deref for PriceComponentArrayWrapper {
+        type Target = [PriceComponent];
+
+        fn deref(&self) -> &Self::Target {
+            &self.0
+        }
+    }
+
+    impl DerefMut for PriceComponentArrayWrapper {
+        fn deref_mut(&mut self) -> &mut Self::Target {
+            &mut self.0
+        }
+    }
+
+    unsafe impl Pod for PriceComponentArrayWrapper {
+    }
+    unsafe impl Zeroable for PriceComponentArrayWrapper {
+    }
 
     /// Pythnet-only extended price account format. This extension is
     /// an append-only change that adds extra publisher slots and
@@ -88,13 +134,7 @@ mod price_pythnet {
         /// PC_NUM_COMP_PYTHNET slots are used due to stack size
         /// issues in the C code. For iterating over price components,
         /// PC_NUM_COMP must be used.
-        pub comp_:                 [PriceComponent; PC_NUM_COMP_PYTHNET as usize],
-        pub unused_:               [u8; 4096],
-        pub unused2_:              [u8; 1024],
-        pub unused3_:              [u8; 512],
-        pub unused4_:              [u8; 256],
-        pub unused5_:              [u8; 128],
-        pub unused6_:              [u8; 32],
+        pub comp_:                 PriceComponentArrayWrapper,
         /// Previous EMA for price and confidence
         pub prev_twap_:            PriceEma,
         pub prev_twac_:            PriceEma,

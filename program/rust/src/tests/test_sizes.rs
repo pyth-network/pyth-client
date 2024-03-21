@@ -69,12 +69,6 @@ fn test_sizes() {
                 + 3 * size_of::<Pubkey>()
                 + size_of::<PriceInfo>()
                 + (PC_NUM_COMP_PYTHNET as usize) * size_of::<PriceComponent>()
-                + 4096                             // Size of unused_
-                + 1024                             // Size of unused2_
-                + 512                              // Size of unused3_
-                + 256                              // Size of unused4_
-                + 128                              // Size of unused5_
-                + 32                               // Size of unused6_
                 + size_of::<PriceEma>()
                 + size_of::<PriceEma>()
                 + size_of::<PriceCumulative>()
