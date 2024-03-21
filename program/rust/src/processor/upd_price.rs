@@ -179,12 +179,6 @@ pub fn upd_price(
     #[allow(unused_variables)]
     let mut aggregate_updated = false;
 
-    let agg_diff = {
-        (clock.slot as i64)
-            - load_checked::<PriceAccount>(price_account, cmd_args.header.version)?.last_slot_
-                as i64
-    };
-
     // NOTE: c_upd_aggregate must use a raw pointer to price
     // data. Solana's `<account>.borrow_*` methods require exclusive
     // access, i.e. no other borrow can exist for the account.
@@ -196,6 +190,11 @@ pub fn upd_price(
                 clock.slot,
                 clock.unix_timestamp,
             );
+            let agg_diff = {
+                (clock.slot as i64)
+                    - load_checked::<PriceAccount>(price_account, cmd_args.header.version)?
+                        .prev_slot_ as i64
+            };
             c_upd_twap(price_account.try_borrow_mut_data()?.as_mut_ptr(), agg_diff);
         }
     }
