@@ -203,7 +203,7 @@ pub fn upd_price(
     }
 
     let should_call_c_upd_aggregate: bool = if cfg!(feature = "pythnet") {
-        clock.slot >= latest_aggregate_price.pub_slot_
+        true // clock.slot >= latest_aggregate_price.pub_slot_ is always true
     } else {
         clock.slot > latest_aggregate_price.pub_slot_
     };
