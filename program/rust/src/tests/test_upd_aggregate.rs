@@ -100,8 +100,6 @@ fn test_upd_aggregate() {
 
         assert_eq!(price_data.agg_.price_, 100);
         assert_eq!(price_data.agg_.conf_, 10);
-        assert_eq!(price_data.twap_.val_, 100);
-        assert_eq!(price_data.twac_.val_, 10);
         assert_eq!(price_data.num_qt_, 1);
         assert_eq!(price_data.timestamp_, 1);
         assert_eq!(price_data.prev_slot_, 0);
@@ -134,8 +132,6 @@ fn test_upd_aggregate() {
 
         assert_eq!(price_data.agg_.price_, 145);
         assert_eq!(price_data.agg_.conf_, 55);
-        assert_eq!(price_data.twap_.val_, 106);
-        assert_eq!(price_data.twac_.val_, 16);
         assert_eq!(price_data.num_qt_, 2);
         assert_eq!(price_data.timestamp_, 2);
         assert_eq!(price_data.prev_slot_, 1000);
@@ -169,8 +165,6 @@ fn test_upd_aggregate() {
 
         assert_eq!(price_data.agg_.price_, 200);
         assert_eq!(price_data.agg_.conf_, 90);
-        assert_eq!(price_data.twap_.val_, 114);
-        assert_eq!(price_data.twac_.val_, 23);
         assert_eq!(price_data.num_qt_, 3);
         assert_eq!(price_data.timestamp_, 3);
         assert_eq!(price_data.prev_slot_, 1000);
@@ -205,8 +199,6 @@ fn test_upd_aggregate() {
 
         assert_eq!(price_data.agg_.price_, 245);
         assert_eq!(price_data.agg_.conf_, 85);
-        assert_eq!(price_data.twap_.val_, 125);
-        assert_eq!(price_data.twac_.val_, 28);
         assert_eq!(price_data.num_qt_, 4);
         assert_eq!(price_data.timestamp_, 4);
         assert_eq!(price_data.last_slot_, 1001);
