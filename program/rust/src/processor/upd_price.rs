@@ -177,27 +177,32 @@ pub fn upd_price(
 
     // Try to update the aggregate
     #[allow(unused_variables)]
-    let mut aggregate_updated = false;
-
-    // NOTE: c_upd_aggregate must use a raw pointer to price
-    // data. Solana's `<account>.borrow_*` methods require exclusive
-    // access, i.e. no other borrow can exist for the account.
-    #[allow(unused_assignments)]
-    if clock.slot > latest_aggregate_price.pub_slot_ {
-        unsafe {
-            aggregate_updated = c_upd_aggregate(
+    let aggregate_updated = if clock.slot > latest_aggregate_price.pub_slot_ {
+        let updated = unsafe {
+            // NOTE: c_upd_aggregate must use a raw pointer to price
+            // data. Solana's `<account>.borrow_*` methods require exclusive
+            // access, i.e. no other borrow can exist for the account.
+            c_upd_aggregate(
                 price_account.try_borrow_mut_data()?.as_mut_ptr(),
                 clock.slot,
                 clock.unix_timestamp,
-            );
-            let agg_diff = {
-                (clock.slot as i64)
-                    - load_checked::<PriceAccount>(price_account, cmd_args.header.version)?
-                        .prev_slot_ as i64
-            };
-            c_upd_twap(price_account.try_borrow_mut_data()?.as_mut_ptr(), agg_diff);
+            )
+        };
+
+        // If the aggregate was successfully updated, calculate the difference and update TWAP.
+        if updated {
+            let agg_diff = (clock.slot as i64)
+                - load_checked::<PriceAccount>(price_account, cmd_args.header.version)?.prev_slot_
+                    as i64;
+            // Encapsulate TWAP update logic in a function to minimize unsafe block scope.
+            unsafe {
+                c_upd_twap(price_account.try_borrow_mut_data()?.as_mut_ptr(), agg_diff);
+            }
         }
-    }
+        updated
+    } else {
+        false
+    };
 
     // Reload price data as a struct after c_upd_aggregate() borrow is dropped
     let mut price_data = load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
