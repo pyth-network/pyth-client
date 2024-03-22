@@ -1,20 +1,10 @@
-#[cfg(feature = "pythnet")]
-use {
-    crate::accounts::{
-        PythOracleSerialize,
-        UPD_PRICE_WRITE_SEED,
-    },
-    solana_program::instruction::{
-        AccountMeta,
-        Instruction,
-    },
-    solana_program::program::invoke_signed,
-};
 use {
     crate::{
         accounts::{
             PriceAccount,
             PriceInfo,
+            PythOracleSerialize,
+            UPD_PRICE_WRITE_SEED,
         },
         deserialize::{
             load,
@@ -35,6 +25,11 @@ use {
         account_info::AccountInfo,
         clock::Clock,
         entrypoint::ProgramResult,
+        instruction::{
+            AccountMeta,
+            Instruction,
+        },
+        program::invoke_signed,
         program_error::ProgramError,
         pubkey::Pubkey,
         sysvar::Sysvar,
@@ -44,10 +39,7 @@ use {
 #[cfg(target_arch = "bpf")]
 #[link(name = "cpyth-bpf")]
 extern "C" {
-    #[cfg(feature = "pythnet")]
     pub fn c_upd_aggregate_pythnet(_input: *mut u8, clock_slot: u64, clock_timestamp: i64) -> bool;
-    #[cfg(not(feature = "pythnet"))]
-    pub fn c_upd_aggregate_solana(_input: *mut u8, clock_slot: u64, clock_timestamp: i64) -> bool;
 
     #[allow(unused)]
     pub fn c_upd_twap(_input: *mut u8, nslots: i64);
@@ -56,10 +48,7 @@ extern "C" {
 #[cfg(not(target_arch = "bpf"))]
 #[link(name = "cpyth-native")]
 extern "C" {
-    #[cfg(feature = "pythnet")]
     pub fn c_upd_aggregate_pythnet(_input: *mut u8, clock_slot: u64, clock_timestamp: i64) -> bool;
-    #[cfg(not(feature = "pythnet"))]
-    pub fn c_upd_aggregate_solana(_input: *mut u8, clock_slot: u64, clock_timestamp: i64) -> bool;
 
     #[allow(unused)]
     pub fn c_upd_twap(_input: *mut u8, nslots: i64);
@@ -67,10 +56,7 @@ extern "C" {
 
 #[inline]
 pub unsafe fn c_upd_aggregate(input: *mut u8, clock_slot: u64, clock_timestamp: i64) -> bool {
-    #[cfg(feature = "pythnet")]
-    return c_upd_aggregate_pythnet(input, clock_slot, clock_timestamp);
-    #[cfg(not(feature = "pythnet"))]
-    return c_upd_aggregate_solana(input, clock_slot, clock_timestamp);
+    c_upd_aggregate_pythnet(input, clock_slot, clock_timestamp)
 }
 
 /// Publish component price, never returning an error even if the update failed
@@ -208,7 +194,6 @@ pub fn upd_price(
     let mut price_data = load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
 
     // Feature-gated accumulator-specific code, used only on pythnet/pythtest
-    #[cfg(feature = "pythnet")]
     {
         // We want to send a message every time the aggregate price updates. However, during the migration,
         // not every publisher will necessarily provide the accumulator accounts. The message_sent_ flag

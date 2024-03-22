@@ -43,8 +43,6 @@ mod product;
 // Some types only exist during use as a library.
 #[cfg(feature = "strum")]
 pub use price::MessageType;
-#[cfg(feature = "pythnet")]
-pub use price::PriceCumulative;
 #[cfg(test)]
 pub use product::{
     account_has_key_values,
@@ -56,6 +54,7 @@ pub use {
     price::{
         PriceAccount,
         PriceComponent,
+        PriceCumulative,
         PriceEma,
         PriceInfo,
         PythOracleSerialize,
@@ -72,7 +71,6 @@ pub use {
 /// are authorized to perform certain administrative actions.
 pub const PERMISSIONS_SEED: &str = "permissions";
 
-#[cfg(feature = "pythnet")]
 /// The update price instruction can optionally invoke another program via CPI. The
 /// CPI will be signed with the PDA `[UPD_PRICE_WRITE_SEED, invoked_program_public_key]`
 /// such that the caller can authenticate its origin.

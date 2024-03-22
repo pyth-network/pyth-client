@@ -24,13 +24,6 @@ cargo test --locked
 # Re-run tests affected by features
 cargo test --locked --features pythnet
 
-cargo-build-bpf -- --locked -Z build-std=std,panic_abort -Z build-std-features=panic_immediate_abort
-sha256sum ./target/**/*.so
-echo "Checking size of pyth_oracle.so for mainnet"
-./scripts/check-size.sh 81760
-mkdir -p target/pyth/solana/
-mv target/deploy/pyth_oracle.so target/pyth/solana/pyth_oracle_solana.so
-
 cargo-build-bpf -- --locked -Z build-std=std,panic_abort -Z build-std-features=panic_immediate_abort --features pythnet
 sha256sum ./target/**/*.so
 echo "Checking size of pyth_oracle.so for pythnet"
