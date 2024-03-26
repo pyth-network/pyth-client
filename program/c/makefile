@@ -11,14 +11,7 @@ else
   include $(SOLANA)/sdk/sbf/c/sbf.mk
 endif
 
-# Propagate the PC_PYTHNET feature by conditionally defining it in a
-# features.h header. The makefile included from Solana SDK does not
-# have an easy way to pass extra C flags which motivates this approach.
-ifdef PC_PYTHNET
-  FEATURES_H_BODY:="\#pragma once\n\#define PC_PYTHNET 1"
-else
-  FEATURES_H_BODY:="\#pragma once"
-endif
+FEATURES_H_BODY:="\#pragma once"
 
 
 .PHONY: features.h # Putting this in .PHONY makes sure the header is always regenerated

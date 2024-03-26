@@ -27,12 +27,9 @@ extern "C" {
 #define PC_NUM_COMP_PYTHNET     128
 
 // PC_NUM_COMP - number of price components in use
-#ifdef PC_PYTHNET
 // Not whole PC_NUM_COMP_PYTHNET because of stack issues appearing in upd_aggregate()
 #define PC_NUM_COMP 64
-#else
-#define PC_NUM_COMP PC_NUM_COMP_SOLANA
-#endif
+
 
 #define PC_PROD_ACC_SIZE    512
 #define PC_EXP_DECAY         -9
@@ -209,7 +206,6 @@ typedef struct pc_price
   pc_price_comp_t comp_[PC_NUM_COMP];// component prices
 } pc_price_t;
 
-#ifdef PC_PYTHNET
 
 // Replace Solana component size's contribution with Pythnet's
 #define PC_EXPECTED_PRICE_T_SIZE_PYTHNET (3312 \
@@ -220,9 +216,6 @@ typedef struct pc_price
 static_assert( sizeof( pc_price_t ) == PC_EXPECTED_PRICE_T_SIZE_PYTHNET, "" );
 #undef PC_EXPECTED_PRICE_SIZE_PYTHNET
 
-#else
-static_assert( sizeof( pc_price_t ) == 3312, "" );
-#endif
 
 // This constant needs to be an upper bound of the price account size, it is used within pythd for ztsd.
 // It is set tighly to the current price account + 96 component prices + 48 bytes for cumulative sums

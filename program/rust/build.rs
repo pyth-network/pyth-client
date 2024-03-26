@@ -24,15 +24,6 @@ fn main() {
     eprintln!("OUT_DIR is {}", out_dir);
     let out_dir = PathBuf::from(out_dir);
 
-    let mut make_extra_flags = vec![];
-    let mut clang_extra_flags = vec![];
-
-    // Define PC_PYTHNET for the C binary build
-    make_extra_flags.push("PC_PYTHNET=1");
-
-    // Define PC_PYTHNET for the bindings build
-    clang_extra_flags.push("-DPC_PYTHNET=1");
-
     let mut make_targets = vec![];
     if target_arch == "bpf" {
         make_targets.push("cpyth-bpf");
@@ -48,7 +39,7 @@ fn main() {
     if has_feat_check {
         eprintln!("WARNING: `check` feature active, make build is skipped");
     } else {
-        do_make_build(make_extra_flags, make_targets, &out_dir);
+        do_make_build(make_targets, &out_dir);
 
         // Link against the right library for the architecture
         if target_arch == "bpf" {
@@ -71,7 +62,6 @@ fn main() {
     // Generate and write bindings
     let bindings = Builder::default()
         .clang_arg(format!("-I{:}", get_solana_inc_path().display()))
-        .clang_args(clang_extra_flags)
         .header("./src/bindings.h")
         .rustfmt_bindings(true)
         .generate()
@@ -85,14 +75,13 @@ fn main() {
     println!("cargo:rerun-if-changed=../");
 }
 
-fn do_make_build(extra_flags: Vec<&str>, targets: Vec<&str>, out_dir: &Path) {
+fn do_make_build(targets: Vec<&str>, out_dir: &Path) {
     // We must forward OUT_DIR as an env variable to the make script otherwise it will output
     // its artifacts to the wrong place.
     let make_output = std::process::Command::new("make")
         .env("VERBOSE", "1")
         .env("OUT_DIR", out_dir.display().to_string())
         .current_dir("../c")
-        .args(extra_flags)
         .args(targets)
         .output()
         .expect("Failed to run make for C oracle program");
