@@ -12,7 +12,6 @@ use {
 fn main() {
     let target_arch = std::env::var("CARGO_CFG_TARGET_ARCH").unwrap();
 
-    let has_feat_pythnet = std::env::var("CARGO_FEATURE_PYTHNET").is_ok();
     let has_feat_check = std::env::var("CARGO_FEATURE_CHECK").is_ok();
 
     // OUT_DIR is the path cargo provides to a build directory under `target/` specifically for
@@ -28,13 +27,11 @@ fn main() {
     let mut make_extra_flags = vec![];
     let mut clang_extra_flags = vec![];
 
-    if has_feat_pythnet {
-        // Define PC_PYTHNET for the C binary build
-        make_extra_flags.push("PC_PYTHNET=1");
+    // Define PC_PYTHNET for the C binary build
+    make_extra_flags.push("PC_PYTHNET=1");
 
-        // Define PC_PYTHNET for the bindings build
-        clang_extra_flags.push("-DPC_PYTHNET=1");
-    }
+    // Define PC_PYTHNET for the bindings build
+    clang_extra_flags.push("-DPC_PYTHNET=1");
 
     let mut make_targets = vec![];
     if target_arch == "bpf" {

@@ -1,26 +1,21 @@
 repos:
-- repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v3.2.0
-  hooks:
-  - id: trailing-whitespace
-    files : program/
-  - id: end-of-file-fixer
-    files : program/
-  - id: check-added-large-files
-- repo: local
-  hooks:
-    - id: cargo-fmt
-      name: Cargo Fmt
-      language: "rust"
-      entry: cargo +nightly-2023-03-01 fmt
-      pass_filenames: false
-    - id: cargo-clippy-solana
-      name: Cargo Clippy Solana
-      language: "rust"
-      entry : cargo +nightly-2023-03-01 clippy --tests --features check -- -D warnings
-      pass_filenames : false
-    - id: cargo-clippy-pythnet
-      name: Cargo Clippy Pythnet
-      language: "rust"
-      entry : cargo +nightly-2023-03-01 clippy --tests --features pythnet,check -- -D warnings
-      pass_filenames : false
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v3.2.0
+    hooks:
+      - id: trailing-whitespace
+        files: program/
+      - id: end-of-file-fixer
+        files: program/
+      - id: check-added-large-files
+  - repo: local
+    hooks:
+      - id: cargo-fmt
+        name: Cargo Fmt
+        language: "rust"
+        entry: cargo +nightly-2023-03-01 fmt
+        pass_filenames: false
+      - id: cargo-clippy-pythnet
+        name: Cargo Clippy Pythnet
+        language: "rust"
+        entry: cargo +nightly-2023-03-01 clippy --tests -- -D warnings
+        pass_filenames: false

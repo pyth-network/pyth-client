@@ -46,7 +46,6 @@ lazy_static = "1.4.0"
 check = [] # Skips make build in build.rs, use with cargo-clippy and cargo-check
 debug = []
 library = []
-pythnet = [] # logic-affecting features start with this one
 
 [lib]
 crate-type = ["cdylib", "lib"]

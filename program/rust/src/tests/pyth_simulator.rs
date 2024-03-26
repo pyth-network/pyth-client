@@ -75,28 +75,6 @@ lazy_static::lazy_static! {
     // simulator. lazy_static makes this happen only once per test
     // run.
     static ref ORACLE_PROGRAM_BINARY_PATH: PathBuf = {
-
-    // Detect features and pass them onto cargo-build-bpf.
-    // IMPORTANT: All features of this crate must have gates added to this vector.
-    let features: Vec<&str> = vec!["pythnet"];
-
-    let mut cmd = std::process::Command::new("cargo");
-    cmd.arg("build-bpf");
-
-    if !features.is_empty() {
-        cmd.arg("--features");
-        cmd.args(features);
-    }
-
-    let status = cmd.status().unwrap();
-
-    if !status.success() {
-        panic!(
-        "cargo-build-bpf did not exit with 0 (code {:?})",
-        status.code()
-        );
-    }
-
     let target_dir = concat!(env!("CARGO_MANIFEST_DIR"), "/../../target");
 
     PathBuf::from(target_dir).join("deploy/pyth_oracle.so")
