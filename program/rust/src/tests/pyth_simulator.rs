@@ -70,17 +70,6 @@ use {
     },
 };
 
-lazy_static::lazy_static! {
-    // Build the oracle binary and make it available to the
-    // simulator. lazy_static makes this happen only once per test
-    // run.
-    static ref ORACLE_PROGRAM_BINARY_PATH: PathBuf = {
-    let target_dir = concat!(env!("CARGO_MANIFEST_DIR"), "/../../target");
-
-    PathBuf::from(target_dir).join("deploy/pyth_oracle.so")
-    };
-}
-
 /// Simulator for the state of the pyth program on Solana. You can run solana transactions against
 /// this struct to test how pyth instructions execute in the Solana runtime.
 pub struct PythSimulator {
@@ -113,7 +102,9 @@ struct ProductMetadata {
 impl PythSimulator {
     /// Deploys the oracle program as upgradable
     pub async fn new() -> PythSimulator {
-        let mut bpf_data = read_file(&*ORACLE_PROGRAM_BINARY_PATH);
+        let target_dir = concat!(env!("CARGO_MANIFEST_DIR"), "/../../target");
+        let oracle_program_binary_path = PathBuf::from(target_dir).join("deploy/pyth_oracle.so");
+        let mut bpf_data = read_file(&oracle_program_binary_path);
 
         let mut program_test = ProgramTest::default();
         let program_key = Pubkey::new_unique();

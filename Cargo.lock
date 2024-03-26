@@ -2514,7 +2514,6 @@ dependencies = [
  "byteorder",
  "csv",
  "hex 0.3.2",
- "lazy_static",
  "num-derive",
  "num-traits",
  "pythnet-sdk",
