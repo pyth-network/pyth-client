@@ -163,7 +163,7 @@ pub fn upd_price(
 
     // Try to update the aggregate
     #[allow(unused_variables)]
-    let aggregate_updated = if clock.slot > latest_aggregate_price.pub_slot_ {
+    if clock.slot > latest_aggregate_price.pub_slot_ {
         let updated = unsafe {
             // NOTE: c_upd_aggregate must use a raw pointer to price
             // data. Solana's `<account>.borrow_*` methods require exclusive
@@ -184,26 +184,22 @@ pub fn upd_price(
             unsafe {
                 c_upd_twap(price_account.try_borrow_mut_data()?.as_mut_ptr(), agg_diff);
             }
+            let mut price_data =
+                load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
+            // We want to send a message every time the aggregate price updates. However, during the migration,
+            // not every publisher will necessarily provide the accumulator accounts. The message_sent_ flag
+            // ensures that after every aggregate update, the next publisher who provides the accumulator accounts
+            // will send the message.
+            price_data.message_sent_ = 0;
+            price_data.update_price_cumulative()?;
         }
-        updated
-    } else {
-        false
-    };
+    }
 
     // Reload price data as a struct after c_upd_aggregate() borrow is dropped
     let mut price_data = load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
 
     // Feature-gated accumulator-specific code, used only on pythnet/pythtest
     {
-        // We want to send a message every time the aggregate price updates. However, during the migration,
-        // not every publisher will necessarily provide the accumulator accounts. The message_sent_ flag
-        // ensures that after every aggregate update, the next publisher who provides the accumulator accounts
-        // will send the message.
-        if aggregate_updated {
-            price_data.message_sent_ = 0;
-            price_data.update_price_cumulative()?;
-        }
-
         if let Some(accumulator_accounts) = maybe_accumulator_accounts {
             if price_data.message_sent_ == 0 {
                 // Check that the oracle PDA is correctly configured for the program we are calling.
