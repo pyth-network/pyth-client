@@ -1,20 +1,10 @@
-#[cfg(feature = "pythnet")]
-use {
-    crate::accounts::{
-        PythOracleSerialize,
-        UPD_PRICE_WRITE_SEED,
-    },
-    solana_program::instruction::{
-        AccountMeta,
-        Instruction,
-    },
-    solana_program::program::invoke_signed,
-};
 use {
     crate::{
         accounts::{
             PriceAccount,
             PriceInfo,
+            PythOracleSerialize,
+            UPD_PRICE_WRITE_SEED,
         },
         deserialize::{
             load,
@@ -35,6 +25,11 @@ use {
         account_info::AccountInfo,
         clock::Clock,
         entrypoint::ProgramResult,
+        instruction::{
+            AccountMeta,
+            Instruction,
+        },
+        program::invoke_signed,
         program_error::ProgramError,
         pubkey::Pubkey,
         sysvar::Sysvar,
@@ -44,10 +39,7 @@ use {
 #[cfg(target_arch = "bpf")]
 #[link(name = "cpyth-bpf")]
 extern "C" {
-    #[cfg(feature = "pythnet")]
     pub fn c_upd_aggregate_pythnet(_input: *mut u8, clock_slot: u64, clock_timestamp: i64) -> bool;
-    #[cfg(not(feature = "pythnet"))]
-    pub fn c_upd_aggregate_solana(_input: *mut u8, clock_slot: u64, clock_timestamp: i64) -> bool;
 
     #[allow(unused)]
     pub fn c_upd_twap(_input: *mut u8, nslots: i64);
@@ -56,10 +48,7 @@ extern "C" {
 #[cfg(not(target_arch = "bpf"))]
 #[link(name = "cpyth-native")]
 extern "C" {
-    #[cfg(feature = "pythnet")]
     pub fn c_upd_aggregate_pythnet(_input: *mut u8, clock_slot: u64, clock_timestamp: i64) -> bool;
-    #[cfg(not(feature = "pythnet"))]
-    pub fn c_upd_aggregate_solana(_input: *mut u8, clock_slot: u64, clock_timestamp: i64) -> bool;
 
     #[allow(unused)]
     pub fn c_upd_twap(_input: *mut u8, nslots: i64);
@@ -67,10 +56,7 @@ extern "C" {
 
 #[inline]
 pub unsafe fn c_upd_aggregate(input: *mut u8, clock_slot: u64, clock_timestamp: i64) -> bool {
-    #[cfg(feature = "pythnet")]
-    return c_upd_aggregate_pythnet(input, clock_slot, clock_timestamp);
-    #[cfg(not(feature = "pythnet"))]
-    return c_upd_aggregate_solana(input, clock_slot, clock_timestamp);
+    c_upd_aggregate_pythnet(input, clock_slot, clock_timestamp)
 }
 
 /// Publish component price, never returning an error even if the update failed
@@ -177,7 +163,7 @@ pub fn upd_price(
 
     // Try to update the aggregate
     #[allow(unused_variables)]
-    let aggregate_updated = if clock.slot > latest_aggregate_price.pub_slot_ {
+    if clock.slot > latest_aggregate_price.pub_slot_ {
         let updated = unsafe {
             // NOTE: c_upd_aggregate must use a raw pointer to price
             // data. Solana's `<account>.borrow_*` methods require exclusive
@@ -198,27 +184,22 @@ pub fn upd_price(
             unsafe {
                 c_upd_twap(price_account.try_borrow_mut_data()?.as_mut_ptr(), agg_diff);
             }
+            let mut price_data =
+                load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
+            // We want to send a message every time the aggregate price updates. However, during the migration,
+            // not every publisher will necessarily provide the accumulator accounts. The message_sent_ flag
+            // ensures that after every aggregate update, the next publisher who provides the accumulator accounts
+            // will send the message.
+            price_data.message_sent_ = 0;
+            price_data.update_price_cumulative()?;
         }
-        updated
-    } else {
-        false
-    };
+    }
 
     // Reload price data as a struct after c_upd_aggregate() borrow is dropped
     let mut price_data = load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
 
     // Feature-gated accumulator-specific code, used only on pythnet/pythtest
-    #[cfg(feature = "pythnet")]
     {
-        // We want to send a message every time the aggregate price updates. However, during the migration,
-        // not every publisher will necessarily provide the accumulator accounts. The message_sent_ flag
-        // ensures that after every aggregate update, the next publisher who provides the accumulator accounts
-        // will send the message.
-        if aggregate_updated {
-            price_data.message_sent_ = 0;
-            price_data.update_price_cumulative()?;
-        }
-
         if let Some(accumulator_accounts) = maybe_accumulator_accounts {
             if price_data.message_sent_ == 0 {
                 // Check that the oracle PDA is correctly configured for the program we are calling.

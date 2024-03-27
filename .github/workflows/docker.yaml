@@ -61,17 +61,7 @@ jobs:
         run : |
             docker create -ti --name container "${DOCKER_IMAGE}" bash
             docker cp container:/home/pyth/pyth-client/target/pyth/pythnet/pyth_oracle_pythnet.so .
-            docker cp container:/home/pyth/pyth-client/target/pyth/solana/pyth_oracle_solana.so .
             docker rm -f container
-
-      - name : Publish Solana binary
-        if : env.IS_ORACLE_RELEASE == 'true'
-        uses: svenstaro/upload-release-action@133984371c30d34e38222a64855679a414cb7575
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ./pyth_oracle_solana.so
-          asset_name: pyth_oracle_solana.so
-          tag: ${{ github.ref }}
   
       - name : Publish Pythnet binary
         if : env.IS_ORACLE_RELEASE == 'true'

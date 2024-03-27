@@ -1,7 +1,4 @@
-#[cfg(feature = "pythnet")]
 pub use price_pythnet::*;
-#[cfg(not(feature = "pythnet"))]
-pub use price_solana::*;
 use {
     super::{
         AccountHeader,
@@ -21,7 +18,6 @@ use {
 };
 
 /// Pythnet-specific PriceAccount implementation
-#[cfg(feature = "pythnet")]
 mod price_pythnet {
     pub type PriceAccount = PriceAccountPythnet;
 
@@ -188,79 +184,6 @@ mod price_pythnet {
             // This is expected to saturate at 0 most of the time (while the feed is up).
             self.num_down_slots += slot_gap.saturating_sub(latency);
         }
-    }
-}
-
-/// Solana-specific PriceAccount implementation
-#[cfg(not(feature = "pythnet"))]
-mod price_solana {
-    pub type PriceAccount = PriceAccountSolana;
-
-    use {
-        super::*,
-        crate::c_oracle_header::PC_NUM_COMP_SOLANA,
-    };
-
-    /// Legacy Solana-only price account format. This price account
-    /// schema is maintained for compatibility reasons.
-    ///
-    /// The main source of incompatibility on mainnet/devnet is the
-    /// possibility of strict account size checks which could break
-    /// existing users if they encountered a longer struct like
-    /// PriceAccountPythnet (see mod price_pythnet for details)
-    #[repr(C)]
-    #[derive(Copy, Clone, Pod, Zeroable)]
-    pub struct PriceAccountSolana {
-        pub header:             AccountHeader,
-        /// Type of the price account
-        pub price_type:         u32,
-        /// Exponent for the published prices
-        pub exponent:           i32,
-        /// Current number of authorized publishers
-        pub num_:               u32,
-        /// Number of valid quotes for the last aggregation
-        pub num_qt_:            u32,
-        /// Last slot with a succesful aggregation (status : TRADING)
-        pub last_slot_:         u64,
-        /// Second to last slot where aggregation was attempted
-        pub valid_slot_:        u64,
-        /// Ema for price
-        pub twap_:              PriceEma,
-        /// Ema for confidence
-        pub twac_:              PriceEma,
-        /// Last time aggregation was attempted
-        pub timestamp_:         i64,
-        /// Minimum valid publisher quotes for a succesful aggregation
-        pub min_pub_:           u8,
-        /// Whether the current aggregate price has been sent as a message to the message buffer.
-        /// 0 = false, 1 = true. (this is a u8 to make the Pod trait happy)
-        pub message_sent_:      u8,
-        /// Configurable max latency in slots between send and receive
-        pub max_latency_:       u8,
-        /// Unused placeholder for alignment
-        pub unused_2_:          i8,
-        pub unused_3_:          i32,
-        /// Corresponding product account
-        pub product_account:    Pubkey,
-        /// Next price account in the list
-        pub next_price_account: Pubkey,
-        /// Second to last slot where aggregation was succesful (i.e. status : TRADING)
-        pub prev_slot_:         u64,
-        /// Aggregate price at prev_slot_
-        pub prev_price_:        i64,
-        /// Confidence interval at prev_slot_
-        pub prev_conf_:         u64,
-        /// Timestamp of prev_slot_
-        pub prev_timestamp_:    i64,
-        /// Last attempted aggregate results
-        pub agg_:               PriceInfo,
-        /// Publishers' price components
-        pub comp_:              [PriceComponent; PC_NUM_COMP_SOLANA as usize],
-    }
-
-    impl PythAccount for PriceAccountSolana {
-        const ACCOUNT_TYPE: u32 = PC_ACCTYPE_PRICE;
-        const INITIAL_SIZE: u32 = size_of::<PriceAccountSolana>() as u32;
     }
 }
 

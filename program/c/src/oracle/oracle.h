@@ -23,16 +23,12 @@ extern "C" {
 #define PC_MAP_TABLE_SIZE   640
 
   // Total price component slots available
-#define PC_NUM_COMP_SOLANA      32
 #define PC_NUM_COMP_PYTHNET     128
 
 // PC_NUM_COMP - number of price components in use
-#ifdef PC_PYTHNET
 // Not whole PC_NUM_COMP_PYTHNET because of stack issues appearing in upd_aggregate()
 #define PC_NUM_COMP 64
-#else
-#define PC_NUM_COMP PC_NUM_COMP_SOLANA
-#endif
+
 
 #define PC_PROD_ACC_SIZE    512
 #define PC_EXP_DECAY         -9
@@ -209,20 +205,47 @@ typedef struct pc_price
   pc_price_comp_t comp_[PC_NUM_COMP];// component prices
 } pc_price_t;
 
-#ifdef PC_PYTHNET
 
-// Replace Solana component size's contribution with Pythnet's
-#define PC_EXPECTED_PRICE_T_SIZE_PYTHNET (3312 \
-					- PC_NUM_COMP_SOLANA * sizeof(pc_price_comp_t) \
+/*
+The value 240 is derived from the fixed size of the pc_price_t struct excluding the size of the comp_ array.
+Here is the breakdown of the sizes (in bytes) for each field within the pc_price_t struct:
+
+- magic_ (uint32_t): 4 bytes
+- ver_ (uint32_t): 4 bytes
+- type_ (uint32_t): 4 bytes
+- size_ (uint32_t): 4 bytes
+- ptype_ (uint32_t): 4 bytes
+- expo_ (int32_t): 4 bytes
+- num_ (uint32_t): 4 bytes
+- num_qt_ (uint32_t): 4 bytes
+- last_slot_ (uint64_t): 8 bytes
+- valid_slot_ (uint64_t): 8 bytes
+- twap_ (pc_ema_t): 24 bytes (3 fields of int64_t each taking 8 bytes)
+- twac_ (pc_ema_t): 24 bytes (similar to twap_)
+- timestamp_ (int64_t): 8 bytes
+- min_pub_ (uint8_t): 1 byte
+- message_sent_ (int8_t): 1 byte
+- max_latency_ (uint8_t): 1 byte
+- drv3_ (int8_t): 1 byte
+- drv4_ (int32_t): 4 bytes
+- prod_ (pc_pub_key_t): 32 bytes (assuming pc_pub_key_t is a 32-byte array or struct)
+- next_ (pc_pub_key_t): 32 bytes (similar to prod_)
+- prev_slot_ (uint64_t): 8 bytes
+- prev_price_ (int64_t): 8 bytes
+- prev_conf_ (uint64_t): 8 bytes
+- prev_timestamp_ (int64_t): 8 bytes
+- agg_ (pc_price_info_t): 32 bytes
+
+Adding up all these sizes gives us a total of 240 bytes for the fixed part of the pc_price_t struct.
+The size of the comp_ array is variable and depends on PC_NUM_COMP, hence it is calculated separately and added to the base size of 240 bytes.
+*/
+#define PC_EXPECTED_PRICE_T_SIZE_PYTHNET (240 \
 					+ PC_NUM_COMP * sizeof(pc_price_comp_t) \
 					)
 
 static_assert( sizeof( pc_price_t ) == PC_EXPECTED_PRICE_T_SIZE_PYTHNET, "" );
-#undef PC_EXPECTED_PRICE_SIZE_PYTHNET
+#undef PC_EXPECTED_PRICE_T_SIZE_PYTHNET
 
-#else
-static_assert( sizeof( pc_price_t ) == 3312, "" );
-#endif
 
 // This constant needs to be an upper bound of the price account size, it is used within pythd for ztsd.
 // It is set tighly to the current price account + 96 component prices + 48 bytes for cumulative sums
