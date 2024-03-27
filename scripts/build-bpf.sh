@@ -20,7 +20,7 @@ set -x
 cd "${PYTH_DIR}"
 
 # Re-run tests affected by features
-cargo test --locked
+cargo-test-bpf
 
 cargo-build-bpf -- --locked -Z build-std=std,panic_abort -Z build-std-features=panic_immediate_abort
 sha256sum ./target/**/*.so

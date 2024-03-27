@@ -102,16 +102,6 @@ struct ProductMetadata {
 impl PythSimulator {
     /// Deploys the oracle program as upgradable
     pub async fn new() -> PythSimulator {
-        let mut cmd = std::process::Command::new("cargo");
-        cmd.arg("build-bpf");
-        let status = cmd.status().unwrap();
-
-        if !status.success() {
-            panic!(
-                "cargo-build-bpf did not exit with 0 (code {:?})",
-                status.code()
-            );
-        }
         let target_dir = concat!(env!("CARGO_MANIFEST_DIR"), "/../../target");
         let oracle_program_binary_path = PathBuf::from(target_dir).join("deploy/pyth_oracle.so");
         let mut bpf_data = read_file(&oracle_program_binary_path);
