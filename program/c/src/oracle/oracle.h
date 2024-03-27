@@ -206,7 +206,6 @@ typedef struct pc_price
 } pc_price_t;
 
 
-// Replace Solana component size's contribution with Pythnet's
 /*
 The value 240 is derived from the fixed size of the pc_price_t struct excluding the size of the comp_ array.
 Here is the breakdown of the sizes (in bytes) for each field within the pc_price_t struct:
