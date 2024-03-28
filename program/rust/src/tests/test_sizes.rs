@@ -6,6 +6,7 @@ use {
             PermissionAccount,
             PriceAccount,
             PriceComponent,
+            PriceCumulative,
             PriceEma,
             PriceInfo,
             ProductAccount,
@@ -14,6 +15,7 @@ use {
         c_oracle_header::{
             PC_MAP_TABLE_SIZE,
             PC_NUM_COMP,
+            PC_NUM_COMP_PYTHNET,
             PC_VERSION,
             ZSTD_UPPER_BOUND,
         },
@@ -52,52 +54,22 @@ fn test_sizes() {
         size_of::<PriceComponent>(),
         size_of::<Pubkey>() + 2 * size_of::<PriceInfo>()
     );
-
-    #[cfg(feature = "pythnet")]
-    {
-        use crate::{
-            accounts::PriceCumulative,
-            c_oracle_header::PC_NUM_COMP_PYTHNET,
-        };
-
-        // Sanity-check the Pythnet PC_NUM_COMP
-        assert_eq!(PC_NUM_COMP, 64);
-
-        assert_eq!(
-            size_of::<PriceAccount>(),
-            48 + u64::BITS as usize
-                + 3 * size_of::<Pubkey>()
-                + size_of::<PriceInfo>()
-                + (PC_NUM_COMP_PYTHNET as usize) * size_of::<PriceComponent>()
-                + size_of::<PriceEma>()
-                + size_of::<PriceEma>()
-                + size_of::<PriceCumulative>()
-                + size_of::<PriceCumulative>()
-        );
-        assert_eq!(size_of::<PriceAccount>(), 12576);
-        assert!(size_of::<PriceAccount>() == try_convert::<_, usize>(ZSTD_UPPER_BOUND).unwrap());
-
-        assert_eq!(size_of::<PriceCumulative>(), 48);
-    }
-
-    #[cfg(not(feature = "pythnet"))]
-    {
-        use crate::c_oracle_header::PC_NUM_COMP_SOLANA;
-
-        // Sanity-check the Solana PC_NUM_COMP
-        assert_eq!(PC_NUM_COMP, PC_NUM_COMP_SOLANA);
-
-        assert_eq!(
-            size_of::<PriceAccount>(),
-            48 + u64::BITS as usize
-                + 3 * size_of::<Pubkey>()
-                + size_of::<PriceInfo>()
-                + (PC_NUM_COMP_SOLANA as usize) * size_of::<PriceComponent>()
-        );
-        assert_eq!(size_of::<PriceAccount>(), 3312);
-        assert!(size_of::<PriceAccount>() <= try_convert::<_, usize>(ZSTD_UPPER_BOUND).unwrap());
-    }
-
+    // Sanity-check the Pythnet PC_NUM_COMP
+    assert_eq!(PC_NUM_COMP, 64);
+    assert_eq!(
+        size_of::<PriceAccount>(),
+        48 + u64::BITS as usize
+            + 3 * size_of::<Pubkey>()
+            + size_of::<PriceInfo>()
+            + (PC_NUM_COMP_PYTHNET as usize) * size_of::<PriceComponent>()
+            + size_of::<PriceEma>()
+            + size_of::<PriceEma>()
+            + size_of::<PriceCumulative>()
+            + size_of::<PriceCumulative>()
+    );
+    assert_eq!(size_of::<PriceAccount>(), 12576);
+    assert!(size_of::<PriceAccount>() == try_convert::<_, usize>(ZSTD_UPPER_BOUND).unwrap());
+    assert_eq!(size_of::<PriceCumulative>(), 48);
     assert_eq!(size_of::<CommandHeader>(), 8);
     assert_eq!(size_of::<AddPriceArgs>(), 16);
     assert_eq!(size_of::<InitPriceArgs>(), 16);

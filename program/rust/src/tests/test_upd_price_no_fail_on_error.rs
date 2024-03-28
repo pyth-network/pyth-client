@@ -119,16 +119,8 @@ fn test_upd_price_no_fail_on_error_no_fail_on_error() {
         assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_TRADING);
         assert_eq!(price_data.valid_slot_, 0);
         assert_eq!(price_data.agg_.pub_slot_, 1);
-        #[cfg(not(feature = "pythnet"))]
-        {
-            assert_eq!(price_data.agg_.price_, 0);
-            assert_eq!(price_data.agg_.status_, PC_STATUS_UNKNOWN);
-        }
-        #[cfg(feature = "pythnet")]
-        {
-            assert_eq!(price_data.agg_.price_, 42);
-            assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
-        }
+        assert_eq!(price_data.agg_.price_, 42);
+        assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
     }
 
     // Invalid updates, such as publishing an update for the current slot,
@@ -169,16 +161,8 @@ fn test_upd_price_no_fail_on_error_no_fail_on_error() {
         assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_TRADING);
         assert_eq!(price_data.valid_slot_, 0);
         assert_eq!(price_data.agg_.pub_slot_, 1);
-        #[cfg(not(feature = "pythnet"))]
-        {
-            assert_eq!(price_data.agg_.price_, 0);
-            assert_eq!(price_data.agg_.status_, PC_STATUS_UNKNOWN);
-        }
-        #[cfg(feature = "pythnet")]
-        {
-            assert_eq!(price_data.agg_.price_, 42);
-            assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
-        }
+        assert_eq!(price_data.agg_.price_, 42);
+        assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
     }
 }
 

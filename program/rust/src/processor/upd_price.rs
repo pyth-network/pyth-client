@@ -1,20 +1,10 @@
-#[cfg(feature = "pythnet")]
-use {
-    crate::accounts::{
-        PythOracleSerialize,
-        UPD_PRICE_WRITE_SEED,
-    },
-    solana_program::instruction::{
-        AccountMeta,
-        Instruction,
-    },
-    solana_program::program::invoke_signed,
-};
 use {
     crate::{
         accounts::{
             PriceAccount,
             PriceInfo,
+            PythOracleSerialize,
+            UPD_PRICE_WRITE_SEED,
         },
         c_oracle_header::PC_STATUS_TRADING,
         deserialize::{
@@ -36,6 +26,11 @@ use {
         account_info::AccountInfo,
         clock::Clock,
         entrypoint::ProgramResult,
+        instruction::{
+            AccountMeta,
+            Instruction,
+        },
+        program::invoke_signed,
         program_error::ProgramError,
         pubkey::Pubkey,
         sysvar::Sysvar,
@@ -45,10 +40,7 @@ use {
 #[cfg(target_arch = "bpf")]
 #[link(name = "cpyth-bpf")]
 extern "C" {
-    #[cfg(feature = "pythnet")]
     pub fn c_upd_aggregate_pythnet(_input: *mut u8, clock_slot: u64, clock_timestamp: i64) -> bool;
-    #[cfg(not(feature = "pythnet"))]
-    pub fn c_upd_aggregate_solana(_input: *mut u8, clock_slot: u64, clock_timestamp: i64) -> bool;
 
     #[allow(unused)]
     pub fn c_upd_twap(_input: *mut u8, nslots: i64);
@@ -57,10 +49,7 @@ extern "C" {
 #[cfg(not(target_arch = "bpf"))]
 #[link(name = "cpyth-native")]
 extern "C" {
-    #[cfg(feature = "pythnet")]
     pub fn c_upd_aggregate_pythnet(_input: *mut u8, clock_slot: u64, clock_timestamp: i64) -> bool;
-    #[cfg(not(feature = "pythnet"))]
-    pub fn c_upd_aggregate_solana(_input: *mut u8, clock_slot: u64, clock_timestamp: i64) -> bool;
 
     #[allow(unused)]
     pub fn c_upd_twap(_input: *mut u8, nslots: i64);
@@ -68,10 +57,7 @@ extern "C" {
 
 #[inline]
 pub unsafe fn c_upd_aggregate(input: *mut u8, clock_slot: u64, clock_timestamp: i64) -> bool {
-    #[cfg(feature = "pythnet")]
-    return c_upd_aggregate_pythnet(input, clock_slot, clock_timestamp);
-    #[cfg(not(feature = "pythnet"))]
-    return c_upd_aggregate_solana(input, clock_slot, clock_timestamp);
+    c_upd_aggregate_pythnet(input, clock_slot, clock_timestamp)
 }
 
 /// Publish component price, never returning an error even if the update failed
@@ -89,9 +75,9 @@ pub fn upd_price_no_fail_on_error(
     }
 }
 
-/// Update a publisher's price for the provided product. This operation's behavior varies based on the feature flag:
-/// - For `feature = "pythnet"`, price aggregation will trigger on the same slot for every price update, resulting in a new aggregate price in the account.
-/// - For non-`pythnet` configurations, the first price update in a slot triggers price aggregation for the prices of the previous slot, resulting in a new aggregate price in the account.
+/// Update a publisher's price for the provided product. If this update is
+/// the first update in a slot, this operation will also trigger price aggregation
+/// and result in a new aggregate price in the account.
 ///
 /// account[0] the publisher's account (funds the tx) [signer writable]
 ///            fails if the publisher's public key is not permissioned for the price account.
@@ -176,68 +162,55 @@ pub fn upd_price(
         )?;
     }
 
-    #[cfg(feature = "pythnet")]
-    {
-        // Reload price data as a struct after c_upd_aggregate() borrow is dropped
-        let mut price_data = load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
+    // Try to update the publisher's price
+    if is_component_update(cmd_args)? {
+        // IMPORTANT: If the publisher does not meet the price/conf
+        // ratio condition, its price will not count for the next
+        // aggregate.
+        let status: u32 =
+            get_status_for_conf_price_ratio(cmd_args.price, cmd_args.confidence, cmd_args.status)?;
 
-        // Try to update the publisher's price
-        if is_component_update(cmd_args)? {
-            // IMPORTANT: If the publisher does not meet the price/conf
-            // ratio condition, its price will not count for the next
-            // aggregate.
-            let status: u32 = get_status_for_conf_price_ratio(
-                cmd_args.price,
-                cmd_args.confidence,
-                cmd_args.status,
-            )?;
-
-            {
-                let publisher_price = &mut price_data.comp_[publisher_index].latest_;
-                publisher_price.price_ = cmd_args.price;
-                publisher_price.conf_ = cmd_args.confidence;
-                publisher_price.status_ = status;
-                publisher_price.pub_slot_ = cmd_args.publishing_slot;
-            }
+        {
+            let mut price_data =
+                load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
+            let publisher_price = &mut price_data.comp_[publisher_index].latest_;
+            publisher_price.price_ = cmd_args.price;
+            publisher_price.conf_ = cmd_args.confidence;
+            publisher_price.status_ = status;
+            publisher_price.pub_slot_ = cmd_args.publishing_slot;
         }
     }
-
-    let should_call_c_upd_aggregate: bool = if cfg!(feature = "pythnet") {
-        true // clock.slot >= latest_aggregate_price.pub_slot_ is always true
-    } else {
-        clock.slot > latest_aggregate_price.pub_slot_
-    };
 
     // get number of slots from last update
     let slots_since_last_update = clock.slot - latest_aggregate_price.pub_slot_;
 
-    let aggregate_updated = if should_call_c_upd_aggregate {
-        if slots_since_last_update > 0 && latest_aggregate_price.status_ == PC_STATUS_TRADING {
-            let mut price_data =
-                load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
-            price_data.prev_slot_ = price_data.agg_.pub_slot_;
-            price_data.prev_price_ = price_data.agg_.price_;
-            price_data.prev_conf_ = price_data.agg_.conf_;
-            price_data.prev_timestamp_ = clock.unix_timestamp;
-        }
-        unsafe {
-            c_upd_aggregate(
-                price_account.try_borrow_mut_data()?.as_mut_ptr(),
-                clock.slot,
-                clock.unix_timestamp,
-            )
-        }
-    } else {
-        false // Do not call c_upd_aggregate and set aggregate_updated to false
+    // If the price update is the first in the slot and the aggregate is trading, update the previous slot, price, conf, and timestamp.
+    if slots_since_last_update > 0 && latest_aggregate_price.status_ == PC_STATUS_TRADING {
+        let mut price_data = load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
+        price_data.prev_slot_ = price_data.agg_.pub_slot_;
+        price_data.prev_price_ = price_data.agg_.price_;
+        price_data.prev_conf_ = price_data.agg_.conf_;
+        price_data.prev_timestamp_ = clock.unix_timestamp;
     };
 
-    if aggregate_updated {
-        // The price_data borrow happens in a scope because it must be
-        // dropped before we borrow again as raw data pointer for the C
-        // aggregation logic.
-        #[cfg(feature = "pythnet")]
+
+    let updated = unsafe {
+        // NOTE: c_upd_aggregate must use a raw pointer to price
+        // data. Solana's `<account>.borrow_*` methods require exclusive
+        // access, i.e. no other borrow can exist for the account.
+        c_upd_aggregate(
+            price_account.try_borrow_mut_data()?.as_mut_ptr(),
+            clock.slot,
+            clock.unix_timestamp,
+        )
+    };
+
+    // If the aggregate was successfully updated, calculate the difference and update TWAP.
+    if updated {
+        let agg_diff = (clock.slot as i64)
+            - load_checked::<PriceAccount>(price_account, cmd_args.header.version)?.prev_slot_
+                as i64;
         {
-            // get price data here
             let mut price_data =
                 load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
             // check if its the first price update in the slot
@@ -250,35 +223,24 @@ pub fn upd_price(
             price_data.twac_ = price_data.prev_twac_;
             price_data.price_cumulative = price_data.prev_price_cumulative;
             price_data.update_price_cumulative()?;
+            // We want to send a message every time the aggregate price updates. However, during the migration,
+            // not every publisher will necessarily provide the accumulator accounts. The message_sent_ flag
+            // ensures that after every aggregate update, the next publisher who provides the accumulator accounts
+            // will send the message.
+            price_data.message_sent_ = 0;
         }
+        // Encapsulate TWAP update logic in a function to minimize unsafe block scope.
         unsafe {
-            let prev_slot = {
-                // get price data here
-                let new_price_data =
-                    load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
-                new_price_data.prev_slot_
-            };
-            c_upd_twap(
-                price_account.try_borrow_mut_data()?.as_mut_ptr(),
-                (clock.slot - prev_slot) as i64, // Ensure slots_since_last_update is cast to i64, as expected by the function signature
-            );
+            c_upd_twap(price_account.try_borrow_mut_data()?.as_mut_ptr(), agg_diff);
         }
     }
+
 
     // Reload price data as a struct after c_upd_aggregate() borrow is dropped
     let mut price_data = load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
 
     // Feature-gated accumulator-specific code, used only on pythnet/pythtest
-    #[cfg(feature = "pythnet")]
     {
-        // We want to send a message every time the aggregate price updates. However, during the migration,
-        // not every publisher will necessarily provide the accumulator accounts. The message_sent_ flag
-        // ensures that after every aggregate update, the next publisher who provides the accumulator accounts
-        // will send the message.
-        if aggregate_updated {
-            price_data.message_sent_ = 0;
-        }
-
         if let Some(accumulator_accounts) = maybe_accumulator_accounts {
             if price_data.message_sent_ == 0 {
                 // Check that the oracle PDA is correctly configured for the program we are calling.
@@ -337,24 +299,6 @@ pub fn upd_price(
                 invoke_signed(&create_inputs_ix, accounts, &[auth_seeds_with_bump])?;
                 price_data.message_sent_ = 1;
             }
-        }
-    }
-
-    #[cfg(not(feature = "pythnet"))]
-    // Try to update the publisher's price
-    if is_component_update(cmd_args)? {
-        // IMPORTANT: If the publisher does not meet the price/conf
-        // ratio condition, its price will not count for the next
-        // aggregate.
-        let status: u32 =
-            get_status_for_conf_price_ratio(cmd_args.price, cmd_args.confidence, cmd_args.status)?;
-
-        {
-            let publisher_price = &mut price_data.comp_[publisher_index].latest_;
-            publisher_price.price_ = cmd_args.price;
-            publisher_price.conf_ = cmd_args.confidence;
-            publisher_price.status_ = status;
-            publisher_price.pub_slot_ = cmd_args.publishing_slot;
         }
     }
 
