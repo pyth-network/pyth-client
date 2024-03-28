@@ -31,7 +31,53 @@ mod price_pythnet {
             },
             error::OracleError,
         },
+        std::ops::{
+            Deref,
+            DerefMut,
+            Index,
+            IndexMut,
+        },
     };
+
+    #[repr(C)]
+    #[derive(Copy, Clone)]
+    pub struct PriceComponentArrayWrapper([PriceComponent; PC_NUM_COMP_PYTHNET as usize]);
+
+    // Implementing Index and IndexMut allows PriceComponentArrayWrapper to use array indexing directly,
+    // such as price_account.comp_[i], making it behave more like a native array or slice.
+    impl Index<usize> for PriceComponentArrayWrapper {
+        type Output = PriceComponent;
+
+        fn index(&self, index: usize) -> &Self::Output {
+            &self.0[index]
+        }
+    }
+    impl IndexMut<usize> for PriceComponentArrayWrapper {
+        fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+            &mut self.0[index]
+        }
+    }
+
+    // Implementing Deref and DerefMut allows PriceComponentArrayWrapper to use slice methods directly,
+    // such as len(), making it behave more like a native array or slice.
+    impl Deref for PriceComponentArrayWrapper {
+        type Target = [PriceComponent];
+
+        fn deref(&self) -> &Self::Target {
+            &self.0
+        }
+    }
+
+    impl DerefMut for PriceComponentArrayWrapper {
+        fn deref_mut(&mut self) -> &mut Self::Target {
+            &mut self.0
+        }
+    }
+
+    unsafe impl Pod for PriceComponentArrayWrapper {
+    }
+    unsafe impl Zeroable for PriceComponentArrayWrapper {
+    }
 
     /// Pythnet-only extended price account format. This extension is
     /// an append-only change that adds extra publisher slots and
@@ -39,54 +85,59 @@ mod price_pythnet {
     #[repr(C)]
     #[derive(Copy, Clone, Pod, Zeroable)]
     pub struct PriceAccountPythnet {
-        pub header:             AccountHeader,
+        pub header:                AccountHeader,
         /// Type of the price account
-        pub price_type:         u32,
+        pub price_type:            u32,
         /// Exponent for the published prices
-        pub exponent:           i32,
+        pub exponent:              i32,
         /// Current number of authorized publishers
-        pub num_:               u32,
+        pub num_:                  u32,
         /// Number of valid quotes for the last aggregation
-        pub num_qt_:            u32,
+        pub num_qt_:               u32,
         /// Last slot with a succesful aggregation (status : TRADING)
-        pub last_slot_:         u64,
+        pub last_slot_:            u64,
         /// Second to last slot where aggregation was attempted
-        pub valid_slot_:        u64,
+        pub valid_slot_:           u64,
         /// Ema for price
-        pub twap_:              PriceEma,
+        pub twap_:                 PriceEma,
         /// Ema for confidence
-        pub twac_:              PriceEma,
+        pub twac_:                 PriceEma,
         /// Last time aggregation was attempted
-        pub timestamp_:         i64,
+        pub timestamp_:            i64,
         /// Minimum valid publisher quotes for a succesful aggregation
-        pub min_pub_:           u8,
-        pub message_sent_:      u8,
+        pub min_pub_:              u8,
+        pub message_sent_:         u8,
         /// Configurable max latency in slots between send and receive
-        pub max_latency_:       u8,
+        pub max_latency_:          u8,
         /// Unused placeholder for alignment
-        pub unused_2_:          i8,
-        pub unused_3_:          i32,
+        pub unused_2_:             i8,
+        pub unused_3_:             i32,
         /// Corresponding product account
-        pub product_account:    Pubkey,
+        pub product_account:       Pubkey,
         /// Next price account in the list
-        pub next_price_account: Pubkey,
+        pub next_price_account:    Pubkey,
         /// Second to last slot where aggregation was succesful (i.e. status : TRADING)
-        pub prev_slot_:         u64,
+        pub prev_slot_:            u64,
         /// Aggregate price at prev_slot_
-        pub prev_price_:        i64,
+        pub prev_price_:           i64,
         /// Confidence interval at prev_slot_
-        pub prev_conf_:         u64,
+        pub prev_conf_:            u64,
         /// Timestamp of prev_slot_
-        pub prev_timestamp_:    i64,
+        pub prev_timestamp_:       i64,
         /// Last attempted aggregate results
-        pub agg_:               PriceInfo,
+        pub agg_:                  PriceInfo,
         /// Publishers' price components. NOTE(2023-10-06): On Pythnet, not all
         /// PC_NUM_COMP_PYTHNET slots are used due to stack size
         /// issues in the C code. For iterating over price components,
         /// PC_NUM_COMP must be used.
-        pub comp_:              [PriceComponent; PC_NUM_COMP_PYTHNET as usize],
+        pub comp_:                 PriceComponentArrayWrapper,
+        /// Previous EMA for price and confidence
+        pub prev_twap_:            PriceEma,
+        pub prev_twac_:            PriceEma,
+        /// Previous TWAP cumulative values
+        pub prev_price_cumulative: PriceCumulative,
         /// Cumulative sums of aggregative price and confidence used to compute arithmetic moving averages
-        pub price_cumulative:   PriceCumulative,
+        pub price_cumulative:      PriceCumulative,
     }
 
     impl PriceAccountPythnet {

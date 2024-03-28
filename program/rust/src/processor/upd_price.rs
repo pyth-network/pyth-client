@@ -6,6 +6,7 @@ use {
             PythOracleSerialize,
             UPD_PRICE_WRITE_SEED,
         },
+        c_oracle_header::PC_STATUS_TRADING,
         deserialize::{
             load,
             load_checked,
@@ -161,37 +162,76 @@ pub fn upd_price(
         )?;
     }
 
-    // Try to update the aggregate
-    #[allow(unused_variables)]
-    if clock.slot > latest_aggregate_price.pub_slot_ {
-        let updated = unsafe {
-            // NOTE: c_upd_aggregate must use a raw pointer to price
-            // data. Solana's `<account>.borrow_*` methods require exclusive
-            // access, i.e. no other borrow can exist for the account.
-            c_upd_aggregate(
-                price_account.try_borrow_mut_data()?.as_mut_ptr(),
-                clock.slot,
-                clock.unix_timestamp,
-            )
-        };
 
-        // If the aggregate was successfully updated, calculate the difference and update TWAP.
-        if updated {
-            let agg_diff = (clock.slot as i64)
-                - load_checked::<PriceAccount>(price_account, cmd_args.header.version)?.prev_slot_
-                    as i64;
-            // Encapsulate TWAP update logic in a function to minimize unsafe block scope.
-            unsafe {
-                c_upd_twap(price_account.try_borrow_mut_data()?.as_mut_ptr(), agg_diff);
-            }
+    // Try to update the publisher's price
+    if is_component_update(cmd_args)? {
+        // IMPORTANT: If the publisher does not meet the price/conf
+        // ratio condition, its price will not count for the next
+        // aggregate.
+        let status: u32 =
+            get_status_for_conf_price_ratio(cmd_args.price, cmd_args.confidence, cmd_args.status)?;
+
+        {
             let mut price_data =
                 load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
+            let publisher_price = &mut price_data.comp_[publisher_index].latest_;
+            publisher_price.price_ = cmd_args.price;
+            publisher_price.conf_ = cmd_args.confidence;
+            publisher_price.status_ = status;
+            publisher_price.pub_slot_ = cmd_args.publishing_slot;
+        }
+    }
+
+    // get number of slots from last update
+    let slots_since_last_update = clock.slot - latest_aggregate_price.pub_slot_;
+
+    // If the price update is the first in the slot and the aggregate is trading, update the previous slot, price, conf, and timestamp.
+    if slots_since_last_update > 0 && latest_aggregate_price.status_ == PC_STATUS_TRADING {
+        let mut price_data = load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
+        price_data.prev_slot_ = price_data.agg_.pub_slot_;
+        price_data.prev_price_ = price_data.agg_.price_;
+        price_data.prev_conf_ = price_data.agg_.conf_;
+        price_data.prev_timestamp_ = clock.unix_timestamp;
+    };
+
+
+    let updated = unsafe {
+        // NOTE: c_upd_aggregate must use a raw pointer to price
+        // data. Solana's `<account>.borrow_*` methods require exclusive
+        // access, i.e. no other borrow can exist for the account.
+        c_upd_aggregate(
+            price_account.try_borrow_mut_data()?.as_mut_ptr(),
+            clock.slot,
+            clock.unix_timestamp,
+        )
+    };
+
+    // If the aggregate was successfully updated, calculate the difference and update TWAP.
+    if updated {
+        let agg_diff = (clock.slot as i64)
+            - load_checked::<PriceAccount>(price_account, cmd_args.header.version)?.prev_slot_
+                as i64;
+        {
+            let mut price_data =
+                load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
+            // check if its the first price update in the slot
+            if slots_since_last_update > 0 {
+                price_data.prev_twap_ = price_data.twap_;
+                price_data.prev_twac_ = price_data.twac_;
+                price_data.prev_price_cumulative = price_data.price_cumulative;
+            }
+            price_data.twap_ = price_data.prev_twap_;
+            price_data.twac_ = price_data.prev_twac_;
+            price_data.price_cumulative = price_data.prev_price_cumulative;
+            price_data.update_price_cumulative()?;
             // We want to send a message every time the aggregate price updates. However, during the migration,
             // not every publisher will necessarily provide the accumulator accounts. The message_sent_ flag
             // ensures that after every aggregate update, the next publisher who provides the accumulator accounts
             // will send the message.
             price_data.message_sent_ = 0;
-            price_data.update_price_cumulative()?;
+        }
+        unsafe {
+            c_upd_twap(price_account.try_borrow_mut_data()?.as_mut_ptr(), agg_diff);
         }
     }
 
@@ -258,23 +298,6 @@ pub fn upd_price(
                 invoke_signed(&create_inputs_ix, accounts, &[auth_seeds_with_bump])?;
                 price_data.message_sent_ = 1;
             }
-        }
-    }
-
-    // Try to update the publisher's price
-    if is_component_update(cmd_args)? {
-        // IMPORTANT: If the publisher does not meet the price/conf
-        // ratio condition, its price will not count for the next
-        // aggregate.
-        let status: u32 =
-            get_status_for_conf_price_ratio(cmd_args.price, cmd_args.confidence, cmd_args.status)?;
-
-        {
-            let publisher_price = &mut price_data.comp_[publisher_index].latest_;
-            publisher_price.price_ = cmd_args.price;
-            publisher_price.conf_ = cmd_args.confidence;
-            publisher_price.status_ = status;
-            publisher_price.pub_slot_ = cmd_args.publishing_slot;
         }
     }
 
