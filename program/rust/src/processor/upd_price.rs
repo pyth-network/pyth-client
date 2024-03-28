@@ -162,6 +162,7 @@ pub fn upd_price(
         )?;
     }
 
+
     // Try to update the publisher's price
     if is_component_update(cmd_args)? {
         // IMPORTANT: If the publisher does not meet the price/conf

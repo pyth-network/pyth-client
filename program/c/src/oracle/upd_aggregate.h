@@ -115,6 +115,7 @@ extern "C"
       pd_div(val, numer, denom);
     }
 
+
     // adjust and store results
     pd_adjust(val, expo, qs->fact_);
     ptr->val_ = val->v_;
@@ -221,6 +222,7 @@ extern "C"
 
     return true;
   }
+
 
 #ifdef __cplusplus
 }
