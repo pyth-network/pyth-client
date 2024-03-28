@@ -1,28 +1,29 @@
 #pragma once
 
-#include "model/price_model.c" /* FIXME: HACK TO DEAL WITH DOCKER LINKAGE ISSUES */
-#include "model/price_model.h"
 #include "oracle.h"
+#include "model/price_model.h"
+#include "model/price_model.c" /* FIXME: HACK TO DEAL WITH DOCKER LINKAGE ISSUES */
 #include "pd.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef struct pc_qset {
-  pd_t    iprice_[PC_NUM_COMP];
-  pd_t    uprice_[PC_NUM_COMP];
-  pd_t    lprice_[PC_NUM_COMP];
-  pd_t    weight_[PC_NUM_COMP];
-  int64_t decay_[1 + PC_MAX_SEND_LATENCY];
-  int64_t fact_[PC_FACTOR_SIZE];
+typedef struct pc_qset
+{
+  pd_t      iprice_[PC_NUM_COMP];
+  pd_t      uprice_[PC_NUM_COMP];
+  pd_t      lprice_[PC_NUM_COMP];
+  pd_t      weight_[PC_NUM_COMP];
+  int64_t   decay_[1+PC_MAX_SEND_LATENCY];
+  int64_t   fact_[PC_FACTOR_SIZE];
 } pc_qset_t;
 
 // initialize quote-set temporary data in heap area
 static pc_qset_t *qset_new()
 {
   // allocate off heap
-  pc_qset_t *qs = (pc_qset_t *)PC_HEAP_START;
+  pc_qset_t *qs = (pc_qset_t*)PC_HEAP_START;
 
   // sqrt of numbers 1 to 25 for decaying conf. interval based on slot delay
   qs->decay_[0]  = 1000000000L;
@@ -53,129 +54,124 @@ static pc_qset_t *qset_new()
   qs->decay_[25] = 5000000000L;
 
   // powers of 10 for use in decimal arithmetic scaling
-  qs->fact_[0]  = 1L;
-  qs->fact_[1]  = 10L;
-  qs->fact_[2]  = 100L;
-  qs->fact_[3]  = 1000L;
-  qs->fact_[4]  = 10000L;
-  qs->fact_[5]  = 100000L;
-  qs->fact_[6]  = 1000000L;
-  qs->fact_[7]  = 10000000L;
-  qs->fact_[8]  = 100000000L;
-  qs->fact_[9]  = 1000000000L;
-  qs->fact_[10] = 10000000000L;
-  qs->fact_[11] = 100000000000L;
-  qs->fact_[12] = 1000000000000L;
-  qs->fact_[13] = 10000000000000L;
-  qs->fact_[14] = 100000000000000L;
-  qs->fact_[15] = 1000000000000000L;
-  qs->fact_[16] = 10000000000000000L;
-  qs->fact_[17] = 100000000000000000L;
+  qs->fact_[0]   = 1L;
+  qs->fact_[1]   = 10L;
+  qs->fact_[2]   = 100L;
+  qs->fact_[3]   = 1000L;
+  qs->fact_[4]   = 10000L;
+  qs->fact_[5]   = 100000L;
+  qs->fact_[6]   = 1000000L;
+  qs->fact_[7]   = 10000000L;
+  qs->fact_[8]   = 100000000L;
+  qs->fact_[9]   = 1000000000L;
+  qs->fact_[10]  = 10000000000L;
+  qs->fact_[11]  = 100000000000L;
+  qs->fact_[12]  = 1000000000000L;
+  qs->fact_[13]  = 10000000000000L;
+  qs->fact_[14]  = 100000000000000L;
+  qs->fact_[15]  = 1000000000000000L;
+  qs->fact_[16]  = 10000000000000000L;
+  qs->fact_[17]  = 100000000000000000L;
 
   return qs;
 }
 
-static void upd_ema(pc_ema_t *ptr, pd_t *val, pd_t *conf, int64_t nslot,
-                    pc_qset_t *qs, int32_t expo)
+static void upd_ema(
+    pc_ema_t *ptr, pd_t *val, pd_t *conf, int64_t nslot, pc_qset_t *qs, int32_t expo
+    )
 {
   pd_t numer[1], denom[1], cwgt[1], wval[1], decay[1], diff[1], one[1];
-  pd_new(one, 100000000L, -8);
-  if (conf->v_) {
-    pd_div(cwgt, one, conf);
+  pd_new( one, 100000000L, -8 );
+  if ( conf->v_ ) {
+    pd_div( cwgt, one, conf );
   } else {
-    pd_set(cwgt, one);
+    pd_set( cwgt, one );
   }
-  if (nslot > PD_EMA_MAX_DIFF) {
+  if ( nslot > PD_EMA_MAX_DIFF ) {
     // initial condition
-    pd_mul(numer, val, cwgt);
-    pd_set(denom, cwgt);
+    pd_mul( numer, val, cwgt );
+    pd_set( denom, cwgt );
   } else {
     // compute decay factor
-    pd_new(diff, nslot, 0);
-    pd_new(decay, PD_EMA_DECAY, PD_EMA_EXPO);
-    pd_mul(decay, decay, diff);
-    pd_add(decay, decay, one, qs->fact_);
+    pd_new( diff, nslot, 0 );
+    pd_new( decay, PD_EMA_DECAY, PD_EMA_EXPO );
+    pd_mul( decay, decay, diff );
+    pd_add( decay, decay, one, qs->fact_ );
 
     // compute numer/denom and new value from decay factor
-    pd_load(numer, ptr->numer_);
-    pd_load(denom, ptr->denom_);
-    pd_mul(numer, numer, decay);
-    pd_mul(wval, val, cwgt);
-    pd_add(numer, numer, wval, qs->fact_);
-    pd_mul(denom, denom, decay);
-    pd_add(denom, denom, cwgt, qs->fact_);
-    pd_div(val, numer, denom);
+    pd_load( numer, ptr->numer_ );
+    pd_load( denom, ptr->denom_ );
+    pd_mul( numer, numer, decay );
+    pd_mul( wval, val, cwgt );
+    pd_add( numer, numer, wval, qs->fact_ );
+    pd_mul( denom, denom, decay );
+    pd_add( denom, denom, cwgt, qs->fact_ );
+    pd_div( val, numer, denom );
   }
 
   // adjust and store results
-  pd_adjust(val, expo, qs->fact_);
-  ptr->val_ = val->v_;
+  pd_adjust( val, expo, qs->fact_ );
+  ptr->val_   = val->v_;
   int64_t numer1, denom1;
-  if (pd_store(&numer1, numer) && pd_store(&denom1, denom)) {
+  if ( pd_store( &numer1, numer ) && pd_store( &denom1, denom ) ) {
     ptr->numer_ = numer1;
     ptr->denom_ = denom1;
   }
 }
 
-static inline void upd_twap(pc_price_t *ptr, int64_t nslots)
+static inline void upd_twap(
+    pc_price_t *ptr, int64_t nslots )
 {
-  pc_qset_t *qs = qset_new();
+  pc_qset_t *qs = qset_new( );
 
   pd_t px[1], conf[1];
-  pd_new_scale(px, ptr->agg_.price_, ptr->expo_);
-  pd_new_scale(conf, (int64_t)(ptr->agg_.conf_), ptr->expo_);
-  upd_ema(&ptr->twap_, px, conf, nslots, qs, ptr->expo_);
-  upd_ema(&ptr->twac_, conf, conf, nslots, qs, ptr->expo_);
+  pd_new_scale( px, ptr->agg_.price_, ptr->expo_ );
+  pd_new_scale( conf, ( int64_t )( ptr->agg_.conf_ ), ptr->expo_ );
+  upd_ema( &ptr->twap_, px, conf, nslots, qs, ptr->expo_ );
+  upd_ema( &ptr->twac_, conf, conf, nslots, qs, ptr->expo_ );
 }
 
 // update aggregate price
-static inline bool upd_aggregate(pc_price_t *ptr, uint64_t slot,
-                                 int64_t timestamp)
+static inline bool upd_aggregate( pc_price_t *ptr, uint64_t slot, int64_t timestamp )
 {
   // update aggregate details ready for next slot
-  ptr->valid_slot_    = ptr->agg_.pub_slot_; // valid slot-time of agg. price
-  ptr->agg_.pub_slot_ = slot;                // publish slot-time of agg. price
-  ptr->timestamp_     = timestamp;
+  ptr->valid_slot_ = ptr->agg_.pub_slot_;// valid slot-time of agg. price
+  ptr->agg_.pub_slot_ = slot;            // publish slot-time of agg. price
+  ptr->timestamp_ = timestamp;
 
   // identify valid quotes
   // compute the aggregate prices and ranges
-  int64_t agg_price;
-  int64_t agg_conf;
+  int64_t  agg_price;
+  int64_t  agg_conf;
   {
     uint32_t numv  = 0;
     uint32_t nprcs = (uint32_t)0;
-    int64_t
-        prcs[PC_NUM_COMP * 3]; // ~0.75KiB for current PC_NUM_COMP (FIXME:
-                               // DOUBLE CHECK THIS FITS INTO STACK FRAME LIMIT)
-    for (uint32_t i = 0; i != ptr->num_; ++i) {
+    int64_t  prcs[ PC_NUM_COMP * 3 ]; // ~0.75KiB for current PC_NUM_COMP (FIXME: DOUBLE CHECK THIS FITS INTO STACK FRAME LIMIT)
+    for ( uint32_t i = 0; i != ptr->num_; ++i ) {
       pc_price_comp_t *iptr = &ptr->comp_[i];
       // copy contributing price to aggregate snapshot
       iptr->agg_ = iptr->latest_;
       // add quote to sorted permutation array if it is valid
-      int64_t slot_diff = (int64_t)slot - (int64_t)(iptr->agg_.pub_slot_);
+      int64_t slot_diff = ( int64_t )slot - ( int64_t )( iptr->agg_.pub_slot_ );
       int64_t price     = iptr->agg_.price_;
-      int64_t conf      = (int64_t)(iptr->agg_.conf_);
-      int64_t max_latency =
-          ptr->max_latency_ ? ptr->max_latency_ : PC_MAX_SEND_LATENCY;
-      if (iptr->agg_.status_ == PC_STATUS_TRADING &&
-          // No overflow for INT64_MIN+conf or INT64_MAX-conf as 0 < conf <
-          // INT64_MAX These checks ensure that price - conf and price + conf do
-          // not overflow.
-          (int64_t)0 < conf && (INT64_MIN + conf) <= price &&
-          price <= (INT64_MAX - conf) &&
-          // slot_diff is implicitly >= 0 due to the check in Rust code ensuring
-          // publishing_slot is always less than or equal to the current slot.
-          slot_diff <= max_latency) {
-	numv += 1;
-	prcs[nprcs++] = price - conf;
-	prcs[nprcs++] = price;
-	prcs[nprcs++] = price + conf;
+      int64_t conf      = ( int64_t )( iptr->agg_.conf_ );
+      int64_t max_latency = ptr->max_latency_ ? ptr->max_latency_ : PC_MAX_SEND_LATENCY;
+      if ( iptr->agg_.status_ == PC_STATUS_TRADING &&
+           // No overflow for INT64_MIN+conf or INT64_MAX-conf as 0 < conf < INT64_MAX
+           // These checks ensure that price - conf and price + conf do not overflow.
+           (int64_t)0 < conf && (INT64_MIN + conf) <= price && price <= (INT64_MAX-conf) &&
+           // slot_diff is implicitly >= 0 due to the check in Rust code ensuring publishing_slot is always less than or equal to the current slot.
+           slot_diff <= max_latency ) {
+        numv += 1;
+        prcs[ nprcs++ ] = price - conf;
+        prcs[ nprcs++ ] = price;
+        prcs[ nprcs++ ] = price + conf;
       }
     }
 
     // too few valid quotes
     ptr->num_qt_ = numv;
-    if (numv == 0 || numv < ptr->min_pub_) {
+    if ( numv == 0 || numv < ptr->min_pub_ ) {
       ptr->agg_.status_ = PC_STATUS_UNKNOWN;
       return false;
     }
@@ -184,11 +180,8 @@ static inline bool upd_aggregate(pc_price_t *ptr, uint64_t slot,
     // note: numv>0 and nprcs = 3*numv at this point
     int64_t agg_p25;
     int64_t agg_p75;
-    int64_t scratch[PC_NUM_COMP *
-                    3]; // ~0.75KiB for current PC_NUM_COMP (FIXME: DOUBLE CHECK
-                        // THIS FITS INTO STACK FRAME LIMIT)
-    price_model_core((uint64_t)nprcs, prcs, &agg_p25, &agg_price, &agg_p75,
-                     scratch);
+    int64_t scratch[ PC_NUM_COMP * 3 ]; // ~0.75KiB for current PC_NUM_COMP (FIXME: DOUBLE CHECK THIS FITS INTO STACK FRAME LIMIT)
+    price_model_core( (uint64_t)nprcs, prcs, &agg_p25, &agg_price, &agg_p75, scratch );
 
     // get the left and right confidences
     // note that as valid quotes have positive prices currently and
@@ -203,7 +196,7 @@ static inline bool upd_aggregate(pc_price_t *ptr, uint64_t slot,
     // if the confidences end up at zero, we abort
     // this is paranoia as it is currently not possible when nprcs>2 and
     // positive confidences given the current pricing model
-    if (agg_conf <= (int64_t)0) {
+    if( agg_conf <= (int64_t)0 ) {
       ptr->agg_.status_ = PC_STATUS_UNKNOWN;
       return false;
     }
