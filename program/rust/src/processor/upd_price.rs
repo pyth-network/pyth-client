@@ -230,12 +230,10 @@ pub fn upd_price(
             // will send the message.
             price_data.message_sent_ = 0;
         }
-        // Encapsulate TWAP update logic in a function to minimize unsafe block scope.
         unsafe {
             c_upd_twap(price_account.try_borrow_mut_data()?.as_mut_ptr(), agg_diff);
         }
     }
-
 
     // Reload price data as a struct after c_upd_aggregate() borrow is dropped
     let mut price_data = load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
