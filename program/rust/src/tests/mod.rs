@@ -26,5 +26,6 @@ mod test_upd_price_no_fail_on_error;
 mod test_upd_product;
 mod test_utils;
 
+
 mod test_twap;
 mod test_upd_price_v2;
