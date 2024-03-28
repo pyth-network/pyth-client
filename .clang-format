@@ -1,8 +1,0 @@
-BasedOnStyle: LLVM
-IndentWidth: 2
-AlignConsecutiveAssignments: true
-AlignConsecutiveMacros: true
-AlignConsecutiveDeclarations: true
-BreakBeforeBraces: Linux
-AllowShortIfStatementsOnASingleLine: false
-UseTab: ForIndentation

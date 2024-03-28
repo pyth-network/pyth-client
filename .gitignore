@@ -12,8 +12,5 @@ features.h
 .idea
 *.iml
 
-# CMake files
-features.h
-
 # Clang format
 .clang-format
