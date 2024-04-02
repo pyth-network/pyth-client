@@ -150,6 +150,9 @@ pub fn upd_price(
             OracleError::PermissionViolation.into(),
         )?;
 
+        // We assign the current aggregate price to latest_aggregate_price before calling c_upd_aggregate because
+        // c_upd_aggregate directly modifies the memory of price_data.agg_ to update its values. This is crucial for
+        // comparisons or operations that rely on the aggregate price state before the update such as slots_since_last_update.
         latest_aggregate_price = price_data.agg_;
         let latest_publisher_price = price_data.comp_[publisher_index].latest_;
 
@@ -161,7 +164,6 @@ pub fn upd_price(
             ProgramError::InvalidArgument,
         )?;
     }
-
 
     // Try to update the publisher's price
     if is_component_update(cmd_args)? {
@@ -193,7 +195,6 @@ pub fn upd_price(
         price_data.prev_conf_ = price_data.agg_.conf_;
         price_data.prev_timestamp_ = clock.unix_timestamp;
     };
-
 
     let updated = unsafe {
         // NOTE: c_upd_aggregate must use a raw pointer to price
