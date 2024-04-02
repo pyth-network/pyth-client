@@ -86,7 +86,7 @@ fn test_ema_multiple_publishers_same_slot() -> Result<(), Box<dyn std::error::Er
         assert_eq!(price_data.twac_.val_, 1);
     }
 
-    // add new test for multiple publishers and ensure that price_cumulative is updated correctly
+    // add new test for multiple publishers and ensure that ema is updated correctly
     let mut funding_setup_two = AccountSetup::new_funding();
     let funding_account_two = funding_setup_two.as_account_info();
 
@@ -96,8 +96,9 @@ fn test_ema_multiple_publishers_same_slot() -> Result<(), Box<dyn std::error::Er
         price_data.comp_[1].pub_ = *funding_account_two.key;
     }
 
-    populate_instruction(&mut instruction_data, 20, 1, 2);
     update_clock_slot(&mut clock_account, 2);
+
+    populate_instruction(&mut instruction_data, 20, 1, 2);
     process_instruction(
         &program_id,
         &[
