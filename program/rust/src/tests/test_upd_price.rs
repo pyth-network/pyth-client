@@ -248,7 +248,7 @@ fn test_upd_price() {
         assert_eq!(price_data.valid_slot_, 5);
         assert_eq!(price_data.agg_.pub_slot_, 6);
         assert_eq!(price_data.agg_.price_, 81);
-        assert_eq!(price_data.agg_.status_, PC_STATUS_UNKNOWN); // in pythnet aggregation is on the same slot so status turns to unknown
+        assert_eq!(price_data.agg_.status_, PC_STATUS_UNKNOWN);
     }
 
     // Crank one more time and aggregate should be unknown
