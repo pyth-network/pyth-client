@@ -165,36 +165,34 @@ pub fn upd_price(
         )?;
     }
 
-    // Try to update the publisher's price
-    if is_component_update(cmd_args)? {
-        // IMPORTANT: If the publisher does not meet the price/conf
-        // ratio condition, its price will not count for the next
-        // aggregate.
-        let status: u32 =
-            get_status_for_conf_price_ratio(cmd_args.price, cmd_args.confidence, cmd_args.status)?;
+    // If the price update is the first in the slot and the aggregate is trading, update the previous slot, price, conf, and timestamp.
+    let slots_since_last_update = clock.slot - latest_aggregate_price.pub_slot_;
 
-        {
-            let mut price_data =
-                load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
+    // Extend the scope of the mutable borrow of price_data
+    {
+        let mut price_data = load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
+
+        // Update the publisher's price
+        if is_component_update(cmd_args)? {
+            let status: u32 = get_status_for_conf_price_ratio(
+                cmd_args.price,
+                cmd_args.confidence,
+                cmd_args.status,
+            )?;
             let publisher_price = &mut price_data.comp_[publisher_index].latest_;
             publisher_price.price_ = cmd_args.price;
             publisher_price.conf_ = cmd_args.confidence;
             publisher_price.status_ = status;
             publisher_price.pub_slot_ = cmd_args.publishing_slot;
         }
+
+        if slots_since_last_update > 0 && latest_aggregate_price.status_ == PC_STATUS_TRADING {
+            price_data.prev_slot_ = price_data.agg_.pub_slot_;
+            price_data.prev_price_ = price_data.agg_.price_;
+            price_data.prev_conf_ = price_data.agg_.conf_;
+            price_data.prev_timestamp_ = clock.unix_timestamp;
+        }
     }
-
-    // get number of slots from last update
-    let slots_since_last_update = clock.slot - latest_aggregate_price.pub_slot_;
-
-    // If the price update is the first in the slot and the aggregate is trading, update the previous slot, price, conf, and timestamp.
-    if slots_since_last_update > 0 && latest_aggregate_price.status_ == PC_STATUS_TRADING {
-        let mut price_data = load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
-        price_data.prev_slot_ = price_data.agg_.pub_slot_;
-        price_data.prev_price_ = price_data.agg_.price_;
-        price_data.prev_conf_ = price_data.agg_.conf_;
-        price_data.prev_timestamp_ = clock.unix_timestamp;
-    };
 
     let updated = unsafe {
         // NOTE: c_upd_aggregate must use a raw pointer to price
