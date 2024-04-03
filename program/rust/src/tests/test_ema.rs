@@ -9,6 +9,7 @@ use {
         },
         c_oracle_header::{
             PC_STATUS_TRADING,
+            PC_STATUS_UNKNOWN,
             PC_VERSION,
         },
         deserialize::{
@@ -126,6 +127,61 @@ fn test_ema_multiple_publishers_same_slot() -> Result<(), Box<dyn std::error::Er
         assert_eq!(price_data.prev_twac_.val_, 1);
         assert_eq!(price_data.twap_.val_, 12);
         assert_eq!(price_data.twac_.val_, 1);
+    }
+
+    // add test for multiple publishers where the first publisher causes the aggregate to be unknown and second publisher causes it to be trading
+    {
+        let mut price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        price_data.min_pub_ = 2;
+        price_data.num_ = 1;
+    }
+
+    update_clock_slot(&mut clock_account, 3);
+
+    populate_instruction(&mut instruction_data, 20, 1, 3);
+    process_instruction(
+        &program_id,
+        &[
+            funding_account.clone(),
+            price_account.clone(),
+            clock_account.clone(),
+        ],
+        &instruction_data,
+    )?;
+
+    {
+        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        assert_eq!(price_data.agg_.status_, PC_STATUS_UNKNOWN);
+        assert_eq!(price_data.prev_twap_.val_, 10);
+        assert_eq!(price_data.prev_twac_.val_, 1);
+        assert_eq!(price_data.twap_.val_, 12);
+        assert_eq!(price_data.twac_.val_, 1);
+    }
+
+    {
+        let mut price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        price_data.min_pub_ = 2;
+        price_data.num_ = 2;
+    }
+
+    populate_instruction(&mut instruction_data, 40, 1, 3);
+    process_instruction(
+        &program_id,
+        &[
+            funding_account_two.clone(),
+            price_account.clone(),
+            clock_account.clone(),
+        ],
+        &instruction_data,
+    )?;
+
+    {
+        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
+        assert_eq!(price_data.prev_twap_.val_, 12);
+        assert_eq!(price_data.prev_twac_.val_, 1);
+        assert_eq!(price_data.twap_.val_, 13);
+        assert_eq!(price_data.twac_.val_, 2);
     }
     Ok(())
 }

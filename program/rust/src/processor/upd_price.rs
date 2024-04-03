@@ -130,6 +130,7 @@ pub fn upd_price(
 
     let mut publisher_index: usize = 0;
     let latest_aggregate_price: PriceInfo;
+    let slots_since_last_update: u64;
 
     // The price_data borrow happens in a scope because it must be
     // dropped before we borrow again as raw data pointer for the C
@@ -150,6 +151,9 @@ pub fn upd_price(
             OracleError::PermissionViolation.into(),
         )?;
 
+        // We use last_slot_ to calculate slots_since_last_update. This is because last_slot_ is updated after the aggregate price is updated successfully.
+        slots_since_last_update = clock.slot - price_data.last_slot_;
+
         // We assign the current aggregate price to latest_aggregate_price before calling c_upd_aggregate because
         // c_upd_aggregate directly modifies the memory of price_data.agg_ to update its values. This is crucial for
         // comparisons or operations that rely on the aggregate price state before the update such as slots_since_last_update.
@@ -164,8 +168,6 @@ pub fn upd_price(
             ProgramError::InvalidArgument,
         )?;
     }
-
-    let slots_since_last_update = clock.slot - latest_aggregate_price.pub_slot_;
 
     // Extend the scope of the mutable borrow of price_data
     {
@@ -214,36 +216,25 @@ pub fn upd_price(
             let mut price_data =
                 load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
 
-            // Check if this is the first update by checking if previous values are uninitialized.
-            // PriceEma implements Zeroable trait, so they are initialized to 0 and we check for that to determine if they are uninitialized.
-            let is_prev_twap_uninitialized = price_data.prev_twap_.val_ == 0
-                && price_data.prev_twap_.numer_ == 0
-                && price_data.prev_twap_.denom_ == 0;
-            let is_prev_twac_uninitialized = price_data.prev_twac_.val_ == 0
-                && price_data.prev_twac_.numer_ == 0
-                && price_data.prev_twac_.denom_ == 0;
-            let is_prev_price_cumulative_uninitialized = price_data.prev_price_cumulative.price
-                == 0
-                && price_data.prev_price_cumulative.conf == 0
-                && price_data.prev_price_cumulative.num_down_slots == 0
-                && price_data.prev_price_cumulative.unused == 0;
-            let is_prev_ema_and_twap_uninitialized = is_prev_twap_uninitialized
-                && is_prev_twac_uninitialized
-                && is_prev_price_cumulative_uninitialized;
-
-            // Multiple price updates may occur within the same slot. Updates within the same slot will
-            // use the previously calculated values (prev_twap, prev_twac, and prev_price_cumulative)
-            // from the last successful aggregated price update as their basis for recalculation. This
-            // ensures that each update within a slot builds upon the last and not the twap/twac/price_cumulative
-            // that is calculated right after the publishers' individual price updates.
-            if slots_since_last_update > 0 || is_prev_ema_and_twap_uninitialized {
-                price_data.prev_twap_ = price_data.twap_;
-                price_data.prev_twac_ = price_data.twac_;
-                price_data.prev_price_cumulative = price_data.price_cumulative;
+            // Check if the program upgrade has happened in the current slot and aggregate price has been updated, if so, use the old logic to update twap/twac/price_cumulative.
+            // This is to ensure that twap/twac/price_cumulative are calculated correctly during the migration.
+            // We check if prev_twap_.denom_ is == 0 because when the program upgrade has happened, denom_ is initialized to 0 and it can only stay the same or increase while numer_ can be negative if prices are negative.
+            // And we check if slots_since_last_update == 0 to check if the aggregate price has been updated in the current slot.
+            if !(price_data.prev_twap_.denom_ == 0 && slots_since_last_update == 0) {
+                // Multiple price updates may occur within the same slot. Updates within the same slot will
+                // use the previously calculated values (prev_twap, prev_twac, and prev_price_cumulative)
+                // from the last successful aggregated price update as their basis for recalculation. This
+                // ensures that each update within a slot builds upon the last and not the twap/twac/price_cumulative
+                // that is calculated right after the publishers' individual price updates.
+                if slots_since_last_update > 0 {
+                    price_data.prev_twap_ = price_data.twap_;
+                    price_data.prev_twac_ = price_data.twac_;
+                    price_data.prev_price_cumulative = price_data.price_cumulative;
+                }
+                price_data.twap_ = price_data.prev_twap_;
+                price_data.twac_ = price_data.prev_twac_;
+                price_data.price_cumulative = price_data.prev_price_cumulative;
             }
-            price_data.twap_ = price_data.prev_twap_;
-            price_data.twac_ = price_data.prev_twac_;
-            price_data.price_cumulative = price_data.prev_price_cumulative;
             price_data.update_price_cumulative()?;
             // We want to send a message every time the aggregate price updates. However, during the migration,
             // not every publisher will necessarily provide the accumulator accounts. The message_sent_ flag
