@@ -93,6 +93,19 @@ fn test_upd_aggregate() {
         ));
     }
 
+    {
+        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+
+        assert_eq!(price_data.agg_.price_, 100);
+        assert_eq!(price_data.agg_.conf_, 10);
+        assert_eq!(price_data.num_qt_, 1);
+        assert_eq!(price_data.timestamp_, 1);
+        assert_eq!(price_data.prev_slot_, 0);
+        assert_eq!(price_data.prev_price_, 0);
+        assert_eq!(price_data.prev_conf_, 0);
+        assert_eq!(price_data.prev_timestamp_, 0);
+    }
+
     // single publisher
     {
         let mut price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
