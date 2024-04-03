@@ -80,6 +80,10 @@ fn test_upd_price() {
         assert_eq!(price_data.agg_.pub_slot_, 1);
         assert_eq!(price_data.agg_.price_, 42);
         assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
+        assert_eq!(price_data.prev_slot_, 0);
+        assert_eq!(price_data.prev_price_, 0);
+        assert_eq!(price_data.prev_conf_, 0);
+        assert_eq!(price_data.prev_timestamp_, 0);
     }
 
     // add some prices for current slot - get rejected
@@ -108,6 +112,10 @@ fn test_upd_price() {
         assert_eq!(price_data.agg_.pub_slot_, 1);
         assert_eq!(price_data.agg_.price_, 42);
         assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
+        assert_eq!(price_data.prev_slot_, 0);
+        assert_eq!(price_data.prev_price_, 0);
+        assert_eq!(price_data.prev_conf_, 0);
+        assert_eq!(price_data.prev_timestamp_, 0);
     }
 
     // add next price in new slot triggering snapshot and aggregate calc
@@ -135,6 +143,10 @@ fn test_upd_price() {
         assert_eq!(price_data.agg_.pub_slot_, 3);
         assert_eq!(price_data.agg_.price_, 81);
         assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
+        assert_eq!(price_data.prev_slot_, 1);
+        assert_eq!(price_data.prev_price_, 42);
+        assert_eq!(price_data.prev_conf_, 2);
+        assert_eq!(price_data.prev_timestamp_, 0);
     }
 
     // next price doesn't change but slot does
@@ -161,6 +173,10 @@ fn test_upd_price() {
         assert_eq!(price_data.agg_.pub_slot_, 4);
         assert_eq!(price_data.agg_.price_, 81);
         assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
+        assert_eq!(price_data.prev_slot_, 3);
+        assert_eq!(price_data.prev_price_, 81);
+        assert_eq!(price_data.prev_conf_, 2);
+        assert_eq!(price_data.prev_timestamp_, 0);
     }
 
     // next price doesn't change and neither does aggregate but slot does
@@ -187,6 +203,10 @@ fn test_upd_price() {
         assert_eq!(price_data.agg_.pub_slot_, 5);
         assert_eq!(price_data.agg_.price_, 81);
         assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
+        assert_eq!(price_data.prev_slot_, 4);
+        assert_eq!(price_data.prev_price_, 81);
+        assert_eq!(price_data.prev_conf_, 2);
+        assert_eq!(price_data.prev_timestamp_, 0);
     }
 
     // try to publish back-in-time
@@ -215,6 +235,10 @@ fn test_upd_price() {
         assert_eq!(price_data.agg_.pub_slot_, 5);
         assert_eq!(price_data.agg_.price_, 81);
         assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
+        assert_eq!(price_data.prev_slot_, 4);
+        assert_eq!(price_data.prev_price_, 81);
+        assert_eq!(price_data.prev_conf_, 2);
+        assert_eq!(price_data.prev_timestamp_, 0);
     }
 
     populate_instruction(&mut instruction_data, 50, 20, 5);
@@ -249,6 +273,10 @@ fn test_upd_price() {
         assert_eq!(price_data.agg_.pub_slot_, 6);
         assert_eq!(price_data.agg_.price_, 81);
         assert_eq!(price_data.agg_.status_, PC_STATUS_UNKNOWN);
+        assert_eq!(price_data.prev_slot_, 5);
+        assert_eq!(price_data.prev_price_, 81);
+        assert_eq!(price_data.prev_conf_, 2);
+        assert_eq!(price_data.prev_timestamp_, 0);
     }
 
     // Crank one more time and aggregate should be unknown
@@ -276,6 +304,10 @@ fn test_upd_price() {
         assert_eq!(price_data.agg_.pub_slot_, 7);
         assert_eq!(price_data.agg_.price_, 81);
         assert_eq!(price_data.agg_.status_, PC_STATUS_UNKNOWN);
+        assert_eq!(price_data.prev_slot_, 5);
+        assert_eq!(price_data.prev_price_, 81);
+        assert_eq!(price_data.prev_conf_, 2);
+        assert_eq!(price_data.prev_timestamp_, 0);
     }
 
     // Negative prices are accepted
@@ -302,6 +334,10 @@ fn test_upd_price() {
         assert_eq!(price_data.agg_.pub_slot_, 8);
         assert_eq!(price_data.agg_.price_, -100);
         assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
+        assert_eq!(price_data.prev_slot_, 5);
+        assert_eq!(price_data.prev_price_, 81);
+        assert_eq!(price_data.prev_conf_, 2);
+        assert_eq!(price_data.prev_timestamp_, 0);
     }
 
     // Crank again for aggregate
@@ -329,6 +365,10 @@ fn test_upd_price() {
         assert_eq!(price_data.agg_.pub_slot_, 9);
         assert_eq!(price_data.agg_.price_, -100);
         assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
+        assert_eq!(price_data.prev_slot_, 8);
+        assert_eq!(price_data.prev_price_, -100);
+        assert_eq!(price_data.prev_conf_, 1);
+        assert_eq!(price_data.prev_timestamp_, 0);
     }
 }
 
