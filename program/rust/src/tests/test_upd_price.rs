@@ -118,7 +118,7 @@ fn test_upd_price() {
         assert_eq!(price_data.prev_timestamp_, 0);
     }
 
-    // add next price in new slot triggering snapshot and aggregate calc
+    // update new price in new slot, aggregate should be updated and prev values should be updated
     populate_instruction(&mut instruction_data, 81, 2, 2);
     update_clock_slot(&mut clock_account, 3);
 
