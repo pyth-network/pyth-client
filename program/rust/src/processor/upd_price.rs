@@ -165,7 +165,6 @@ pub fn upd_price(
         )?;
     }
 
-    // If the price update is the first in the slot and the aggregate is trading, update the previous slot, price, conf, and timestamp.
     let slots_since_last_update = clock.slot - latest_aggregate_price.pub_slot_;
 
     // Extend the scope of the mutable borrow of price_data
@@ -186,6 +185,7 @@ pub fn upd_price(
             publisher_price.pub_slot_ = cmd_args.publishing_slot;
         }
 
+        // If the price update is the first in the slot and the aggregate is trading, update the previous slot, price, conf, and timestamp.
         if slots_since_last_update > 0 && latest_aggregate_price.status_ == PC_STATUS_TRADING {
             price_data.prev_slot_ = price_data.agg_.pub_slot_;
             price_data.prev_price_ = price_data.agg_.price_;
@@ -213,8 +213,30 @@ pub fn upd_price(
         {
             let mut price_data =
                 load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
-            // check if its the first price update in the slot
-            if slots_since_last_update > 0 {
+
+            // Check if this is the first update by checking if previous values are uninitialized.
+            // PriceEma implements Zeroable trait, so they are initialized to 0 and we check for that to determine if they are uninitialized.
+            let is_prev_twap_uninitialized = price_data.prev_twap_.val_ == 0
+                && price_data.prev_twap_.numer_ == 0
+                && price_data.prev_twap_.denom_ == 0;
+            let is_prev_twac_uninitialized = price_data.prev_twac_.val_ == 0
+                && price_data.prev_twac_.numer_ == 0
+                && price_data.prev_twac_.denom_ == 0;
+            let is_prev_price_cumulative_uninitialized = price_data.prev_price_cumulative.price
+                == 0
+                && price_data.prev_price_cumulative.conf == 0
+                && price_data.prev_price_cumulative.num_down_slots == 0
+                && price_data.prev_price_cumulative.unused == 0;
+            let is_prev_ema_and_twap_uninitialized = is_prev_twap_uninitialized
+                && is_prev_twac_uninitialized
+                && is_prev_price_cumulative_uninitialized;
+
+            // Multiple price updates may occur within the same slot. Updates within the same slot will
+            // use the previously calculated values (prev_twap, prev_twac, and prev_price_cumulative)
+            // from the last successful aggregated price update as their basis for recalculation. This
+            // ensures that each update within a slot builds upon the last and not the twap/twac/price_cumulative
+            // that is calculated right after the publishers' individual price updates.
+            if slots_since_last_update > 0 || is_prev_ema_and_twap_uninitialized {
                 price_data.prev_twap_ = price_data.twap_;
                 price_data.prev_twac_ = price_data.twac_;
                 price_data.prev_price_cumulative = price_data.price_cumulative;
