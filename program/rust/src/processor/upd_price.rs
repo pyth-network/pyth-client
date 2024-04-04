@@ -131,6 +131,7 @@ pub fn upd_price(
     let mut publisher_index: usize = 0;
     let latest_aggregate_price: PriceInfo;
     let slots_since_last_update: u64;
+    let noninitial_price_update_after_program_upgrade: bool;
 
     // The price_data borrow happens in a scope because it must be
     // dropped before we borrow again as raw data pointer for the C
@@ -153,6 +154,13 @@ pub fn upd_price(
 
         // We use last_slot_ to calculate slots_since_last_update. This is because last_slot_ is updated after the aggregate price is updated successfully.
         slots_since_last_update = clock.slot - price_data.last_slot_;
+
+        // Check if the program upgrade has happened in the current slot and aggregate price has been updated, if so, use the old logic to update twap/twac/price_cumulative.
+        // This is to ensure that twap/twac/price_cumulative are calculated correctly during the migration.
+        // We check if prev_twap_.denom_ is == 0 because when the program upgrade has happened, denom_ is initialized to 0 and it can only stay the same or increase while numer_ can be negative if prices are negative.
+        // And we check if slots_since_last_update == 0 to check if the aggregate price has been updated in the current slot.
+        noninitial_price_update_after_program_upgrade =
+            price_data.prev_twap_.denom_ == 0 && slots_since_last_update == 0;
 
         // We assign the current aggregate price to latest_aggregate_price before calling c_upd_aggregate because
         // c_upd_aggregate directly modifies the memory of price_data.agg_ to update its values. This is crucial for
@@ -197,14 +205,18 @@ pub fn upd_price(
     }
 
     let updated = unsafe {
-        // NOTE: c_upd_aggregate must use a raw pointer to price
-        // data. Solana's `<account>.borrow_*` methods require exclusive
-        // access, i.e. no other borrow can exist for the account.
-        c_upd_aggregate(
-            price_account.try_borrow_mut_data()?.as_mut_ptr(),
-            clock.slot,
-            clock.unix_timestamp,
-        )
+        if noninitial_price_update_after_program_upgrade {
+            false
+        } else {
+            // NOTE: c_upd_aggregate must use a raw pointer to price
+            // data. Solana's `<account>.borrow_*` methods require exclusive
+            // access, i.e. no other borrow can exist for the account.
+            c_upd_aggregate(
+                price_account.try_borrow_mut_data()?.as_mut_ptr(),
+                clock.slot,
+                clock.unix_timestamp,
+            )
+        }
     };
 
     // If the aggregate was successfully updated, calculate the difference and update TWAP.
@@ -216,11 +228,7 @@ pub fn upd_price(
             let mut price_data =
                 load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
 
-            // Check if the program upgrade has happened in the current slot and aggregate price has been updated, if so, use the old logic to update twap/twac/price_cumulative.
-            // This is to ensure that twap/twac/price_cumulative are calculated correctly during the migration.
-            // We check if prev_twap_.denom_ is == 0 because when the program upgrade has happened, denom_ is initialized to 0 and it can only stay the same or increase while numer_ can be negative if prices are negative.
-            // And we check if slots_since_last_update == 0 to check if the aggregate price has been updated in the current slot.
-            if !(price_data.prev_twap_.denom_ == 0 && slots_since_last_update == 0) {
+            if !(noninitial_price_update_after_program_upgrade) {
                 // Multiple price updates may occur within the same slot. Updates within the same slot will
                 // use the previously calculated values (prev_twap, prev_twac, and prev_price_cumulative)
                 // from the last successful aggregated price update as their basis for recalculation. This

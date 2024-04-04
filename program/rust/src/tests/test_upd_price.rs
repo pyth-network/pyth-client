@@ -299,7 +299,7 @@ fn test_upd_price() {
         assert_eq!(price_data.comp_[0].latest_.conf_, 1);
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 7);
         assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_TRADING);
-        assert_eq!(price_data.valid_slot_, 7);
+        assert_eq!(price_data.valid_slot_, 6);
         assert_eq!(price_data.agg_.pub_slot_, 8);
         assert_eq!(price_data.agg_.price_, -100);
         assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
