@@ -110,6 +110,14 @@ fn test_ema_multiple_publishers_same_slot() -> Result<(), Box<dyn std::error::Er
         &instruction_data,
     )?;
 
+    {
+        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        assert_eq!(price_data.prev_twap_.val_, 10);
+        assert_eq!(price_data.prev_twac_.val_, 1);
+        assert_eq!(price_data.twap_.val_, 15);
+        assert_eq!(price_data.twac_.val_, 1);
+    }
+
     populate_instruction(&mut instruction_data, 30, 1, 2);
     process_instruction(
         &program_id,
