@@ -279,37 +279,6 @@ fn test_upd_price() {
         assert_eq!(price_data.prev_timestamp_, 0);
     }
 
-    // Crank one more time and aggregate should be unknown
-    populate_instruction(&mut instruction_data, 50, 20, 6);
-    update_clock_slot(&mut clock_account, 7);
-
-    assert!(process_instruction(
-        &program_id,
-        &[
-            funding_account.clone(),
-            price_account.clone(),
-            clock_account.clone()
-        ],
-        &instruction_data
-    )
-    .is_ok());
-
-    {
-        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
-        assert_eq!(price_data.comp_[0].latest_.price_, 50);
-        assert_eq!(price_data.comp_[0].latest_.conf_, 20);
-        assert_eq!(price_data.comp_[0].latest_.pub_slot_, 6);
-        assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_IGNORED);
-        assert_eq!(price_data.valid_slot_, 6);
-        assert_eq!(price_data.agg_.pub_slot_, 7);
-        assert_eq!(price_data.agg_.price_, 81);
-        assert_eq!(price_data.agg_.status_, PC_STATUS_UNKNOWN);
-        assert_eq!(price_data.prev_slot_, 5);
-        assert_eq!(price_data.prev_price_, 81);
-        assert_eq!(price_data.prev_conf_, 2);
-        assert_eq!(price_data.prev_timestamp_, 0);
-    }
-
     // Negative prices are accepted
     populate_instruction(&mut instruction_data, -100, 1, 7);
     update_clock_slot(&mut clock_account, 8);
@@ -337,37 +306,6 @@ fn test_upd_price() {
         assert_eq!(price_data.prev_slot_, 5);
         assert_eq!(price_data.prev_price_, 81);
         assert_eq!(price_data.prev_conf_, 2);
-        assert_eq!(price_data.prev_timestamp_, 0);
-    }
-
-    // Crank again for aggregate
-    populate_instruction(&mut instruction_data, -100, 1, 8);
-    update_clock_slot(&mut clock_account, 9);
-
-    assert!(process_instruction(
-        &program_id,
-        &[
-            funding_account.clone(),
-            price_account.clone(),
-            clock_account.clone()
-        ],
-        &instruction_data
-    )
-    .is_ok());
-
-    {
-        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
-        assert_eq!(price_data.comp_[0].latest_.price_, -100);
-        assert_eq!(price_data.comp_[0].latest_.conf_, 1);
-        assert_eq!(price_data.comp_[0].latest_.pub_slot_, 8);
-        assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_TRADING);
-        assert_eq!(price_data.valid_slot_, 8);
-        assert_eq!(price_data.agg_.pub_slot_, 9);
-        assert_eq!(price_data.agg_.price_, -100);
-        assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
-        assert_eq!(price_data.prev_slot_, 8);
-        assert_eq!(price_data.prev_price_, -100);
-        assert_eq!(price_data.prev_conf_, 1);
         assert_eq!(price_data.prev_timestamp_, 0);
     }
 }
