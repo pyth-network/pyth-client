@@ -151,7 +151,6 @@ fn test_upd_price() {
         assert_eq!(price_data.prev_timestamp_, 1);
     }
 
-    println!("test");
     // next price doesn't change but slot and timestamp does
     populate_instruction(&mut instruction_data, 81, 2, 3);
     update_clock_slot(&mut clock_account, 4);
