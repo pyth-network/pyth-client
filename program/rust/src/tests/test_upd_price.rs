@@ -21,6 +21,7 @@ use {
         processor::process_instruction,
         tests::test_utils::{
             update_clock_slot,
+            update_clock_timestamp,
             AccountSetup,
         },
     },
@@ -58,6 +59,7 @@ fn test_upd_price() {
     clock_account.is_writable = false;
 
     update_clock_slot(&mut clock_account, 1);
+    update_clock_timestamp(&mut clock_account, 1);
 
     assert!(process_instruction(
         &program_id,
@@ -146,12 +148,14 @@ fn test_upd_price() {
         assert_eq!(price_data.prev_slot_, 1);
         assert_eq!(price_data.prev_price_, 42);
         assert_eq!(price_data.prev_conf_, 2);
-        assert_eq!(price_data.prev_timestamp_, 0);
+        assert_eq!(price_data.prev_timestamp_, 1);
     }
 
-    // next price doesn't change but slot does
+    println!("test");
+    // next price doesn't change but slot and timestamp does
     populate_instruction(&mut instruction_data, 81, 2, 3);
     update_clock_slot(&mut clock_account, 4);
+    update_clock_timestamp(&mut clock_account, 4);
     assert!(process_instruction(
         &program_id,
         &[
@@ -176,7 +180,8 @@ fn test_upd_price() {
         assert_eq!(price_data.prev_slot_, 3);
         assert_eq!(price_data.prev_price_, 81);
         assert_eq!(price_data.prev_conf_, 2);
-        assert_eq!(price_data.prev_timestamp_, 0);
+        assert_eq!(price_data.timestamp_, 4); // We only check for timestamp_ here because test_upd_price doesn't directly update timestamp_, this is updated through c_upd_aggregate which is tested in test_upd_aggregate, but we assert here to show that in subsequent asserts for prev_tim
+        assert_eq!(price_data.prev_timestamp_, 1);
     }
 
     // next price doesn't change and neither does aggregate but slot does
@@ -206,7 +211,7 @@ fn test_upd_price() {
         assert_eq!(price_data.prev_slot_, 4);
         assert_eq!(price_data.prev_price_, 81);
         assert_eq!(price_data.prev_conf_, 2);
-        assert_eq!(price_data.prev_timestamp_, 0);
+        assert_eq!(price_data.prev_timestamp_, 4);
     }
 
     // try to publish back-in-time
@@ -238,7 +243,7 @@ fn test_upd_price() {
         assert_eq!(price_data.prev_slot_, 4);
         assert_eq!(price_data.prev_price_, 81);
         assert_eq!(price_data.prev_conf_, 2);
-        assert_eq!(price_data.prev_timestamp_, 0);
+        assert_eq!(price_data.prev_timestamp_, 4);
     }
 
     populate_instruction(&mut instruction_data, 50, 20, 5);
@@ -276,7 +281,7 @@ fn test_upd_price() {
         assert_eq!(price_data.prev_slot_, 5);
         assert_eq!(price_data.prev_price_, 81);
         assert_eq!(price_data.prev_conf_, 2);
-        assert_eq!(price_data.prev_timestamp_, 0);
+        assert_eq!(price_data.prev_timestamp_, 4);
     }
 
     // Negative prices are accepted
@@ -306,7 +311,7 @@ fn test_upd_price() {
         assert_eq!(price_data.prev_slot_, 5);
         assert_eq!(price_data.prev_price_, 81);
         assert_eq!(price_data.prev_conf_, 2);
-        assert_eq!(price_data.prev_timestamp_, 0);
+        assert_eq!(price_data.prev_timestamp_, 4);
     }
 }
 

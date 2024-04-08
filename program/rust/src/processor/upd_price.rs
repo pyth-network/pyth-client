@@ -200,7 +200,7 @@ pub fn upd_price(
             price_data.prev_slot_ = price_data.agg_.pub_slot_;
             price_data.prev_price_ = price_data.agg_.price_;
             price_data.prev_conf_ = price_data.agg_.conf_;
-            price_data.prev_timestamp_ = clock.unix_timestamp;
+            price_data.prev_timestamp_ = price_data.timestamp_;
         }
     }
 
@@ -221,28 +221,24 @@ pub fn upd_price(
 
     // If the aggregate was successfully updated, calculate the difference and update TWAP.
     if updated {
-        let agg_diff = (clock.slot as i64)
-            - load_checked::<PriceAccount>(price_account, cmd_args.header.version)?.prev_slot_
-                as i64;
         {
             let mut price_data =
                 load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
 
-            if !(noninitial_price_update_after_program_upgrade) {
-                // Multiple price updates may occur within the same slot. Updates within the same slot will
-                // use the previously calculated values (prev_twap, prev_twac, and prev_price_cumulative)
-                // from the last successful aggregated price update as their basis for recalculation. This
-                // ensures that each update within a slot builds upon the last and not the twap/twac/price_cumulative
-                // that is calculated right after the publishers' individual price updates.
-                if slots_since_last_update > 0 {
-                    price_data.prev_twap_ = price_data.twap_;
-                    price_data.prev_twac_ = price_data.twac_;
-                    price_data.prev_price_cumulative = price_data.price_cumulative;
-                }
-                price_data.twap_ = price_data.prev_twap_;
-                price_data.twac_ = price_data.prev_twac_;
-                price_data.price_cumulative = price_data.prev_price_cumulative;
+            // Multiple price updates may occur within the same slot. Updates within the same slot will
+            // use the previously calculated values (prev_twap, prev_twac, and prev_price_cumulative)
+            // from the last successful aggregated price update as their basis for recalculation. This
+            // ensures that each update within a slot builds upon the last and not the twap/twac/price_cumulative
+            // that is calculated right after the publishers' individual price updates.
+            if slots_since_last_update > 0 {
+                price_data.prev_twap_ = price_data.twap_;
+                price_data.prev_twac_ = price_data.twac_;
+                price_data.prev_price_cumulative = price_data.price_cumulative;
             }
+            price_data.twap_ = price_data.prev_twap_;
+            price_data.twac_ = price_data.prev_twac_;
+            price_data.price_cumulative = price_data.prev_price_cumulative;
+
             price_data.update_price_cumulative()?;
             // We want to send a message every time the aggregate price updates. However, during the migration,
             // not every publisher will necessarily provide the accumulator accounts. The message_sent_ flag
@@ -250,6 +246,9 @@ pub fn upd_price(
             // will send the message.
             price_data.message_sent_ = 0;
         }
+        let agg_diff = (clock.slot as i64)
+            - load_checked::<PriceAccount>(price_account, cmd_args.header.version)?.prev_slot_
+                as i64;
         unsafe {
             c_upd_twap(price_account.try_borrow_mut_data()?.as_mut_ptr(), agg_diff);
         }
