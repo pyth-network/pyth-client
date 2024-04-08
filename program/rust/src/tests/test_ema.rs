@@ -34,6 +34,7 @@ use {
         Serialize,
     },
     solana_program::pubkey::Pubkey,
+    solana_sdk::account_info::AccountInfo,
     std::{
         fs::File,
         mem::size_of,
@@ -44,7 +45,6 @@ use {
 #[test]
 fn test_ema_multiple_publishers_same_slot() -> Result<(), Box<dyn std::error::Error>> {
     let mut instruction_data = [0u8; size_of::<UpdPriceArgs>()];
-    populate_instruction(&mut instruction_data, 10, 1, 1);
 
     let program_id = Pubkey::new_unique();
 
@@ -56,11 +56,7 @@ fn test_ema_multiple_publishers_same_slot() -> Result<(), Box<dyn std::error::Er
     price_account.is_signer = false;
     PriceAccount::initialize(&price_account, PC_VERSION).unwrap();
 
-    {
-        let mut price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
-        price_data.num_ = 1;
-        price_data.comp_[0].pub_ = *funding_account.key;
-    }
+    add_publisher(&mut price_account, funding_account.key, 0);
 
     let mut clock_setup = AccountSetup::new_clock();
     let mut clock_account = clock_setup.as_account_info();
@@ -69,6 +65,7 @@ fn test_ema_multiple_publishers_same_slot() -> Result<(), Box<dyn std::error::Er
 
     update_clock_slot(&mut clock_account, 1);
 
+    populate_instruction(&mut instruction_data, 10, 1, 1);
     process_instruction(
         &program_id,
         &[
@@ -91,11 +88,7 @@ fn test_ema_multiple_publishers_same_slot() -> Result<(), Box<dyn std::error::Er
     let mut funding_setup_two = AccountSetup::new_funding();
     let funding_account_two = funding_setup_two.as_account_info();
 
-    {
-        let mut price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
-        price_data.num_ = 2;
-        price_data.comp_[1].pub_ = *funding_account_two.key;
-    }
+    add_publisher(&mut price_account, funding_account_two.key, 1);
 
     update_clock_slot(&mut clock_account, 2);
 
@@ -330,4 +323,10 @@ fn populate_instruction(instruction_data: &mut [u8], price: i64, conf: u64, pub_
     cmd.confidence = conf;
     cmd.publishing_slot = pub_slot;
     cmd.unused_ = 0;
+}
+
+fn add_publisher(price_account: &mut AccountInfo, publisher_key: &Pubkey, index: usize) {
+    let mut price_data = load_checked::<PriceAccount>(price_account, PC_VERSION).unwrap();
+    price_data.num_ = (index + 1) as u32;
+    price_data.comp_[index].pub_ = *publisher_key;
 }
