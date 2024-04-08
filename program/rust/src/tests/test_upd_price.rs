@@ -29,6 +29,7 @@ use {
         program_error::ProgramError,
         pubkey::Pubkey,
     },
+    solana_sdk::account_info::AccountInfo,
     std::mem::size_of,
 };
 
@@ -312,6 +313,75 @@ fn test_upd_price() {
         assert_eq!(price_data.prev_conf_, 2);
         assert_eq!(price_data.prev_timestamp_, 4);
     }
+
+    // add new test for multiple publishers and ensure that agg price is not updated multiple times when program upgrade happens in the same slot after the first update
+    let mut funding_setup_two = AccountSetup::new_funding();
+    let funding_account_two = funding_setup_two.as_account_info();
+
+    add_publisher(&mut price_account, funding_account_two.key, 1);
+
+    populate_instruction(&mut instruction_data, 10, 1, 10);
+    update_clock_slot(&mut clock_account, 10);
+
+    assert!(process_instruction(
+        &program_id,
+        &[
+            funding_account.clone(),
+            price_account.clone(),
+            clock_account.clone()
+        ],
+        &instruction_data
+    )
+    .is_ok());
+
+    {
+        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        assert_eq!(price_data.comp_[0].latest_.price_, 10);
+        assert_eq!(price_data.comp_[0].latest_.conf_, 1);
+        assert_eq!(price_data.comp_[0].latest_.pub_slot_, 10);
+        assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_TRADING);
+        assert_eq!(price_data.valid_slot_, 8);
+        assert_eq!(price_data.agg_.pub_slot_, 10);
+        assert_eq!(price_data.agg_.price_, 10);
+        assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
+        assert_eq!(price_data.prev_slot_, 8);
+        assert_eq!(price_data.prev_price_, -100);
+        assert_eq!(price_data.prev_conf_, 1);
+        assert_eq!(price_data.prev_timestamp_, 4);
+    }
+
+    // reset twap_.denom_ to 0 to simulate program upgrade in the same slot and make sure agg_.price_ is not updated again
+    {
+        let mut price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        price_data.prev_twap_.denom_ = 0;
+    }
+    populate_instruction(&mut instruction_data, 20, 1, 10);
+    assert!(process_instruction(
+        &program_id,
+        &[
+            funding_account_two.clone(),
+            price_account.clone(),
+            clock_account.clone()
+        ],
+        &instruction_data
+    )
+    .is_ok());
+
+    {
+        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        assert_eq!(price_data.comp_[1].latest_.price_, 20);
+        assert_eq!(price_data.comp_[1].latest_.conf_, 1);
+        assert_eq!(price_data.comp_[1].latest_.pub_slot_, 10);
+        assert_eq!(price_data.comp_[1].latest_.status_, PC_STATUS_TRADING);
+        assert_eq!(price_data.valid_slot_, 8);
+        assert_eq!(price_data.agg_.pub_slot_, 10);
+        assert_eq!(price_data.agg_.price_, 10);
+        assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
+        assert_eq!(price_data.prev_slot_, 8);
+        assert_eq!(price_data.prev_price_, -100);
+        assert_eq!(price_data.prev_conf_, 1);
+        assert_eq!(price_data.prev_timestamp_, 4);
+    }
 }
 
 // Create an upd_price instruction with the provided parameters
@@ -323,4 +393,10 @@ fn populate_instruction(instruction_data: &mut [u8], price: i64, conf: u64, pub_
     cmd.confidence = conf;
     cmd.publishing_slot = pub_slot;
     cmd.unused_ = 0;
+}
+
+fn add_publisher(price_account: &mut AccountInfo, publisher_key: &Pubkey, index: usize) {
+    let mut price_data = load_checked::<PriceAccount>(price_account, PC_VERSION).unwrap();
+    price_data.num_ = (index + 1) as u32;
+    price_data.comp_[index].pub_ = *publisher_key;
 }
