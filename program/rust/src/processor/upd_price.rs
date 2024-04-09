@@ -2,7 +2,6 @@ use {
     crate::{
         accounts::{
             PriceAccount,
-            PriceInfo,
             PythOracleSerialize,
             UPD_PRICE_WRITE_SEED,
         },
@@ -129,7 +128,6 @@ pub fn upd_price(
     let clock = Clock::from_account_info(clock_account)?;
 
     let mut publisher_index: usize = 0;
-    let latest_aggregate_price: PriceInfo;
     let slots_since_last_update: u64;
     let noninitial_price_update_after_program_upgrade: bool;
 
@@ -162,10 +160,6 @@ pub fn upd_price(
         noninitial_price_update_after_program_upgrade =
             price_data.prev_twap_.denom_ == 0 && slots_since_last_update == 0;
 
-        // We assign the current aggregate price to latest_aggregate_price before calling c_upd_aggregate because
-        // c_upd_aggregate directly modifies the memory of price_data.agg_ to update its values. This is crucial for
-        // comparisons or operations that rely on the aggregate price state before the update such as slots_since_last_update.
-        latest_aggregate_price = price_data.agg_;
         let latest_publisher_price = price_data.comp_[publisher_index].latest_;
 
         // Check that publisher is publishing a more recent price
@@ -196,7 +190,7 @@ pub fn upd_price(
         }
 
         // If the price update is the first in the slot and the aggregate is trading, update the previous slot, price, conf, and timestamp.
-        if slots_since_last_update > 0 && latest_aggregate_price.status_ == PC_STATUS_TRADING {
+        if slots_since_last_update > 0 && price_data.agg_.status_ == PC_STATUS_TRADING {
             price_data.prev_slot_ = price_data.agg_.pub_slot_;
             price_data.prev_price_ = price_data.agg_.price_;
             price_data.prev_conf_ = price_data.agg_.conf_;
