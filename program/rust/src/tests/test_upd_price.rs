@@ -348,6 +348,9 @@ fn test_upd_price() {
         assert_eq!(price_data.prev_price_, -100);
         assert_eq!(price_data.prev_conf_, 1);
         assert_eq!(price_data.prev_timestamp_, 4);
+        assert_eq!(price_data.twap_.numer_, 1677311098);
+        assert_eq!(price_data.twap_.denom_, 1279419481);
+        assert_eq!(price_data.price_cumulative.price, 86);
     }
 
     // reset twap_.denom_ to 0 to simulate program upgrade in the same slot and make sure agg_.price_ is not updated again
@@ -381,6 +384,9 @@ fn test_upd_price() {
         assert_eq!(price_data.prev_price_, -100);
         assert_eq!(price_data.prev_conf_, 1);
         assert_eq!(price_data.prev_timestamp_, 4);
+        assert_eq!(price_data.twap_.numer_, 1677311098); // twap_.numer_ should not be updated
+        assert_eq!(price_data.twap_.denom_, 1279419481); // twap_.denom_ should not be updated
+        assert_eq!(price_data.price_cumulative.price, 86); // price_cumulative should not be updated
     }
 }
 

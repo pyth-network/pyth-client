@@ -126,6 +126,8 @@ fn test_ema_multiple_publishers_same_slot() -> Result<(), Box<dyn std::error::Er
         let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
         assert_eq!(price_data.prev_twap_.val_, 10);
         assert_eq!(price_data.prev_twac_.val_, 1);
+        // The EMA value decreases to 12 despite an increase in the aggregate price due to the higher confidence associated with the new price.
+        // The EMA calculation considers the weight of 1/confidence for the new price, leading to a lower weighted average when the confidence is high.
         assert_eq!(price_data.twap_.val_, 12);
         assert_eq!(price_data.twac_.val_, 1);
     }
