@@ -123,7 +123,7 @@ fn test_upd_price_no_fail_on_error_no_fail_on_error() {
         assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
     }
 
-    // Invalid updates, such as publishing a price component with a pub_slot_ that's lower or equal than the price component stored in the program
+    // Invalid updates, such as publishing a price update with a pub_slot_ that's lower or equal than one that's already been published (by the same publisher),
     // should still fail silently and have no effect.
 
     // Check that the normal upd_price fails
