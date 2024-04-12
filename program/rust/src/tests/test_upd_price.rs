@@ -93,7 +93,7 @@ fn test_upd_price() {
         assert_eq!(price_data.price_cumulative.num_down_slots, 0);
     }
 
-    // add some prices for current slot - get rejected
+    // add some prices for a slot that is not greater than the current published slot
     populate_instruction(&mut instruction_data, 43, 2, 1);
 
     assert_eq!(
