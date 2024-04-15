@@ -80,6 +80,7 @@ fn test_upd_price() {
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 1);
         assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_TRADING);
         assert_eq!(price_data.valid_slot_, 0);
+        assert_eq!(price_data.last_slot_, 1);
         assert_eq!(price_data.agg_.pub_slot_, 1);
         assert_eq!(price_data.agg_.price_, 42);
         assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
@@ -112,6 +113,7 @@ fn test_upd_price() {
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 1);
         assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_TRADING);
         assert_eq!(price_data.valid_slot_, 0);
+        assert_eq!(price_data.last_slot_, 1);
         assert_eq!(price_data.agg_.pub_slot_, 1);
         assert_eq!(price_data.agg_.price_, 42);
         assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
@@ -143,6 +145,7 @@ fn test_upd_price() {
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 2);
         assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_TRADING);
         assert_eq!(price_data.valid_slot_, 1);
+        assert_eq!(price_data.last_slot_, 3);
         assert_eq!(price_data.agg_.pub_slot_, 3);
         assert_eq!(price_data.agg_.price_, 81);
         assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
@@ -174,13 +177,14 @@ fn test_upd_price() {
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 3);
         assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_TRADING);
         assert_eq!(price_data.valid_slot_, 3);
+        assert_eq!(price_data.last_slot_, 4);
         assert_eq!(price_data.agg_.pub_slot_, 4);
         assert_eq!(price_data.agg_.price_, 81);
         assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
         assert_eq!(price_data.prev_slot_, 3);
         assert_eq!(price_data.prev_price_, 81);
         assert_eq!(price_data.prev_conf_, 2);
-        assert_eq!(price_data.timestamp_, 4); // We only check for timestamp_ here because test_upd_price doesn't directly update timestamp_, this is updated through c_upd_aggregate which is tested in test_upd_aggregate, but we assert here to show that in subsequent asserts for prev_tim
+        assert_eq!(price_data.timestamp_, 4); // We only check for timestamp_ here because test_upd_price doesn't directly update timestamp_, this is updated through c_upd_aggregate which is tested in test_upd_aggregate, but we assert here to show that in subsequent asserts for prev_timestamp_ the value should be updated to this value
         assert_eq!(price_data.prev_timestamp_, 1);
     }
 
@@ -205,6 +209,7 @@ fn test_upd_price() {
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 4);
         assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_TRADING);
         assert_eq!(price_data.valid_slot_, 4);
+        assert_eq!(price_data.last_slot_, 5);
         assert_eq!(price_data.agg_.pub_slot_, 5);
         assert_eq!(price_data.agg_.price_, 81);
         assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
@@ -237,6 +242,7 @@ fn test_upd_price() {
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 4);
         assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_TRADING);
         assert_eq!(price_data.valid_slot_, 4);
+        assert_eq!(price_data.last_slot_, 5);
         assert_eq!(price_data.agg_.pub_slot_, 5);
         assert_eq!(price_data.agg_.price_, 81);
         assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
@@ -275,6 +281,7 @@ fn test_upd_price() {
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 5);
         assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_IGNORED);
         assert_eq!(price_data.valid_slot_, 5);
+        assert_eq!(price_data.last_slot_, 5);
         assert_eq!(price_data.agg_.pub_slot_, 6);
         assert_eq!(price_data.agg_.price_, 81);
         assert_eq!(price_data.agg_.status_, PC_STATUS_UNKNOWN);
@@ -305,6 +312,7 @@ fn test_upd_price() {
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 7);
         assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_TRADING);
         assert_eq!(price_data.valid_slot_, 6);
+        assert_eq!(price_data.last_slot_, 8);
         assert_eq!(price_data.agg_.pub_slot_, 8);
         assert_eq!(price_data.agg_.price_, -100);
         assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
@@ -341,6 +349,7 @@ fn test_upd_price() {
         assert_eq!(price_data.comp_[0].latest_.pub_slot_, 10);
         assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_TRADING);
         assert_eq!(price_data.valid_slot_, 8);
+        assert_eq!(price_data.last_slot_, 10);
         assert_eq!(price_data.agg_.pub_slot_, 10);
         assert_eq!(price_data.agg_.price_, 10);
         assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
@@ -377,6 +386,7 @@ fn test_upd_price() {
         assert_eq!(price_data.comp_[1].latest_.pub_slot_, 10);
         assert_eq!(price_data.comp_[1].latest_.status_, PC_STATUS_TRADING);
         assert_eq!(price_data.valid_slot_, 8);
+        assert_eq!(price_data.last_slot_, 10);
         assert_eq!(price_data.agg_.pub_slot_, 10);
         assert_eq!(price_data.agg_.price_, 10);
         assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
