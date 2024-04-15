@@ -56,7 +56,7 @@ fn test_ema_multiple_publishers_same_slot() -> Result<(), Box<dyn std::error::Er
     price_account.is_signer = false;
     PriceAccount::initialize(&price_account, PC_VERSION).unwrap();
 
-    add_publisher(&mut price_account, funding_account.key, 0);
+    add_publisher(&mut price_account, funding_account.key);
 
     let mut clock_setup = AccountSetup::new_clock();
     let mut clock_account = clock_setup.as_account_info();
@@ -88,7 +88,7 @@ fn test_ema_multiple_publishers_same_slot() -> Result<(), Box<dyn std::error::Er
     let mut funding_setup_two = AccountSetup::new_funding();
     let funding_account_two = funding_setup_two.as_account_info();
 
-    add_publisher(&mut price_account, funding_account_two.key, 1);
+    add_publisher(&mut price_account, funding_account_two.key);
 
     update_clock_slot(&mut clock_account, 2);
 
@@ -327,8 +327,9 @@ fn populate_instruction(instruction_data: &mut [u8], price: i64, conf: u64, pub_
     cmd.unused_ = 0;
 }
 
-fn add_publisher(price_account: &mut AccountInfo, publisher_key: &Pubkey, index: usize) {
+fn add_publisher(price_account: &mut AccountInfo, publisher_key: &Pubkey) {
     let mut price_data = load_checked::<PriceAccount>(price_account, PC_VERSION).unwrap();
-    price_data.num_ = (index + 1) as u32;
+    let index = price_data.num_ as usize;
     price_data.comp_[index].pub_ = *publisher_key;
+    price_data.num_ += 1;
 }
