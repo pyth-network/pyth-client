@@ -128,7 +128,7 @@ pub fn upd_price(
     let clock = Clock::from_account_info(clock_account)?;
 
     let mut publisher_index: usize = 0;
-    let slots_since_last_update: u64;
+    let slots_since_last_successful_aggregate: u64;
     let noninitial_price_update_after_program_upgrade: bool;
 
     // The price_data borrow happens in a scope because it must be
@@ -150,15 +150,15 @@ pub fn upd_price(
             OracleError::PermissionViolation.into(),
         )?;
 
-        // We use last_slot_ to calculate slots_since_last_update. This is because last_slot_ is updated after the aggregate price is updated successfully.
-        slots_since_last_update = clock.slot - price_data.last_slot_;
+        // We use last_slot_ to calculate slots_since_last_successful_aggregate. This is because last_slot_ is updated after the aggregate price is updated successfully.
+        slots_since_last_successful_aggregate = clock.slot - price_data.last_slot_;
 
         // Check if the program upgrade has happened in the current slot and aggregate price has been updated, if so, use the old logic to update twap/twac/price_cumulative.
         // This is to ensure that twap/twac/price_cumulative are calculated correctly during the migration.
         // We check if prev_twap_.denom_ is == 0 because when the program upgrade has happened, denom_ is initialized to 0 and it can only stay the same or increase while numer_ can be negative if prices are negative.
-        // And we check if slots_since_last_update == 0 to check if the aggregate price has been updated in the current slot.
+        // And we check if slots_since_last_successful_aggregate == 0 to check if the aggregate price has been updated in the current slot.
         noninitial_price_update_after_program_upgrade =
-            price_data.prev_twap_.denom_ == 0 && slots_since_last_update == 0;
+            price_data.prev_twap_.denom_ == 0 && slots_since_last_successful_aggregate == 0;
 
         let latest_publisher_price = price_data.comp_[publisher_index].latest_;
 
@@ -190,7 +190,8 @@ pub fn upd_price(
         }
 
         // If the price update is the first in the slot and the aggregate is trading, update the previous slot, price, conf, and timestamp.
-        if slots_since_last_update > 0 && price_data.agg_.status_ == PC_STATUS_TRADING {
+        if slots_since_last_successful_aggregate > 0 && price_data.agg_.status_ == PC_STATUS_TRADING
+        {
             price_data.prev_slot_ = price_data.agg_.pub_slot_;
             price_data.prev_price_ = price_data.agg_.price_;
             price_data.prev_conf_ = price_data.agg_.conf_;
@@ -224,7 +225,7 @@ pub fn upd_price(
             // from the last successful aggregated price update as their basis for recalculation. This
             // ensures that each update within a slot builds upon the last and not the twap/twac/price_cumulative
             // that is calculated right after the publishers' individual price updates.
-            if slots_since_last_update > 0 {
+            if slots_since_last_successful_aggregate > 0 {
                 price_data.prev_twap_ = price_data.twap_;
                 price_data.prev_twac_ = price_data.twac_;
                 price_data.prev_price_cumulative = price_data.price_cumulative;

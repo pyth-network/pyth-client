@@ -115,13 +115,6 @@ fn test_upd_aggregate() {
         price_data.timestamp_ = 0;
         price_data.agg_.pub_slot_ = 1000;
         price_data.comp_[0].latest_ = p1;
-        price_data.prev_slot_ = 0;
-        price_data.prev_price_ = 0;
-        price_data.prev_conf_ = 0;
-        price_data.prev_timestamp_ = 0;
-        price_data.agg_.price_ = 0;
-        price_data.agg_.conf_ = 0;
-        price_data.agg_.status_ = PC_STATUS_UNKNOWN;
     }
 
     unsafe {
