@@ -1,12 +1,31 @@
 extern crate test_generator;
 
 use {
+    super::test_utils::update_clock_slot,
     crate::{
-        accounts::PriceAccount,
+        accounts::{
+            PriceAccount,
+            PythAccount,
+        },
+        c_oracle_header::{
+            PC_STATUS_TRADING,
+            PC_STATUS_UNKNOWN,
+            PC_VERSION,
+        },
+        deserialize::{
+            load_checked,
+            load_mut,
+        },
+        instruction::{
+            OracleCommand,
+            UpdPriceArgs,
+        },
         processor::{
             c_upd_aggregate,
             c_upd_twap,
+            process_instruction,
         },
+        tests::test_utils::AccountSetup,
     },
     bytemuck::Zeroable,
     csv::ReaderBuilder,
@@ -14,10 +33,161 @@ use {
         Deserialize,
         Serialize,
     },
-    std::fs::File,
+    solana_program::pubkey::Pubkey,
+    solana_sdk::account_info::AccountInfo,
+    std::{
+        fs::File,
+        mem::size_of,
+    },
     test_generator::test_resources,
 };
 
+#[test]
+fn test_ema_multiple_publishers_same_slot() -> Result<(), Box<dyn std::error::Error>> {
+    let mut instruction_data = [0u8; size_of::<UpdPriceArgs>()];
+
+    let program_id = Pubkey::new_unique();
+
+    let mut funding_setup = AccountSetup::new_funding();
+    let funding_account = funding_setup.as_account_info();
+
+    let mut price_setup = AccountSetup::new::<PriceAccount>(&program_id);
+    let mut price_account = price_setup.as_account_info();
+    price_account.is_signer = false;
+    PriceAccount::initialize(&price_account, PC_VERSION).unwrap();
+
+    add_publisher(&mut price_account, funding_account.key);
+
+    let mut clock_setup = AccountSetup::new_clock();
+    let mut clock_account = clock_setup.as_account_info();
+    clock_account.is_signer = false;
+    clock_account.is_writable = false;
+
+    update_clock_slot(&mut clock_account, 1);
+
+    populate_instruction(&mut instruction_data, 10, 1, 1);
+    process_instruction(
+        &program_id,
+        &[
+            funding_account.clone(),
+            price_account.clone(),
+            clock_account.clone(),
+        ],
+        &instruction_data,
+    )?;
+
+    {
+        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        assert_eq!(price_data.prev_twap_.val_, 0);
+        assert_eq!(price_data.prev_twac_.val_, 0);
+        assert_eq!(price_data.twap_.val_, 10);
+        assert_eq!(price_data.twac_.val_, 1);
+    }
+
+    // add new test for multiple publishers and ensure that ema is updated correctly
+    let mut funding_setup_two = AccountSetup::new_funding();
+    let funding_account_two = funding_setup_two.as_account_info();
+
+    add_publisher(&mut price_account, funding_account_two.key);
+
+    update_clock_slot(&mut clock_account, 2);
+
+    populate_instruction(&mut instruction_data, 20, 1, 2);
+    process_instruction(
+        &program_id,
+        &[
+            funding_account.clone(),
+            price_account.clone(),
+            clock_account.clone(),
+        ],
+        &instruction_data,
+    )?;
+
+    {
+        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        assert_eq!(price_data.prev_twap_.val_, 10);
+        assert_eq!(price_data.prev_twac_.val_, 1);
+        assert_eq!(price_data.twap_.val_, 15);
+        assert_eq!(price_data.twac_.val_, 1);
+    }
+
+    populate_instruction(&mut instruction_data, 30, 1, 2);
+    process_instruction(
+        &program_id,
+        &[
+            funding_account_two.clone(),
+            price_account.clone(),
+            clock_account.clone(),
+        ],
+        &instruction_data,
+    )?;
+
+    {
+        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        assert_eq!(price_data.prev_twap_.val_, 10);
+        assert_eq!(price_data.prev_twac_.val_, 1);
+        // The EMA value decreases to 12 despite an increase in the aggregate price due to the higher confidence associated with the new price.
+        // The EMA calculation considers the weight of 1/confidence for the new price, leading to a lower weighted average when the confidence is high.
+        assert_eq!(price_data.twap_.val_, 12);
+        assert_eq!(price_data.twac_.val_, 1);
+    }
+
+    // add test for multiple publishers where the first publisher causes the aggregate to be unknown and second publisher causes it to be trading
+    {
+        let mut price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        price_data.min_pub_ = 2;
+        price_data.num_ = 1;
+    }
+
+    update_clock_slot(&mut clock_account, 3);
+
+    populate_instruction(&mut instruction_data, 20, 1, 3);
+    process_instruction(
+        &program_id,
+        &[
+            funding_account.clone(),
+            price_account.clone(),
+            clock_account.clone(),
+        ],
+        &instruction_data,
+    )?;
+
+    {
+        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        assert_eq!(price_data.agg_.status_, PC_STATUS_UNKNOWN);
+        assert_eq!(price_data.prev_twap_.val_, 10);
+        assert_eq!(price_data.prev_twac_.val_, 1);
+        assert_eq!(price_data.twap_.val_, 12);
+        assert_eq!(price_data.twac_.val_, 1);
+    }
+
+    {
+        let mut price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        price_data.min_pub_ = 2;
+        price_data.num_ = 2;
+    }
+
+    populate_instruction(&mut instruction_data, 40, 1, 3);
+    process_instruction(
+        &program_id,
+        &[
+            funding_account_two.clone(),
+            price_account.clone(),
+            clock_account.clone(),
+        ],
+        &instruction_data,
+    )?;
+
+    {
+        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
+        assert_eq!(price_data.prev_twap_.val_, 12);
+        assert_eq!(price_data.prev_twac_.val_, 1);
+        assert_eq!(price_data.twap_.val_, 13);
+        assert_eq!(price_data.twac_.val_, 2);
+    }
+    Ok(())
+}
 
 #[test_resources("program/rust/test_data/ema/*.csv")]
 fn test_ema(input_path_raw: &str) {
@@ -110,7 +280,6 @@ fn run_ema_test(inputs: &[InputRecord], expected_outputs: &[OutputRecord]) {
     }
 }
 
-
 // TODO: put these functions somewhere more accessible
 pub fn upd_aggregate(
     price_account: &mut PriceAccount,
@@ -130,7 +299,6 @@ pub fn upd_twap(price_account: &mut PriceAccount, nslots: i64) {
     unsafe { c_upd_twap((price_account as *mut PriceAccount) as *mut u8, nslots) }
 }
 
-
 #[derive(Serialize, Deserialize, Debug)]
 struct InputRecord {
     price:  i64,
@@ -147,4 +315,21 @@ struct OutputRecord {
     nslots: i64,
     twap:   i64,
     twac:   i64,
+}
+
+fn populate_instruction(instruction_data: &mut [u8], price: i64, conf: u64, pub_slot: u64) {
+    let mut cmd = load_mut::<UpdPriceArgs>(instruction_data).unwrap();
+    cmd.header = OracleCommand::UpdPrice.into();
+    cmd.status = PC_STATUS_TRADING;
+    cmd.price = price;
+    cmd.confidence = conf;
+    cmd.publishing_slot = pub_slot;
+    cmd.unused_ = 0;
+}
+
+fn add_publisher(price_account: &mut AccountInfo, publisher_key: &Pubkey) {
+    let mut price_data = load_checked::<PriceAccount>(price_account, PC_VERSION).unwrap();
+    let index = price_data.num_ as usize;
+    price_data.comp_[index].pub_ = *publisher_key;
+    price_data.num_ += 1;
 }

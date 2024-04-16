@@ -36,7 +36,6 @@ async fn test_full_publisher_set() -> Result<(), Box<dyn std::error::Error>> {
         .await;
     let price = price_accounts["LTC"];
 
-
     let n_pubs = pub_keypairs.len();
 
     // Divide publishers into two even parts (assuming the max PC_NUM_COMP size is even)
@@ -60,18 +59,6 @@ async fn test_full_publisher_set() -> Result<(), Box<dyn std::error::Error>> {
 
         sim.upd_price(second_kp, price, second_quote).await?;
     }
-
-    // Advance slot once from 1 to 2
-    sim.warp_to_slot(2).await?;
-
-    // Final price update to trigger aggregation
-    let first_kp = pub_keypairs.first().unwrap();
-    let first_quote = Quote {
-        price:      100,
-        confidence: 30,
-        status:     PC_STATUS_TRADING,
-    };
-    sim.upd_price(first_kp, price, first_quote).await?;
 
     {
         let price_data = sim

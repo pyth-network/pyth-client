@@ -23,7 +23,7 @@ extern "C" {
 #define PC_MAP_TABLE_SIZE   640
 
   // Total price component slots available
-#define PC_NUM_COMP_PYTHNET     128
+#define PC_NUM_COMP_PYTHNET     127
 
 // PC_NUM_COMP - number of price components in use
 // Not whole PC_NUM_COMP_PYTHNET because of stack issues appearing in upd_aggregate()

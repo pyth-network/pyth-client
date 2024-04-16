@@ -52,7 +52,6 @@ fn test_upd_price_no_fail_on_error_no_fail_on_error() {
 
     update_clock_slot(&mut clock_account, 1);
 
-
     // Check that the normal upd_price fails
     populate_instruction(&mut instruction_data, 42, 9, 1, true);
 
@@ -69,7 +68,6 @@ fn test_upd_price_no_fail_on_error_no_fail_on_error() {
         Err(OracleError::PermissionViolation.into())
     );
 
-
     populate_instruction(&mut instruction_data, 42, 9, 1, false);
     // We haven't permissioned the publish account for the price account
     // yet, so any update should fail silently and have no effect. The
@@ -84,7 +82,6 @@ fn test_upd_price_no_fail_on_error_no_fail_on_error() {
         &instruction_data
     )
     .is_ok());
-
 
     {
         let mut price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
@@ -122,8 +119,8 @@ fn test_upd_price_no_fail_on_error_no_fail_on_error() {
         assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_TRADING);
         assert_eq!(price_data.valid_slot_, 0);
         assert_eq!(price_data.agg_.pub_slot_, 1);
-        assert_eq!(price_data.agg_.price_, 0);
-        assert_eq!(price_data.agg_.status_, PC_STATUS_UNKNOWN);
+        assert_eq!(price_data.agg_.price_, 42);
+        assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
     }
 
     // Invalid updates, such as publishing an update for the current slot,
@@ -164,11 +161,10 @@ fn test_upd_price_no_fail_on_error_no_fail_on_error() {
         assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_TRADING);
         assert_eq!(price_data.valid_slot_, 0);
         assert_eq!(price_data.agg_.pub_slot_, 1);
-        assert_eq!(price_data.agg_.price_, 0);
-        assert_eq!(price_data.agg_.status_, PC_STATUS_UNKNOWN);
+        assert_eq!(price_data.agg_.price_, 42);
+        assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
     }
 }
-
 
 // Create an upd_price_no_fail_on_error or upd_price instruction with the provided parameters
 fn populate_instruction(
