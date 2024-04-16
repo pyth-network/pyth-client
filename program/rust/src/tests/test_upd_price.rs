@@ -485,6 +485,34 @@ fn test_upd_price() {
     )
     .is_ok());
 
+    {
+        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        assert_eq!(price_data.comp_[0].latest_.price_, 10);
+        assert_eq!(price_data.comp_[0].latest_.conf_, 1);
+        assert_eq!(price_data.comp_[0].latest_.pub_slot_, 100);
+        assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_TRADING);
+        assert_eq!(price_data.valid_slot_, 50);
+        assert_eq!(price_data.agg_.pub_slot_, 100);
+        assert_eq!(price_data.agg_.price_, 10);
+        assert_eq!(price_data.agg_.conf_, 1);
+        assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
+        assert_eq!(price_data.prev_slot_, 50);
+        assert_eq!(price_data.prev_price_, 60);
+        assert_eq!(price_data.prev_conf_, 4);
+        assert_eq!(
+            price_data.prev_price_cumulative.price,
+            42 + 81 * 4 - 100 * 3 + 10 * 2 + 60 * 40
+        );
+        assert_eq!(price_data.prev_price_cumulative.conf, 2 * 5 + 5 + 40 * 4);
+        assert_eq!(price_data.prev_price_cumulative.num_down_slots, 15);
+        assert_eq!(
+            price_data.price_cumulative.price,
+            42 + 81 * 4 - 100 * 3 + 10 * 2 + 60 * 40 + 10 * 50
+        ); // (42 + 81 * 4 - 100 * 3 + 10 * 2 + 60 * 40) is the price cumulative from the previous test and 10 * 50 (slot_gap) is the price cumulative from this test
+        assert_eq!(price_data.price_cumulative.conf, 2 * 5 + 5 + 40 * 4 + 50);
+        assert_eq!(price_data.price_cumulative.num_down_slots, 40); // prev num_down_slots was 15 and since pub slot is 100 and last pub slot was 50, slot_gap is 50 and default latency is 25, so num_down_slots = 50 - 25 = 25, so total num_down_slots = 15 + 25 = 40
+    }
+
     populate_instruction(&mut instruction_data, 20, 2, 100);
     assert!(process_instruction(
         &program_id,
@@ -524,7 +552,7 @@ fn test_upd_price() {
         assert_eq!(
             price_data.price_cumulative.price,
             42 + 81 * 4 - 100 * 3 + 10 * 2 + 60 * 40 + 14 * 50
-        ); // (42 + 81 * 4 - 100 * 3 + 10 * 2 + 60 * 40 + 55) is the price cumulative from the previous test and 14 * 49 (slot_gap) is the price cumulative from this test
+        ); // (42 + 81 * 4 - 100 * 3 + 10 * 2 + 60 * 40) is the price cumulative from the previous test and 14 * 50 (slot_gap) is the price cumulative from this test
         assert_eq!(
             price_data.price_cumulative.conf,
             2 * 5 + 5 + 40 * 4 + 6 * 50
