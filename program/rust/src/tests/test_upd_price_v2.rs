@@ -32,7 +32,7 @@ use {
 };
 
 #[test]
-fn test_upd_price() {
+fn test_upd_price_v2() -> Result<(), Box<dyn std::error::Error>> {
     let mut instruction_data = [0u8; size_of::<UpdPriceArgs>()];
     populate_instruction(&mut instruction_data, 42, 2, 1);
 
@@ -59,16 +59,15 @@ fn test_upd_price() {
 
     update_clock_slot(&mut clock_account, 1);
 
-    assert!(process_instruction(
+    process_instruction(
         &program_id,
         &[
             funding_account.clone(),
             price_account.clone(),
-            clock_account.clone()
+            clock_account.clone(),
         ],
-        &instruction_data
-    )
-    .is_ok());
+        &instruction_data,
+    )?;
 
     {
         let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
@@ -79,10 +78,15 @@ fn test_upd_price() {
         assert_eq!(price_data.valid_slot_, 0);
         assert_eq!(price_data.agg_.pub_slot_, 1);
         assert_eq!(price_data.agg_.price_, 0);
+        assert_eq!(price_data.agg_.conf_, 0);
         assert_eq!(price_data.agg_.status_, PC_STATUS_UNKNOWN);
+
+        assert_eq!(price_data.price_cumulative.price, 0);
+        assert_eq!(price_data.price_cumulative.conf, 0);
+        assert_eq!(price_data.price_cumulative.num_down_slots, 0);
     }
 
-    // a publisher's component pub_slot_ has to be strictly increasing -- get rejected
+    // add some prices for current slot - get rejected
     populate_instruction(&mut instruction_data, 43, 2, 1);
 
     assert_eq!(
@@ -107,23 +111,27 @@ fn test_upd_price() {
         assert_eq!(price_data.valid_slot_, 0);
         assert_eq!(price_data.agg_.pub_slot_, 1);
         assert_eq!(price_data.agg_.price_, 0);
+        assert_eq!(price_data.agg_.conf_, 0);
         assert_eq!(price_data.agg_.status_, PC_STATUS_UNKNOWN);
+
+        assert_eq!(price_data.price_cumulative.price, 0);
+        assert_eq!(price_data.price_cumulative.conf, 0);
+        assert_eq!(price_data.price_cumulative.num_down_slots, 0);
     }
 
     // add next price in new slot triggering snapshot and aggregate calc
     populate_instruction(&mut instruction_data, 81, 2, 2);
     update_clock_slot(&mut clock_account, 3);
 
-    assert!(process_instruction(
+    process_instruction(
         &program_id,
         &[
             funding_account.clone(),
             price_account.clone(),
-            clock_account.clone()
+            clock_account.clone(),
         ],
-        &instruction_data
-    )
-    .is_ok());
+        &instruction_data,
+    )?;
 
     {
         let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
@@ -134,22 +142,26 @@ fn test_upd_price() {
         assert_eq!(price_data.valid_slot_, 1);
         assert_eq!(price_data.agg_.pub_slot_, 3);
         assert_eq!(price_data.agg_.price_, 42);
+        assert_eq!(price_data.agg_.conf_, 2);
         assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
+
+        assert_eq!(price_data.price_cumulative.price, 3 * 42);
+        assert_eq!(price_data.price_cumulative.conf, 3 * 2);
+        assert_eq!(price_data.price_cumulative.num_down_slots, 0);
     }
 
     // next price doesn't change but slot does
     populate_instruction(&mut instruction_data, 81, 2, 3);
     update_clock_slot(&mut clock_account, 4);
-    assert!(process_instruction(
+    process_instruction(
         &program_id,
         &[
             funding_account.clone(),
             price_account.clone(),
-            clock_account.clone()
+            clock_account.clone(),
         ],
-        &instruction_data
-    )
-    .is_ok());
+        &instruction_data,
+    )?;
 
     {
         let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
@@ -160,22 +172,26 @@ fn test_upd_price() {
         assert_eq!(price_data.valid_slot_, 3);
         assert_eq!(price_data.agg_.pub_slot_, 4);
         assert_eq!(price_data.agg_.price_, 81);
+        assert_eq!(price_data.agg_.conf_, 2);
         assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
+
+        assert_eq!(price_data.price_cumulative.price, 3 * 42 + 81);
+        assert_eq!(price_data.price_cumulative.conf, 3 * 2 + 2);
+        assert_eq!(price_data.price_cumulative.num_down_slots, 0);
     }
 
     // next price doesn't change and neither does aggregate but slot does
     populate_instruction(&mut instruction_data, 81, 2, 4);
     update_clock_slot(&mut clock_account, 5);
-    assert!(process_instruction(
+    process_instruction(
         &program_id,
         &[
             funding_account.clone(),
             price_account.clone(),
-            clock_account.clone()
+            clock_account.clone(),
         ],
-        &instruction_data
-    )
-    .is_ok());
+        &instruction_data,
+    )?;
 
     {
         let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
@@ -186,7 +202,12 @@ fn test_upd_price() {
         assert_eq!(price_data.valid_slot_, 4);
         assert_eq!(price_data.agg_.pub_slot_, 5);
         assert_eq!(price_data.agg_.price_, 81);
+        assert_eq!(price_data.agg_.conf_, 2);
         assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
+
+        assert_eq!(price_data.price_cumulative.price, 3 * 42 + 81 * 2);
+        assert_eq!(price_data.price_cumulative.conf, 3 * 2 + 2 * 2);
+        assert_eq!(price_data.price_cumulative.num_down_slots, 0);
     }
 
     // try to publish back-in-time
@@ -214,7 +235,12 @@ fn test_upd_price() {
         assert_eq!(price_data.valid_slot_, 4);
         assert_eq!(price_data.agg_.pub_slot_, 5);
         assert_eq!(price_data.agg_.price_, 81);
+        assert_eq!(price_data.agg_.conf_, 2);
         assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
+
+        assert_eq!(price_data.price_cumulative.price, 3 * 42 + 81 * 2);
+        assert_eq!(price_data.price_cumulative.conf, 3 * 2 + 2 * 2);
+        assert_eq!(price_data.price_cumulative.num_down_slots, 0);
     }
 
     populate_instruction(&mut instruction_data, 50, 20, 5);
@@ -228,16 +254,15 @@ fn test_upd_price() {
         assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_TRADING);
     }
 
-    assert!(process_instruction(
+    process_instruction(
         &program_id,
         &[
             funding_account.clone(),
             price_account.clone(),
-            clock_account.clone()
+            clock_account.clone(),
         ],
-        &instruction_data
-    )
-    .is_ok());
+        &instruction_data,
+    )?;
 
     {
         let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
@@ -248,23 +273,27 @@ fn test_upd_price() {
         assert_eq!(price_data.valid_slot_, 5);
         assert_eq!(price_data.agg_.pub_slot_, 6);
         assert_eq!(price_data.agg_.price_, 81);
+        assert_eq!(price_data.agg_.conf_, 2);
         assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
+
+        assert_eq!(price_data.price_cumulative.price, 3 * 42 + 81 * 3);
+        assert_eq!(price_data.price_cumulative.conf, 3 * 2 + 2 * 3);
+        assert_eq!(price_data.price_cumulative.num_down_slots, 0);
     }
 
     // Crank one more time and aggregate should be unknown
     populate_instruction(&mut instruction_data, 50, 20, 6);
     update_clock_slot(&mut clock_account, 7);
 
-    assert!(process_instruction(
+    process_instruction(
         &program_id,
         &[
             funding_account.clone(),
             price_account.clone(),
-            clock_account.clone()
+            clock_account.clone(),
         ],
-        &instruction_data
-    )
-    .is_ok());
+        &instruction_data,
+    )?;
 
     {
         let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
@@ -275,23 +304,27 @@ fn test_upd_price() {
         assert_eq!(price_data.valid_slot_, 6);
         assert_eq!(price_data.agg_.pub_slot_, 7);
         assert_eq!(price_data.agg_.price_, 81);
+        assert_eq!(price_data.agg_.conf_, 2);
         assert_eq!(price_data.agg_.status_, PC_STATUS_UNKNOWN);
+
+        assert_eq!(price_data.price_cumulative.price, 3 * 42 + 81 * 3);
+        assert_eq!(price_data.price_cumulative.conf, 3 * 2 + 2 * 3);
+        assert_eq!(price_data.price_cumulative.num_down_slots, 0);
     }
 
     // Negative prices are accepted
     populate_instruction(&mut instruction_data, -100, 1, 7);
     update_clock_slot(&mut clock_account, 8);
 
-    assert!(process_instruction(
+    process_instruction(
         &program_id,
         &[
             funding_account.clone(),
             price_account.clone(),
-            clock_account.clone()
+            clock_account.clone(),
         ],
-        &instruction_data
-    )
-    .is_ok());
+        &instruction_data,
+    )?;
 
     {
         let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
@@ -302,23 +335,27 @@ fn test_upd_price() {
         assert_eq!(price_data.valid_slot_, 7);
         assert_eq!(price_data.agg_.pub_slot_, 8);
         assert_eq!(price_data.agg_.price_, 81);
+        assert_eq!(price_data.agg_.conf_, 2);
         assert_eq!(price_data.agg_.status_, PC_STATUS_UNKNOWN);
+
+        assert_eq!(price_data.price_cumulative.price, 3 * 42 + 81 * 3);
+        assert_eq!(price_data.price_cumulative.conf, 3 * 2 + 2 * 3);
+        assert_eq!(price_data.price_cumulative.num_down_slots, 0);
     }
 
     // Crank again for aggregate
     populate_instruction(&mut instruction_data, -100, 1, 8);
     update_clock_slot(&mut clock_account, 9);
 
-    assert!(process_instruction(
+    process_instruction(
         &program_id,
         &[
             funding_account.clone(),
             price_account.clone(),
-            clock_account.clone()
+            clock_account.clone(),
         ],
-        &instruction_data
-    )
-    .is_ok());
+        &instruction_data,
+    )?;
 
     {
         let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
@@ -329,8 +366,82 @@ fn test_upd_price() {
         assert_eq!(price_data.valid_slot_, 8);
         assert_eq!(price_data.agg_.pub_slot_, 9);
         assert_eq!(price_data.agg_.price_, -100);
+        assert_eq!(price_data.agg_.conf_, 1);
         assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
+
+        assert_eq!(price_data.price_cumulative.price, 3 * 42 + 81 * 3 - 100 * 3);
+        assert_eq!(price_data.price_cumulative.conf, 3 * 2 + 2 * 3 + 3);
+        assert_eq!(price_data.price_cumulative.num_down_slots, 0);
     }
+
+    // Big gap
+
+    populate_instruction(&mut instruction_data, 60, 4, 50);
+    update_clock_slot(&mut clock_account, 50);
+
+    process_instruction(
+        &program_id,
+        &[
+            funding_account.clone(),
+            price_account.clone(),
+            clock_account.clone(),
+        ],
+        &instruction_data,
+    )?;
+
+    {
+        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        assert_eq!(price_data.comp_[0].latest_.price_, 60);
+        assert_eq!(price_data.comp_[0].latest_.conf_, 4);
+        assert_eq!(price_data.comp_[0].latest_.pub_slot_, 50);
+        assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_TRADING);
+        assert_eq!(price_data.valid_slot_, 9);
+        assert_eq!(price_data.agg_.pub_slot_, 50);
+        assert_eq!(price_data.agg_.price_, -100);
+        assert_eq!(price_data.agg_.conf_, 1);
+        assert_eq!(price_data.agg_.status_, PC_STATUS_UNKNOWN);
+
+        assert_eq!(price_data.price_cumulative.price, 3 * 42 + 81 * 3 - 100 * 3);
+        assert_eq!(price_data.price_cumulative.conf, 3 * 2 + 2 * 3 + 3);
+        assert_eq!(price_data.price_cumulative.num_down_slots, 0);
+    }
+
+    // Crank again for aggregate
+
+    populate_instruction(&mut instruction_data, 55, 5, 51);
+    update_clock_slot(&mut clock_account, 51);
+
+    process_instruction(
+        &program_id,
+        &[
+            funding_account.clone(),
+            price_account.clone(),
+            clock_account.clone(),
+        ],
+        &instruction_data,
+    )?;
+
+    {
+        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        assert_eq!(price_data.comp_[0].latest_.price_, 55);
+        assert_eq!(price_data.comp_[0].latest_.conf_, 5);
+        assert_eq!(price_data.comp_[0].latest_.pub_slot_, 51);
+        assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_TRADING);
+        assert_eq!(price_data.valid_slot_, 50);
+        assert_eq!(price_data.agg_.pub_slot_, 51);
+        assert_eq!(price_data.agg_.price_, 60);
+        assert_eq!(price_data.agg_.conf_, 4);
+        assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
+
+        assert_eq!(
+            price_data.price_cumulative.price,
+            3 * 42 + 81 * 3 - 100 * 3 + 42 * 60
+        );
+        assert_eq!(price_data.price_cumulative.conf, 3 * 2 + 2 * 3 + 3 + 42 * 4);
+        assert_eq!(price_data.price_cumulative.num_down_slots, 17);
+    }
+
+    Ok(())
 }
 
 // Create an upd_price instruction with the provided parameters

@@ -19,10 +19,13 @@ mod test_publish_batch;
 mod test_set_max_latency;
 mod test_set_min_pub;
 mod test_sizes;
-mod test_twap;
 mod test_upd_aggregate;
 mod test_upd_permissions;
 mod test_upd_price;
 mod test_upd_price_no_fail_on_error;
 mod test_upd_product;
 mod test_utils;
+
+
+mod test_twap;
+mod test_upd_price_v2;
