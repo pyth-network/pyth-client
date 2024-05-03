@@ -5,12 +5,9 @@ target
 cmake-build-*
 /venv
 
-# CMake files
-features.h
-
 # IntelliJ / CLion configuration
 .idea
 *.iml
 
-# Clang format
-.clang-format
+# CMake files
+features.h

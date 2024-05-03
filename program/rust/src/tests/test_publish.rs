@@ -73,9 +73,10 @@ async fn test_publish() {
         assert_eq!(price_data.comp_[0].latest_.price_, 150);
         assert_eq!(price_data.comp_[0].latest_.conf_, 7);
         assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_TRADING);
-        assert_eq!(price_data.comp_[0].agg_.price_, 150);
-        assert_eq!(price_data.comp_[0].agg_.conf_, 7);
-        assert_eq!(price_data.comp_[0].agg_.status_, PC_STATUS_TRADING);
+
+        assert_eq!(price_data.comp_[0].agg_.price_, 0);
+        assert_eq!(price_data.comp_[0].agg_.conf_, 0);
+        assert_eq!(price_data.comp_[0].agg_.status_, PC_STATUS_UNKNOWN);
     }
 
     sim.warp_to_slot(2).await.unwrap();
@@ -101,8 +102,8 @@ async fn test_publish() {
         assert_eq!(price_data.comp_[0].latest_.conf_, 0);
         assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_UNKNOWN);
 
-        assert_eq!(price_data.comp_[0].agg_.price_, 0);
-        assert_eq!(price_data.comp_[0].agg_.conf_, 0);
-        assert_eq!(price_data.comp_[0].agg_.status_, PC_STATUS_UNKNOWN);
+        assert_eq!(price_data.comp_[0].agg_.price_, 150);
+        assert_eq!(price_data.comp_[0].agg_.conf_, 7);
+        assert_eq!(price_data.comp_[0].agg_.status_, PC_STATUS_TRADING);
     }
 }
