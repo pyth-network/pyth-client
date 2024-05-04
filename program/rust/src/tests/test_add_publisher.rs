@@ -144,7 +144,7 @@ fn test_add_publisher() {
         {
             let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
             assert_eq!(price_data.num_, i + 1);
-            assert!(price_data.comp_[i as usize].pub_ == cmd.publisher);
+            assert!(price_data.comp_.iter().any(|c| c.pub_ == cmd.publisher));
             assert_eq!(price_data.header.size, PriceAccount::INITIAL_SIZE);
         }
     }
@@ -163,4 +163,45 @@ fn test_add_publisher() {
         ),
         Err(ProgramError::InvalidArgument)
     );
+
+    // Make sure that publishers are sorted
+    {
+        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        for i in 1..PC_NUM_COMP {
+            assert!(price_data.comp_[i as usize].pub_ > price_data.comp_[(i - 1) as usize].pub_);
+        }
+    }
+
+    // Test sorting by reordering the publishers to be in reverse order
+    // and then adding the default (000...) publisher to trigger the sorting.
+    {
+        let mut price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        price_data
+            .comp_
+            .get_mut(..PC_NUM_COMP as usize)
+            .unwrap()
+            .reverse();
+    }
+
+    cmd.publisher = Pubkey::default();
+    instruction_data = bytes_of::<AddPublisherArgs>(&cmd);
+    assert!(process_instruction(
+        &program_id,
+        &[
+            funding_account.clone(),
+            price_account.clone(),
+            permissions_account.clone(),
+        ],
+        instruction_data
+    )
+    .is_ok());
+
+    // Make sure that publishers get sorted after adding the default publisher
+    {
+        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        println!("{:?}", price_data.comp_.map(|x| x.pub_));
+        for i in 1..PC_NUM_COMP {
+            assert!(price_data.comp_[i as usize].pub_ > price_data.comp_[(i - 1) as usize].pub_);
+        }
+    }
 }
