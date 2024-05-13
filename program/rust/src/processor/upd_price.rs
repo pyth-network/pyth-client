@@ -303,6 +303,8 @@ fn find_publisher_index(comps: &[PriceComponent], key: &Pubkey) -> Option<usize>
         let mut right = comps.len();
         while left < right {
             let mid = left + (right - left) / 2;
+            // sol_memcmp is much faster than rust default comparison of Pubkey. It costs
+            // 10CU whereas rust default comparison costs a few times more.
             match sol_memcmp(comps[mid].pub_.as_ref(), key.as_ref(), 32) {
                 i if i < 0 => {
                     left = mid + 1;
@@ -362,7 +364,12 @@ mod test {
             assert_eq!(find_publisher_index(&comps, &comp.pub_), Some(idx));
         });
 
-        assert_eq!(find_publisher_index(&comps, &Pubkey::new_unique()), None);
+        let mut key_not_in_list = Pubkey::new_unique();
+        while comps.iter().any(|comp| comp.pub_ == key_not_in_list) {
+            key_not_in_list = Pubkey::new_unique();
+        }
+
+        assert_eq!(find_publisher_index(&comps, &key_not_in_list), None);
     }
 
     /// Test the find_publisher_index method works with a sorted list of components.
@@ -374,6 +381,11 @@ mod test {
             assert_eq!(find_publisher_index(&comps, &comp.pub_), Some(idx));
         });
 
-        assert_eq!(find_publisher_index(&comps, &Pubkey::new_unique()), None);
+        let mut key_not_in_list = Pubkey::new_unique();
+        while comps.iter().any(|comp| comp.pub_ == key_not_in_list) {
+            key_not_in_list = Pubkey::new_unique();
+        }
+
+        assert_eq!(find_publisher_index(&comps, &key_not_in_list), None);
     }
 }

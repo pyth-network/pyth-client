@@ -199,7 +199,7 @@ fn test_add_publisher() {
     // Make sure that publishers get sorted after adding the default publisher
     {
         let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
-        println!("{:?}", price_data.comp_.map(|x| x.pub_));
+        assert!(price_data.num_ == PC_NUM_COMP);
         for i in 1..PC_NUM_COMP {
             assert!(price_data.comp_[i as usize].pub_ > price_data.comp_[(i - 1) as usize].pub_);
         }
