@@ -115,9 +115,7 @@ fn valid_writable_account(
     program_id: &Pubkey,
     account: &AccountInfo,
 ) -> Result<bool, ProgramError> {
-    Ok(account.is_writable
-        && account.owner == program_id
-        && get_rent()?.is_exempt(account.lamports(), account.data_len()))
+    Ok(account.is_writable && account.owner == program_id)
 }
 
 pub fn check_valid_writable_account(
@@ -134,10 +132,7 @@ fn valid_readable_account(
     program_id: &Pubkey,
     account: &AccountInfo,
 ) -> Result<bool, ProgramError> {
-    Ok(
-        account.owner == program_id
-            && get_rent()?.is_exempt(account.lamports(), account.data_len()),
-    )
+    Ok(account.owner == program_id)
 }
 
 pub fn check_valid_readable_account(
@@ -180,11 +175,7 @@ pub fn get_status_for_conf_price_ratio(
     confidence: u64,
     status: u32,
 ) -> Result<u32, OracleError> {
-    let mut threshold_conf = price / MAX_CI_DIVISOR;
-
-    if threshold_conf < 0 {
-        threshold_conf = -threshold_conf;
-    }
+    let threshold_conf = price.abs() / MAX_CI_DIVISOR;
 
     if confidence > try_convert::<_, u64>(threshold_conf)? {
         Ok(PC_STATUS_IGNORED)
