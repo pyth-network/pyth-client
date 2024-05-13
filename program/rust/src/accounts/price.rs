@@ -1,4 +1,6 @@
 pub use price_pythnet::*;
+#[cfg(test)]
+use quickcheck::Arbitrary;
 use {
     super::{
         AccountHeader,
@@ -188,6 +190,7 @@ mod price_pythnet {
 }
 
 #[repr(C)]
+#[cfg_attr(test, derive(Debug, PartialEq))]
 #[derive(Copy, Clone, Pod, Zeroable)]
 pub struct PriceComponent {
     pub pub_:    Pubkey,
@@ -195,7 +198,21 @@ pub struct PriceComponent {
     pub latest_: PriceInfo,
 }
 
+#[cfg(test)]
+impl Arbitrary for PriceComponent {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
+        let mut key = [0u8; 32];
+        key.iter_mut().for_each(|item| *item = u8::arbitrary(g));
+        PriceComponent {
+            pub_:    Pubkey::new_from_array(key),
+            agg_:    PriceInfo::arbitrary(g),
+            latest_: PriceInfo::arbitrary(g),
+        }
+    }
+}
+
 #[repr(C)]
+#[cfg_attr(test, derive(Debug, PartialEq))]
 #[derive(Copy, Clone, Pod, Zeroable)]
 pub struct PriceInfo {
     pub price_:           i64,
@@ -203,6 +220,19 @@ pub struct PriceInfo {
     pub status_:          u32,
     pub corp_act_status_: u32,
     pub pub_slot_:        u64,
+}
+
+#[cfg(test)]
+impl Arbitrary for PriceInfo {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
+        PriceInfo {
+            price_:           i64::arbitrary(g),
+            conf_:            u64::arbitrary(g),
+            status_:          u32::arbitrary(g),
+            corp_act_status_: u32::arbitrary(g),
+            pub_slot_:        u64::arbitrary(g),
+        }
+    }
 }
 
 #[repr(C)]

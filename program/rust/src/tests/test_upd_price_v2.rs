@@ -444,6 +444,87 @@ fn test_upd_price_v2() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+#[test]
+fn test_upd_works_with_unordered_publisher_set() -> Result<(), Box<dyn std::error::Error>> {
+    let mut instruction_data = [0u8; size_of::<UpdPriceArgs>()];
+
+    let program_id = Pubkey::new_unique();
+
+    let mut price_setup = AccountSetup::new::<PriceAccount>(&program_id);
+    let mut price_account = price_setup.as_account_info();
+    price_account.is_signer = false;
+    PriceAccount::initialize(&price_account, PC_VERSION).unwrap();
+
+    let mut publishers_setup: Vec<_> = (0..20).map(|_| AccountSetup::new_funding()).collect();
+    let mut publishers: Vec<_> = publishers_setup
+        .iter_mut()
+        .map(|s| s.as_account_info())
+        .collect();
+
+    publishers.sort_by_key(|x| x.key);
+
+    {
+        let mut price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        price_data.num_ = 20;
+        // Store the publishers in reverse order
+        publishers
+            .iter()
+            .rev()
+            .enumerate()
+            .for_each(|(i, account)| {
+                price_data.comp_[i].pub_ = *account.key;
+            });
+    }
+
+    let mut clock_setup = AccountSetup::new_clock();
+    let mut clock_account = clock_setup.as_account_info();
+    clock_account.is_signer = false;
+    clock_account.is_writable = false;
+
+    update_clock_slot(&mut clock_account, 1);
+
+    for (i, publisher) in publishers.iter().enumerate() {
+        populate_instruction(&mut instruction_data, (i + 100) as i64, 10, 1);
+        process_instruction(
+            &program_id,
+            &[
+                publisher.clone(),
+                price_account.clone(),
+                clock_account.clone(),
+            ],
+            &instruction_data,
+        )?;
+    }
+
+    update_clock_slot(&mut clock_account, 2);
+
+    // Trigger the aggregate calculation by sending another price
+    // update
+    populate_instruction(&mut instruction_data, 100, 10, 2);
+    process_instruction(
+        &program_id,
+        &[
+            publishers[0].clone(),
+            price_account.clone(),
+            clock_account.clone(),
+        ],
+        &instruction_data,
+    )?;
+
+
+    let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+
+    // The result will be the following only if all the
+    // publishers prices are included in the aggregate.
+    assert_eq!(price_data.valid_slot_, 1);
+    assert_eq!(price_data.agg_.pub_slot_, 2);
+    assert_eq!(price_data.agg_.price_, 109);
+    assert_eq!(price_data.agg_.conf_, 8);
+    assert_eq!(price_data.agg_.status_, PC_STATUS_TRADING);
+
+    Ok(())
+}
+
 // Create an upd_price instruction with the provided parameters
 fn populate_instruction(instruction_data: &mut [u8], price: i64, conf: u64, pub_slot: u64) {
     let mut cmd = load_mut::<UpdPriceArgs>(instruction_data).unwrap();

@@ -2,6 +2,7 @@ use {
     crate::{
         accounts::{
             PriceAccount,
+            PriceComponent,
             PriceInfo,
             PythOracleSerialize,
             UPD_PRICE_WRITE_SEED,
@@ -31,6 +32,7 @@ use {
         },
         program::invoke_signed,
         program_error::ProgramError,
+        program_memory::sol_memcmp,
         pubkey::Pubkey,
         sysvar::Sysvar,
     },
@@ -127,7 +129,7 @@ pub fn upd_price(
     // Check clock
     let clock = Clock::from_account_info(clock_account)?;
 
-    let mut publisher_index: usize = 0;
+    let publisher_index: usize;
     let latest_aggregate_price: PriceInfo;
 
     // The price_data borrow happens in a scope because it must be
@@ -137,17 +139,15 @@ pub fn upd_price(
         // Verify that symbol account is initialized
         let price_data = load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
 
-        // Verify that publisher is authorized
-        while publisher_index < try_convert::<u32, usize>(price_data.num_)? {
-            if price_data.comp_[publisher_index].pub_ == *funding_account.key {
-                break;
+        publisher_index = match find_publisher_index(
+            &price_data.comp_[..try_convert::<u32, usize>(price_data.num_)?],
+            funding_account.key,
+        ) {
+            Some(index) => index,
+            None => {
+                return Err(OracleError::PermissionViolation.into());
             }
-            publisher_index += 1;
-        }
-        pyth_assert(
-            publisher_index < try_convert::<u32, usize>(price_data.num_)?,
-            OracleError::PermissionViolation.into(),
-        )?;
+        };
 
         latest_aggregate_price = price_data.agg_;
         let latest_publisher_price = price_data.comp_[publisher_index].latest_;
@@ -281,6 +281,64 @@ pub fn upd_price(
     Ok(())
 }
 
+/// Find the index of the publisher in the list of components.
+///
+/// This method first tries to binary search for the publisher's key in the list of components
+/// to get the result faster if the list is sorted. If the list is not sorted, it falls back to
+/// a linear search.
+#[inline(always)]
+fn find_publisher_index(comps: &[PriceComponent], key: &Pubkey) -> Option<usize> {
+    // Verify that publisher is authorized by initially binary searching
+    // for the publisher's component in the price account. The binary
+    // search might not work if the publisher list is not sorted; therefore
+    // we fall back to a linear search.
+    let mut binary_search_result = None;
+
+    {
+        // Binary search to find the publisher key. Rust std binary search is not used because
+        // they guarantee valid outcome only if the array is sorted whereas we want to rely on
+        // a Equal match if it is a result on an unsorted array. Currently the rust
+        // implementation behaves the same but we do not want to rely on api internals.
+        let mut left = 0;
+        let mut right = comps.len();
+        while left < right {
+            let mid = left + (right - left) / 2;
+            // sol_memcmp is much faster than rust default comparison of Pubkey. It costs
+            // 10CU whereas rust default comparison costs a few times more.
+            match sol_memcmp(comps[mid].pub_.as_ref(), key.as_ref(), 32) {
+                i if i < 0 => {
+                    left = mid + 1;
+                }
+                i if i > 0 => {
+                    right = mid;
+                }
+                _ => {
+                    binary_search_result = Some(mid);
+                    break;
+                }
+            }
+        }
+    }
+
+    match binary_search_result {
+        Some(index) => Some(index),
+        None => {
+            let mut index = 0;
+            while index < comps.len() {
+                if sol_memcmp(comps[index].pub_.as_ref(), key.as_ref(), 32) == 0 {
+                    break;
+                }
+                index += 1;
+            }
+            if index == comps.len() {
+                None
+            } else {
+                Some(index)
+            }
+        }
+    }
+}
+
 #[allow(dead_code)]
 // Wrapper struct for the accounts required to add data to the accumulator program.
 struct MessageBufferAccounts<'a, 'b: 'a> {
@@ -288,4 +346,46 @@ struct MessageBufferAccounts<'a, 'b: 'a> {
     whitelist:           &'a AccountInfo<'b>,
     oracle_auth_pda:     &'a AccountInfo<'b>,
     message_buffer_data: &'a AccountInfo<'b>,
+}
+
+#[cfg(test)]
+mod test {
+    use {
+        super::*,
+        crate::accounts::PriceComponent,
+        quickcheck_macros::quickcheck,
+        solana_program::pubkey::Pubkey,
+    };
+
+    /// Test the find_publisher_index method works with an unordered list of components.
+    #[quickcheck]
+    pub fn test_find_publisher_index_unordered_comp(comps: Vec<PriceComponent>) {
+        comps.iter().enumerate().for_each(|(idx, comp)| {
+            assert_eq!(find_publisher_index(&comps, &comp.pub_), Some(idx));
+        });
+
+        let mut key_not_in_list = Pubkey::new_unique();
+        while comps.iter().any(|comp| comp.pub_ == key_not_in_list) {
+            key_not_in_list = Pubkey::new_unique();
+        }
+
+        assert_eq!(find_publisher_index(&comps, &key_not_in_list), None);
+    }
+
+    /// Test the find_publisher_index method works with a sorted list of components.
+    #[quickcheck]
+    pub fn test_find_publisher_index_ordered_comp(mut comps: Vec<PriceComponent>) {
+        comps.sort_by_key(|comp| comp.pub_);
+
+        comps.iter().enumerate().for_each(|(idx, comp)| {
+            assert_eq!(find_publisher_index(&comps, &comp.pub_), Some(idx));
+        });
+
+        let mut key_not_in_list = Pubkey::new_unique();
+        while comps.iter().any(|comp| comp.pub_ == key_not_in_list) {
+            key_not_in_list = Pubkey::new_unique();
+        }
+
+        assert_eq!(find_publisher_index(&comps, &key_not_in_list), None);
+    }
 }
