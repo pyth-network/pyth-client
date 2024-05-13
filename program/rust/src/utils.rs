@@ -130,6 +130,16 @@ pub fn check_valid_writable_account(
     )
 }
 
+pub fn check_valid_writable_account_without_rent_check(
+    program_id: &Pubkey,
+    account: &AccountInfo,
+) -> Result<(), ProgramError> {
+    pyth_assert(
+        account.is_writable && account.owner == program_id,
+        OracleError::InvalidWritableAccount.into(),
+    )
+}
+
 fn valid_readable_account(
     program_id: &Pubkey,
     account: &AccountInfo,
@@ -180,11 +190,7 @@ pub fn get_status_for_conf_price_ratio(
     confidence: u64,
     status: u32,
 ) -> Result<u32, OracleError> {
-    let mut threshold_conf = price / MAX_CI_DIVISOR;
-
-    if threshold_conf < 0 {
-        threshold_conf = -threshold_conf;
-    }
+    let threshold_conf = price.abs() / MAX_CI_DIVISOR;
 
     if confidence > try_convert::<_, u64>(threshold_conf)? {
         Ok(PC_STATUS_IGNORED)
