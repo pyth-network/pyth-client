@@ -58,21 +58,7 @@ fn test_add_publisher() {
         permissions_account_data.security_authority = *funding_account.key;
     }
 
-    // Expect the instruction to fail, because the price account isn't rent exempt
-    assert_eq!(
-        process_instruction(
-            &program_id,
-            &[
-                funding_account.clone(),
-                price_account.clone(),
-                permissions_account.clone(),
-            ],
-            instruction_data
-        ),
-        Err(OracleError::InvalidWritableAccount.into())
-    );
-
-    // Now give the price account enough lamports to be rent exempt
+    // Give the price account enough lamports to be rent exempt
     **price_account.try_borrow_mut_lamports().unwrap() =
         Rent::minimum_balance(&Rent::default(), PriceAccount::MINIMUM_SIZE);
 

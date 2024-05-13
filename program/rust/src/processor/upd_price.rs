@@ -13,7 +13,7 @@ use {
         instruction::UpdPriceArgs,
         utils::{
             check_valid_funding_account,
-            check_valid_writable_account_without_rent_check,
+            check_valid_writable_account,
             get_status_for_conf_price_ratio,
             is_component_update,
             pyth_assert,
@@ -123,7 +123,7 @@ pub fn upd_price(
     }?;
 
     check_valid_funding_account(funding_account)?;
-    check_valid_writable_account_without_rent_check(program_id, price_account)?;
+    check_valid_writable_account(program_id, price_account)?;
     // Check clock
     let clock = Clock::from_account_info(clock_account)?;
 

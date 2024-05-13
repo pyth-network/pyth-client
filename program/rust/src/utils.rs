@@ -115,9 +115,7 @@ fn valid_writable_account(
     program_id: &Pubkey,
     account: &AccountInfo,
 ) -> Result<bool, ProgramError> {
-    Ok(account.is_writable
-        && account.owner == program_id
-        && get_rent()?.is_exempt(account.lamports(), account.data_len()))
+    Ok(account.is_writable && account.owner == program_id)
 }
 
 pub fn check_valid_writable_account(
@@ -130,24 +128,11 @@ pub fn check_valid_writable_account(
     )
 }
 
-pub fn check_valid_writable_account_without_rent_check(
-    program_id: &Pubkey,
-    account: &AccountInfo,
-) -> Result<(), ProgramError> {
-    pyth_assert(
-        account.is_writable && account.owner == program_id,
-        OracleError::InvalidWritableAccount.into(),
-    )
-}
-
 fn valid_readable_account(
     program_id: &Pubkey,
     account: &AccountInfo,
 ) -> Result<bool, ProgramError> {
-    Ok(
-        account.owner == program_id
-            && get_rent()?.is_exempt(account.lamports(), account.data_len()),
-    )
+    Ok(account.owner == program_id)
 }
 
 pub fn check_valid_readable_account(
