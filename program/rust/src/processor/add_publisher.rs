@@ -83,23 +83,21 @@ pub fn add_publisher(
         }
     }
 
-    let mut current_index: usize = try_convert(price_data.num_)?;
+    let current_index: usize = try_convert(price_data.num_)?;
     sol_memset(
         bytes_of_mut(&mut price_data.comp_[current_index]),
         0,
         size_of::<PriceComponent>(),
     );
     price_data.comp_[current_index].pub_ = cmd_args.publisher;
+    price_data.num_ += 1;
 
-    // Shift the element back to keep the publishers components sorted.
-    while current_index > 0
-        && price_data.comp_[current_index].pub_ < price_data.comp_[current_index - 1].pub_
+    // Sort the publishers in the list
     {
-        price_data.comp_.swap(current_index, current_index - 1);
-        current_index -= 1;
+        let num_comps = try_convert::<u32, usize>(price_data.num_)?;
+        sort_price_comps(&mut price_data.comp_, num_comps)?;
     }
 
-    price_data.num_ += 1;
     price_data.header.size = try_convert::<_, u32>(PriceAccount::INITIAL_SIZE)?;
     Ok(())
 }
@@ -107,7 +105,6 @@ pub fn add_publisher(
 /// A copy of rust slice/sort.rs heapsort implementation which is small and fast. We couldn't use
 /// the sort directly because it was only accessible behind a unstable feature flag at the time of
 /// writing this code.
-#[inline(always)]
 fn heapsort(v: &mut [(Pubkey, usize)]) {
     // This binary heap respects the invariant `parent >= child`.
     let sift_down = |v: &mut [(Pubkey, usize)], mut node: usize| {
@@ -155,16 +152,19 @@ fn heapsort(v: &mut [(Pubkey, usize)]) {
 ///
 /// num_publishers is the number of publishers in the list that should be sorted. It is explicitly
 /// passed to avoid callers mistake of passing the full slice which may contain uninitialized values.
-#[inline(always)]
 fn sort_price_comps(comps: &mut [PriceComponent], num_comps: usize) -> Result<(), ProgramError> {
     let comps = comps
         .get_mut(..num_comps)
         .ok_or(ProgramError::InvalidArgument)?;
 
+    // Publishers are likely sorted in ascending order but
+    // heapsorts creates a max-heap so we reverse the order
+    // of the keys to make the heapify step faster.
     let mut keys = comps
         .iter()
         .enumerate()
         .map(|(i, x)| (x.pub_, i))
+        .rev()
         .collect::<Vec<_>>();
 
     heapsort(&mut keys);
