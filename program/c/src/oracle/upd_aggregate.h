@@ -188,8 +188,7 @@ static inline bool upd_aggregate( pc_price_t *ptr, uint64_t slot, int64_t timest
     // note: numv>0 and nprcs = 3*numv at this point
     int64_t agg_p25;
     int64_t agg_p75;
-    int64_t scratch[ PC_NUM_COMP * 3 ]; // ~0.75KiB for current PC_NUM_COMP (FIXME: DOUBLE CHECK THIS FITS INTO STACK FRAME LIMIT)
-    price_model_core( (uint64_t)nprcs, prcs, &agg_p25, &agg_price, &agg_p75, scratch );
+    price_model_core( (uint64_t)nprcs, prcs, &agg_p25, &agg_price, &agg_p75 );
 
     // get the left and right confidences
     // note that as valid quotes have positive prices currently and

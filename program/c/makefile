@@ -41,7 +41,6 @@ cpyth-native: features.h
 test: features.h
 	mkdir -p $(OUT_DIR)/test/
 	gcc -c ./src/oracle/model/test_price_model.c -o $(OUT_DIR)/test/test_price_model.o -fPIC
-	gcc -c ./src/oracle/sort/test_sort_stable.c -o $(OUT_DIR)/test/test_sort_stable.o -fPIC
 	gcc -c ./src/oracle/util/test_align.c -o $(OUT_DIR)/test/test_align.o -fPIC
 	gcc -c ./src/oracle/util/test_avg.c -o $(OUT_DIR)/test/test_avg.o -fPIC
 	gcc -c ./src/oracle/util/test_hash.c -o $(OUT_DIR)/test/test_hash.o -fPIC

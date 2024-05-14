@@ -19,7 +19,7 @@ int test_price_model() {
   prng_t _prng[1];
   prng_t * prng = prng_join( prng_new( _prng, (uint32_t)0, (uint64_t)0 ) );
 
-# define N 96
+# define N 192
 
   int64_t quote0 [N];
   int64_t quote  [N];
@@ -27,7 +27,6 @@ int test_price_model() {
   int64_t scratch[N];
 
   for( int iter=0; iter<10000000; iter++ ) {
-
     /* Generate a random test */
 
     uint64_t cnt = (uint64_t)1 + (uint64_t)(prng_uint32( prng ) % (uint32_t)N); /* In [1,N], approx uniform IID */
@@ -36,21 +35,30 @@ int test_price_model() {
     /* Apply the model */
 
     memcpy( quote, quote0, sizeof(int64_t)*(size_t)cnt );
-    if( price_model( cnt, quote, val+0, val+1, val+2, scratch )!=quote ) { printf( "FAIL (compose)\n" ); return 1; }
+
+    price_model_core( cnt, quote, val+0, val+1, val+2 );
 
     /* Validate the results */
 
     qsort( quote0, (size_t)cnt, sizeof(int64_t), qcmp );
-    if( memcmp( quote, quote0, sizeof(int64_t)*(size_t)cnt ) ) { printf( "FAIL (sort)\n" ); return 1; }
 
     uint64_t p25_idx = cnt>>2;
     uint64_t p50_idx = cnt>>1;
     uint64_t p75_idx = cnt - (uint64_t)1 - p25_idx;
     uint64_t is_even = (uint64_t)!(cnt & (uint64_t)1);
 
-    if( val[0]!=quote[ p25_idx ] ) { printf( "FAIL (p25)\n" ); return 1; }
-    if( val[1]!=avg_2_int64( quote[ p50_idx-is_even ], quote[ p50_idx ] ) ) { printf( "FAIL (p50)\n" ); return 1; }
-    if( val[2]!=quote[ p75_idx ] ) { printf( "FAIL (p75)\n" ); return 1; }
+    if( val[0]!=quote0[ p25_idx ] ) {
+        printf( "FAILED (p25). given: %lld, expected: %lld\n", val[0], quote0[ p25_idx ] );
+        return 1;
+    }
+    if( val[1]!=avg_2_int64( quote0[ p50_idx-is_even ], quote0[ p50_idx ] ) ) {
+        printf( "FAIL (p50). given: %lld, expected: %lld\n", val[1], avg_2_int64( quote0[ p50_idx-is_even ], quote0[ p50_idx ] ) );
+        return 1;
+    }
+    if( val[2]!=quote0[ p75_idx ] ) {
+        printf( "FAIL (p75). given: %lld, expected: %lld\n", val[2], quote0[ p75_idx ] );
+        return 1;
+    }
   }
 
 # undef N

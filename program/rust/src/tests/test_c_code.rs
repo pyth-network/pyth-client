@@ -5,7 +5,6 @@ mod c {
     #[link(name = "cpyth-test")]
     extern "C" {
         pub fn test_price_model() -> i32;
-        pub fn test_sort_stable() -> i32;
         pub fn test_align() -> i32;
         pub fn test_avg() -> i32;
         pub fn test_hash() -> i32;
@@ -19,13 +18,6 @@ mod c {
 fn test_price_model() {
     unsafe {
         assert_eq!(c::test_price_model(), 0);
-    }
-}
-
-#[test]
-fn test_sort_stable() {
-    unsafe {
-        assert_eq!(c::test_sort_stable(), 0);
     }
 }
 
