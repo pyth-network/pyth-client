@@ -19,12 +19,11 @@ int test_price_model() {
   prng_t _prng[1];
   prng_t * prng = prng_join( prng_new( _prng, (uint32_t)0, (uint64_t)0 ) );
 
-# define N 96
+# define N 192
 
   int64_t quote0 [N];
   int64_t quote  [N];
   int64_t val    [3];
-  int64_t scratch[N];
 
   for( int iter=0; iter<10000000; iter++ ) {
 
@@ -36,7 +35,7 @@ int test_price_model() {
     /* Apply the model */
 
     memcpy( quote, quote0, sizeof(int64_t)*(size_t)cnt );
-    if( price_model( cnt, quote, val+0, val+1, val+2, scratch )!=quote ) { printf( "FAIL (compose)\n" ); return 1; }
+    if( price_model_core( cnt, quote, val+0, val+1, val+2)!=quote ) { printf( "FAIL (compose)\n" ); return 1; }
 
     /* Validate the results */
 
