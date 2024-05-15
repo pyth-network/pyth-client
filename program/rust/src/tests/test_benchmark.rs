@@ -36,7 +36,7 @@ async fn run_benchmark(num_publishers: usize) -> Result<(), Box<dyn std::error::
         sim.add_publisher(&price_keypair, *publisher).await?;
     }
 
-    // Set the seed to make the test deterministic
+    // Set the seed to make the test is deterministic
     let mut rnd = rand::rngs::SmallRng::seed_from_u64(14);
 
     for kp in publishers_keypairs.iter() {

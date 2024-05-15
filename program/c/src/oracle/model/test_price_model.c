@@ -39,6 +39,9 @@ int test_price_model() {
 
     /* Validate the results */
 
+    /*
+     * Although being sorted is not necessary it gives us more confidence about the correctness of the model.
+     */
     qsort( quote0, (size_t)cnt, sizeof(int64_t), qcmp );
     if( memcmp( quote, quote0, sizeof(int64_t)*(size_t)cnt ) ) { printf( "FAIL (sort)\n" ); return 1; }
 

@@ -47,6 +47,22 @@ void heapsort(int64_t * a, uint64_t n) {
   }
 }
 
+/*
+ * Find the 25, 50, and 75 percentiles of the given quotes using heapsort.
+ *
+ * This implementation optimizes the price_model_core function for minimal compute unit usage in BPF.
+ *
+ * In Solana, each BPF instruction costs 1 unit of compute and is much different than a native code
+ * execution time. Here are some of the differences:
+ * 1. There is no cache, so memory access is much more expensive.
+ * 2. The instruction set is very minimal, and there are only 10 registers available.
+ * 3. The BPF compiler is not very good at optimizing the code.
+ * 4. The stack size is limited and having extra stack frame has high overhead.
+ *
+ * This implementation is chosen among other implementations such as merge-sort, quick-sort, and quick-select
+ * because it is very fast, has small number of instructions, and has a very small memory footprint by being
+ * in-place and is non-recursive.
+ */
 int64_t *
 price_model_core( uint64_t  cnt,
                   int64_t * quote,
