@@ -11,30 +11,34 @@
  * thinking of a as 1-based array. Fortunately, BPF compiler optimizes that for us.
  */
 void heapsort(int64_t * a, uint64_t n) {
+  if (n <= 1) return;
+
   /*
    * This is a bottom-up heapify which is linear in time.
    */
-  for (int i = n / 2 - 1; i >= 0; i--) {
+  for (uint64_t i = n / 2 - 1;; --i) {
     int64_t root = a[i];
-    int j = i * 2 + 1;
+    uint64_t j = i * 2 + 1;
     while (j < n) {
-      if (j + 1 < n && a[j] < a[j + 1]) j++;
+      if (j + 1 < n && a[j] < a[j + 1]) ++j;
       if (root >= a[j]) break;
       a[(j - 1) / 2] = a[j];
       j = j * 2 + 1;
     }
     a[(j - 1) / 2] = root;
+
+    if (i == 0) break;
   }
 
-  for (int i = n - 1; i > 0; i--) {
+  for (uint64_t i = n - 1; i > 0; --i) {
     int64_t tmp = a[0];
     a[0] = a[i];
     a[i] = tmp;
 
     int64_t root = a[0];
-    int j = 1;
+    uint64_t j = 1;
     while (j < i) {
-      if (j + 1 < i && a[j] < a[j + 1]) j++;
+      if (j + 1 < i && a[j] < a[j + 1]) ++j;
       if (root >= a[j]) break;
       a[(j - 1) / 2] = a[j];
       j = j * 2 + 1;
