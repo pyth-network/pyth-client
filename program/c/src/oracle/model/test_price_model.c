@@ -28,7 +28,7 @@ int test_price_model() {
   /* Brute force validate small sizes via the 0-1 principle. */
   for( int cnt=0; cnt<=24; cnt++ ) {
     for( long mask=0L; mask<(1L<<cnt); mask++ ) {
-      for( int i=0; i<cnt; i++ ) quote[i] = (int64_t) ((mask>>i) & 1L);
+      for( int i=0; i<cnt; i++ ) quote0[i] = (int64_t) ((mask>>i) & 1L);
 
       memcpy( quote, quote0, sizeof(int64_t)*(size_t)cnt );
       if( price_model_core( cnt, quote, val+0, val+1, val+2)!=quote ) { printf( "FAIL (01-compose)\n" ); return 1; }
