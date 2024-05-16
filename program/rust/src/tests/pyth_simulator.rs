@@ -55,7 +55,6 @@ use {
     },
     solana_sdk::{
         account::Account,
-        commitment_config::CommitmentLevel,
         signature::{
             Keypair,
             Signer,
@@ -207,7 +206,7 @@ impl PythSimulator {
 
         self.context
             .banks_client
-            .process_transaction_with_commitment(transaction, CommitmentLevel::Processed)
+            .process_transaction(transaction)
             .await
     }
 
