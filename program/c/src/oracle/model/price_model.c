@@ -61,7 +61,7 @@ void heapsort(int64_t * a, uint64_t n) {
  *
  * This implementation is chosen among other implementations such as merge-sort, quick-sort, and quick-select
  * because it is very fast, has small number of instructions, and has a very small memory footprint by being
- * in-place and is non-recursive.
+ * in-place and is non-recursive and has a nlogn worst-case time complexity.
  */
 int64_t *
 price_model_core( uint64_t  cnt,

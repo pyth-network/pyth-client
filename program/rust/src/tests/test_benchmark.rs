@@ -17,8 +17,17 @@ use {
     },
 };
 
+#[derive(Clone, Copy, Debug)]
+enum TestingStrategy {
+    Random,
+    SimilarPrices,
+}
+
 /// Benchmark the execution of the oracle program
-async fn run_benchmark(num_publishers: usize) -> Result<(), Box<dyn std::error::Error>> {
+async fn run_benchmark(
+    num_publishers: usize,
+    strategy: TestingStrategy,
+) -> Result<(), Box<dyn std::error::Error>> {
     let mut sim = PythSimulator::new().await;
 
     let mapping_keypair = sim.init_mapping().await?;
@@ -40,13 +49,19 @@ async fn run_benchmark(num_publishers: usize) -> Result<(), Box<dyn std::error::
     let mut rnd = rand::rngs::SmallRng::seed_from_u64(14);
 
     for kp in publishers_keypairs.iter() {
-        // The ranges are chosen to create overlap between
-        // publishers price set (price-conf, price, price + conf)
-        let quote = Quote {
-            price:      rnd.gen_range(10000..11000),
-            confidence: rnd.gen_range(1..1000),
-            status:     PC_STATUS_TRADING,
+        let quote = match strategy {
+            TestingStrategy::Random => Quote {
+                price:      rnd.gen_range(10000..11000),
+                confidence: rnd.gen_range(1..1000),
+                status:     PC_STATUS_TRADING,
+            },
+            TestingStrategy::SimilarPrices => Quote {
+                price:      rnd.gen_range(10..12),
+                confidence: rnd.gen_range(1..3),
+                status:     PC_STATUS_TRADING,
+            },
         };
+
 
         sim.upd_price(kp, price_pubkey, quote).await?;
     }
@@ -67,21 +82,41 @@ async fn run_benchmark(num_publishers: usize) -> Result<(), Box<dyn std::error::
 }
 
 #[tokio::test]
-async fn test_benchmark_64_pubs() -> Result<(), Box<dyn std::error::Error>> {
-    run_benchmark(64).await
+async fn test_benchmark_64_pubs_random() -> Result<(), Box<dyn std::error::Error>> {
+    run_benchmark(64, TestingStrategy::Random).await
 }
 
 #[tokio::test]
-async fn test_benchmark_32_pubs() -> Result<(), Box<dyn std::error::Error>> {
-    run_benchmark(32).await
+async fn test_benchmark_64_pubs_similar_prices() -> Result<(), Box<dyn std::error::Error>> {
+    run_benchmark(64, TestingStrategy::SimilarPrices).await
 }
 
 #[tokio::test]
-async fn test_benchmark_16_pubs() -> Result<(), Box<dyn std::error::Error>> {
-    run_benchmark(16).await
+async fn test_benchmark_32_pubs_random() -> Result<(), Box<dyn std::error::Error>> {
+    run_benchmark(32, TestingStrategy::Random).await
 }
 
 #[tokio::test]
-async fn test_benchmark_8_pubs() -> Result<(), Box<dyn std::error::Error>> {
-    run_benchmark(8).await
+async fn test_benchmark_32_pubs_similar_prices() -> Result<(), Box<dyn std::error::Error>> {
+    run_benchmark(32, TestingStrategy::SimilarPrices).await
+}
+
+#[tokio::test]
+async fn test_benchmark_16_pubs_random() -> Result<(), Box<dyn std::error::Error>> {
+    run_benchmark(16, TestingStrategy::Random).await
+}
+
+#[tokio::test]
+async fn test_benchmark_16_pubs_similar_prices() -> Result<(), Box<dyn std::error::Error>> {
+    run_benchmark(16, TestingStrategy::SimilarPrices).await
+}
+
+#[tokio::test]
+async fn test_benchmark_8_pubs_random() -> Result<(), Box<dyn std::error::Error>> {
+    run_benchmark(8, TestingStrategy::Random).await
+}
+
+#[tokio::test]
+async fn test_benchmark_8_pubs_similar_prices() -> Result<(), Box<dyn std::error::Error>> {
+    run_benchmark(8, TestingStrategy::SimilarPrices).await
 }
