@@ -2,10 +2,13 @@
 #include "../util/avg.h" /* For avg_2_int64 */
 
 /*
- * In-place Heapsort implementation optimized for minimal compute unit usage in BPF.
+ * In-place bottom-up Heapsort implementation optimized for minimal compute unit usage in BPF.
  *
  * Initially it creates a max heap in linear time and then to get ascending
  * order it swaps the root with the last element and then sifts down the root.
+ *
+ * The number of comparisions in average case is nlgn + O(1) and in worst case is
+ * 1.5nlgn + O(n).
  *
  * There are a lot of (j-1) or (j+1) math in the code which can be optimized by
  * thinking of a as 1-based array. Fortunately, BPF compiler optimizes that for us.
