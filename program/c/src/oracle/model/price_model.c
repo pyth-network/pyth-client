@@ -1,112 +1,104 @@
 #include "price_model.h"
 #include "../util/avg.h" /* For avg_2_int64 */
 
-#define SORT_NAME  int64_sort_ascending
-#define SORT_KEY_T int64_t
-#include "../sort/tmpl/sort_stable.c"
+/*
+ * In-place bottom-up Heapsort implementation optimized for minimal compute unit usage in BPF.
+ *
+ * Initially it creates a max heap in linear time and then to get ascending
+ * order it swaps the root with the last element and then sifts down the root.
+ *
+ * The number of comparisions in average case is nlgn + O(1) and in worst case is
+ * 1.5nlgn + O(n).
+ *
+ * There are a lot of (j-1) or (j+1) math in the code which can be optimized by
+ * thinking of a as 1-based array. Fortunately, BPF compiler optimizes that for us.
+ */
+void heapsort(int64_t * a, uint64_t n) {
+  if (n <= 1) return;
 
+  /*
+   * This is a bottom-up heapify which is linear in time.
+   */
+  for (uint64_t i = n / 2 - 1;; --i) {
+    int64_t root = a[i];
+    uint64_t j = i * 2 + 1;
+    while (j < n) {
+      if (j + 1 < n && a[j] < a[j + 1]) ++j;
+      if (root >= a[j]) break;
+      a[(j - 1) / 2] = a[j];
+      j = j * 2 + 1;
+    }
+    a[(j - 1) / 2] = root;
+
+    if (i == 0) break;
+  }
+
+  for (uint64_t i = n - 1; i > 0; --i) {
+    int64_t tmp = a[0];
+    a[0] = a[i];
+    a[i] = tmp;
+
+    int64_t root = a[0];
+    uint64_t j = 1;
+    while (j < i) {
+      if (j + 1 < i && a[j] < a[j + 1]) ++j;
+      if (root >= a[j]) break;
+      a[(j - 1) / 2] = a[j];
+      j = j * 2 + 1;
+    }
+    a[(j - 1) / 2] = root;
+  }
+}
+
+/*
+ * Find the 25, 50, and 75 percentiles of the given quotes using heapsort.
+ *
+ * This implementation optimizes the price_model_core function for minimal compute unit usage in BPF.
+ *
+ * In Solana, each BPF instruction costs 1 unit of compute and is much different than a native code
+ * execution time. Here are some of the differences:
+ * 1. There is no cache, so memory access is much more expensive.
+ * 2. The instruction set is very minimal, and there are only 10 registers available.
+ * 3. The BPF compiler is not very good at optimizing the code.
+ * 4. The stack size is limited and having extra stack frame has high overhead.
+ *
+ * This implementation is chosen among other implementations such as merge-sort, quick-sort, and quick-select
+ * because it is very fast, has small number of instructions, and has a very small memory footprint by being
+ * in-place and is non-recursive and has a nlogn worst-case time complexity.
+ */
 int64_t *
 price_model_core( uint64_t  cnt,
                   int64_t * quote,
                   int64_t * _p25,
                   int64_t * _p50,
-                  int64_t * _p75,
-                  void    * scratch ) {
+                  int64_t * _p75) {
+  heapsort(quote, cnt);
 
-  /* Sort the quotes.  The sorting implementation used here is a highly
-     optimized mergesort (merge with an unrolled insertion sorting
-     network small n base cases).  The best case is ~0.5 n lg n compares
-     and the average and worst cases are ~n lg n compares.
-
-     While not completely data oblivious, this has quite low variance in
-     operation count practically and this is _better_ than quicksort's
-     average case and quicksort's worst case is a computational
-     denial-of-service and timing attack vulnerable O(n^2).  Unlike
-     quicksort, this is also stable (but this stability does not
-     currently matter ... it might be a factor in future models).
-
-     A data oblivious sorting network approach might be viable here with
-     and would have a completely deterministic operations count.  It
-     currently isn't used as the best known practical approaches for
-     general n have a worse algorithmic cost (O( n (lg n)^2 )) and,
-     while the application probably doesn't need perfect obliviousness,
-     mergesort is still moderately oblivious and the application can
-     benefit from mergesort's lower operations cost.  (The main drawback
-     of mergesort over quicksort is that it isn't in place, but memory
-     footprint isn't an issue here.)
-
-     Given the operations cost model (e.g. cache friendliness is not
-     incorporated), a radix sort might be viable here (O(n) in best /
-     average / worst).  It currently isn't used as we expect invocations
-     with small-ish n to be common and radix sort would be have large
-     coefficients on the O(n) and additional fixed overheads that would
-     make it more expensive than mergesort in this regime.
-
-     Note: price_model_cnt_valid( cnt ) implies
-     int64_sort_ascending_cnt_valid( cnt ) currently.
-
-     Note: consider filtering out "NaN" quotes (i.e. INT64_MIN)? */
-
-  int64_t * sort_quote = int64_sort_ascending_stable( quote, cnt, scratch );
-
-  /* Extract the p25
-
-     There are many variants with subtle tradeoffs here.  One option is
-     to interpolate when the ideal p25 is bracketed by two samples (akin
-     to the p50 interpolation above when the number of quotes is even).
-     That is, for p25, interpolate between quotes floor((cnt-2)/4) and
-     ceil((cnt-2)/4) with the weights determined by cnt mod 4.  The
-     current preference is to not do that as it is slightly more
-     complex, doesn't exactly always minimize the current loss function
-     and is more exposed to the confidence intervals getting skewed by
-     bum quotes with the number of quotes is small.
-
-     Another option is to use the inside quote of the above pair.  That
-     is, for p25, use quote ceil((cnt-2)/4) == floor((cnt+1)/4) ==
-     (cnt+1)>>2.  The current preference is not to do this as, though
-     this has stronger bum quote robustness, it results in p25==p50==p75
-     when cnt==3.  (In this case, the above wants to do an interpolation
-     between quotes 0 and 1 to for the p25 and between quotes 1 and 2
-     for the p75.  But limiting to just the inside quote results in
-     p25/p50/p75 all using the median quote.)
-
-     A tweak to this option, for p25, is to use floor(cnt/4) == cnt>>2.
-     This is simple, has the same asymptotic behavior for large cnt, has
-     good behavior in the cnt==3 case and practically as good bum quote
-     rejection in the moderate cnt case. */
-
+  /* Extract the p25 */
   uint64_t p25_idx = cnt >> 2;
-
-  *_p25 = sort_quote[p25_idx];
+  *_p25 = quote[p25_idx];
 
   /* Extract the p50 */
-
   if( (cnt & (uint64_t)1) ) { /* Odd number of quotes */
-
     uint64_t p50_idx = cnt >> 1; /* ==ceil((cnt-1)/2) */
-
-    *_p50 = sort_quote[p50_idx];
-
+    *_p50 = quote[p50_idx];
   } else { /* Even number of quotes (at least 2) */
-
     uint64_t p50_idx_right = cnt >> 1;                    /* == ceil((cnt-1)/2)> 0 */
     uint64_t p50_idx_left  = p50_idx_right - (uint64_t)1; /* ==floor((cnt-1)/2)>=0 (no overflow/underflow) */
 
-    int64_t vl = sort_quote[p50_idx_left ];
-    int64_t vr = sort_quote[p50_idx_right];
+    int64_t vl = quote[p50_idx_left];
+    int64_t vr = quote[p50_idx_right];
 
     /* Compute the average of vl and vr (with floor / round toward
        negative infinity rounding and without possibility of
        intermediate overflow). */
-
     *_p50 = avg_2_int64( vl, vr );
   }
 
   /* Extract the p75 (this is the mirror image of the p25 case) */
 
   uint64_t p75_idx = cnt - ((uint64_t)1) - p25_idx;
+  *_p75 = quote[p75_idx];
 
-  *_p75 = sort_quote[p75_idx];
-
-  return sort_quote;
+  return quote;
 }
