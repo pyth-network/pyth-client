@@ -3,7 +3,6 @@ mod test_add_price;
 mod test_add_product;
 mod test_add_publisher;
 mod test_aggregation;
-mod test_benchmark;
 mod test_c_code;
 mod test_check_valid_signable_account_or_permissioned_funding_account;
 mod test_del_price;
