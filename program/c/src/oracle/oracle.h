@@ -21,6 +21,8 @@ extern "C" {
 #define PC_PUBKEY_SIZE       32
 #define PC_PUBKEY_SIZE_64   (PC_PUBKEY_SIZE/sizeof(uint64_t))
 #define PC_MAP_TABLE_SIZE   640
+#define PC_MAX_PUBLISHERS    256
+#define PC_MAX_SYMBOLS       1024
 
   // Total price component slots available
 #define PC_NUM_COMP_PYTHNET     128
@@ -49,11 +51,12 @@ extern "C" {
 #define PC_STATUS_IGNORED     4
 
 // account types
-#define PC_ACCTYPE_MAPPING    1
-#define PC_ACCTYPE_PRODUCT    2
-#define PC_ACCTYPE_PRICE      3
-#define PC_ACCTYPE_TEST       4
-#define PC_ACCTYPE_PERMISSIONS       5
+#define PC_ACCTYPE_MAPPING      1
+#define PC_ACCTYPE_PRODUCT      2
+#define PC_ACCTYPE_PRICE        3
+#define PC_ACCTYPE_TEST         4
+#define PC_ACCTYPE_PERMISSIONS  5
+#define PC_ACCTYPE_SCORE        6
 
 
 // Compute budget requested per price update instruction

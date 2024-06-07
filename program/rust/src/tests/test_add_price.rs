@@ -6,6 +6,7 @@ use {
             PermissionAccount,
             PriceAccount,
             ProductAccount,
+            PublisherScoresAccount,
             PythAccount,
         },
         c_oracle_header::{
@@ -62,6 +63,9 @@ fn test_add_price() {
     let mut permissions_setup = AccountSetup::new_permission(&program_id);
     let permissions_account = permissions_setup.as_account_info();
 
+    let mut scores_setup = AccountSetup::new::<PublisherScoresAccount>(&program_id);
+    let scores_account = scores_setup.as_account_info();
+
     {
         let mut permissions_account_data =
             PermissionAccount::initialize(&permissions_account, PC_VERSION).unwrap();
@@ -81,6 +85,28 @@ fn test_add_price() {
         instruction_data_add_product
     )
     .is_ok());
+
+    // add price with scores account
+    assert!(process_instruction(
+        &program_id,
+        &[
+            funding_account.clone(),
+            product_account.clone(),
+            price_account.clone(),
+            permissions_account.clone(),
+            scores_account.clone(),
+        ],
+        instruction_data_add_price
+    )
+    .is_ok());
+
+    {
+        let score_data =
+            load_checked::<PublisherScoresAccount>(&scores_account, PC_VERSION).unwrap();
+        assert_eq!(score_data.symbols.len(), 1);
+        assert_eq!(score_data.symbols[0], *price_account.key);
+        assert_eq!(score_data.num_symbols, 1);
+    }
 
     assert!(process_instruction(
         &program_id,
@@ -136,6 +162,7 @@ fn test_add_price() {
                 funding_account.clone(),
                 product_account.clone(),
                 price_account.clone(),
+                permissions_account.clone(),
                 permissions_account.clone(),
                 permissions_account.clone(),
             ],

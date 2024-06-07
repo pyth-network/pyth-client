@@ -39,6 +39,7 @@ mod mapping;
 mod permission;
 mod price;
 mod product;
+mod score;
 
 // Some types only exist during use as a library.
 #[cfg(feature = "strum")]
@@ -64,6 +65,7 @@ pub use {
         update_product_metadata,
         ProductAccount,
     },
+    score::PublisherScoresAccount,
 };
 
 // PDA seeds for accounts.
