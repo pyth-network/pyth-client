@@ -7,6 +7,7 @@ use {
         PC_ACCTYPE_SCORE,
         PC_MAX_PUBLISHERS,
         PC_MAX_SYMBOLS,
+        PC_MAX_SYMBOLS_64,
     },
     bytemuck::{
         Pod,
@@ -27,13 +28,27 @@ pub struct PublisherScoresAccount {
     pub num_symbols:           usize,
     // a constant used to normalize the scores
     pub z:                     u32,
-    pub publisher_permissions: [[bool; PC_MAX_SYMBOLS as usize]; PC_MAX_PUBLISHERS as usize],
+
+    // array[x][y] is a u64 whose bits represent if publisher x publishes symbols 64*y to 64*(y+1) - 1
+    pub publisher_permissions: [[u64; PC_MAX_SYMBOLS_64 as usize]; PC_MAX_PUBLISHERS as usize],
     pub scores:                [f64; PC_MAX_PUBLISHERS as usize],
     pub publishers:            [Pubkey; PC_MAX_PUBLISHERS as usize],
     pub symbols:               [Pubkey; PC_MAX_SYMBOLS as usize],
 }
 
 impl PublisherScoresAccount {
+    fn get_publisher_permission(&self, x: usize, y: usize) -> bool {
+        (self.publisher_permissions[x][y / 64] >> (y % 64)) & 1 == 1
+    }
+
+    fn set_publisher_permission(&mut self, x: usize, y: usize, value: bool) {
+        if value {
+            self.publisher_permissions[x][y / 64] |= 1 << (y % 64);
+        } else {
+            self.publisher_permissions[x][y / 64] &= !(1 << (y % 64));
+        }
+    }
+
     pub fn add_publisher(
         &mut self,
         publisher: Pubkey,
@@ -60,7 +75,7 @@ impl PublisherScoresAccount {
             .position(|&x| x == price_account)
             .ok_or(ProgramError::InvalidArgument)?;
 
-        self.publisher_permissions[publisher_index][symbol_index] = true;
+        self.set_publisher_permission(publisher_index, symbol_index, true);
         self.calculate_scores()
     }
 
@@ -81,7 +96,7 @@ impl PublisherScoresAccount {
             .position(|&x| x == price_account)
             .ok_or(ProgramError::InvalidArgument)?;
 
-        self.publisher_permissions[publisher_index][symbol_index] = false;
+        self.set_publisher_permission(publisher_index, symbol_index, false);
         self.calculate_scores()
     }
 
@@ -111,8 +126,16 @@ impl PublisherScoresAccount {
             .position(|&x| x == symbol)
             .ok_or(ProgramError::InvalidArgument)?;
 
+        // update symbol list
         self.symbols[symbol_index] = self.symbols[self.num_symbols - 1];
         self.symbols[self.num_symbols - 1] = Pubkey::default();
+
+        // update publisher permissions
+        for i in 0..self.num_publishers {
+            let value = self.get_publisher_permission(i, self.num_symbols - 1);
+            self.set_publisher_permission(i, symbol_index, value)
+        }
+
         self.num_symbols -= 1;
         self.calculate_scores()
     }
@@ -136,7 +159,7 @@ impl PublisherScoresAccount {
                 .symbols
                 .iter()
                 .enumerate()
-                .filter(|(j, _)| self.publisher_permissions[i][*j])
+                .filter(|(j, _)| self.get_publisher_permission(i, *j))
                 .map(|(j, _)| 1f64 / symbol_scores[j] as f64)
                 .sum();
         }

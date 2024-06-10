@@ -23,8 +23,10 @@ extern "C" {
 #define PC_MAP_TABLE_SIZE   640
 #define PC_MAX_PUBLISHERS    256
 #define PC_MAX_SYMBOLS       1024
+// This is the number of 64-bit words needed to store the bitset of symbols
+#define PC_MAX_SYMBOLS_64    (PC_MAX_SYMBOLS/64)
 
-  // Total price component slots available
+// Total price component slots available
 #define PC_NUM_COMP_PYTHNET     128
 
 // PC_NUM_COMP - number of price components in use
