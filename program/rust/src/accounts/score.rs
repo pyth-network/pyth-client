@@ -23,11 +23,11 @@ use {
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct PublisherScoresAccount {
-    pub header:                AccountHeader,
-    pub num_publishers:        usize,
-    pub num_symbols:           usize,
+    pub header:         AccountHeader,
+    pub num_publishers: usize,
+    pub num_symbols:    usize,
     // a constant used to normalize the scores
-    pub z:                     u32,
+    pub z:              u32,
 
     // array[x][y] is a u64 whose bits represent if publisher x publishes symbols 64*y to 64*(y+1) - 1
     pub publisher_permissions: [[u64; PC_MAX_SYMBOLS_64 as usize]; PC_MAX_PUBLISHERS as usize],
