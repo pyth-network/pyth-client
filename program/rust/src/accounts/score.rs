@@ -170,7 +170,7 @@ impl PublisherScoresAccount {
 impl PythAccount for PublisherScoresAccount {
     const ACCOUNT_TYPE: u32 = PC_ACCTYPE_SCORE;
     // Calculate the initial size of the account
-    const INITIAL_SIZE: u32 = 1000;
+    const INITIAL_SIZE: u32 = 75816;
 }
 
 // Unsafe impl because product_list is of size 640 and there's no derived trait for this size

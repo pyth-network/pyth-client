@@ -60,11 +60,15 @@ fn test_add_price() {
     let mut price_setup_2 = AccountSetup::new::<PriceAccount>(&program_id);
     let price_account_2 = price_setup_2.as_account_info();
 
+    let mut price_setup_3 = AccountSetup::new::<PriceAccount>(&program_id);
+    let price_account_3 = price_setup_3.as_account_info();
+
     let mut permissions_setup = AccountSetup::new_permission(&program_id);
     let permissions_account = permissions_setup.as_account_info();
 
     let mut scores_setup = AccountSetup::new::<PublisherScoresAccount>(&program_id);
     let scores_account = scores_setup.as_account_info();
+    PublisherScoresAccount::initialize(&scores_account, PC_VERSION).unwrap();
 
     {
         let mut permissions_account_data =
@@ -92,7 +96,7 @@ fn test_add_price() {
         &[
             funding_account.clone(),
             product_account.clone(),
-            price_account.clone(),
+            price_account_3.clone(),
             permissions_account.clone(),
             scores_account.clone(),
         ],
@@ -103,8 +107,7 @@ fn test_add_price() {
     {
         let score_data =
             load_checked::<PublisherScoresAccount>(&scores_account, PC_VERSION).unwrap();
-        assert_eq!(score_data.symbols.len(), 1);
-        assert_eq!(score_data.symbols[0], *price_account.key);
+        assert_eq!(score_data.symbols[0], *price_account_3.key);
         assert_eq!(score_data.num_symbols, 1);
     }
 
@@ -127,7 +130,7 @@ fn test_add_price() {
         assert_eq!(price_data.price_type, 1);
         assert_eq!(price_data.min_pub_, PRICE_ACCOUNT_DEFAULT_MIN_PUB);
         assert!(price_data.product_account == *product_account.key);
-        assert!(price_data.next_price_account == Pubkey::default());
+        assert!(price_data.next_price_account == *price_account_3.key);
         assert!(product_data.first_price_account == *price_account.key);
     }
 
