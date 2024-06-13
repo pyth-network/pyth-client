@@ -65,7 +65,7 @@ pub use {
         update_product_metadata,
         ProductAccount,
     },
-    score::PublisherScoresAccount,
+    score::PublisherCapsAccount,
 };
 
 // PDA seeds for accounts.

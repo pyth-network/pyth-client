@@ -6,7 +6,7 @@ use {
             PermissionAccount,
             PriceAccount,
             ProductAccount,
-            PublisherScoresAccount,
+            PublisherCapsAccount,
             PythAccount,
         },
         c_oracle_header::{
@@ -66,9 +66,9 @@ fn test_add_price() {
     let mut permissions_setup = AccountSetup::new_permission(&program_id);
     let permissions_account = permissions_setup.as_account_info();
 
-    let mut scores_setup = AccountSetup::new::<PublisherScoresAccount>(&program_id);
+    let mut scores_setup = AccountSetup::new::<PublisherCapsAccount>(&program_id);
     let scores_account = scores_setup.as_account_info();
-    PublisherScoresAccount::initialize(&scores_account, PC_VERSION).unwrap();
+    PublisherCapsAccount::initialize(&scores_account, PC_VERSION).unwrap();
 
     {
         let mut permissions_account_data =
@@ -105,8 +105,7 @@ fn test_add_price() {
     .is_ok());
 
     {
-        let score_data =
-            load_checked::<PublisherScoresAccount>(&scores_account, PC_VERSION).unwrap();
+        let score_data = load_checked::<PublisherCapsAccount>(&scores_account, PC_VERSION).unwrap();
         assert_eq!(score_data.symbols[0], *price_account_3.key);
         assert_eq!(score_data.num_symbols, 1);
     }

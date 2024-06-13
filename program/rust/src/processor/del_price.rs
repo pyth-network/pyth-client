@@ -3,7 +3,7 @@ use {
         accounts::{
             PriceAccount,
             ProductAccount,
-            PublisherScoresAccount,
+            PublisherCapsAccount,
         },
         deserialize::{
             load,
@@ -89,7 +89,7 @@ pub fn del_price(
 
     if let Some(scores_account) = scores_account {
         let mut scores_account =
-            load_checked::<PublisherScoresAccount>(scores_account, cmd_args.version)?;
+            load_checked::<PublisherCapsAccount>(scores_account, cmd_args.version)?;
         scores_account.del_price(*price_account.key)?;
     }
 

@@ -3,7 +3,7 @@ use {
         accounts::{
             PriceAccount,
             ProductAccount,
-            PublisherScoresAccount,
+            PublisherCapsAccount,
             PythAccount,
         },
         c_oracle_header::{
@@ -86,7 +86,7 @@ pub fn add_price(
 
     if let Some(scores_account) = scores_account {
         let mut scores_account =
-            load_checked::<PublisherScoresAccount>(scores_account, cmd_args.header.version)?;
+            load_checked::<PublisherCapsAccount>(scores_account, cmd_args.header.version)?;
         scores_account.add_price(*price_account.key)?;
     }
 

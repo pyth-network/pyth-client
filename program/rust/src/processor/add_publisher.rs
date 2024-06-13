@@ -3,7 +3,7 @@ use {
         accounts::{
             PriceAccount,
             PriceComponent,
-            PublisherScoresAccount,
+            PublisherCapsAccount,
             PythAccount,
         },
         c_oracle_header::PC_NUM_COMP,
@@ -105,7 +105,7 @@ pub fn add_publisher(
 
     if let Some(scores_account) = scores_account {
         let mut scores_account =
-            load_checked::<PublisherScoresAccount>(scores_account, cmd_args.header.version)?;
+            load_checked::<PublisherCapsAccount>(scores_account, cmd_args.header.version)?;
         scores_account.add_publisher(cmd_args.publisher, *price_account.key)?;
     }
 
