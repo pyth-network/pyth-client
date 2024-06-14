@@ -147,25 +147,54 @@ impl PublisherCapsAccount {
         self.calculate_scores()
     }
 
-    #[allow(clippy::needless_range_loop)]
+
     pub fn calculate_scores(&mut self) -> Result<(), ProgramError> {
-        let mut symbol_scores: Vec<u64> = vec![0; self.num_symbols];
-        for j in 0..self.num_symbols {
-            for i in 0..self.num_publishers {
-                symbol_scores[j] += self.get_publisher_permission(i, j) as u64;
-            }
-            symbol_scores[j] = max(symbol_scores[j], self.z);
-        }
+        let symbol_scores: Vec<u64> = self
+            .symbols
+            .iter()
+            .enumerate()
+            .map(|(j, _)| {
+                let score = self
+                    .publisher_permissions
+                    .iter()
+                    .enumerate()
+                    .filter(|(i, _)| self.get_publisher_permission(*i, j))
+                    .count() as u64;
+                max(score, self.z)
+            })
+            .collect();
 
         for i in 0..self.num_publishers {
-            self.caps[i] = 0;
-            for j in 0..self.num_symbols {
-                self.caps[i] += self.get_publisher_permission(i, j) as u64 * 1_000_000_000_u64
-                    / symbol_scores[j];
-            }
+            self.caps[i] = self
+                .symbols
+                .iter()
+                .enumerate()
+                .filter(|(j, _)| self.get_publisher_permission(i, *j))
+                .map(|(j, _)| 1_000_000_000_u64 / symbol_scores[j] as u64)
+                .sum();
         }
         Ok(())
     }
+
+    // #[allow(clippy::needless_range_loop)]
+    // pub fn calculate_scores(&mut self) -> Result<(), ProgramError> {
+    //     let mut symbol_scores: Vec<u64> = vec![0; self.num_symbols];
+    //     for j in 0..self.num_symbols {
+    //         for i in 0..self.num_publishers {
+    //             symbol_scores[j] += self.get_publisher_permission(i, j) as u64;
+    //         }
+    //         symbol_scores[j] = max(symbol_scores[j], self.z);
+    //     }
+
+    //     for i in 0..self.num_publishers {
+    //         self.caps[i] = 0;
+    //         for j in 0..self.num_symbols {
+    //             self.caps[i] += self.get_publisher_permission(i, j) as u64 * 1_000_000_000_u64
+    //                 / symbol_scores[j];
+    //         }
+    //     }
+    //     Ok(())
+    // }
 }
 
 impl PythAccount for PublisherCapsAccount {
