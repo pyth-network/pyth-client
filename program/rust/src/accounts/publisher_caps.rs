@@ -147,6 +147,7 @@ impl PublisherCapsAccount {
         self.calculate_scores()
     }
 
+    #[allow(clippy::needless_range_loop)]
     pub fn calculate_scores(&mut self) -> Result<(), ProgramError> {
         let mut symbol_scores: Vec<u64> = vec![0; self.num_symbols];
         for j in 0..self.num_symbols {
