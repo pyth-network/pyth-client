@@ -34,7 +34,7 @@ use {
     solana_sdk::transaction::TransactionError,
 };
 
-const UPPER_BOUND_OF_ALL_ACCOUNT_SIZES: usize = 75816;
+const UPPER_BOUND_OF_ALL_ACCOUNT_SIZES: usize = 75824;
 
 /// The goal of this struct is to easily instantiate fresh solana accounts
 /// for the Pyth program to use in tests.

@@ -21,7 +21,7 @@ use {
 };
 
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Pod, Zeroable)]
 /*
  * This account is part of Community Integrity Pool (CIP) project.
  * It is used to store the caps of the publishers which will be sent
@@ -32,13 +32,13 @@ pub struct PublisherCapsAccount {
     pub num_publishers: usize,
     pub num_symbols:    usize,
     // Z is a constant used to normalize the scores
-    pub z:              u32,
+    pub z:              u64,
     // M is a constant showing the target stake per symbol
-    pub m:              u32,
+    pub m:              u64,
 
     // array[x][y] is a u64 whose bits represent if publisher x publishes symbols 64*y to 64*(y+1) - 1
     pub publisher_permissions: [[u64; PC_MAX_SYMBOLS_64 as usize]; PC_MAX_PUBLISHERS as usize],
-    pub caps:                  [f64; PC_MAX_PUBLISHERS as usize],
+    pub caps:                  [u64; PC_MAX_PUBLISHERS as usize],
     pub publishers:            [Pubkey; PC_MAX_PUBLISHERS as usize],
     pub symbols:               [Pubkey; PC_MAX_SYMBOLS as usize],
 }
@@ -148,27 +148,20 @@ impl PublisherCapsAccount {
     }
 
     pub fn calculate_scores(&mut self) -> Result<(), ProgramError> {
-        let symbol_scores: Vec<u32> = self
-            .symbols
-            .iter()
-            .enumerate()
-            .map(|(j, _)| {
-                let score = self
-                    .publisher_permissions
-                    .iter()
-                    .fold(0, |score, permissions| score + permissions[j] as u32);
-                max(score, self.z)
-            })
-            .collect();
+        let mut symbol_scores: Vec<u64> = vec![0; self.num_symbols];
+        for j in 0..self.num_symbols {
+            for i in 0..self.num_publishers {
+                symbol_scores[j] += self.get_publisher_permission(i, j) as u64;
+            }
+            symbol_scores[j] = max(symbol_scores[j], self.z);
+        }
 
         for i in 0..self.num_publishers {
-            self.caps[i] = self
-                .symbols
-                .iter()
-                .enumerate()
-                .filter(|(j, _)| self.get_publisher_permission(i, *j))
-                .map(|(j, _)| 1f64 / symbol_scores[j] as f64)
-                .sum();
+            self.caps[i] = 0;
+            for j in 0..self.num_symbols {
+                self.caps[i] += self.get_publisher_permission(i, j) as u64 * 1_000_000_000_u64
+                    / symbol_scores[j];
+            }
         }
         Ok(())
     }
@@ -177,12 +170,5 @@ impl PublisherCapsAccount {
 impl PythAccount for PublisherCapsAccount {
     const ACCOUNT_TYPE: u32 = PC_ACCTYPE_SCORE;
     // Calculate the initial size of the account
-    const INITIAL_SIZE: u32 = 75816;
-}
-
-// Unsafe impl because product_list is of size 640 and there's no derived trait for this size
-unsafe impl Pod for PublisherCapsAccount {
-}
-
-unsafe impl Zeroable for PublisherCapsAccount {
+    const INITIAL_SIZE: u32 = 75824;
 }
