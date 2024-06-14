@@ -319,24 +319,7 @@ fn find_publisher_index(comps: &[PriceComponent], key: &Pubkey) -> Option<usize>
             }
         }
     }
-
-    match binary_search_result {
-        Some(index) => Some(index),
-        None => {
-            let mut index = 0;
-            while index < comps.len() {
-                if sol_memcmp(comps[index].pub_.as_ref(), key.as_ref(), 32) == 0 {
-                    break;
-                }
-                index += 1;
-            }
-            if index == comps.len() {
-                None
-            } else {
-                Some(index)
-            }
-        }
-    }
+    binary_search_result
 }
 
 #[allow(dead_code)]
@@ -356,21 +339,6 @@ mod test {
         quickcheck_macros::quickcheck,
         solana_program::pubkey::Pubkey,
     };
-
-    /// Test the find_publisher_index method works with an unordered list of components.
-    #[quickcheck]
-    pub fn test_find_publisher_index_unordered_comp(comps: Vec<PriceComponent>) {
-        comps.iter().enumerate().for_each(|(idx, comp)| {
-            assert_eq!(find_publisher_index(&comps, &comp.pub_), Some(idx));
-        });
-
-        let mut key_not_in_list = Pubkey::new_unique();
-        while comps.iter().any(|comp| comp.pub_ == key_not_in_list) {
-            key_not_in_list = Pubkey::new_unique();
-        }
-
-        assert_eq!(find_publisher_index(&comps, &key_not_in_list), None);
-    }
 
     /// Test the find_publisher_index method works with a sorted list of components.
     #[quickcheck]
