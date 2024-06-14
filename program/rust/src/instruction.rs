@@ -1,3 +1,8 @@
+#[cfg(test)]
+use num_derive::{
+    FromPrimitive,
+    ToPrimitive,
+};
 use {
     crate::{
         c_oracle_header::PC_VERSION,
@@ -8,17 +13,14 @@ use {
         Pod,
         Zeroable,
     },
-    num_derive::{
-        FromPrimitive,
-        ToPrimitive,
-    },
-    num_traits::FromPrimitive,
     solana_program::pubkey::Pubkey,
 };
 
 /// WARNING : NEW COMMANDS SHOULD BE ADDED AT THE END OF THE LIST
 #[repr(i32)]
-#[derive(PartialEq, Eq, FromPrimitive, ToPrimitive)]
+#[cfg_attr(test, derive(FromPrimitive, ToPrimitive))]
+#[derive(PartialEq, Eq)]
+#[allow(dead_code)]
 pub enum OracleCommand {
     /// Initialize first mapping list account
     // account[0] funding account       [signer writable]
@@ -103,6 +105,16 @@ pub enum OracleCommand {
     // account[0] funding account       [signer writable]
     // account[1] price account         [signer writable]
     SetMaxLatency         = 18,
+}
+
+impl OracleCommand {
+    pub fn from_i32(value: i32) -> Option<Self> {
+        if (0..=18).contains(&value) {
+            Some(unsafe { std::mem::transmute(value) })
+        } else {
+            None
+        }
+    }
 }
 
 #[repr(C)]

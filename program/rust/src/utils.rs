@@ -25,7 +25,6 @@ use {
         Pod,
         Zeroable,
     },
-    num_traits::FromPrimitive,
     solana_program::{
         account_info::AccountInfo,
         bpf_loader_upgradeable,
