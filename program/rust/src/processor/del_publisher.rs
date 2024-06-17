@@ -33,7 +33,7 @@ use {
 /// Delete publisher from symbol account
 // account[0] funding account       [signer writable]
 // account[1] price account         [signer writable]
-// account[2] scores account        [signer writable]
+// account[2] caps account        [signer writable]
 pub fn del_publisher(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
@@ -47,7 +47,7 @@ pub fn del_publisher(
         ProgramError::InvalidArgument,
     )?;
 
-    let (funding_account, price_account, permissions_account, scores_account) = match accounts {
+    let (funding_account, price_account, permissions_account, caps_account) = match accounts {
         [x, y, p] => Ok((x, y, p, None)),
         [x, y, p, s] => Ok((x, y, p, Some(s))),
         _ => Err(OracleError::InvalidNumberOfAccounts),
@@ -62,10 +62,10 @@ pub fn del_publisher(
         &cmd_args.header,
     )?;
 
-    if let Some(scores_account) = scores_account {
-        let mut scores_account =
-            load_checked::<PublisherCapsAccount>(scores_account, cmd_args.header.version)?;
-        scores_account.del_publisher(cmd_args.publisher, *price_account.key)?;
+    if let Some(caps_account) = caps_account {
+        let mut caps_account =
+            load_checked::<PublisherCapsAccount>(caps_account, cmd_args.header.version)?;
+        caps_account.del_publisher(cmd_args.publisher, *price_account.key)?;
     }
 
     let mut price_data = load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;

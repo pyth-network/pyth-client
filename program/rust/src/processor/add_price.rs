@@ -35,7 +35,7 @@ use {
 // account[0] funding account       [signer writable]
 // account[1] product account       [signer writable]
 // account[2] new price account     [signer writable]
-// account[3] scores account        [signer writable]
+// account[3] caps account        [signer writable]
 pub fn add_price(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
@@ -50,7 +50,7 @@ pub fn add_price(
     )?;
 
 
-    let (funding_account, product_account, price_account, permissions_account, scores_account) =
+    let (funding_account, product_account, price_account, permissions_account, caps_account) =
         match accounts {
             [x, y, z, p] => Ok((x, y, z, p, None)),
             [x, y, z, p, s] => Ok((x, y, z, p, Some(s))),
@@ -84,10 +84,10 @@ pub fn add_price(
     price_data.min_pub_ = PRICE_ACCOUNT_DEFAULT_MIN_PUB;
     product_data.first_price_account = *price_account.key;
 
-    if let Some(scores_account) = scores_account {
-        let mut scores_account =
-            load_checked::<PublisherCapsAccount>(scores_account, cmd_args.header.version)?;
-        scores_account.add_price(*price_account.key)?;
+    if let Some(caps_account) = caps_account {
+        let mut caps_account =
+            load_checked::<PublisherCapsAccount>(caps_account, cmd_args.header.version)?;
+        caps_account.add_price(*price_account.key)?;
     }
 
     Ok(())

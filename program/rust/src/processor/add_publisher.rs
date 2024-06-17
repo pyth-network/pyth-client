@@ -34,7 +34,7 @@ use {
 /// Add publisher to symbol account
 // account[0] funding account       [signer writable]
 // account[1] price account         [signer writable]
-// account[2] scores account        [signer writable]
+// account[2] caps account        [signer writable]
 pub fn add_publisher(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
@@ -47,7 +47,7 @@ pub fn add_publisher(
         ProgramError::InvalidArgument,
     )?;
 
-    let (funding_account, price_account, permissions_account, scores_account) = match accounts {
+    let (funding_account, price_account, permissions_account, caps_account) = match accounts {
         [x, y, p] => Ok((x, y, p, None)),
         [x, y, p, s] => Ok((x, y, p, Some(s))),
         _ => Err(OracleError::InvalidNumberOfAccounts),
@@ -70,12 +70,12 @@ pub fn add_publisher(
     if cmd_args.publisher == Pubkey::default() {
         let num_comps = try_convert::<u32, usize>(price_data.num_)?;
 
-        if let Some(scores_account) = scores_account {
-            let mut scores_account =
-                load_checked::<PublisherCapsAccount>(scores_account, cmd_args.header.version)?;
-            scores_account.add_price(*price_account.key)?;
+        if let Some(caps_account) = caps_account {
+            let mut caps_account =
+                load_checked::<PublisherCapsAccount>(caps_account, cmd_args.header.version)?;
+            caps_account.add_price(*price_account.key)?;
             for publisher in price_data.comp_[..num_comps].iter() {
-                scores_account.add_publisher(publisher.pub_, *price_account.key)?;
+                caps_account.add_publisher(publisher.pub_, *price_account.key)?;
             }
         }
 
@@ -117,10 +117,10 @@ pub fn add_publisher(
 
     price_data.header.size = try_convert::<_, u32>(PriceAccount::INITIAL_SIZE)?;
 
-    if let Some(scores_account) = scores_account {
-        let mut scores_account =
-            load_checked::<PublisherCapsAccount>(scores_account, cmd_args.header.version)?;
-        scores_account.add_publisher(cmd_args.publisher, *price_account.key)?;
+    if let Some(caps_account) = caps_account {
+        let mut caps_account =
+            load_checked::<PublisherCapsAccount>(caps_account, cmd_args.header.version)?;
+        caps_account.add_publisher(cmd_args.publisher, *price_account.key)?;
     }
 
     Ok(())

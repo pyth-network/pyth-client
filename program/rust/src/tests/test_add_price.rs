@@ -67,8 +67,8 @@ fn test_add_price() {
     let permissions_account = permissions_setup.as_account_info();
 
     let mut scores_setup = AccountSetup::new::<PublisherCapsAccount>(&program_id);
-    let scores_account = scores_setup.as_account_info();
-    PublisherCapsAccount::initialize(&scores_account, PC_VERSION).unwrap();
+    let caps_account = scores_setup.as_account_info();
+    PublisherCapsAccount::initialize(&caps_account, PC_VERSION).unwrap();
 
     {
         let mut permissions_account_data =
@@ -90,7 +90,7 @@ fn test_add_price() {
     )
     .is_ok());
 
-    // add price with scores account
+    // add price with caps account
     assert!(process_instruction(
         &program_id,
         &[
@@ -98,14 +98,14 @@ fn test_add_price() {
             product_account.clone(),
             price_account_3.clone(),
             permissions_account.clone(),
-            scores_account.clone(),
+            caps_account.clone(),
         ],
         instruction_data_add_price
     )
     .is_ok());
 
     {
-        let score_data = load_checked::<PublisherCapsAccount>(&scores_account, PC_VERSION).unwrap();
+        let score_data = load_checked::<PublisherCapsAccount>(&caps_account, PC_VERSION).unwrap();
         assert_eq!(score_data.symbols[0], *price_account_3.key);
         assert_eq!(score_data.num_symbols, 1);
     }
