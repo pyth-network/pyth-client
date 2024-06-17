@@ -22,11 +22,10 @@ use {
 
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]
-/*
- * This account is part of Community Integrity Pool (CIP) project.
- * It is used to store the caps of the publishers which will be sent
- * to the `integrity_pool` program on mainnet to calculate the rewards.
- */
+
+/// This account is part of Community Integrity Pool (CIP) project.
+/// It is used to store the caps of the publishers which will be sent
+/// to the `integrity_pool` program on mainnet to calculate the rewards.
 pub struct PublisherCapsAccount {
     pub header:         AccountHeader,
     pub num_publishers: usize,
