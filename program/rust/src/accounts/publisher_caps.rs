@@ -83,7 +83,7 @@ impl PublisherCapsAccount {
 
         self.set_publisher_permission(publisher_index, symbol_index, true);
 
-        self.calculate_scores()
+        self.calculate_caps()
     }
 
     pub fn del_publisher(
@@ -104,7 +104,7 @@ impl PublisherCapsAccount {
             .ok_or(ProgramError::InvalidArgument)?;
 
         self.set_publisher_permission(publisher_index, symbol_index, false);
-        self.calculate_scores()
+        self.calculate_caps()
     }
 
     pub fn add_price(&mut self, symbol: Pubkey) -> Result<(), ProgramError> {
@@ -144,11 +144,11 @@ impl PublisherCapsAccount {
         }
 
         self.num_symbols -= 1;
-        self.calculate_scores()
+        self.calculate_caps()
     }
 
 
-    pub fn calculate_scores(&mut self) -> Result<(), ProgramError> {
+    pub fn calculate_caps(&mut self) -> Result<(), ProgramError> {
         let symbol_scores: Vec<u64> = self
             .symbols
             .iter()
