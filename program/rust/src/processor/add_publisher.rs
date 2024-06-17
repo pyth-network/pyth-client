@@ -101,12 +101,15 @@ pub fn add_publisher(
     price_data.num_ += 1;
 
     // Sort the publishers in the list
+    #[allow(clippy::manual_swap)]
     {
         let mut comp_index = try_convert::<u32, usize>(price_data.num_ - 1)?;
         while comp_index > 0
             && price_data.comp_[comp_index - 1].pub_ > price_data.comp_[comp_index].pub_
         {
-            price_data.comp_.swap(comp_index - 1, comp_index);
+            let tmp = price_data.comp_[comp_index - 1];
+            price_data.comp_[comp_index - 1] = price_data.comp_[comp_index];
+            price_data.comp_[comp_index] = tmp;
             comp_index -= 1;
         }
     }
