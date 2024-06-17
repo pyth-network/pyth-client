@@ -73,7 +73,7 @@ pub fn add_publisher(
         if let Some(scores_account) = scores_account {
             let mut scores_account =
                 load_checked::<PublisherCapsAccount>(scores_account, cmd_args.header.version)?;
-            for pubisher in price_data.comp_.iter().take(num_comps) {
+            for pubisher in price_data.comp_[..num_comps].iter() {
                 scores_account.add_publisher(pubisher.pub_, *price_account.key)?;
             }
         }
