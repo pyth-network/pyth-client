@@ -39,7 +39,7 @@ pub struct PublisherCapsAccount {
     pub publisher_permissions: [[u64; PC_MAX_SYMBOLS_64 as usize]; PC_MAX_PUBLISHERS as usize],
     pub caps:                  [u64; PC_MAX_PUBLISHERS as usize],
     pub publishers:            [Pubkey; PC_MAX_PUBLISHERS as usize],
-    pub symbols:               [Pubkey; PC_MAX_SYMBOLS as usize],
+    pub prices:                [Pubkey; PC_MAX_SYMBOLS as usize],
 }
 
 impl PublisherCapsAccount {
@@ -76,7 +76,7 @@ impl PublisherCapsAccount {
         }
 
         let symbol_index = self
-            .symbols
+            .prices
             .iter()
             .position(|&x| x == price_account)
             .ok_or(ProgramError::InvalidArgument)?;
@@ -98,7 +98,7 @@ impl PublisherCapsAccount {
             .ok_or(ProgramError::InvalidArgument)?;
 
         let symbol_index = self
-            .symbols
+            .prices
             .iter()
             .position(|&x| x == price_account)
             .ok_or(ProgramError::InvalidArgument)?;
@@ -109,7 +109,7 @@ impl PublisherCapsAccount {
 
     pub fn add_price(&mut self, symbol: Pubkey) -> Result<(), ProgramError> {
         let symbol_index = self
-            .symbols
+            .prices
             .iter()
             .position(|&x| x == symbol)
             .unwrap_or(self.num_symbols);
@@ -119,7 +119,7 @@ impl PublisherCapsAccount {
                 return Err(ProgramError::AccountDataTooSmall);
             }
 
-            self.symbols[self.num_symbols] = symbol;
+            self.prices[self.num_symbols] = symbol;
             self.num_symbols += 1;
         }
 
@@ -128,14 +128,14 @@ impl PublisherCapsAccount {
 
     pub fn del_price(&mut self, symbol: Pubkey) -> Result<(), ProgramError> {
         let symbol_index = self
-            .symbols
+            .prices
             .iter()
             .position(|&x| x == symbol)
             .ok_or(ProgramError::InvalidArgument)?;
 
         // update symbol list
-        self.symbols[symbol_index] = self.symbols[self.num_symbols - 1];
-        self.symbols[self.num_symbols - 1] = Pubkey::default();
+        self.prices[symbol_index] = self.prices[self.num_symbols - 1];
+        self.prices[self.num_symbols - 1] = Pubkey::default();
 
         // update publisher permissions
         for i in 0..self.num_publishers {
@@ -150,7 +150,7 @@ impl PublisherCapsAccount {
 
     pub fn calculate_caps(&mut self) -> Result<(), ProgramError> {
         let symbol_scores: Vec<u64> = self
-            .symbols
+            .prices
             .iter()
             .enumerate()
             .map(|(j, _)| {
@@ -166,7 +166,7 @@ impl PublisherCapsAccount {
 
         for i in 0..self.num_publishers {
             self.caps[i] = self
-                .symbols
+                .prices
                 .iter()
                 .enumerate()
                 .filter(|(j, _)| self.get_publisher_permission(i, *j))
@@ -232,7 +232,7 @@ mod tests {
             publisher_permissions: [[0; PC_MAX_SYMBOLS_64 as usize]; PC_MAX_PUBLISHERS as usize],
             caps:                  [0; PC_MAX_PUBLISHERS as usize],
             publishers:            [Pubkey::default(); PC_MAX_PUBLISHERS as usize],
-            symbols:               [Pubkey::default(); PC_MAX_SYMBOLS as usize],
+            prices:                [Pubkey::default(); PC_MAX_SYMBOLS as usize],
         }
     }
 

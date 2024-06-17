@@ -106,7 +106,7 @@ fn test_add_price() {
 
     {
         let score_data = load_checked::<PublisherCapsAccount>(&caps_account, PC_VERSION).unwrap();
-        assert_eq!(score_data.symbols[0], *price_account_3.key);
+        assert_eq!(score_data.prices[0], *price_account_3.key);
         assert_eq!(score_data.num_symbols, 1);
     }
 
