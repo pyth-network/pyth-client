@@ -138,7 +138,7 @@ impl From<OracleCommand> for CommandHeader {
     fn from(val: OracleCommand) -> Self {
         CommandHeader {
             version: PC_VERSION,
-            command: val.to_i32().unwrap(), // This can never fail and is only used in tests
+            command: val.to_u32().unwrap(), // This can never fail and is only used in tests
         }
     }
 }

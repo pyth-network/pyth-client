@@ -72,7 +72,7 @@ pub fn check_permissioned_funding_account(
     pyth_assert(
         permissions_account_data.is_authorized(
             funding_account.key,
-            OracleCommand::from_i32(cmd_hdr.command).ok_or(OracleError::UnrecognizedInstruction)?,
+            OracleCommand::from_u32(cmd_hdr.command).ok_or(OracleError::UnrecognizedInstruction)?,
         ),
         OracleError::PermissionViolation.into(),
     )?;
@@ -160,7 +160,7 @@ pub fn check_valid_permissions_account(
 /// Checks whether this instruction is trying to update an individual publisher's price (`true`) or
 /// is only trying to refresh the aggregate (`false`)
 pub fn is_component_update(cmd_args: &UpdPriceArgs) -> Result<bool, OracleError> {
-    match OracleCommand::from_i32(cmd_args.header.command)
+    match OracleCommand::from_u32(cmd_args.header.command)
         .ok_or(OracleError::UnrecognizedInstruction)?
     {
         OracleCommand::UpdPrice | OracleCommand::UpdPriceNoFailOnError => Ok(true),
