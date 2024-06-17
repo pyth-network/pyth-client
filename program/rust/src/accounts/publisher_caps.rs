@@ -30,7 +30,7 @@ pub struct PublisherCapsAccount {
     pub header:         AccountHeader,
     pub num_publishers: usize,
     pub num_symbols:    usize,
-    // Z is a constant used to normalize the scores
+    // Z is a constant used to normalize the caps
     pub z:              u64,
     // M is a constant showing the target stake per symbol
     pub m:              u64,
@@ -175,26 +175,6 @@ impl PublisherCapsAccount {
         }
         Ok(())
     }
-
-    // #[allow(clippy::needless_range_loop)]
-    // pub fn calculate_scores(&mut self) -> Result<(), ProgramError> {
-    //     let mut symbol_scores: Vec<u64> = vec![0; self.num_symbols];
-    //     for j in 0..self.num_symbols {
-    //         for i in 0..self.num_publishers {
-    //             symbol_scores[j] += self.get_publisher_permission(i, j) as u64;
-    //         }
-    //         symbol_scores[j] = max(symbol_scores[j], self.z);
-    //     }
-
-    //     for i in 0..self.num_publishers {
-    //         self.caps[i] = 0;
-    //         for j in 0..self.num_symbols {
-    //             self.caps[i] += self.get_publisher_permission(i, j) as u64 * 1_000_000_000_u64
-    //                 / symbol_scores[j];
-    //         }
-    //     }
-    //     Ok(())
-    // }
 }
 
 impl PythAccount for PublisherCapsAccount {
@@ -204,7 +184,6 @@ impl PythAccount for PublisherCapsAccount {
 }
 
 
-// write tests
 #[cfg(test)]
 mod tests {
     use {

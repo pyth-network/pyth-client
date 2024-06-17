@@ -66,8 +66,8 @@ fn test_add_price() {
     let mut permissions_setup = AccountSetup::new_permission(&program_id);
     let permissions_account = permissions_setup.as_account_info();
 
-    let mut scores_setup = AccountSetup::new::<PublisherCapsAccount>(&program_id);
-    let caps_account = scores_setup.as_account_info();
+    let mut caps_setup = AccountSetup::new::<PublisherCapsAccount>(&program_id);
+    let caps_account = caps_setup.as_account_info();
     PublisherCapsAccount::initialize(&caps_account, PC_VERSION).unwrap();
 
     {
