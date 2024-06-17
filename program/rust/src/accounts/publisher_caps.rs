@@ -82,6 +82,7 @@ impl PublisherCapsAccount {
             .ok_or(ProgramError::InvalidArgument)?;
 
         self.set_publisher_permission(publisher_index, symbol_index, true);
+
         self.calculate_scores()
     }
 
@@ -169,7 +170,7 @@ impl PublisherCapsAccount {
                 .iter()
                 .enumerate()
                 .filter(|(j, _)| self.get_publisher_permission(i, *j))
-                .map(|(j, _)| 1_000_000_000_u64 / symbol_scores[j])
+                .map(|(j, _)| self.m * 1_000_000_000_u64 / symbol_scores[j])
                 .sum();
         }
         Ok(())
@@ -200,4 +201,128 @@ impl PythAccount for PublisherCapsAccount {
     const ACCOUNT_TYPE: u32 = PC_ACCTYPE_SCORE;
     // Calculate the initial size of the account
     const INITIAL_SIZE: u32 = 75824;
+}
+
+
+// write tests
+#[cfg(test)]
+mod tests {
+    use {
+        super::*,
+        crate::c_oracle_header::{
+            PC_ACCTYPE_SCORE,
+            PC_VERSION,
+        },
+        solana_program::pubkey::Pubkey,
+        std::mem::size_of,
+    };
+
+    fn get_empty_account() -> PublisherCapsAccount {
+        PublisherCapsAccount {
+            header:                AccountHeader {
+                magic_number: PC_ACCTYPE_SCORE,
+                account_type: PC_ACCTYPE_SCORE,
+                version:      PC_VERSION,
+                size:         size_of::<PublisherCapsAccount>() as u32,
+            },
+            num_publishers:        0,
+            num_symbols:           0,
+            z:                     2,
+            m:                     1000,
+            publisher_permissions: [[0; PC_MAX_SYMBOLS_64 as usize]; PC_MAX_PUBLISHERS as usize],
+            caps:                  [0; PC_MAX_PUBLISHERS as usize],
+            publishers:            [Pubkey::default(); PC_MAX_PUBLISHERS as usize],
+            symbols:               [Pubkey::default(); PC_MAX_SYMBOLS as usize],
+        }
+    }
+
+    #[test]
+    fn test_size_of_publisher_caps_account() {
+        let account = get_empty_account();
+        assert_eq!(
+            PublisherCapsAccount::INITIAL_SIZE as usize,
+            size_of::<PublisherCapsAccount>()
+        );
+        assert_eq!(
+            account.header.size as usize,
+            size_of::<PublisherCapsAccount>()
+        );
+    }
+
+    #[test]
+    fn test_publisher_caps_account() {
+        let mut account = get_empty_account();
+
+        let publisher1 = Pubkey::new_unique();
+        let publisher2 = Pubkey::new_unique();
+        let publisher3 = Pubkey::new_unique();
+        let symbol1 = Pubkey::new_unique();
+        let symbol2 = Pubkey::new_unique();
+
+        account.add_price(symbol1).unwrap();
+        account.add_price(symbol2).unwrap();
+
+        account.add_publisher(publisher1, symbol1).unwrap();
+        assert_eq!(account.caps[..2], [account.m * 500_000_000, 0]);
+
+        account.add_publisher(publisher1, symbol2).unwrap();
+        assert!(account.get_publisher_permission(0, 0));
+        assert!(account.get_publisher_permission(0, 1));
+        assert_eq!(account.caps[..2], [account.m * 1_000_000_000, 0]);
+
+
+        account.add_publisher(publisher2, symbol1).unwrap();
+        assert_eq!(
+            account.caps[..2],
+            [account.m * 1_000_000_000, account.m * 500_000_000]
+        );
+
+        account.add_publisher(publisher2, symbol2).unwrap();
+        assert!(account.get_publisher_permission(1, 0));
+        assert!(account.get_publisher_permission(1, 1));
+        assert_eq!(
+            account.caps[..2],
+            [account.m * 1_000_000_000, account.m * 1_000_000_000]
+        );
+
+        account.add_publisher(publisher3, symbol1).unwrap();
+        assert_eq!(
+            account.caps[..3],
+            [833_333_333_333, 833_333_333_333, 333333333333]
+        );
+
+        account.del_publisher(publisher1, symbol1).unwrap();
+        assert_eq!(account.num_publishers, 3);
+        assert_eq!(account.num_symbols, 2);
+        assert!(!account.get_publisher_permission(0, 0));
+        assert!(account.get_publisher_permission(0, 1));
+        assert!(account.get_publisher_permission(1, 0));
+        assert!(account.get_publisher_permission(1, 1));
+
+        account.del_publisher(publisher1, symbol2).unwrap();
+        assert_eq!(account.num_publishers, 3);
+        assert_eq!(account.num_symbols, 2);
+        assert!(!account.get_publisher_permission(0, 0));
+        assert!(!account.get_publisher_permission(0, 1));
+        assert!(account.get_publisher_permission(1, 0));
+        assert!(account.get_publisher_permission(1, 1));
+
+        account.del_publisher(publisher2, symbol1).unwrap();
+        assert_eq!(account.num_publishers, 3);
+        assert_eq!(account.num_symbols, 2);
+        assert!(!account.get_publisher_permission(0, 0));
+        assert!(!account.get_publisher_permission(0, 1));
+        assert!(!account.get_publisher_permission(1, 0));
+        assert!(account.get_publisher_permission(1, 1));
+
+        account.del_publisher(publisher2, symbol2).unwrap();
+        assert_eq!(account.num_publishers, 3);
+        assert_eq!(account.num_symbols, 2);
+        assert!(!account.get_publisher_permission(0, 0));
+        assert!(!account.get_publisher_permission(0, 1));
+        assert!(!account.get_publisher_permission(1, 0));
+        assert!(!account.get_publisher_permission(1, 1));
+
+        assert_eq!(account.caps[..3], [0, 0, 500000000000]);
+    }
 }
