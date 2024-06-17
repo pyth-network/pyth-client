@@ -169,7 +169,7 @@ impl PublisherCapsAccount {
                 .iter()
                 .enumerate()
                 .filter(|(j, _)| self.get_publisher_permission(i, *j))
-                .map(|(j, _)| 1_000_000_000_u64 / symbol_scores[j] as u64)
+                .map(|(j, _)| 1_000_000_000_u64 / symbol_scores[j])
                 .sum();
         }
         Ok(())
