@@ -97,24 +97,24 @@ impl PublisherCapsAccount {
             .position(|&x| x == publisher)
             .ok_or(ProgramError::InvalidArgument)?;
 
-        let symbol_index = self
+        let price_index = self
             .prices
             .iter()
             .position(|&x| x == price_account)
             .ok_or(ProgramError::InvalidArgument)?;
 
-        self.set_publisher_permission(publisher_index, symbol_index, false);
+        self.set_publisher_permission(publisher_index, price_index, false);
         self.calculate_caps()
     }
 
     pub fn add_price(&mut self, symbol: Pubkey) -> Result<(), ProgramError> {
-        let symbol_index = self
+        let price_index = self
             .prices
             .iter()
             .position(|&x| x == symbol)
             .unwrap_or(self.num_symbols);
 
-        if symbol_index == self.num_symbols {
+        if price_index == self.num_symbols {
             if self.num_symbols == PC_MAX_SYMBOLS as usize {
                 return Err(ProgramError::AccountDataTooSmall);
             }
@@ -127,20 +127,20 @@ impl PublisherCapsAccount {
     }
 
     pub fn del_price(&mut self, symbol: Pubkey) -> Result<(), ProgramError> {
-        let symbol_index = self
+        let price_index = self
             .prices
             .iter()
             .position(|&x| x == symbol)
             .ok_or(ProgramError::InvalidArgument)?;
 
         // update symbol list
-        self.prices[symbol_index] = self.prices[self.num_symbols - 1];
+        self.prices[price_index] = self.prices[self.num_symbols - 1];
         self.prices[self.num_symbols - 1] = Pubkey::default();
 
         // update publisher permissions
         for i in 0..self.num_publishers {
             let value = self.get_publisher_permission(i, self.num_symbols - 1);
-            self.set_publisher_permission(i, symbol_index, value)
+            self.set_publisher_permission(i, price_index, value)
         }
 
         self.num_symbols -= 1;
@@ -149,18 +149,18 @@ impl PublisherCapsAccount {
 
 
     pub fn calculate_caps(&mut self) -> Result<(), ProgramError> {
-        let symbol_scores: Vec<u64> = self
+        let price_weights: Vec<u64> = self
             .prices
             .iter()
             .enumerate()
             .map(|(j, _)| {
-                let score = self
+                let weight = self
                     .publisher_permissions
                     .iter()
                     .enumerate()
                     .filter(|(i, _)| self.get_publisher_permission(*i, j))
                     .count() as u64;
-                max(score, self.z)
+                max(weight, self.z)
             })
             .collect();
 
@@ -170,7 +170,7 @@ impl PublisherCapsAccount {
                 .iter()
                 .enumerate()
                 .filter(|(j, _)| self.get_publisher_permission(i, *j))
-                .map(|(j, _)| self.m * 1_000_000_000_u64 / symbol_scores[j])
+                .map(|(j, _)| self.m * 1_000_000_000_u64 / price_weights[j])
                 .sum();
         }
         Ok(())
