@@ -21,6 +21,7 @@ use {
 };
 
 #[repr(C)]
+#[cfg_attr(test, derive(Debug))]
 #[derive(Copy, Clone, Pod, Zeroable)]
 
 /// This account is part of Community Integrity Pool (CIP) project.
@@ -190,16 +191,50 @@ mod tests {
         super::*,
         crate::c_oracle_header::{
             PC_ACCTYPE_SCORE,
+            PC_MAGIC,
             PC_VERSION,
         },
+        quickcheck::Arbitrary,
+        quickcheck_macros::quickcheck,
         solana_program::pubkey::Pubkey,
         std::mem::size_of,
     };
 
+    fn arbitrary_pubkey(g: &mut quickcheck::Gen) -> Pubkey {
+        let mut key = [0u8; 32];
+        key.iter_mut().for_each(|item| *item = u8::arbitrary(g));
+        Pubkey::new_from_array(key)
+    }
+
+    impl Arbitrary for PublisherCapsAccount {
+        fn arbitrary(g: &mut quickcheck::Gen) -> Self {
+            let mut account = PublisherCapsAccount {
+                header:                AccountHeader {
+                    magic_number: PC_MAGIC,
+                    account_type: PC_ACCTYPE_SCORE,
+                    version:      PC_VERSION,
+                    size:         size_of::<PublisherCapsAccount>() as u32,
+                },
+                num_publishers:        usize::arbitrary(g) % (PC_MAX_PUBLISHERS - 10) as usize + 10,
+                num_symbols:           usize::arbitrary(g) % (PC_MAX_SYMBOLS - 10) as usize + 10,
+                z:                     u64::arbitrary(g) % 5 + 2,
+                m:                     u64::arbitrary(g) % 1000 + 1000,
+                publisher_permissions: [[u64::arbitrary(g); PC_MAX_SYMBOLS_64 as usize];
+                    PC_MAX_PUBLISHERS as usize],
+                caps:                  [0; PC_MAX_PUBLISHERS as usize],
+                publishers:            [arbitrary_pubkey(g); PC_MAX_PUBLISHERS as usize],
+                prices:                [arbitrary_pubkey(g); PC_MAX_SYMBOLS as usize],
+            };
+
+            account.calculate_caps().unwrap();
+            account
+        }
+    }
+
     fn get_empty_account() -> PublisherCapsAccount {
         PublisherCapsAccount {
             header:                AccountHeader {
-                magic_number: PC_ACCTYPE_SCORE,
+                magic_number: PC_MAGIC,
                 account_type: PC_ACCTYPE_SCORE,
                 version:      PC_VERSION,
                 size:         size_of::<PublisherCapsAccount>() as u32,
@@ -303,5 +338,17 @@ mod tests {
         assert!(!account.get_publisher_permission(1, 1));
 
         assert_eq!(account.caps[..3], [0, 0, 500000000000]);
+    }
+
+    #[allow(clippy::assertions_on_constants)]
+    #[quickcheck]
+    fn test_arbitrary_account(account: PublisherCapsAccount) {
+        assert_eq!(account.header.magic_number, PC_MAGIC);
+        assert_eq!(account.header.account_type, PC_ACCTYPE_SCORE);
+        assert_eq!(account.header.version, PC_VERSION);
+        assert_eq!(
+            account.header.size as usize,
+            size_of::<PublisherCapsAccount>()
+        );
     }
 }

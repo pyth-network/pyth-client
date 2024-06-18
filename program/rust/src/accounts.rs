@@ -79,6 +79,7 @@ pub const PERMISSIONS_SEED: &str = "permissions";
 pub const UPD_PRICE_WRITE_SEED: &str = "upd_price_write";
 
 #[repr(C)]
+#[cfg_attr(test, derive(Debug))]
 #[derive(Copy, Clone, Zeroable, Pod)]
 pub struct AccountHeader {
     pub magic_number: u32,
