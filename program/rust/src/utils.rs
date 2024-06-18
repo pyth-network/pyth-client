@@ -28,7 +28,14 @@ use {
     solana_program::{
         account_info::AccountInfo,
         bpf_loader_upgradeable,
-        program::invoke,
+        instruction::{
+            AccountMeta,
+            Instruction,
+        },
+        program::{
+            invoke,
+            invoke_signed,
+        },
         program_error::ProgramError,
         pubkey::Pubkey,
         system_instruction::transfer,
@@ -256,5 +263,72 @@ pub fn send_lamports<'a>(
         &transfer_instruction,
         &[from.clone(), to.clone(), system_program.clone()],
     )?;
+    Ok(())
+}
+
+// Wrapper struct for the accounts required to add data to the accumulator program.
+pub struct MessageBufferAccounts<'a, 'b: 'a> {
+    pub program_id:          &'a AccountInfo<'b>,
+    pub whitelist:           &'a AccountInfo<'b>,
+    pub oracle_auth_pda:     &'a AccountInfo<'b>,
+    pub message_buffer_data: &'a AccountInfo<'b>,
+}
+
+pub fn send_message_to_message_buffer(
+    program_id: &Pubkey,
+    base_account_key: &Pubkey,
+    seed: &str,
+    accounts: &[AccountInfo],
+    accumulator_accounts: MessageBufferAccounts,
+    message: Vec<Vec<u8>>,
+) -> Result<(), ProgramError> {
+    let account_metas = vec![
+        AccountMeta {
+            pubkey:      *accumulator_accounts.whitelist.key,
+            is_signer:   false,
+            is_writable: false,
+        },
+        AccountMeta {
+            pubkey:      *accumulator_accounts.oracle_auth_pda.key,
+            is_signer:   true,
+            is_writable: false,
+        },
+        AccountMeta {
+            pubkey:      *accumulator_accounts.message_buffer_data.key,
+            is_signer:   false,
+            is_writable: true,
+        },
+    ];
+
+    // Check that the oracle PDA is correctly configured for the program we are calling.
+    let oracle_auth_seeds: &[&[u8]] = &[
+        seed.as_bytes(),
+        &accumulator_accounts.program_id.key.to_bytes(),
+    ];
+    let (expected_oracle_auth_pda, bump) =
+        Pubkey::find_program_address(oracle_auth_seeds, program_id);
+    pyth_assert(
+        expected_oracle_auth_pda == *accumulator_accounts.oracle_auth_pda.key,
+        OracleError::InvalidPda.into(),
+    )?;
+
+    // Append a TWAP message if available
+
+    // anchor discriminator for "global:put_all"
+    let discriminator: [u8; 8] = [212, 225, 193, 91, 151, 238, 20, 93];
+    let create_inputs_ix = Instruction::new_with_borsh(
+        *accumulator_accounts.program_id.key,
+        &(discriminator, base_account_key.to_bytes(), message),
+        account_metas,
+    );
+
+    let auth_seeds_with_bump: &[&[u8]] = &[
+        seed.as_bytes(),
+        &accumulator_accounts.program_id.key.to_bytes(),
+        &[bump],
+    ];
+
+    invoke_signed(&create_inputs_ix, accounts, &[auth_seeds_with_bump])?;
+
     Ok(())
 }
