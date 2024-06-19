@@ -5,6 +5,7 @@ use {
             PriceComponent,
             PublisherCapsAccount,
             PythAccount,
+            CAPS_WRITE_SEED,
         },
         c_oracle_header::PC_NUM_COMP,
         deserialize::{
@@ -16,7 +17,9 @@ use {
             check_permissioned_funding_account,
             check_valid_funding_account,
             pyth_assert,
+            send_message_to_message_buffer,
             try_convert,
+            MessageBufferAccounts,
         },
         OracleError,
     },
@@ -47,9 +50,26 @@ pub fn add_publisher(
         ProgramError::InvalidArgument,
     )?;
 
-    let (funding_account, price_account, permissions_account, caps_account) = match accounts {
-        [x, y, p] => Ok((x, y, p, None)),
-        [x, y, p, s] => Ok((x, y, p, Some(s))),
+    let (
+        funding_account,
+        price_account,
+        permissions_account,
+        caps_account,
+        maybe_accumulator_accounts,
+    ) = match accounts {
+        [x, y, p] => Ok((x, y, p, None, None)),
+        [x, y, p, s, a, b, c, d] => Ok((
+            x,
+            y,
+            p,
+            Some(s),
+            Some(MessageBufferAccounts {
+                program_id:          a,
+                whitelist:           b,
+                oracle_auth_pda:     c,
+                message_buffer_data: d,
+            }),
+        )),
         _ => Err(OracleError::InvalidNumberOfAccounts),
     }?;
 
@@ -117,10 +137,22 @@ pub fn add_publisher(
 
     price_data.header.size = try_convert::<_, u32>(PriceAccount::INITIAL_SIZE)?;
 
-    if let Some(caps_account) = caps_account {
+    if let Some(caps_account_info) = caps_account {
         let mut caps_account =
-            load_checked::<PublisherCapsAccount>(caps_account, cmd_args.header.version)?;
+            load_checked::<PublisherCapsAccount>(caps_account_info, cmd_args.header.version)?;
         caps_account.add_publisher(cmd_args.publisher, *price_account.key)?;
+
+        // Feature-gated accumulator-specific code, used only on pythnet/pythtest
+        if let Some(accumulator_accounts) = maybe_accumulator_accounts {
+            send_message_to_message_buffer(
+                program_id,
+                caps_account_info.key,
+                CAPS_WRITE_SEED,
+                accounts,
+                accumulator_accounts,
+                caps_account.to_message(),
+            )?;
+        }
     }
 
     Ok(())

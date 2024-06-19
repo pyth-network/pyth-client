@@ -78,6 +78,8 @@ pub const PERMISSIONS_SEED: &str = "permissions";
 /// such that the caller can authenticate its origin.
 pub const UPD_PRICE_WRITE_SEED: &str = "upd_price_write";
 
+pub const CAPS_WRITE_SEED: &str = "caps_write";
+
 #[repr(C)]
 #[cfg_attr(test, derive(Debug))]
 #[derive(Copy, Clone, Zeroable, Pod)]

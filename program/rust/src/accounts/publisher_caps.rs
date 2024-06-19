@@ -176,6 +176,20 @@ impl PublisherCapsAccount {
         }
         Ok(())
     }
+
+    pub fn to_message(self) -> Vec<Vec<u8>> {
+        self.publishers
+            .iter()
+            .enumerate()
+            .map(|(i, pubkey)| {
+                pubkey
+                    .to_bytes()
+                    .into_iter()
+                    .chain(self.caps[i].to_le_bytes().into_iter())
+                    .collect()
+            })
+            .collect()
+    }
 }
 
 impl PythAccount for PublisherCapsAccount {
