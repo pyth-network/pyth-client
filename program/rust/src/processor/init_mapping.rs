@@ -1,4 +1,3 @@
-#[cfg(test)]
 use {
     crate::{
         accounts::{
@@ -23,7 +22,6 @@ use {
 /// Initialize first mapping list account
 // account[0] funding account       [signer writable]
 // account[1] mapping account       [signer writable]
-#[cfg(test)]
 pub fn init_mapping(
     program_id: &Pubkey,
     accounts: &[AccountInfo],

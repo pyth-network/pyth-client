@@ -27,8 +27,6 @@ mod upd_permissions;
 mod upd_price;
 mod upd_product;
 
-#[cfg(test)]
-use init_mapping::init_mapping;
 pub use {
     add_price::add_price,
     add_product::add_product,
@@ -36,6 +34,7 @@ pub use {
     del_price::del_price,
     del_product::del_product,
     del_publisher::del_publisher,
+    init_mapping::init_mapping,
     init_price::init_price,
     set_max_latency::set_max_latency,
     set_min_pub::set_min_pub,
@@ -58,10 +57,7 @@ pub fn process_instruction(
     use OracleCommand::*;
 
     match load_command_header_checked(instruction_data)? {
-        #[cfg(test)]
         InitMapping => init_mapping(program_id, accounts, instruction_data),
-        #[cfg(not(test))]
-        InitMapping => Err(OracleError::UnrecognizedInstruction.into()),
         AddMapping => Err(OracleError::UnrecognizedInstruction.into()),
         AddProduct => add_product(program_id, accounts, instruction_data),
         UpdProduct => upd_product(program_id, accounts, instruction_data),
