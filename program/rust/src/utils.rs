@@ -27,7 +27,6 @@ use {
     },
     solana_program::{
         account_info::AccountInfo,
-        bpf_loader_upgradeable,
         instruction::{
             AccountMeta,
             Instruction,
@@ -39,7 +38,13 @@ use {
         program_error::ProgramError,
         pubkey::Pubkey,
         system_instruction::transfer,
-        sysvar::rent::Rent,
+    },
+};
+#[cfg(test)]
+use {
+    solana_program::{
+        bpf_loader_upgradeable,
+        rent::Rent,
     },
     std::cell::Ref,
 };
@@ -210,6 +215,7 @@ struct ProgramdataAccount {
 
 /// Check that `programdata_account` is actually the buffer for `program_id`.
 /// Check that the authority in `programdata_account` matches `upgrade_authority_account`.
+#[cfg(test)]
 pub fn check_is_upgrade_authority_for_program(
     upgrade_authority_account: &AccountInfo,
     programdata_account: &AccountInfo,
@@ -240,11 +246,11 @@ pub fn check_is_upgrade_authority_for_program(
     Ok(())
 }
 
-#[cfg(not(test))]
-pub fn get_rent() -> Result<Rent, ProgramError> {
-    use solana_program::sysvar::Sysvar;
-    Rent::get()
-}
+// #[cfg(not(test))]
+// pub fn get_rent() -> Result<Rent, ProgramError> {
+//     use solana_program::sysvar::Sysvar;
+//     Rent::get()
+// }
 
 #[cfg(test)]
 pub fn get_rent() -> Result<Rent, ProgramError> {
