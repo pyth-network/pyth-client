@@ -85,22 +85,23 @@ pub fn add_publisher(
 
     let mut price_data = load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
 
+    // TODO: uncomment for migration
     // Use the call with the default pubkey (000..) as a trigger to update caps account
     // migration step for initializing the caps account
-    if cmd_args.publisher == Pubkey::default() {
-        let num_comps = try_convert::<u32, usize>(price_data.num_)?;
+    // if cmd_args.publisher == Pubkey::default() {
+    //     let num_comps = try_convert::<u32, usize>(price_data.num_)?;
 
-        if let Some(caps_account) = caps_account {
-            let mut caps_account =
-                load_checked::<PublisherCapsAccount>(caps_account, cmd_args.header.version)?;
-            caps_account.add_price(*price_account.key)?;
-            for publisher in price_data.comp_[..num_comps].iter() {
-                caps_account.add_publisher(publisher.pub_, *price_account.key)?;
-            }
-        }
+    //     if let Some(caps_account) = caps_account {
+    //         let mut caps_account =
+    //             load_checked::<PublisherCapsAccount>(caps_account, cmd_args.header.version)?;
+    //         caps_account.add_price(*price_account.key)?;
+    //         for publisher in price_data.comp_[..num_comps].iter() {
+    //             caps_account.add_publisher(publisher.pub_, *price_account.key)?;
+    //         }
+    //     }
 
-        return Ok(());
-    }
+    //     return Ok(());
+    // }
 
     if price_data.num_ >= PC_NUM_COMP {
         return Err(ProgramError::InvalidArgument);
