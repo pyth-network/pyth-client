@@ -177,7 +177,7 @@ impl PublisherCapsAccount {
         Ok(())
     }
 
-    pub fn to_message(self) -> Vec<Vec<u8>> {
+    pub fn get_caps_message(&self) -> Vec<Vec<u8>> {
         self.publishers
             .iter()
             .enumerate()

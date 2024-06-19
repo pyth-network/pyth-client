@@ -151,7 +151,7 @@ pub fn add_publisher(
                 CAPS_WRITE_SEED,
                 accounts,
                 accumulator_accounts,
-                caps_account.to_message(),
+                caps_account.get_caps_message(),
             )?;
         }
     }
