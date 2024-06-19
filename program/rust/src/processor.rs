@@ -19,12 +19,12 @@ mod add_publisher;
 mod del_price;
 mod del_product;
 mod del_publisher;
-#[cfg(test)]
+#[cfg(any(feature = "test", test))]
 mod init_mapping;
 mod init_price;
 mod set_max_latency;
 mod set_min_pub;
-#[cfg(test)]
+#[cfg(any(feature = "test", test))]
 mod upd_permissions;
 mod upd_price;
 mod upd_product;
@@ -47,7 +47,7 @@ pub use {
     },
     upd_product::upd_product,
 };
-#[cfg(test)]
+#[cfg(any(feature = "test", test))]
 pub use {
     init_mapping::init_mapping,
     upd_permissions::upd_permissions,
@@ -63,11 +63,11 @@ pub fn process_instruction(
 
     match load_command_header_checked(instruction_data)? {
         InitMapping => {
-            #[cfg(test)]
+            #[cfg(any(feature = "test", test))]
             {
                 init_mapping(program_id, accounts, instruction_data)
             }
-            #[cfg(not(test))]
+            #[cfg(not(any(feature = "test", test)))]
             {
                 Err(OracleError::UnrecognizedInstruction.into())
             }
@@ -92,11 +92,11 @@ pub fn process_instruction(
         DelPrice => del_price(program_id, accounts, instruction_data),
         DelProduct => del_product(program_id, accounts, instruction_data),
         UpdPermissions => {
-            #[cfg(test)]
+            #[cfg(any(feature = "test", test))]
             {
                 upd_permissions(program_id, accounts, instruction_data)
             }
-            #[cfg(not(test))]
+            #[cfg(not(any(feature = "test", test)))]
             {
                 Err(OracleError::UnrecognizedInstruction.into())
             }

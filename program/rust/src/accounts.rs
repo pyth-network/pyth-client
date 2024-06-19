@@ -1,19 +1,12 @@
 //! Account types and utilities for working with Pyth accounts.
 
-#[cfg(test)]
+#[cfg(any(feature = "test", test))]
 use {
     crate::utils::get_rent,
-    solana_program::program_memory::sol_memset,
-    std::borrow::BorrowMut,
-};
-#[cfg(test)]
-use {
     crate::utils::try_convert,
-    solana_program::{
-        program::invoke_signed,
-        pubkey::Pubkey,
-        system_instruction::create_account,
-    },
+    solana_program::program::invoke_signed,
+    solana_program::pubkey::Pubkey,
+    solana_program::system_instruction::create_account,
 };
 use {
     crate::{
@@ -37,6 +30,11 @@ use {
         cell::RefMut,
         mem::size_of,
     },
+};
+#[cfg(test)]
+use {
+    solana_program::program_memory::sol_memset,
+    std::borrow::BorrowMut,
 };
 
 
@@ -141,7 +139,7 @@ pub trait PythAccount: Pod {
     /// Creates PDA accounts only when needed, and initializes it as one of the Pyth accounts.
     /// This PDA initialization assumes that the account has 0 lamports.
     /// TO DO: Fix this once we can resize the program.
-    #[cfg(test)]
+    #[cfg(any(feature = "test", test))]
     fn initialize_pda<'a>(
         account: &AccountInfo<'a>,
         funding_account: &AccountInfo<'a>,
@@ -169,7 +167,7 @@ pub trait PythAccount: Pod {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(feature = "test", test))]
 fn create<'a>(
     from: &AccountInfo<'a>,
     to: &AccountInfo<'a>,

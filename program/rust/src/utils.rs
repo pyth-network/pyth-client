@@ -40,7 +40,7 @@ use {
         system_instruction::transfer,
     },
 };
-#[cfg(test)]
+#[cfg(any(feature = "test", test))]
 use {
     solana_program::{
         bpf_loader_upgradeable,
@@ -215,7 +215,7 @@ struct ProgramdataAccount {
 
 /// Check that `programdata_account` is actually the buffer for `program_id`.
 /// Check that the authority in `programdata_account` matches `upgrade_authority_account`.
-#[cfg(test)]
+#[cfg(any(feature = "test", test))]
 pub fn check_is_upgrade_authority_for_program(
     upgrade_authority_account: &AccountInfo,
     programdata_account: &AccountInfo,
@@ -252,7 +252,7 @@ pub fn check_is_upgrade_authority_for_program(
 //     Rent::get()
 // }
 
-#[cfg(test)]
+#[cfg(any(feature = "test", test))]
 pub fn get_rent() -> Result<Rent, ProgramError> {
     Ok(Rent::default())
 }

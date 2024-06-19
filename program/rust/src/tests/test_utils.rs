@@ -1,3 +1,5 @@
+#[cfg(test)]
+use num_traits::ToPrimitive;
 use {
     crate::{
         accounts::{
@@ -12,7 +14,6 @@ use {
             OracleCommand,
         },
     },
-    num_traits::ToPrimitive,
     solana_program::{
         account_info::AccountInfo,
         clock::{
@@ -33,6 +34,7 @@ use {
     },
     solana_sdk::transaction::TransactionError,
 };
+
 
 const UPPER_BOUND_OF_ALL_ACCOUNT_SIZES: usize = 75824;
 
@@ -134,6 +136,7 @@ pub fn update_clock_slot(clock_account: &mut AccountInfo, slot: u64) {
     clock_data.to_account_info(clock_account);
 }
 
+#[cfg(test)]
 impl From<OracleCommand> for CommandHeader {
     fn from(val: OracleCommand) -> Self {
         CommandHeader {

@@ -1,4 +1,4 @@
-#[cfg(test)]
+#[cfg(any(feature = "test", test))]
 use num_derive::{
     FromPrimitive,
     ToPrimitive,
@@ -18,7 +18,7 @@ use {
 
 /// WARNING : NEW COMMANDS SHOULD BE ADDED AT THE END OF THE LIST
 #[repr(u32)]
-#[cfg_attr(test, derive(FromPrimitive, ToPrimitive))]
+#[cfg_attr(any(feature = "test", test), derive(FromPrimitive, ToPrimitive))]
 #[derive(PartialEq, Eq)]
 #[allow(dead_code)]
 pub enum OracleCommand {
