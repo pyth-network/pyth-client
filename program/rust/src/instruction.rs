@@ -1,3 +1,8 @@
+#[cfg(any(feature = "test", test))]
+use num_derive::{
+    FromPrimitive,
+    ToPrimitive,
+};
 use {
     crate::{
         c_oracle_header::PC_VERSION,
@@ -8,17 +13,14 @@ use {
         Pod,
         Zeroable,
     },
-    num_derive::{
-        FromPrimitive,
-        ToPrimitive,
-    },
-    num_traits::FromPrimitive,
     solana_program::pubkey::Pubkey,
 };
 
 /// WARNING : NEW COMMANDS SHOULD BE ADDED AT THE END OF THE LIST
-#[repr(i32)]
-#[derive(PartialEq, Eq, FromPrimitive, ToPrimitive)]
+#[repr(u32)]
+#[cfg_attr(any(feature = "test", test), derive(FromPrimitive, ToPrimitive))]
+#[derive(PartialEq, Eq)]
+#[allow(dead_code)]
 pub enum OracleCommand {
     /// Initialize first mapping list account
     // account[0] funding account       [signer writable]
@@ -105,11 +107,21 @@ pub enum OracleCommand {
     SetMaxLatency         = 18,
 }
 
+impl OracleCommand {
+    pub fn from_u32(value: u32) -> Option<Self> {
+        if value < 19 {
+            Some(unsafe { std::mem::transmute(value) })
+        } else {
+            None
+        }
+    }
+}
+
 #[repr(C)]
 #[derive(Zeroable, Pod, Copy, Clone)]
 pub struct CommandHeader {
     pub version: u32,
-    pub command: i32,
+    pub command: u32,
 }
 
 pub fn load_command_header_checked(data: &[u8]) -> Result<OracleCommand, OracleError> {
@@ -118,7 +130,7 @@ pub fn load_command_header_checked(data: &[u8]) -> Result<OracleCommand, OracleE
     if command_header.version != PC_VERSION {
         return Err(OracleError::InvalidInstructionVersion);
     }
-    OracleCommand::from_i32(command_header.command).ok_or(OracleError::UnrecognizedInstruction)
+    OracleCommand::from_u32(command_header.command).ok_or(OracleError::UnrecognizedInstruction)
 }
 
 #[repr(C)]

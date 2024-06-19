@@ -89,10 +89,10 @@ fn do_make_build(targets: Vec<&str>, out_dir: &Path) {
     if !make_output.status.success() {
         panic!(
             "C oracle make build did not exit with 0 (code
-	({:?}).\n\nstdout:\n{}\n\nstderr:\n{}",
+    	({:?}).\n\nstdout:\n{}\n\nstderr:\n{}",
             make_output.status.code(),
-            String::from_utf8(make_output.stdout).unwrap_or("<non-utf8>".to_owned()),
-            String::from_utf8(make_output.stderr).unwrap_or("<non-utf8>".to_owned())
+            String::from_utf8(make_output.stdout).unwrap_or_else(|_| "<non-utf8>".to_owned()),
+            String::from_utf8(make_output.stderr).unwrap_or_else(|_| "<non-utf8>".to_owned())
         );
     }
 }

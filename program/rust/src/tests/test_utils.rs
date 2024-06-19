@@ -1,3 +1,5 @@
+#[cfg(test)]
+use num_traits::ToPrimitive;
 use {
     crate::{
         accounts::{
@@ -12,7 +14,6 @@ use {
             OracleCommand,
         },
     },
-    num_traits::ToPrimitive,
     solana_program::{
         account_info::AccountInfo,
         clock::{
@@ -34,7 +35,8 @@ use {
     solana_sdk::transaction::TransactionError,
 };
 
-const UPPER_BOUND_OF_ALL_ACCOUNT_SIZES: usize = 20536;
+
+const UPPER_BOUND_OF_ALL_ACCOUNT_SIZES: usize = 75824;
 
 /// The goal of this struct is to easily instantiate fresh solana accounts
 /// for the Pyth program to use in tests.
@@ -134,11 +136,12 @@ pub fn update_clock_slot(clock_account: &mut AccountInfo, slot: u64) {
     clock_data.to_account_info(clock_account);
 }
 
+#[cfg(test)]
 impl From<OracleCommand> for CommandHeader {
     fn from(val: OracleCommand) -> Self {
         CommandHeader {
             version: PC_VERSION,
-            command: val.to_i32().unwrap(), // This can never fail and is only used in tests
+            command: val.to_u32().unwrap(), // This can never fail and is only used in tests
         }
     }
 }

@@ -25,15 +25,26 @@ use {
         Pod,
         Zeroable,
     },
-    num_traits::FromPrimitive,
     solana_program::{
         account_info::AccountInfo,
-        bpf_loader_upgradeable,
-        program::invoke,
+        instruction::{
+            AccountMeta,
+            Instruction,
+        },
+        program::{
+            invoke,
+            invoke_signed,
+        },
         program_error::ProgramError,
         pubkey::Pubkey,
         system_instruction::transfer,
-        sysvar::rent::Rent,
+    },
+};
+#[cfg(any(feature = "test", test))]
+use {
+    solana_program::{
+        bpf_loader_upgradeable,
+        rent::Rent,
     },
     std::cell::Ref,
 };
@@ -73,7 +84,7 @@ pub fn check_permissioned_funding_account(
     pyth_assert(
         permissions_account_data.is_authorized(
             funding_account.key,
-            OracleCommand::from_i32(cmd_hdr.command).ok_or(OracleError::UnrecognizedInstruction)?,
+            OracleCommand::from_u32(cmd_hdr.command).ok_or(OracleError::UnrecognizedInstruction)?,
         ),
         OracleError::PermissionViolation.into(),
     )?;
@@ -161,7 +172,7 @@ pub fn check_valid_permissions_account(
 /// Checks whether this instruction is trying to update an individual publisher's price (`true`) or
 /// is only trying to refresh the aggregate (`false`)
 pub fn is_component_update(cmd_args: &UpdPriceArgs) -> Result<bool, OracleError> {
-    match OracleCommand::from_i32(cmd_args.header.command)
+    match OracleCommand::from_u32(cmd_args.header.command)
         .ok_or(OracleError::UnrecognizedInstruction)?
     {
         OracleCommand::UpdPrice | OracleCommand::UpdPriceNoFailOnError => Ok(true),
@@ -204,6 +215,7 @@ struct ProgramdataAccount {
 
 /// Check that `programdata_account` is actually the buffer for `program_id`.
 /// Check that the authority in `programdata_account` matches `upgrade_authority_account`.
+#[cfg(any(feature = "test", test))]
 pub fn check_is_upgrade_authority_for_program(
     upgrade_authority_account: &AccountInfo,
     programdata_account: &AccountInfo,
@@ -234,13 +246,13 @@ pub fn check_is_upgrade_authority_for_program(
     Ok(())
 }
 
-#[cfg(not(test))]
-pub fn get_rent() -> Result<Rent, ProgramError> {
-    use solana_program::sysvar::Sysvar;
-    Rent::get()
-}
+// #[cfg(not(test))]
+// pub fn get_rent() -> Result<Rent, ProgramError> {
+//     use solana_program::sysvar::Sysvar;
+//     Rent::get()
+// }
 
-#[cfg(test)]
+#[cfg(any(feature = "test", test))]
 pub fn get_rent() -> Result<Rent, ProgramError> {
     Ok(Rent::default())
 }
@@ -257,5 +269,72 @@ pub fn send_lamports<'a>(
         &transfer_instruction,
         &[from.clone(), to.clone(), system_program.clone()],
     )?;
+    Ok(())
+}
+
+// Wrapper struct for the accounts required to add data to the accumulator program.
+pub struct MessageBufferAccounts<'a, 'b: 'a> {
+    pub program_id:          &'a AccountInfo<'b>,
+    pub whitelist:           &'a AccountInfo<'b>,
+    pub oracle_auth_pda:     &'a AccountInfo<'b>,
+    pub message_buffer_data: &'a AccountInfo<'b>,
+}
+
+pub fn send_message_to_message_buffer(
+    program_id: &Pubkey,
+    base_account_key: &Pubkey,
+    seed: &str,
+    accounts: &[AccountInfo],
+    accumulator_accounts: MessageBufferAccounts,
+    message: Vec<Vec<u8>>,
+) -> Result<(), ProgramError> {
+    let account_metas = vec![
+        AccountMeta {
+            pubkey:      *accumulator_accounts.whitelist.key,
+            is_signer:   false,
+            is_writable: false,
+        },
+        AccountMeta {
+            pubkey:      *accumulator_accounts.oracle_auth_pda.key,
+            is_signer:   true,
+            is_writable: false,
+        },
+        AccountMeta {
+            pubkey:      *accumulator_accounts.message_buffer_data.key,
+            is_signer:   false,
+            is_writable: true,
+        },
+    ];
+
+    // Check that the oracle PDA is correctly configured for the program we are calling.
+    let oracle_auth_seeds: &[&[u8]] = &[
+        seed.as_bytes(),
+        &accumulator_accounts.program_id.key.to_bytes(),
+    ];
+    let (expected_oracle_auth_pda, bump) =
+        Pubkey::find_program_address(oracle_auth_seeds, program_id);
+    pyth_assert(
+        expected_oracle_auth_pda == *accumulator_accounts.oracle_auth_pda.key,
+        OracleError::InvalidPda.into(),
+    )?;
+
+    // Append a TWAP message if available
+
+    // anchor discriminator for "global:put_all"
+    let discriminator: [u8; 8] = [212, 225, 193, 91, 151, 238, 20, 93];
+    let create_inputs_ix = Instruction::new_with_borsh(
+        *accumulator_accounts.program_id.key,
+        &(discriminator, base_account_key.to_bytes(), message),
+        account_metas,
+    );
+
+    let auth_seeds_with_bump: &[&[u8]] = &[
+        seed.as_bytes(),
+        &accumulator_accounts.program_id.key.to_bytes(),
+        &[bump],
+    ];
+
+    invoke_signed(&create_inputs_ix, accounts, &[auth_seeds_with_bump])?;
+
     Ok(())
 }

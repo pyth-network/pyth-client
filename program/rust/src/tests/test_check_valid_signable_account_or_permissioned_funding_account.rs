@@ -60,7 +60,7 @@ pub fn test_permissions_account_mandatory() {
             &permissions_account,
             &CommandHeader {
                 version: PC_VERSION,
-                command: OracleCommand::UpdProduct as i32,
+                command: OracleCommand::UpdProduct as u32,
             },
         ),
         Ok(()),

@@ -1,5 +1,13 @@
 //! Account types and utilities for working with Pyth accounts.
 
+#[cfg(any(feature = "test", test))]
+use {
+    crate::utils::get_rent,
+    crate::utils::try_convert,
+    solana_program::program::invoke_signed,
+    solana_program::pubkey::Pubkey,
+    solana_program::system_instruction::create_account,
+};
 use {
     crate::{
         c_oracle_header::PC_MAGIC,
@@ -7,9 +15,7 @@ use {
         error::OracleError,
         utils::{
             check_valid_fresh_account,
-            get_rent,
             pyth_assert,
-            try_convert,
         },
     },
     bytemuck::{
@@ -18,10 +24,7 @@ use {
     },
     solana_program::{
         account_info::AccountInfo,
-        program::invoke_signed,
         program_error::ProgramError,
-        pubkey::Pubkey,
-        system_instruction::create_account,
     },
     std::{
         cell::RefMut,
@@ -39,6 +42,7 @@ mod mapping;
 mod permission;
 mod price;
 mod product;
+mod publisher_caps;
 
 // Some types only exist during use as a library.
 #[cfg(feature = "strum")]
@@ -64,6 +68,7 @@ pub use {
         update_product_metadata,
         ProductAccount,
     },
+    publisher_caps::PublisherCapsAccount,
 };
 
 // PDA seeds for accounts.
@@ -76,7 +81,10 @@ pub const PERMISSIONS_SEED: &str = "permissions";
 /// such that the caller can authenticate its origin.
 pub const UPD_PRICE_WRITE_SEED: &str = "upd_price_write";
 
+pub const CAPS_WRITE_SEED: &str = "caps_write";
+
 #[repr(C)]
+#[cfg_attr(test, derive(Debug))]
 #[derive(Copy, Clone, Zeroable, Pod)]
 pub struct AccountHeader {
     pub magic_number: u32,
@@ -131,6 +139,7 @@ pub trait PythAccount: Pod {
     /// Creates PDA accounts only when needed, and initializes it as one of the Pyth accounts.
     /// This PDA initialization assumes that the account has 0 lamports.
     /// TO DO: Fix this once we can resize the program.
+    #[cfg(any(feature = "test", test))]
     fn initialize_pda<'a>(
         account: &AccountInfo<'a>,
         funding_account: &AccountInfo<'a>,
@@ -158,6 +167,7 @@ pub trait PythAccount: Pod {
     }
 }
 
+#[cfg(any(feature = "test", test))]
 fn create<'a>(
     from: &AccountInfo<'a>,
     to: &AccountInfo<'a>,
