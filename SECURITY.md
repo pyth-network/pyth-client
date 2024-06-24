@@ -2,21 +2,15 @@
 
 ## Bug Bounty Program
 
-Pyth operates a self hosted [bug bounty program](https://pyth.network/bounty) to financially incentivize independent researchers (with up to $250,000 USDC) for finding and responsibly disclosing security issues.
+The Pyth Network operates a bug bounty program to financially incentivize independent researchers for finding and responsibly disclosing security issues.
 
-- **Scopes**
-    - [Pyth Oracle](https://github.com/pyth-network/pyth-client/tree/main/program)
-    - [Pyth Crosschain Ethereum](https://github.com/pyth-network/pyth-crosschain/tree/main/target_chains/ethereum/contracts/contracts/pyth)
-    - [Pyth Crosschain Aptos](https://github.com/pyth-network/pyth-crosschain/tree/main/target_chains/aptos/contracts)
-    - [Pyth Crosschain Sui](https://github.com/pyth-network/pyth-crosschain/tree/main/target_chains/sui/contracts)
-    - [Pyth Governance](https://github.com/pyth-network/governance/tree/master/staking/programs/staking)
-- **Rewards**
-    - Critical: Up to $250,000
-    - High: Up to $50,000
+[Immunefi-Hosted Program](https://immunefi.com/bug-bounty/pythnetwork/)
+Rewards: Up to $250,000 USDC
+KYC: Required
 
-If you find a security issue in Pyth, please [report the issue](https://yyyf63zqhtu.typeform.com/to/dBV4qcP0) immediately to our security team.
+If you find a security issue in Pyth, please report the issue immediately using the bug bounty program above.
 
-If there is a duplicate report, either the same reporter or different reporters, the first of the two by timestamp will be accepted as the official bug report and will be subject to the specific terms of the submitting program.
+If there is a duplicate report, either the same reporter or different reporters, the first of the two by timestamp will be accepted as the official bug report and will be subject to the specific terms of the program.
 
 ## 3rd Party Security Audits
 
