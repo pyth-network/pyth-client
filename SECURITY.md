@@ -5,8 +5,8 @@
 The Pyth Network operates a bug bounty program to financially incentivize independent researchers for finding and responsibly disclosing security issues.
 
 [Immunefi-Hosted Program](https://immunefi.com/bug-bounty/pythnetwork/)
-Rewards: Up to $250,000 USDC
-KYC: Required
+- Rewards: Up to $250,000 USDC
+- KYC: Required
 
 If you find a security issue in Pyth, please report the issue immediately using the bug bounty program above.
 
