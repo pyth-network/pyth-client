@@ -9,7 +9,7 @@ publish = false
 bindgen = "0.60.1"
 
 [dependencies]
-solana-program = "=1.13.3"
+solana-program = "=1.14.17"
 bytemuck = "1.11.0"
 thiserror = "1.0"
 num-derive = "0.3"
@@ -20,8 +20,8 @@ strum = { version = "0.24.1", features = ["derive"], optional = true }
 pythnet-sdk = { git = "https://github.com/pyth-network/pyth-crosschain", rev="60144002053a93f424be70decd8a8ccb8d618d81"}
 
 [dev-dependencies]
-solana-program-test = "=1.13.3"
-solana-sdk = "=1.13.3"
+solana-program-test = "=1.14.17"
+solana-sdk = "=1.14.17"
 tokio = "1.14.1"
 hex = "0.3.1"
 quickcheck = "1"
