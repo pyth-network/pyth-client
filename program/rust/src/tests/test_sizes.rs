@@ -112,7 +112,7 @@ fn test_offsets() {
 #[test]
 fn test_pubkey() {
     let default_pubkey = Pubkey::default();
-    let zero_pubkey = Pubkey::new(&[0u8; 32]);
+    let zero_pubkey = Pubkey::from([0u8; 32]);
     let unique_pubkey = Pubkey::new_unique();
 
     assert_eq!(default_pubkey, zero_pubkey);

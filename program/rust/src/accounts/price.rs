@@ -33,6 +33,7 @@ mod price_pythnet {
             },
             error::OracleError,
         },
+        bitflags::bitflags,
     };
 
     /// Pythnet-only extended price account format. This extension is
@@ -65,8 +66,9 @@ mod price_pythnet {
         pub message_sent_:      u8,
         /// Configurable max latency in slots between send and receive
         pub max_latency_:       u8,
+        /// Various flags
+        pub flags:              PriceAccountFlags,
         /// Unused placeholder for alignment
-        pub unused_2_:          i8,
         pub unused_3_:          i32,
         /// Corresponding product account
         pub product_account:    Pubkey,
@@ -89,6 +91,15 @@ mod price_pythnet {
         pub comp_:              [PriceComponent; PC_NUM_COMP_PYTHNET as usize],
         /// Cumulative sums of aggregative price and confidence used to compute arithmetic moving averages
         pub price_cumulative:   PriceCumulative,
+    }
+
+    bitflags! {
+        #[repr(C)]
+        #[derive(Copy, Clone, Pod, Zeroable)]
+        pub struct PriceAccountFlags: u8 {
+            /// If set, the program doesn't do accumulation, but validator does.
+            const ACCUMULATOR_V2 = 1;
+        }
     }
 
     impl PriceAccountPythnet {

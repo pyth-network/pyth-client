@@ -2,6 +2,7 @@ use {
     crate::{
         accounts::{
             PriceAccount,
+            PriceAccountFlags,
             PriceComponent,
             PythAccount,
         },
@@ -33,6 +34,13 @@ use {
     std::mem::size_of,
 };
 
+const ENABLE_ACCUMULATOR_V2: [u8; 32] = [
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+];
+const DISABLE_ACCUMULATOR_V2: [u8; 32] = [
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
+];
+
 /// Add publisher to symbol account
 // account[0] funding account       [signer writable]
 // account[1] price account         [signer writable]
@@ -62,7 +70,6 @@ pub fn add_publisher(
         &cmd_args.header,
     )?;
 
-
     let mut price_data = load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
 
     // Use the call with the default pubkey (000..) as a trigger to sort the publishers as a
@@ -70,6 +77,12 @@ pub fn add_publisher(
     if cmd_args.publisher == Pubkey::default() {
         let num_comps = try_convert::<u32, usize>(price_data.num_)?;
         sort_price_comps(&mut price_data.comp_, num_comps)?;
+        return Ok(());
+    } else if cmd_args.publisher == Pubkey::from(ENABLE_ACCUMULATOR_V2) {
+        price_data.flags.insert(PriceAccountFlags::ACCUMULATOR_V2);
+        return Ok(());
+    } else if cmd_args.publisher == Pubkey::from(DISABLE_ACCUMULATOR_V2) {
+        price_data.flags.remove(PriceAccountFlags::ACCUMULATOR_V2);
         return Ok(());
     }
 
@@ -223,7 +236,6 @@ mod test {
 
         let mut rust_std_sorted_comps = comps.get(..num_comps).unwrap().to_vec();
         rust_std_sorted_comps.sort_by_key(|x| x.pub_);
-
 
         assert_eq!(sort_price_comps(&mut comps, num_comps), Ok(()));
         assert_eq!(comps.get(..num_comps).unwrap(), rust_std_sorted_comps);

@@ -34,7 +34,6 @@ use {
     std::borrow::BorrowMut,
 };
 
-
 mod mapping;
 mod permission;
 mod price;
@@ -53,6 +52,7 @@ pub use {
     permission::PermissionAccount,
     price::{
         PriceAccount,
+        PriceAccountFlags,
         PriceComponent,
         PriceCumulative,
         PriceEma,

@@ -9,6 +9,8 @@ mod error;
 mod instruction;
 mod processor;
 mod utils;
+
+#[cfg(feature = "library")]
 pub mod validator;
 
 #[cfg(test)]

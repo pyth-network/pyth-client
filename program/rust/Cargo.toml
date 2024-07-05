@@ -19,6 +19,7 @@ serde = { version = "1.0", features = ["derive"], optional = true }
 strum = { version = "0.24.1", features = ["derive"], optional = true }
 pythnet-sdk = { git = "https://github.com/pyth-network/pyth-crosschain", rev="60144002053a93f424be70decd8a8ccb8d618d81"}
 solana-sdk = { version = "=1.14.17", optional = true }
+bitflags = { version = "2.6.0", features = ["bytemuck"] }
 
 [dev-dependencies]
 solana-program-test = "=1.14.17"
@@ -34,6 +35,11 @@ pythnet-sdk = { git = "https://github.com/pyth-network/pyth-crosschain", rev="60
 serde_json = "1.0"
 test-generator = "0.3.1"
 csv = "1.1"
+
+# Downgrade to be compatible with Rust 1.60
+tracing-subscriber = "=0.3.0"
+time-macros = "=0.2.3"
+time = "=0.3.7"
 
 [features]
 check = [] # Skips make build in build.rs, use with cargo-clippy and cargo-check
