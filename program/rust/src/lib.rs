@@ -9,6 +9,7 @@ mod error;
 mod instruction;
 mod processor;
 mod utils;
+pub mod validator;
 
 #[cfg(test)]
 mod tests;
