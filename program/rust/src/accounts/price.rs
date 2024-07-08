@@ -98,7 +98,10 @@ mod price_pythnet {
         #[derive(Copy, Clone, Pod, Zeroable)]
         pub struct PriceAccountFlags: u8 {
             /// If set, the program doesn't do accumulation, but validator does.
-            const ACCUMULATOR_V2 = 1;
+            const ACCUMULATOR_V2 = 0b1;
+            /// If unset, the program will remove old messages from its message buffer account
+            /// and set this flag.
+            const MESSAGE_BUFFER_CLEARED = 0b10;
         }
     }
 

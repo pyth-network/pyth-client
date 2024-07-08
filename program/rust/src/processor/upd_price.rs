@@ -2,6 +2,7 @@ use {
     crate::{
         accounts::{
             PriceAccount,
+            PriceAccountFlags,
             PriceComponent,
             PriceInfo,
             PythOracleSerialize,
@@ -131,6 +132,7 @@ pub fn upd_price(
 
     let publisher_index: usize;
     let latest_aggregate_price: PriceInfo;
+    let flags: PriceAccountFlags;
 
     // The price_data borrow happens in a scope because it must be
     // dropped before we borrow again as raw data pointer for the C
@@ -159,39 +161,43 @@ pub fn upd_price(
                     && cmd_args.publishing_slot <= clock.slot),
             ProgramError::InvalidArgument,
         )?;
+
+        flags = price_data.flags;
     }
 
-    // Try to update the aggregate
-    #[allow(unused_variables)]
-    if clock.slot > latest_aggregate_price.pub_slot_ {
-        let updated = unsafe {
-            // NOTE: c_upd_aggregate must use a raw pointer to price
-            // data. Solana's `<account>.borrow_*` methods require exclusive
-            // access, i.e. no other borrow can exist for the account.
-            c_upd_aggregate(
-                price_account.try_borrow_mut_data()?.as_mut_ptr(),
-                clock.slot,
-                clock.unix_timestamp,
-            )
-        };
+    if !flags.contains(PriceAccountFlags::ACCUMULATOR_V2) {
+        // Try to update the aggregate
+        #[allow(unused_variables)]
+        if clock.slot > latest_aggregate_price.pub_slot_ {
+            let updated = unsafe {
+                // NOTE: c_upd_aggregate must use a raw pointer to price
+                // data. Solana's `<account>.borrow_*` methods require exclusive
+                // access, i.e. no other borrow can exist for the account.
+                c_upd_aggregate(
+                    price_account.try_borrow_mut_data()?.as_mut_ptr(),
+                    clock.slot,
+                    clock.unix_timestamp,
+                )
+            };
 
-        // If the aggregate was successfully updated, calculate the difference and update TWAP.
-        if updated {
-            let agg_diff = (clock.slot as i64)
-                - load_checked::<PriceAccount>(price_account, cmd_args.header.version)?.prev_slot_
-                    as i64;
-            // Encapsulate TWAP update logic in a function to minimize unsafe block scope.
-            unsafe {
-                c_upd_twap(price_account.try_borrow_mut_data()?.as_mut_ptr(), agg_diff);
+            // If the aggregate was successfully updated, calculate the difference and update TWAP.
+            if updated {
+                let agg_diff = (clock.slot as i64)
+                    - load_checked::<PriceAccount>(price_account, cmd_args.header.version)?
+                        .prev_slot_ as i64;
+                // Encapsulate TWAP update logic in a function to minimize unsafe block scope.
+                unsafe {
+                    c_upd_twap(price_account.try_borrow_mut_data()?.as_mut_ptr(), agg_diff);
+                }
+                let mut price_data =
+                    load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
+                // We want to send a message every time the aggregate price updates. However, during the migration,
+                // not every publisher will necessarily provide the accumulator accounts. The message_sent_ flag
+                // ensures that after every aggregate update, the next publisher who provides the accumulator accounts
+                // will send the message.
+                price_data.message_sent_ = 0;
+                price_data.update_price_cumulative()?;
             }
-            let mut price_data =
-                load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
-            // We want to send a message every time the aggregate price updates. However, during the migration,
-            // not every publisher will necessarily provide the accumulator accounts. The message_sent_ flag
-            // ensures that after every aggregate update, the next publisher who provides the accumulator accounts
-            // will send the message.
-            price_data.message_sent_ = 0;
-            price_data.update_price_cumulative()?;
         }
     }
 
@@ -199,7 +205,15 @@ pub fn upd_price(
     let mut price_data = load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
 
     // Feature-gated accumulator-specific code, used only on pythnet/pythtest
-    {
+    let need_message_buffer_update = if flags.contains(PriceAccountFlags::ACCUMULATOR_V2) {
+        // We need to clear old messages.
+        !flags.contains(PriceAccountFlags::MESSAGE_BUFFER_CLEARED)
+    } else {
+        // V1
+        true
+    };
+
+    if need_message_buffer_update {
         if let Some(accumulator_accounts) = maybe_accumulator_accounts {
             if price_data.message_sent_ == 0 {
                 // Check that the oracle PDA is correctly configured for the program we are calling.
@@ -232,12 +246,16 @@ pub fn upd_price(
                     },
                 ];
 
-                let message = vec![
-                    price_data
-                        .as_price_feed_message(price_account.key)
-                        .to_bytes(),
-                    price_data.as_twap_message(price_account.key).to_bytes(),
-                ];
+                let message = if flags.contains(PriceAccountFlags::ACCUMULATOR_V2) {
+                    vec![]
+                } else {
+                    vec![
+                        price_data
+                            .as_price_feed_message(price_account.key)
+                            .to_bytes(),
+                        price_data.as_twap_message(price_account.key).to_bytes(),
+                    ]
+                };
 
                 // Append a TWAP message if available
 
@@ -257,6 +275,11 @@ pub fn upd_price(
 
                 invoke_signed(&create_inputs_ix, accounts, &[auth_seeds_with_bump])?;
                 price_data.message_sent_ = 1;
+                if flags.contains(PriceAccountFlags::ACCUMULATOR_V2) {
+                    price_data
+                        .flags
+                        .insert(PriceAccountFlags::MESSAGE_BUFFER_CLEARED);
+                }
             }
         }
     }

@@ -82,7 +82,9 @@ pub fn add_publisher(
         price_data.flags.insert(PriceAccountFlags::ACCUMULATOR_V2);
         return Ok(());
     } else if cmd_args.publisher == Pubkey::from(DISABLE_ACCUMULATOR_V2) {
-        price_data.flags.remove(PriceAccountFlags::ACCUMULATOR_V2);
+        price_data
+            .flags
+            .remove(PriceAccountFlags::ACCUMULATOR_V2 | PriceAccountFlags::MESSAGE_BUFFER_CLEARED);
         return Ok(());
     }
 
