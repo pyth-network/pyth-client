@@ -287,7 +287,7 @@ pub fn upd_price(
 /// to get the result faster if the list is sorted. If the list is not sorted, it falls back to
 /// a linear search.
 #[inline(always)]
-fn find_publisher_index(comps: &[PriceComponent], key: &Pubkey) -> Option<usize> {
+pub fn find_publisher_index(comps: &[PriceComponent], key: &Pubkey) -> Option<usize> {
     // Verify that publisher is authorized by initially binary searching
     // for the publisher's component in the price account. The binary
     // search might not work if the publisher list is not sorted; therefore
