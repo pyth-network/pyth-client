@@ -1,11 +1,21 @@
 use {
     crate::{
-        accounts::{AccountHeader, PriceAccount, PriceAccountFlags, PythAccount},
+        accounts::{
+            AccountHeader,
+            PriceAccount,
+            PriceAccountFlags,
+            PythAccount,
+            PythOracleSerialize,
+        },
         c_oracle_header::PC_MAGIC,
         error::OracleError,
-        processor::{c_upd_aggregate, c_upd_twap},
+        processor::{
+            c_upd_aggregate,
+            c_upd_twap,
+        },
         utils::pyth_assert,
     },
+    solana_sdk::pubkey::Pubkey,
     std::mem::size_of,
 };
 
@@ -37,17 +47,14 @@ fn validate_price_account(
         &mut price_account_info[0..size_of::<PriceAccount>()],
     );
     if !data.flags.contains(PriceAccountFlags::ACCUMULATOR_V2) {
-        return Err(AggregationError::LegacyAggregationMode);
+        return Err(AggregationError::V1AggregationMode);
     }
 
     Ok(data)
 }
 
-fn update_aggregate(
-    slot: u64,
-    timestamp: i64,
-    price_account: &mut PriceAccount,
-) -> Result<(), AggregationError> {
+// Returns true if the price account data has been modified and should be committed.
+fn update_aggregate(slot: u64, timestamp: i64, price_account: &mut PriceAccount) -> bool {
     // NOTE: c_upd_aggregate must use a raw pointer to price data. We already
     // have the exclusive mut reference so we can simply cast before calling
     // the function.
@@ -65,7 +72,7 @@ fn update_aggregate(
     // If the aggregate was successfully updated, calculate the difference
     // and update TWAP.
     if !updated {
-        return Ok(());
+        return false;
     }
 
     let agg_diff = (slot as i64) - price_account.prev_slot_ as i64;
@@ -80,29 +87,42 @@ fn update_aggregate(
     // ensures that after every aggregate update, the next publisher who provides the accumulator accounts
     // will send the message.
     price_account.message_sent_ = 0;
-    price_account
-        .update_price_cumulative()
-        .map_err(|_| AggregationError::NotTradingStatus)?;
+    if price_account.update_price_cumulative().is_err() {
+        // Revert in case of a bad trading status.
+        return false;
+    }
 
-    Ok(())
+    true
 }
 
 #[derive(Debug, thiserror::Error)]
 pub enum AggregationError {
     #[error("NotPriceFeedAccount")]
     NotPriceFeedAccount,
-    #[error("LegacyAggregationMode")]
-    LegacyAggregationMode,
-    #[error("NotTradingStatus")]
-    NotTradingStatus,
+    #[error("V1AggregationMode")]
+    V1AggregationMode,
+}
+
+pub struct AggregationOutcome {
+    pub messages: [Vec<u8>; 2],
+    pub commit:   bool,
 }
 
 pub fn aggregate_price(
     slot: u64,
     timestamp: i64,
+    price_account_pubkey: &Pubkey,
     price_account_data: &mut [u8],
-) -> Result<(), AggregationError> {
+) -> Result<AggregationOutcome, AggregationError> {
     let price_account = validate_price_account(price_account_data)?;
-    update_aggregate(slot, timestamp, price_account)?;
-    Ok(())
+    let commit = update_aggregate(slot, timestamp, price_account);
+    let messages = [
+        price_account
+            .as_price_feed_message(price_account_pubkey)
+            .to_bytes(),
+        price_account
+            .as_twap_message(price_account_pubkey)
+            .to_bytes(),
+    ];
+    Ok(AggregationOutcome { messages, commit })
 }
