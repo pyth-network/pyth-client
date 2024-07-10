@@ -30,7 +30,11 @@ mod upd_product;
 pub use {
     add_price::add_price,
     add_product::add_product,
-    add_publisher::add_publisher,
+    add_publisher::{
+        add_publisher,
+        DISABLE_ACCUMULATOR_V2,
+        ENABLE_ACCUMULATOR_V2,
+    },
     del_price::del_price,
     del_product::del_product,
     del_publisher::del_publisher,

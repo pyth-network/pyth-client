@@ -34,10 +34,10 @@ use {
     std::mem::size_of,
 };
 
-const ENABLE_ACCUMULATOR_V2: [u8; 32] = [
+pub const ENABLE_ACCUMULATOR_V2: [u8; 32] = [
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
 ];
-const DISABLE_ACCUMULATOR_V2: [u8; 32] = [
+pub const DISABLE_ACCUMULATOR_V2: [u8; 32] = [
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
 ];
 
