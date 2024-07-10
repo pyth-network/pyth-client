@@ -20,6 +20,7 @@ strum = { version = "0.24.1", features = ["derive"], optional = true }
 pythnet-sdk = { git = "https://github.com/pyth-network/pyth-crosschain", rev="60144002053a93f424be70decd8a8ccb8d618d81"}
 solana-sdk = { version = "=1.14.17", optional = true }
 bitflags = { version = "2.6.0", features = ["bytemuck"] }
+base64 = "0.22.1"
 
 [dev-dependencies]
 solana-program-test = "=1.14.17"

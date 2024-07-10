@@ -226,8 +226,8 @@ impl Arbitrary for PriceComponent {
 }
 
 #[repr(C)]
-#[cfg_attr(test, derive(Debug, PartialEq))]
-#[derive(Copy, Clone, Pod, Zeroable)]
+#[cfg_attr(test, derive(PartialEq))]
+#[derive(Debug, Copy, Clone, Pod, Zeroable)]
 pub struct PriceInfo {
     pub price_:           i64,
     pub conf_:            u64,

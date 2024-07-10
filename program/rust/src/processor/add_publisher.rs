@@ -40,6 +40,10 @@ pub const ENABLE_ACCUMULATOR_V2: [u8; 32] = [
 pub const DISABLE_ACCUMULATOR_V2: [u8; 32] = [
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
 ];
+#[test]
+fn test1() {
+    panic!("OK {}", Pubkey::from(DISABLE_ACCUMULATOR_V2).to_string());
+}
 
 /// Add publisher to symbol account
 // account[0] funding account       [signer writable]
