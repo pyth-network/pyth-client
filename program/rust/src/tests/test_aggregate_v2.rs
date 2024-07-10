@@ -30,11 +30,7 @@ use {
         },
     },
     bytemuck::bytes_of,
-    solana_program::{
-        pubkey::Pubkey,
-        rent::Rent,
-    },
-    solana_sdk::account_info::AccountInfo,
+    solana_program::pubkey::Pubkey,
     std::mem::size_of,
 };
 

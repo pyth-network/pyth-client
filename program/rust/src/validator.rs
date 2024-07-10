@@ -58,9 +58,6 @@ fn update_aggregate(slot: u64, timestamp: i64, price_account: &mut PriceAccount)
     // NOTE: c_upd_aggregate must use a raw pointer to price data. We already
     // have the exclusive mut reference so we can simply cast before calling
     // the function.
-    //
-    // TODO: Verify the bytemuck::from_mut_bytes function is as safe as if
-    // we called `try_borrow_mut_data()``
     let updated = unsafe {
         c_upd_aggregate(
             price_account as *mut PriceAccount as *mut u8,
@@ -101,6 +98,8 @@ pub enum AggregationError {
     NotPriceFeedAccount,
     #[error("V1AggregationMode")]
     V1AggregationMode,
+    #[error("AlreadyAggregated")]
+    AlreadyAggregated,
 }
 
 pub struct AggregationOutcome {
@@ -115,6 +114,9 @@ pub fn aggregate_price(
     price_account_data: &mut [u8],
 ) -> Result<AggregationOutcome, AggregationError> {
     let price_account = validate_price_account(price_account_data)?;
+    if price_account.agg_.pub_slot_ == slot {
+        return Err(AggregationError::AlreadyAggregated);
+    }
     let commit = update_aggregate(slot, timestamp, price_account);
     let messages = [
         price_account
