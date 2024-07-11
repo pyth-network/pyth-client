@@ -79,6 +79,10 @@ pub fn add_publisher(
         sort_price_comps(&mut price_data.comp_, num_comps)?;
         return Ok(());
     } else if cmd_args.publisher == Pubkey::from(ENABLE_ACCUMULATOR_V2) {
+        // Hack: we use add_publisher instruction to configure the `ACCUMULATOR_V2` flag. Using a new
+        // instruction would be cleaner but it would require more work in the tooling.
+        // These special cases can be removed along with the v1 aggregation code once the transition
+        // is complete.
         price_data.flags.insert(PriceAccountFlags::ACCUMULATOR_V2);
         return Ok(());
     } else if cmd_args.publisher == Pubkey::from(DISABLE_ACCUMULATOR_V2) {

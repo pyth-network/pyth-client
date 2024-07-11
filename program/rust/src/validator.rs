@@ -104,10 +104,21 @@ pub enum AggregationError {
 
 #[derive(Debug)]
 pub struct AggregationOutcome {
+    /// Messages that should be included in the merkle tree
+    /// (a price feed message and a TWAP message).
     pub messages: [Vec<u8>; 2],
+    /// A flag indicating that the changes to `price_account_data`
+    /// should be saved to the price account.
     pub commit:   bool,
 }
 
+/// Attempts to read a price account and create a new price aggregate if v2
+/// aggregation is enabled on this price account.
+/// `price_account_data` will be modified in case of successful aggregation.
+/// However, the changes to `price_account_data` should not be stored in the
+/// account if `commit = false` in the returned value or if an error is returned.
+/// Note that the `messages` will be returned whenever possible, even if
+/// aggregation fails for some reason.
 pub fn aggregate_price(
     slot: u64,
     timestamp: i64,
@@ -116,6 +127,8 @@ pub fn aggregate_price(
 ) -> Result<AggregationOutcome, AggregationError> {
     let price_account = validate_price_account(price_account_data)?;
     if price_account.agg_.pub_slot_ == slot {
+        // Avoid v2 aggregation if v1 aggregation has happened in the same slot
+        // (this should normally happen only in the slot that contains the v1->v2 transition).
         return Err(AggregationError::AlreadyAggregated);
     }
     let commit = update_aggregate(slot, timestamp, price_account);
