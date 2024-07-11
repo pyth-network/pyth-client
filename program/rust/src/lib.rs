@@ -13,6 +13,9 @@ mod utils;
 #[cfg(feature = "library")]
 pub mod validator;
 
+#[cfg(feature = "library")]
+pub use solana_program;
+
 #[cfg(test)]
 mod tests;
 

@@ -102,6 +102,7 @@ pub enum AggregationError {
     AlreadyAggregated,
 }
 
+#[derive(Debug)]
 pub struct AggregationOutcome {
     pub messages: [Vec<u8>; 2],
     pub commit:   bool,
