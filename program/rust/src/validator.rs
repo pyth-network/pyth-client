@@ -66,27 +66,24 @@ fn update_aggregate(slot: u64, timestamp: i64, price_account: &mut PriceAccount)
         )
     };
 
-    // If the aggregate was successfully updated, calculate the difference
-    // and update TWAP.
-    if !updated {
-        return false;
-    }
+    // If the aggregate was successfully updated, calculate the difference and update TWAP.
+    if updated {
+        let agg_diff = (slot as i64) - price_account.prev_slot_ as i64;
 
-    let agg_diff = (slot as i64) - price_account.prev_slot_ as i64;
+        // See comment on unsafe `c_upd_aggregate` call above for details.
+        unsafe {
+            c_upd_twap(price_account as *mut PriceAccount as *mut u8, agg_diff);
+        }
 
-    // See comment on unsafe `c_upd_aggregate` call above for details.
-    unsafe {
-        c_upd_twap(price_account as *mut PriceAccount as *mut u8, agg_diff);
-    }
-
-    // We want to send a message every time the aggregate price updates. However, during the migration,
-    // not every publisher will necessarily provide the accumulator accounts. The message_sent_ flag
-    // ensures that after every aggregate update, the next publisher who provides the accumulator accounts
-    // will send the message.
-    price_account.message_sent_ = 0;
-    if price_account.update_price_cumulative().is_err() {
-        // Revert in case of a bad trading status.
-        return false;
+        // We want to send a message every time the aggregate price updates. However, during the migration,
+        // not every publisher will necessarily provide the accumulator accounts. The message_sent_ flag
+        // ensures that after every aggregate update, the next publisher who provides the accumulator accounts
+        // will send the message.
+        price_account.message_sent_ = 0;
+        if price_account.update_price_cumulative().is_err() {
+            // Revert in case of a bad trading status.
+            return false;
+        }
     }
 
     true
