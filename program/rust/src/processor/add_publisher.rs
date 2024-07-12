@@ -72,13 +72,7 @@ pub fn add_publisher(
 
     let mut price_data = load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
 
-    // Use the call with the default pubkey (000..) as a trigger to sort the publishers as a
-    // migration step from unsorted list to sorted list.
-    if cmd_args.publisher == Pubkey::default() {
-        let num_comps = try_convert::<u32, usize>(price_data.num_)?;
-        sort_price_comps(&mut price_data.comp_, num_comps)?;
-        return Ok(());
-    } else if cmd_args.publisher == Pubkey::from(ENABLE_ACCUMULATOR_V2) {
+    if cmd_args.publisher == Pubkey::from(ENABLE_ACCUMULATOR_V2) {
         // Hack: we use add_publisher instruction to configure the `ACCUMULATOR_V2` flag. Using a new
         // instruction would be cleaner but it would require more work in the tooling.
         // These special cases can be removed along with the v1 aggregation code once the transition
