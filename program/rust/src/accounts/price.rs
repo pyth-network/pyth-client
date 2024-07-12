@@ -123,7 +123,6 @@ mod price_pythnet {
         }
         /// This function gets triggered when there's a succesful aggregation and updates the cumulative sums
         pub fn update_price_cumulative(&mut self) {
-            debug_assert!(self.agg_.status_ == PC_STATUS_TRADING);
             if self.agg_.status_ == PC_STATUS_TRADING {
                 self.price_cumulative.update(
                     self.agg_.price_,
