@@ -12,7 +12,6 @@ use {
             PC_STATUS_UNKNOWN,
         },
         deserialize::load_account_as_mut,
-        error::OracleError,
     },
     quickcheck::Arbitrary,
     quickcheck_macros::quickcheck,
@@ -262,7 +261,7 @@ fn test_twap_with_price_account() {
         unused:         0,
     };
     price_data.prev_slot_ = 3;
-    price_data.update_price_cumulative().unwrap();
+    price_data.update_price_cumulative();
 
     assert_eq!(price_data.price_cumulative.price, 1 - 2 * 10);
     assert_eq!(price_data.price_cumulative.conf, 2 + 2 * 5);
@@ -291,10 +290,6 @@ fn test_twap_with_price_account() {
         pub_slot_:        6,
     };
     price_data.prev_slot_ = 5;
-    assert_eq!(
-        price_data.update_price_cumulative(),
-        Err(OracleError::NeedsSuccesfulAggregation)
-    );
 
     assert_eq!(price_data.price_cumulative.price, 1 - 2 * 10);
     assert_eq!(price_data.price_cumulative.conf, 2 + 2 * 5);
@@ -302,7 +297,7 @@ fn test_twap_with_price_account() {
 
     // Back to normal behavior
     price_data.agg_.status_ = PC_STATUS_TRADING;
-    price_data.update_price_cumulative().unwrap();
+    price_data.update_price_cumulative();
 
     assert_eq!(price_data.price_cumulative.price, 1 - 2 * 10 + 1);
     assert_eq!(price_data.price_cumulative.conf, 2 + 2 * 5 + 2);

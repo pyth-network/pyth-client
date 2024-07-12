@@ -49,12 +49,19 @@ fn validate_price_account(
     if !data.flags.contains(PriceAccountFlags::ACCUMULATOR_V2) {
         return Err(AggregationError::V1AggregationMode);
     }
+    if !data
+        .flags
+        .contains(PriceAccountFlags::MESSAGE_BUFFER_CLEARED)
+    {
+        // We make sure that we don't generate v2 messages while v1 messages are still
+        // in the message buffer.
+        return Err(AggregationError::V1AggregationMode);
+    }
 
     Ok(data)
 }
 
-// Returns true if the price account data has been modified and should be committed.
-fn update_aggregate(slot: u64, timestamp: i64, price_account: &mut PriceAccount) -> bool {
+fn update_aggregate(slot: u64, timestamp: i64, price_account: &mut PriceAccount) {
     // NOTE: c_upd_aggregate must use a raw pointer to price data. We already
     // have the exclusive mut reference so we can simply cast before calling
     // the function.
@@ -80,13 +87,8 @@ fn update_aggregate(slot: u64, timestamp: i64, price_account: &mut PriceAccount)
         // ensures that after every aggregate update, the next publisher who provides the accumulator accounts
         // will send the message.
         price_account.message_sent_ = 0;
-        if price_account.update_price_cumulative().is_err() {
-            // Revert in case of a bad trading status.
-            return false;
-        }
+        price_account.update_price_cumulative();
     }
-
-    true
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -110,32 +112,29 @@ pub struct AggregationOutcome {
 }
 
 /// Attempts to read a price account and create a new price aggregate if v2
-/// aggregation is enabled on this price account.
-/// `price_account_data` will be modified in case of successful aggregation.
-/// However, the changes to `price_account_data` should not be stored in the
-/// account if `commit = false` in the returned value or if an error is returned.
-/// Note that the `messages` will be returned whenever possible, even if
-/// aggregation fails for some reason.
+/// aggregation is enabled on this price account. Modifies `price_account_data` accordingly.
+/// Returns messages that should be included in the merkle tree, unless v1 aggregation
+/// is still in use.
+/// Note that the `messages` may be returned even if aggregation fails for some reason.
 pub fn aggregate_price(
     slot: u64,
     timestamp: i64,
     price_account_pubkey: &Pubkey,
     price_account_data: &mut [u8],
-) -> Result<AggregationOutcome, AggregationError> {
+) -> Result<[Vec<u8>; 2], AggregationError> {
     let price_account = validate_price_account(price_account_data)?;
     if price_account.agg_.pub_slot_ == slot {
         // Avoid v2 aggregation if v1 aggregation has happened in the same slot
         // (this should normally happen only in the slot that contains the v1->v2 transition).
         return Err(AggregationError::AlreadyAggregated);
     }
-    let commit = update_aggregate(slot, timestamp, price_account);
-    let messages = [
+    update_aggregate(slot, timestamp, price_account);
+    Ok([
         price_account
             .as_price_feed_message(price_account_pubkey)
             .to_bytes(),
         price_account
             .as_twap_message(price_account_pubkey)
             .to_bytes(),
-    ];
-    Ok(AggregationOutcome { messages, commit })
+    ])
 }

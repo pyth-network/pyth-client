@@ -196,7 +196,7 @@ pub fn upd_price(
                 // ensures that after every aggregate update, the next publisher who provides the accumulator accounts
                 // will send the message.
                 price_data.message_sent_ = 0;
-                price_data.update_price_cumulative()?;
+                price_data.update_price_cumulative();
             }
         }
     }

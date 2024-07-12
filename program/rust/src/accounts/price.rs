@@ -25,13 +25,10 @@ mod price_pythnet {
 
     use {
         super::*,
-        crate::{
-            c_oracle_header::{
-                PC_MAX_SEND_LATENCY,
-                PC_NUM_COMP_PYTHNET,
-                PC_STATUS_TRADING,
-            },
-            error::OracleError,
+        crate::c_oracle_header::{
+            PC_MAX_SEND_LATENCY,
+            PC_NUM_COMP_PYTHNET,
+            PC_STATUS_TRADING,
         },
         bitflags::bitflags,
     };
@@ -125,7 +122,8 @@ mod price_pythnet {
             }
         }
         /// This function gets triggered when there's a succesful aggregation and updates the cumulative sums
-        pub fn update_price_cumulative(&mut self) -> Result<(), OracleError> {
+        pub fn update_price_cumulative(&mut self) {
+            debug_assert!(self.agg_.status_ == PC_STATUS_TRADING);
             if self.agg_.status_ == PC_STATUS_TRADING {
                 self.price_cumulative.update(
                     self.agg_.price_,
@@ -133,9 +131,6 @@ mod price_pythnet {
                     self.agg_.pub_slot_.saturating_sub(self.prev_slot_),
                     self.max_latency_,
                 ); // pub_slot should always be >= prev_slot, but we protect ourselves against underflow just in case
-                Ok(())
-            } else {
-                Err(OracleError::NeedsSuccesfulAggregation)
             }
         }
 
