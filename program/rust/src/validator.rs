@@ -101,16 +101,6 @@ pub enum AggregationError {
     AlreadyAggregated,
 }
 
-#[derive(Debug)]
-pub struct AggregationOutcome {
-    /// Messages that should be included in the merkle tree
-    /// (a price feed message and a TWAP message).
-    pub messages: [Vec<u8>; 2],
-    /// A flag indicating that the changes to `price_account_data`
-    /// should be saved to the price account.
-    pub commit:   bool,
-}
-
 /// Attempts to read a price account and create a new price aggregate if v2
 /// aggregation is enabled on this price account. Modifies `price_account_data` accordingly.
 /// Returns messages that should be included in the merkle tree, unless v1 aggregation
