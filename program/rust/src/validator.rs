@@ -20,7 +20,10 @@ use {
         PublisherCapsMessage,
     },
     solana_sdk::{
-        account::ReadableAccount,
+        account::{
+            AccountSharedData,
+            ReadableAccount,
+        },
         pubkey::Pubkey,
         transaction_context::TransactionAccount,
     },
@@ -140,7 +143,7 @@ pub fn aggregate_price(
     ])
 }
 
-pub fn compute_publisher_caps(accounts: &Vec<TransactionAccount>, timestamp: i64) -> Vec<u8> {
+pub fn compute_publisher_caps(accounts: &Vec<AccountSharedData>, timestamp: i64) -> Vec<u8> {
     let mut publisher_caps: HashMap<Pubkey, u64> = HashMap::new();
     for (_, account) in accounts {
         let price_account_data = account.data();
