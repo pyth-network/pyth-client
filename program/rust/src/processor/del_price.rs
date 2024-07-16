@@ -3,6 +3,7 @@ use {
         accounts::{
             PriceAccount,
             ProductAccount,
+            PublisherCapsAccount,
         },
         deserialize::{
             load,
@@ -30,6 +31,7 @@ use {
 // account[0] funding account       [signer writable]
 // account[1] product account       [signer writable]
 // account[2] price account         [signer writable]
+// account[3] caps account        [signer writable]
 /// Warning: This function is dangerous and will break any programs that depend on the deleted
 /// price account!
 pub fn del_price(
@@ -37,10 +39,12 @@ pub fn del_price(
     accounts: &[AccountInfo],
     instruction_data: &[u8],
 ) -> ProgramResult {
-    let (funding_account, product_account, price_account, permissions_account) = match accounts {
-        [w, x, y, p] => Ok((w, x, y, p)),
-        _ => Err(OracleError::InvalidNumberOfAccounts),
-    }?;
+    let (funding_account, product_account, price_account, permissions_account, caps_account) =
+        match accounts {
+            [x, y, z, p] => Ok((x, y, z, p, None)),
+            [x, y, z, p, s] => Ok((x, y, z, p, Some(s))),
+            _ => Err(OracleError::InvalidNumberOfAccounts),
+        }?;
 
     let cmd_args = load::<CommandHeader>(instruction_data)?;
 
@@ -82,6 +86,12 @@ pub fn del_price(
     let lamports = price_account.lamports();
     **price_account.lamports.borrow_mut() = 0;
     **funding_account.lamports.borrow_mut() += lamports;
+
+    if let Some(caps_account) = caps_account {
+        let mut caps_account =
+            load_checked::<PublisherCapsAccount>(caps_account, cmd_args.version)?;
+        caps_account.del_price(*price_account.key)?;
+    }
 
     Ok(())
 }

@@ -6,6 +6,7 @@ use {
             PermissionAccount,
             PriceAccount,
             ProductAccount,
+            PublisherCapsAccount,
             PythAccount,
         },
         c_oracle_header::{
@@ -59,8 +60,15 @@ fn test_add_price() {
     let mut price_setup_2 = AccountSetup::new::<PriceAccount>(&program_id);
     let price_account_2 = price_setup_2.as_account_info();
 
+    let mut price_setup_3 = AccountSetup::new::<PriceAccount>(&program_id);
+    let price_account_3 = price_setup_3.as_account_info();
+
     let mut permissions_setup = AccountSetup::new_permission(&program_id);
     let permissions_account = permissions_setup.as_account_info();
+
+    let mut caps_setup = AccountSetup::new::<PublisherCapsAccount>(&program_id);
+    let caps_account = caps_setup.as_account_info();
+    PublisherCapsAccount::initialize(&caps_account, PC_VERSION).unwrap();
 
     {
         let mut permissions_account_data =
@@ -82,6 +90,26 @@ fn test_add_price() {
     )
     .is_ok());
 
+    // add price with caps account
+    assert!(process_instruction(
+        &program_id,
+        &[
+            funding_account.clone(),
+            product_account.clone(),
+            price_account_3.clone(),
+            permissions_account.clone(),
+            caps_account.clone(),
+        ],
+        instruction_data_add_price
+    )
+    .is_ok());
+
+    {
+        let score_data = load_checked::<PublisherCapsAccount>(&caps_account, PC_VERSION).unwrap();
+        assert_eq!(score_data.prices[0], *price_account_3.key);
+        assert_eq!(score_data.num_symbols, 1);
+    }
+
     assert!(process_instruction(
         &program_id,
         &[
@@ -101,7 +129,7 @@ fn test_add_price() {
         assert_eq!(price_data.price_type, 1);
         assert_eq!(price_data.min_pub_, PRICE_ACCOUNT_DEFAULT_MIN_PUB);
         assert!(price_data.product_account == *product_account.key);
-        assert!(price_data.next_price_account == Pubkey::default());
+        assert!(price_data.next_price_account == *price_account_3.key);
         assert!(product_data.first_price_account == *price_account.key);
     }
 
@@ -136,6 +164,7 @@ fn test_add_price() {
                 funding_account.clone(),
                 product_account.clone(),
                 price_account.clone(),
+                permissions_account.clone(),
                 permissions_account.clone(),
                 permissions_account.clone(),
             ],

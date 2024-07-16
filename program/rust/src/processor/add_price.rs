@@ -3,6 +3,7 @@ use {
         accounts::{
             PriceAccount,
             ProductAccount,
+            PublisherCapsAccount,
             PythAccount,
         },
         c_oracle_header::{
@@ -34,6 +35,7 @@ use {
 // account[0] funding account       [signer writable]
 // account[1] product account       [signer writable]
 // account[2] new price account     [signer writable]
+// account[3] caps account        [signer writable]
 pub fn add_price(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
@@ -48,10 +50,12 @@ pub fn add_price(
     )?;
 
 
-    let (funding_account, product_account, price_account, permissions_account) = match accounts {
-        [x, y, z, p] => Ok((x, y, z, p)),
-        _ => Err(OracleError::InvalidNumberOfAccounts),
-    }?;
+    let (funding_account, product_account, price_account, permissions_account, caps_account) =
+        match accounts {
+            [x, y, z, p] => Ok((x, y, z, p, None)),
+            [x, y, z, p, s] => Ok((x, y, z, p, Some(s))),
+            _ => Err(OracleError::InvalidNumberOfAccounts),
+        }?;
 
     check_valid_funding_account(funding_account)?;
     check_permissioned_funding_account(
@@ -79,6 +83,12 @@ pub fn add_price(
     price_data.next_price_account = product_data.first_price_account;
     price_data.min_pub_ = PRICE_ACCOUNT_DEFAULT_MIN_PUB;
     product_data.first_price_account = *price_account.key;
+
+    if let Some(caps_account) = caps_account {
+        let mut caps_account =
+            load_checked::<PublisherCapsAccount>(caps_account, cmd_args.header.version)?;
+        caps_account.add_price(*price_account.key)?;
+    }
 
     Ok(())
 }

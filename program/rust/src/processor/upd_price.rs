@@ -18,7 +18,9 @@ use {
             get_status_for_conf_price_ratio,
             is_component_update,
             pyth_assert,
+            send_message_to_message_buffer,
             try_convert,
+            MessageBufferAccounts,
         },
         OracleError,
     },
@@ -26,11 +28,6 @@ use {
         account_info::AccountInfo,
         clock::Clock,
         entrypoint::ProgramResult,
-        instruction::{
-            AccountMeta,
-            Instruction,
-        },
-        program::invoke_signed,
         program_error::ProgramError,
         program_memory::sol_memcmp,
         pubkey::Pubkey,
@@ -202,36 +199,6 @@ pub fn upd_price(
     {
         if let Some(accumulator_accounts) = maybe_accumulator_accounts {
             if price_data.message_sent_ == 0 {
-                // Check that the oracle PDA is correctly configured for the program we are calling.
-                let oracle_auth_seeds: &[&[u8]] = &[
-                    UPD_PRICE_WRITE_SEED.as_bytes(),
-                    &accumulator_accounts.program_id.key.to_bytes(),
-                ];
-                let (expected_oracle_auth_pda, bump) =
-                    Pubkey::find_program_address(oracle_auth_seeds, program_id);
-                pyth_assert(
-                    expected_oracle_auth_pda == *accumulator_accounts.oracle_auth_pda.key,
-                    OracleError::InvalidPda.into(),
-                )?;
-
-                let account_metas = vec![
-                    AccountMeta {
-                        pubkey:      *accumulator_accounts.whitelist.key,
-                        is_signer:   false,
-                        is_writable: false,
-                    },
-                    AccountMeta {
-                        pubkey:      *accumulator_accounts.oracle_auth_pda.key,
-                        is_signer:   true,
-                        is_writable: false,
-                    },
-                    AccountMeta {
-                        pubkey:      *accumulator_accounts.message_buffer_data.key,
-                        is_signer:   false,
-                        is_writable: true,
-                    },
-                ];
-
                 let message = vec![
                     price_data
                         .as_price_feed_message(price_account.key)
@@ -239,23 +206,15 @@ pub fn upd_price(
                     price_data.as_twap_message(price_account.key).to_bytes(),
                 ];
 
-                // Append a TWAP message if available
+                send_message_to_message_buffer(
+                    program_id,
+                    price_account.key,
+                    UPD_PRICE_WRITE_SEED,
+                    accounts,
+                    accumulator_accounts,
+                    message,
+                )?;
 
-                // anchor discriminator for "global:put_all"
-                let discriminator: [u8; 8] = [212, 225, 193, 91, 151, 238, 20, 93];
-                let create_inputs_ix = Instruction::new_with_borsh(
-                    *accumulator_accounts.program_id.key,
-                    &(discriminator, price_account.key.to_bytes(), message),
-                    account_metas,
-                );
-
-                let auth_seeds_with_bump: &[&[u8]] = &[
-                    UPD_PRICE_WRITE_SEED.as_bytes(),
-                    &accumulator_accounts.program_id.key.to_bytes(),
-                    &[bump],
-                ];
-
-                invoke_signed(&create_inputs_ix, accounts, &[auth_seeds_with_bump])?;
                 price_data.message_sent_ = 1;
             }
         }
@@ -319,33 +278,7 @@ fn find_publisher_index(comps: &[PriceComponent], key: &Pubkey) -> Option<usize>
             }
         }
     }
-
-    match binary_search_result {
-        Some(index) => Some(index),
-        None => {
-            let mut index = 0;
-            while index < comps.len() {
-                if sol_memcmp(comps[index].pub_.as_ref(), key.as_ref(), 32) == 0 {
-                    break;
-                }
-                index += 1;
-            }
-            if index == comps.len() {
-                None
-            } else {
-                Some(index)
-            }
-        }
-    }
-}
-
-#[allow(dead_code)]
-// Wrapper struct for the accounts required to add data to the accumulator program.
-struct MessageBufferAccounts<'a, 'b: 'a> {
-    program_id:          &'a AccountInfo<'b>,
-    whitelist:           &'a AccountInfo<'b>,
-    oracle_auth_pda:     &'a AccountInfo<'b>,
-    message_buffer_data: &'a AccountInfo<'b>,
+    binary_search_result
 }
 
 #[cfg(test)]
@@ -356,21 +289,6 @@ mod test {
         quickcheck_macros::quickcheck,
         solana_program::pubkey::Pubkey,
     };
-
-    /// Test the find_publisher_index method works with an unordered list of components.
-    #[quickcheck]
-    pub fn test_find_publisher_index_unordered_comp(comps: Vec<PriceComponent>) {
-        comps.iter().enumerate().for_each(|(idx, comp)| {
-            assert_eq!(find_publisher_index(&comps, &comp.pub_), Some(idx));
-        });
-
-        let mut key_not_in_list = Pubkey::new_unique();
-        while comps.iter().any(|comp| comp.pub_ == key_not_in_list) {
-            key_not_in_list = Pubkey::new_unique();
-        }
-
-        assert_eq!(find_publisher_index(&comps, &key_not_in_list), None);
-    }
 
     /// Test the find_publisher_index method works with a sorted list of components.
     #[quickcheck]
