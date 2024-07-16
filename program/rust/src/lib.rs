@@ -10,7 +10,7 @@ mod instruction;
 mod processor;
 mod utils;
 
-#[cfg(feature = "library")]
+#[cfg(any(test, feature = "library"))]
 pub mod validator;
 
 #[cfg(feature = "library")]

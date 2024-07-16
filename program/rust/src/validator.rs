@@ -91,7 +91,7 @@ fn update_aggregate(slot: u64, timestamp: i64, price_account: &mut PriceAccount)
     }
 }
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, PartialEq, thiserror::Error)]
 pub enum AggregationError {
     #[error("NotPriceFeedAccount")]
     NotPriceFeedAccount,
