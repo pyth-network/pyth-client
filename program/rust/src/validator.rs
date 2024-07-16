@@ -142,7 +142,7 @@ pub fn aggregate_price(
 
 pub fn compute_publisher_caps(accounts: &Vec<TransactionAccount>, timestamp: i64) -> Vec<u8> {
     let mut publisher_caps: HashMap<Pubkey, u64> = HashMap::new();
-    for (pubkey, account) in accounts {
+    for (_, account) in accounts {
         let price_account_data = account.data();
         let price_account: &PriceAccount = bytemuck::from_bytes(&price_account_data);
         let cap = 1_000_000 / (price_account.num_ as u64);
@@ -158,7 +158,10 @@ pub fn compute_publisher_caps(accounts: &Vec<TransactionAccount>, timestamp: i64
         publish_time: timestamp,
         caps:         publisher_caps
             .into_iter()
-            .map(|(publisher, cap)| PublisherCap { publisher, cap })
+            .map(|(publisher, cap)| PublisherCap {
+                publisher: publisher.to_bytes(),
+                cap,
+            })
             .collect(),
     };
 
