@@ -15,8 +15,19 @@ use {
         },
         utils::pyth_assert,
     },
-    solana_sdk::pubkey::Pubkey,
-    std::mem::size_of,
+    pythnet_sdk::messages::{
+        PublisherCap,
+        PublisherCapsMessage,
+    },
+    solana_sdk::{
+        account::ReadableAccount,
+        pubkey::Pubkey,
+        transaction_context::TransactionAccount,
+    },
+    std::{
+        collections::HashMap,
+        mem::size_of,
+    },
 };
 
 // Attempts to validate and access the contents of an account as a PriceAccount.
@@ -127,4 +138,29 @@ pub fn aggregate_price(
             .as_twap_message(price_account_pubkey)
             .to_bytes(),
     ])
+}
+
+pub fn compute_publisher_caps(accounts: &Vec<TransactionAccount>, timestamp: i64) -> Vec<u8> {
+    let mut publisher_caps: HashMap<Pubkey, u64> = HashMap::new();
+    for (pubkey, account) in accounts {
+        let price_account_data = account.data();
+        let price_account: &PriceAccount = bytemuck::from_bytes(&price_account_data);
+        let cap = 1_000_000 / (price_account.num_ as u64);
+        for i in 0..(price_account.num_ as usize) {
+            publisher_caps
+                .entry(price_account.comp_[i].pub_)
+                .and_modify(|e| *e += cap)
+                .or_insert(cap);
+        }
+    }
+
+    let message = PublisherCapsMessage {
+        publish_time: timestamp,
+        caps:         publisher_caps
+            .into_iter()
+            .map(|(publisher, cap)| PublisherCap { publisher, cap })
+            .collect(),
+    };
+
+    return message.to_bytes();
 }

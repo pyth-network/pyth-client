@@ -24,9 +24,7 @@ use {
             update_clock_slot,
             AccountSetup,
         },
-        validator::{
-            self,
-        },
+        validator::{self,},
     },
     solana_program::{
         program_error::ProgramError,

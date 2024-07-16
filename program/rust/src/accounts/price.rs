@@ -111,7 +111,7 @@ mod price_pythnet {
             };
 
             PriceFeedMessage {
-                id: key.to_bytes(),
+                feed_id: key.to_bytes(),
                 price,
                 conf,
                 exponent: self.exponent,
@@ -141,7 +141,7 @@ mod price_pythnet {
             };
 
             TwapMessage {
-                id: key.to_bytes(),
+                feed_id: key.to_bytes(),
                 cumulative_price: self.price_cumulative.price,
                 cumulative_conf: self.price_cumulative.conf,
                 num_down_slots: self.price_cumulative.num_down_slots,
@@ -270,7 +270,7 @@ impl PythOracleSerialize for PriceFeedMessage {
         bytes[i..i + 1].clone_from_slice(&[DISCRIMINATOR]);
         i += 1;
 
-        bytes[i..i + 32].clone_from_slice(&self.id[..]);
+        bytes[i..i + 32].clone_from_slice(&self.feed_id[..]);
         i += 32;
 
         bytes[i..i + 8].clone_from_slice(&self.price.to_be_bytes());
@@ -313,7 +313,7 @@ impl PythOracleSerialize for TwapMessage {
         bytes[i..i + 1].clone_from_slice(&[DISCRIMINATOR]);
         i += 1;
 
-        bytes[i..i + 32].clone_from_slice(&self.id[..]);
+        bytes[i..i + 32].clone_from_slice(&self.feed_id[..]);
         i += 32;
 
         bytes[i..i + 16].clone_from_slice(&self.cumulative_price.to_be_bytes());
