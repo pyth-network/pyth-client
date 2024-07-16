@@ -210,76 +210,74 @@ pub fn upd_price(
         !flags.contains(PriceAccountFlags::MESSAGE_BUFFER_CLEARED)
     } else {
         // V1
-        true
+        price_data.message_sent_ == 0
     };
 
     if need_message_buffer_update {
         if let Some(accumulator_accounts) = maybe_accumulator_accounts {
-            if price_data.message_sent_ == 0 {
-                // Check that the oracle PDA is correctly configured for the program we are calling.
-                let oracle_auth_seeds: &[&[u8]] = &[
-                    UPD_PRICE_WRITE_SEED.as_bytes(),
-                    &accumulator_accounts.program_id.key.to_bytes(),
-                ];
-                let (expected_oracle_auth_pda, bump) =
-                    Pubkey::find_program_address(oracle_auth_seeds, program_id);
-                pyth_assert(
-                    expected_oracle_auth_pda == *accumulator_accounts.oracle_auth_pda.key,
-                    OracleError::InvalidPda.into(),
-                )?;
+            // Check that the oracle PDA is correctly configured for the program we are calling.
+            let oracle_auth_seeds: &[&[u8]] = &[
+                UPD_PRICE_WRITE_SEED.as_bytes(),
+                &accumulator_accounts.program_id.key.to_bytes(),
+            ];
+            let (expected_oracle_auth_pda, bump) =
+                Pubkey::find_program_address(oracle_auth_seeds, program_id);
+            pyth_assert(
+                expected_oracle_auth_pda == *accumulator_accounts.oracle_auth_pda.key,
+                OracleError::InvalidPda.into(),
+            )?;
 
-                let account_metas = vec![
-                    AccountMeta {
-                        pubkey:      *accumulator_accounts.whitelist.key,
-                        is_signer:   false,
-                        is_writable: false,
-                    },
-                    AccountMeta {
-                        pubkey:      *accumulator_accounts.oracle_auth_pda.key,
-                        is_signer:   true,
-                        is_writable: false,
-                    },
-                    AccountMeta {
-                        pubkey:      *accumulator_accounts.message_buffer_data.key,
-                        is_signer:   false,
-                        is_writable: true,
-                    },
-                ];
+            let account_metas = vec![
+                AccountMeta {
+                    pubkey:      *accumulator_accounts.whitelist.key,
+                    is_signer:   false,
+                    is_writable: false,
+                },
+                AccountMeta {
+                    pubkey:      *accumulator_accounts.oracle_auth_pda.key,
+                    is_signer:   true,
+                    is_writable: false,
+                },
+                AccountMeta {
+                    pubkey:      *accumulator_accounts.message_buffer_data.key,
+                    is_signer:   false,
+                    is_writable: true,
+                },
+            ];
 
-                let message = if flags.contains(PriceAccountFlags::ACCUMULATOR_V2) {
-                    vec![]
-                } else {
-                    vec![
-                        price_data
-                            .as_price_feed_message(price_account.key)
-                            .to_bytes(),
-                        price_data.as_twap_message(price_account.key).to_bytes(),
-                    ]
-                };
-
-                // Append a TWAP message if available
-
-                // anchor discriminator for "global:put_all"
-                let discriminator: [u8; 8] = [212, 225, 193, 91, 151, 238, 20, 93];
-                let create_inputs_ix = Instruction::new_with_borsh(
-                    *accumulator_accounts.program_id.key,
-                    &(discriminator, price_account.key.to_bytes(), message),
-                    account_metas,
-                );
-
-                let auth_seeds_with_bump: &[&[u8]] = &[
-                    UPD_PRICE_WRITE_SEED.as_bytes(),
-                    &accumulator_accounts.program_id.key.to_bytes(),
-                    &[bump],
-                ];
-
-                invoke_signed(&create_inputs_ix, accounts, &[auth_seeds_with_bump])?;
-                price_data.message_sent_ = 1;
-                if flags.contains(PriceAccountFlags::ACCUMULATOR_V2) {
+            let message = if flags.contains(PriceAccountFlags::ACCUMULATOR_V2) {
+                vec![]
+            } else {
+                vec![
                     price_data
-                        .flags
-                        .insert(PriceAccountFlags::MESSAGE_BUFFER_CLEARED);
-                }
+                        .as_price_feed_message(price_account.key)
+                        .to_bytes(),
+                    price_data.as_twap_message(price_account.key).to_bytes(),
+                ]
+            };
+
+            // Append a TWAP message if available
+
+            // anchor discriminator for "global:put_all"
+            let discriminator: [u8; 8] = [212, 225, 193, 91, 151, 238, 20, 93];
+            let create_inputs_ix = Instruction::new_with_borsh(
+                *accumulator_accounts.program_id.key,
+                &(discriminator, price_account.key.to_bytes(), message),
+                account_metas,
+            );
+
+            let auth_seeds_with_bump: &[&[u8]] = &[
+                UPD_PRICE_WRITE_SEED.as_bytes(),
+                &accumulator_accounts.program_id.key.to_bytes(),
+                &[bump],
+            ];
+
+            invoke_signed(&create_inputs_ix, accounts, &[auth_seeds_with_bump])?;
+            price_data.message_sent_ = 1;
+            if flags.contains(PriceAccountFlags::ACCUMULATOR_V2) {
+                price_data
+                    .flags
+                    .insert(PriceAccountFlags::MESSAGE_BUFFER_CLEARED);
             }
         }
     }
