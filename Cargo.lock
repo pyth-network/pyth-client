@@ -2610,6 +2610,7 @@ dependencies = [
 [[package]]
 name = "pythnet-sdk"
 version = "2.1.0"
+source = "git+https://github.com/pyth-network/pyth-crosschain?branch=feat/publisher-caps#959a43cfbf5547d783344af641c27d1bbb240e38"
 dependencies = [
  "bincode",
  "borsh 0.10.3",
