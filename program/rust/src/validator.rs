@@ -181,7 +181,8 @@ pub fn compute_publisher_stake_caps(accounts: Vec<&[u8]>, timestamp: i64) -> Vec
                 publisher: publisher.to_bytes(),
                 cap,
             })
-            .collect(),
+            .collect::<Vec<PublisherCap>>()
+            .into(),
     };
 
     return message.to_bytes();
