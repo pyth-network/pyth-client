@@ -8,6 +8,7 @@ use {
             PythOracleSerialize,
         },
         c_oracle_header::PC_MAGIC,
+        deserialize::load_account_as,
         error::OracleError,
         processor::{
             c_upd_aggregate,
@@ -24,11 +25,12 @@ use {
             AccountSharedData,
             ReadableAccount,
         },
+        program_error::ProgramError,
         pubkey::Pubkey,
         transaction_context::TransactionAccount,
     },
     std::{
-        collections::HashMap,
+        collections::{BTreeMap, HashMap},
         mem::size_of,
     },
 };
@@ -143,16 +145,44 @@ pub fn aggregate_price(
     ])
 }
 
+fn validate_price_account_readonly(price_account_info: &[u8]) -> Option<&PriceAccount> {
+    pyth_assert(
+        price_account_info.len() >= PriceAccount::MINIMUM_SIZE,
+        OracleError::AccountTooSmall.into(),
+    )
+    .ok()?;
+
+    {
+        let account_header = bytemuck::from_bytes::<AccountHeader>(
+            &price_account_info[0..size_of::<AccountHeader>()],
+        );
+
+        pyth_assert(
+            account_header.magic_number == PC_MAGIC
+                && account_header.account_type == PriceAccount::ACCOUNT_TYPE,
+            OracleError::InvalidAccountHeader.into(),
+        )
+        .ok()?
+    }
+
+    Some(bytemuck::from_bytes::<PriceAccount>(
+        &price_account_info[0..size_of::<PriceAccount>()],
+    ))
+}
+
+pub const PUBLISHER_CAPS_DENOMINATOR: u64 = 1_000_000;
+
 pub fn compute_publisher_caps(accounts: Vec<&[u8]>, timestamp: i64) -> Vec<u8> {
-    let mut publisher_caps: HashMap<Pubkey, u64> = HashMap::new();
+    let mut publisher_caps: BTreeMap<Pubkey, u64> = BTreeMap::new();
     for account in accounts {
-        let price_account: &PriceAccount = bytemuck::from_bytes(&account);
-        let cap = 1_000_000 / (price_account.num_ as u64);
-        for i in 0..(price_account.num_ as usize) {
-            publisher_caps
-                .entry(price_account.comp_[i].pub_)
-                .and_modify(|e| *e += cap)
-                .or_insert(cap);
+        if let Some(price_account) = validate_price_account_readonly(account) {
+            let cap : u64 = PUBLISHER_CAPS_DENOMINATOR / u64::from(price_account.num_);
+            for i in 0..usize::try_from(price_account.num_).unwrap() {
+                publisher_caps
+                    .entry(price_account.comp_[i].pub_)
+                    .and_modify(|e: &mut u64| *e = e.saturating_add(cap))
+                    .or_insert(cap);
+            }
         }
     }
 
