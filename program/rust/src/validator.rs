@@ -163,7 +163,9 @@ pub fn compute_publisher_stake_caps(accounts: Vec<&[u8]>, timestamp: i64) -> Vec
     let mut publisher_caps: BTreeMap<Pubkey, u64> = BTreeMap::new();
     for account in accounts {
         if let Some(price_account) = checked_load_price_account(account) {
-            let cap: u64 = PUBLISHER_CAPS_DENOMINATOR / u64::from(price_account.num_);
+            let cap: u64 = PUBLISHER_CAPS_DENOMINATOR
+                .checked_div(u64::from(price_account.num_))
+                .unwrap_or(0);
             for i in 0..(price_account.num_ as usize) {
                 publisher_caps
                     .entry(price_account.comp_[i].pub_)
