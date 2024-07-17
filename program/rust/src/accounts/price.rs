@@ -349,7 +349,7 @@ impl PythOracleSerialize for PublisherCapsMessage {
 
         result.extend_from_slice(&[DISCRIMINATOR]);
         result.extend_from_slice(&self.publish_time.to_be_bytes());
-        result.extend_from_slice(&self.caps.len().to_be_bytes());
+        result.extend_from_slice(&TryInto::<u16>::try_into(self.caps.as_ref().len()).unwrap().to_be_bytes());
 
         for cap in self.caps {
             result.extend_from_slice(&cap.publisher);
