@@ -159,7 +159,7 @@ fn checked_load_price_account(price_account_info: &[u8]) -> Option<&PriceAccount
 
 pub const PUBLISHER_CAPS_DENOMINATOR: u64 = 1_000_000;
 
-pub fn compute_publisher_caps(accounts: Vec<&[u8]>, timestamp: i64) -> Vec<u8> {
+pub fn compute_publisher_stake_caps(accounts: Vec<&[u8]>, timestamp: i64) -> Vec<u8> {
     let mut publisher_caps: BTreeMap<Pubkey, u64> = BTreeMap::new();
     for account in accounts {
         if let Some(price_account) = checked_load_price_account(account) {
