@@ -30,34 +30,39 @@ use {
         transaction_context::TransactionAccount,
     },
     std::{
-        collections::{BTreeMap, HashMap},
+        collections::{
+            BTreeMap,
+            HashMap,
+        },
         mem::size_of,
     },
 };
+
+// Checks that the account is a PriceAccount from the length and header.
+fn check_price_account_header(price_account_info: &[u8]) -> Result<(), ProgramError> {
+    pyth_assert(
+        price_account_info.len() >= PriceAccount::MINIMUM_SIZE,
+        OracleError::AccountTooSmall.into(),
+    )?;
+
+    let account_header =
+        bytemuck::from_bytes::<AccountHeader>(&price_account_info[0..size_of::<AccountHeader>()]);
+
+    pyth_assert(
+        account_header.magic_number == PC_MAGIC
+            && account_header.account_type == PriceAccount::ACCOUNT_TYPE,
+        OracleError::InvalidAccountHeader.into(),
+    )?;
+
+    Ok(())
+}
 
 // Attempts to validate and access the contents of an account as a PriceAccount.
 fn validate_price_account(
     price_account_info: &mut [u8],
 ) -> Result<&mut PriceAccount, AggregationError> {
-    // TODO: don't return error on non-price account?
-    pyth_assert(
-        price_account_info.len() >= PriceAccount::MINIMUM_SIZE,
-        OracleError::AccountTooSmall.into(),
-    )
-    .map_err(|_| AggregationError::NotPriceFeedAccount)?;
-
-    {
-        let account_header = bytemuck::from_bytes::<AccountHeader>(
-            &price_account_info[0..size_of::<AccountHeader>()],
-        );
-
-        pyth_assert(
-            account_header.magic_number == PC_MAGIC
-                && account_header.account_type == PriceAccount::ACCOUNT_TYPE,
-            OracleError::InvalidAccountHeader.into(),
-        )
+    check_price_account_header(price_account_info)
         .map_err(|_| AggregationError::NotPriceFeedAccount)?;
-    }
 
     let data = bytemuck::from_bytes_mut::<PriceAccount>(
         &mut price_account_info[0..size_of::<PriceAccount>()],
@@ -145,26 +150,8 @@ pub fn aggregate_price(
     ])
 }
 
-fn validate_price_account_readonly(price_account_info: &[u8]) -> Option<&PriceAccount> {
-    pyth_assert(
-        price_account_info.len() >= PriceAccount::MINIMUM_SIZE,
-        OracleError::AccountTooSmall.into(),
-    )
-    .ok()?;
-
-    {
-        let account_header = bytemuck::from_bytes::<AccountHeader>(
-            &price_account_info[0..size_of::<AccountHeader>()],
-        );
-
-        pyth_assert(
-            account_header.magic_number == PC_MAGIC
-                && account_header.account_type == PriceAccount::ACCOUNT_TYPE,
-            OracleError::InvalidAccountHeader.into(),
-        )
-        .ok()?
-    }
-
+fn checked_load_price_account(price_account_info: &[u8]) -> Option<&PriceAccount> {
+    check_price_account_header(price_account_info).ok()?;
     Some(bytemuck::from_bytes::<PriceAccount>(
         &price_account_info[0..size_of::<PriceAccount>()],
     ))
@@ -175,9 +162,9 @@ pub const PUBLISHER_CAPS_DENOMINATOR: u64 = 1_000_000;
 pub fn compute_publisher_caps(accounts: Vec<&[u8]>, timestamp: i64) -> Vec<u8> {
     let mut publisher_caps: BTreeMap<Pubkey, u64> = BTreeMap::new();
     for account in accounts {
-        if let Some(price_account) = validate_price_account_readonly(account) {
-            let cap : u64 = PUBLISHER_CAPS_DENOMINATOR / u64::from(price_account.num_);
-            for i in 0..usize::try_from(price_account.num_).unwrap() {
+        if let Some(price_account) = checked_load_price_account(account) {
+            let cap: u64 = PUBLISHER_CAPS_DENOMINATOR / u64::from(price_account.num_);
+            for i in 0..(price_account.num_ as usize) {
                 publisher_caps
                     .entry(price_account.comp_[i].pub_)
                     .and_modify(|e: &mut u64| *e = e.saturating_add(cap))
