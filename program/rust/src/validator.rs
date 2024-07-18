@@ -30,10 +30,12 @@ use {
         transaction_context::TransactionAccount,
     },
     std::{
-        cmp::max, collections::{
+        cmp::max,
+        collections::{
             BTreeMap,
             HashMap,
-        }, mem::size_of
+        },
+        mem::size_of,
     },
 };
 
@@ -158,9 +160,9 @@ fn checked_load_price_account(price_account_info: &[u8]) -> Option<&PriceAccount
 
 pub const PUBLISHER_CAPS_DENOMINATOR: u64 = 1_000_000;
 
-pub fn compute_publisher_stake_caps(accounts: Vec<&[u8]>, timestamp: i64, z : u64) -> Vec<u8> {
+pub fn compute_publisher_stake_caps(account_datas: Vec<&[u8]>, timestamp: i64, z: u64) -> Vec<u8> {
     let mut publisher_caps: BTreeMap<Pubkey, u64> = BTreeMap::new();
-    for account in accounts {
+    for account in account_datas {
         if let Some(price_account) = checked_load_price_account(account) {
             let cap: u64 = PUBLISHER_CAPS_DENOMINATOR
                 .checked_div(max(u64::from(price_account.num_), z))
@@ -174,7 +176,7 @@ pub fn compute_publisher_stake_caps(accounts: Vec<&[u8]>, timestamp: i64, z : u6
         }
     }
 
-    let message = PublisherStakeCapsMessage {
+    PublisherStakeCapsMessage {
         publish_time: timestamp,
         caps:         publisher_caps
             .into_iter()
@@ -184,7 +186,5 @@ pub fn compute_publisher_stake_caps(accounts: Vec<&[u8]>, timestamp: i64, z : u6
             })
             .collect::<Vec<PublisherStakeCap>>()
             .into(),
-    };
-
-    return message.to_bytes();
+    }.to_bytes()
 }
