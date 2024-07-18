@@ -17,8 +17,8 @@ use {
         utils::pyth_assert,
     },
     pythnet_sdk::messages::{
-        PublisherCap,
-        PublisherCapsMessage,
+        PublisherStakeCap,
+        PublisherStakeCapsMessage,
     },
     solana_sdk::{
         account::{
@@ -175,15 +175,15 @@ pub fn compute_publisher_stake_caps(accounts: Vec<&[u8]>, timestamp: i64) -> Vec
         }
     }
 
-    let message = PublisherCapsMessage {
+    let message = PublisherStakeCapsMessage {
         publish_time: timestamp,
         caps:         publisher_caps
             .into_iter()
-            .map(|(publisher, cap)| PublisherCap {
+            .map(|(publisher, cap)| PublisherStakeCap {
                 publisher: publisher.to_bytes(),
                 cap,
             })
-            .collect::<Vec<PublisherCap>>()
+            .collect::<Vec<PublisherStakeCap>>()
             .into(),
     };
 

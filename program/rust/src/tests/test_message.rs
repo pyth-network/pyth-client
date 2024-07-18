@@ -5,7 +5,7 @@ use {
         messages::{
             Message,
             PriceFeedMessage,
-            PublisherCapsMessage,
+            PublisherStakeCapsMessage,
             TwapMessage,
         },
         wire::{
@@ -49,7 +49,7 @@ fn test_twap_message_roundtrip(input: TwapMessage) -> bool {
 }
 
 
-fn prop_publisher_caps_message_roundtrip(input: PublisherCapsMessage) -> bool {
+fn prop_publisher_caps_message_roundtrip(input: PublisherStakeCapsMessage) -> bool {
     let reconstructed = from_slice::<BigEndian, Message>(&input.clone().to_bytes()).unwrap();
 
     println!("Failed test case:");
@@ -57,7 +57,7 @@ fn prop_publisher_caps_message_roundtrip(input: PublisherCapsMessage) -> bool {
     println!("{:?}", reconstructed);
 
     match reconstructed {
-        Message::PublisherCapsMessage(reconstructed) => reconstructed == input,
+        Message::PublisherStakeCapsMessage(reconstructed) => reconstructed == input,
         _ => false,
     }
 }
@@ -67,5 +67,5 @@ fn test_publisher_caps_message_roundtrip() {
     // Configure the size parameter for the generator
     QuickCheck::new()
         .gen(Gen::new(1024))
-        .quickcheck(prop_publisher_caps_message_roundtrip as fn(PublisherCapsMessage) -> bool);
+        .quickcheck(prop_publisher_caps_message_roundtrip as fn(PublisherStakeCapsMessage) -> bool);
 }

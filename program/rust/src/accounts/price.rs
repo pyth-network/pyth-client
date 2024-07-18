@@ -13,7 +13,7 @@ use {
     },
     pythnet_sdk::messages::{
         PriceFeedMessage,
-        PublisherCapsMessage,
+        PublisherStakeCapsMessage,
         TwapMessage,
     },
     solana_program::pubkey::Pubkey,
@@ -342,7 +342,7 @@ impl PythOracleSerialize for TwapMessage {
     }
 }
 
-impl PythOracleSerialize for PublisherCapsMessage {
+impl PythOracleSerialize for PublisherStakeCapsMessage {
     fn to_bytes(self) -> Vec<u8> {
         const DISCRIMINATOR: u8 = 2;
         let mut result: Vec<u8> = Vec::new();

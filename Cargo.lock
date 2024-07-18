@@ -369,7 +369,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4114279215a005bc675e386011e594e1d9b800918cea18fcadadcce864a2046b"
 dependencies = [
  "borsh-derive 0.10.3",
- "hashbrown 0.12.3",
+ "hashbrown 0.11.2",
 ]
 
 [[package]]
@@ -2610,7 +2610,7 @@ dependencies = [
 [[package]]
 name = "pythnet-sdk"
 version = "2.1.0"
-source = "git+https://github.com/pyth-network/pyth-crosschain?branch=feat/publisher-caps#3522f2940522e49aa56038e1000ea78f2e489d20"
+source = "git+https://github.com/pyth-network/pyth-crosschain?branch=feat/publisher-caps#4989828325d932bcbbf67bdc507301a8b23dcaee"
 dependencies = [
  "bincode",
  "borsh 0.10.3",
