@@ -158,13 +158,16 @@ fn checked_load_price_account(price_account_info: &[u8]) -> Option<&PriceAccount
     ))
 }
 
-pub const PUBLISHER_CAPS_DENOMINATOR: u64 = 1_000_000;
-
-pub fn compute_publisher_stake_caps(account_datas: Vec<&[u8]>, timestamp: i64, z: u64) -> Vec<u8> {
+pub fn compute_publisher_stake_caps(
+    account_datas: Vec<&[u8]>,
+    timestamp: i64,
+    m: u64,
+    z: u64,
+) -> Vec<u8> {
     let mut publisher_caps: BTreeMap<Pubkey, u64> = BTreeMap::new();
     for account in account_datas {
         if let Some(price_account) = checked_load_price_account(account) {
-            let cap: u64 = PUBLISHER_CAPS_DENOMINATOR
+            let cap: u64 = m
                 .checked_div(max(u64::from(price_account.num_), z))
                 .unwrap_or(0);
             for i in 0..(price_account.num_ as usize) {
@@ -186,5 +189,6 @@ pub fn compute_publisher_stake_caps(account_datas: Vec<&[u8]>, timestamp: i64, z
             })
             .collect::<Vec<PublisherStakeCap>>()
             .into(),
-    }.to_bytes()
+    }
+    .to_bytes()
 }
