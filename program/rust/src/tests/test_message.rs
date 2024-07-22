@@ -8,17 +8,13 @@ use {
             PublisherStakeCapsMessage,
             TwapMessage,
         },
-        wire::{
-            from_slice,
-            Serializer,
-        },
+        wire::from_slice,
     },
     quickcheck::{
         Gen,
         QuickCheck,
     },
     quickcheck_macros::quickcheck,
-    serde::Serialize,
 };
 
 #[quickcheck]

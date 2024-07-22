@@ -360,6 +360,6 @@ impl PythOracleSerialize for PublisherStakeCapsMessage {
             result.extend_from_slice(&cap.cap.to_be_bytes());
         }
 
-        return result;
+        result
     }
 }

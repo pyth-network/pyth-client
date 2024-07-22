@@ -8,7 +8,6 @@ use {
             PythOracleSerialize,
         },
         c_oracle_header::PC_MAGIC,
-        deserialize::load_account_as,
         error::OracleError,
         processor::{
             c_upd_aggregate,
@@ -21,20 +20,12 @@ use {
         PublisherStakeCapsMessage,
     },
     solana_sdk::{
-        account::{
-            AccountSharedData,
-            ReadableAccount,
-        },
         program_error::ProgramError,
         pubkey::Pubkey,
-        transaction_context::TransactionAccount,
     },
     std::{
         cmp::max,
-        collections::{
-            BTreeMap,
-            HashMap,
-        },
+        collections::BTreeMap,
         mem::size_of,
     },
 };
