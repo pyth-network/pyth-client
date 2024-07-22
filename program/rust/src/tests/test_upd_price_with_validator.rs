@@ -24,7 +24,7 @@ use {
             update_clock_slot,
             AccountSetup,
         },
-        validator::{self,},
+        validator,
     },
     solana_program::{
         program_error::ProgramError,
@@ -120,22 +120,12 @@ fn test_upd_price_with_validator() {
     }
 
     // We aggregate the price at the end of each slot now.
-    validator::aggregate_price(
-        1,
-        101,
-        price_account.key,
-        &mut *price_account.data.borrow_mut(),
-    )
-    .unwrap();
+    validator::aggregate_price(1, 101, price_account.key, *price_account.data.borrow_mut())
+        .unwrap();
     update_clock_slot(&mut clock_account, 2);
 
-    validator::aggregate_price(
-        2,
-        102,
-        price_account.key,
-        &mut *price_account.data.borrow_mut(),
-    )
-    .unwrap();
+    validator::aggregate_price(2, 102, price_account.key, *price_account.data.borrow_mut())
+        .unwrap();
     update_clock_slot(&mut clock_account, 3);
     // add next price in new slot triggering snapshot and aggregate calc
     populate_instruction(&mut instruction_data, 81, 2, 2);
@@ -166,13 +156,8 @@ fn test_upd_price_with_validator() {
 
     // next price doesn't change but slot does
     populate_instruction(&mut instruction_data, 81, 2, 3);
-    validator::aggregate_price(
-        3,
-        103,
-        price_account.key,
-        &mut *price_account.data.borrow_mut(),
-    )
-    .unwrap();
+    validator::aggregate_price(3, 103, price_account.key, *price_account.data.borrow_mut())
+        .unwrap();
     update_clock_slot(&mut clock_account, 4);
     assert!(process_instruction(
         &program_id,
@@ -199,13 +184,8 @@ fn test_upd_price_with_validator() {
 
     // next price doesn't change and neither does aggregate but slot does
     populate_instruction(&mut instruction_data, 81, 2, 4);
-    validator::aggregate_price(
-        4,
-        104,
-        price_account.key,
-        &mut *price_account.data.borrow_mut(),
-    )
-    .unwrap();
+    validator::aggregate_price(4, 104, price_account.key, *price_account.data.borrow_mut())
+        .unwrap();
     update_clock_slot(&mut clock_account, 5);
 
     assert!(process_instruction(
@@ -261,13 +241,8 @@ fn test_upd_price_with_validator() {
     }
 
     populate_instruction(&mut instruction_data, 50, 20, 5);
-    validator::aggregate_price(
-        5,
-        105,
-        price_account.key,
-        &mut *price_account.data.borrow_mut(),
-    )
-    .unwrap();
+    validator::aggregate_price(5, 105, price_account.key, *price_account.data.borrow_mut())
+        .unwrap();
     update_clock_slot(&mut clock_account, 6);
 
     // Publishing a wide CI results in a status of unknown.
@@ -304,13 +279,8 @@ fn test_upd_price_with_validator() {
     // Crank one more time and aggregate should be unknown
     populate_instruction(&mut instruction_data, 50, 20, 6);
 
-    validator::aggregate_price(
-        6,
-        106,
-        price_account.key,
-        &mut *price_account.data.borrow_mut(),
-    )
-    .unwrap();
+    validator::aggregate_price(6, 106, price_account.key, *price_account.data.borrow_mut())
+        .unwrap();
     update_clock_slot(&mut clock_account, 7);
 
 
@@ -339,13 +309,8 @@ fn test_upd_price_with_validator() {
 
     // Negative prices are accepted
     populate_instruction(&mut instruction_data, -100, 1, 7);
-    validator::aggregate_price(
-        7,
-        107,
-        price_account.key,
-        &mut *price_account.data.borrow_mut(),
-    )
-    .unwrap();
+    validator::aggregate_price(7, 107, price_account.key, *price_account.data.borrow_mut())
+        .unwrap();
     update_clock_slot(&mut clock_account, 8);
 
 
@@ -374,13 +339,8 @@ fn test_upd_price_with_validator() {
 
     // Crank again for aggregate
     populate_instruction(&mut instruction_data, -100, 1, 8);
-    validator::aggregate_price(
-        8,
-        108,
-        price_account.key,
-        &mut *price_account.data.borrow_mut(),
-    )
-    .unwrap();
+    validator::aggregate_price(8, 108, price_account.key, *price_account.data.borrow_mut())
+        .unwrap();
     update_clock_slot(&mut clock_account, 9);
 
 

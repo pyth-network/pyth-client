@@ -43,6 +43,8 @@ mod product;
 #[cfg(feature = "strum")]
 pub use price::MessageType;
 #[cfg(test)]
+pub use price::PriceCumulative;
+#[cfg(test)]
 pub use product::{
     account_has_key_values,
     create_pc_str_t,
@@ -54,13 +56,11 @@ pub use {
         PriceAccount,
         PriceAccountFlags,
         PriceComponent,
-        PriceCumulative,
         PriceEma,
         PriceInfo,
         PythOracleSerialize,
     },
     product::{
-        read_pc_str_t,
         update_product_metadata,
         ProductAccount,
     },
