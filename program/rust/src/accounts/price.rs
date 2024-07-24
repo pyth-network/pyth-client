@@ -345,9 +345,7 @@ impl PythOracleSerialize for TwapMessage {
 impl PythOracleSerialize for PublisherStakeCapsMessage {
     fn to_bytes(self) -> Vec<u8> {
         const DISCRIMINATOR: u8 = 2;
-        let mut result: Vec<u8> = Vec::new();
-
-        result.extend_from_slice(&[DISCRIMINATOR]);
+        let mut result = vec![DISCRIMINATOR];
         result.extend_from_slice(&self.publish_time.to_be_bytes());
         result.extend_from_slice(
             &TryInto::<u16>::try_into(self.caps.as_ref().len())
