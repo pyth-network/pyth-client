@@ -10,6 +10,12 @@ mod instruction;
 mod processor;
 mod utils;
 
+#[cfg(any(test, feature = "library"))]
+pub mod validator;
+
+#[cfg(feature = "library")]
+pub use solana_program;
+
 #[cfg(test)]
 mod tests;
 
@@ -31,11 +37,13 @@ pub use accounts::{
     MappingAccount,
     PermissionAccount,
     PriceAccount,
+    PriceAccountFlags,
     PriceComponent,
     PriceEma,
     PriceInfo,
     ProductAccount,
     PythAccount,
+    PythOracleSerialize,
 };
 use {
     crate::error::OracleError,

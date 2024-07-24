@@ -34,7 +34,6 @@ use {
     std::borrow::BorrowMut,
 };
 
-
 mod mapping;
 mod permission;
 mod price;
@@ -43,6 +42,8 @@ mod product;
 // Some types only exist during use as a library.
 #[cfg(feature = "strum")]
 pub use price::MessageType;
+#[cfg(test)]
+pub use price::PriceCumulative;
 #[cfg(test)]
 pub use product::{
     account_has_key_values,
@@ -53,14 +54,13 @@ pub use {
     permission::PermissionAccount,
     price::{
         PriceAccount,
+        PriceAccountFlags,
         PriceComponent,
-        PriceCumulative,
         PriceEma,
         PriceInfo,
         PythOracleSerialize,
     },
     product::{
-        read_pc_str_t,
         update_product_metadata,
         ProductAccount,
     },

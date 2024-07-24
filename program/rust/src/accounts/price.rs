@@ -25,14 +25,12 @@ mod price_pythnet {
 
     use {
         super::*,
-        crate::{
-            c_oracle_header::{
-                PC_MAX_SEND_LATENCY,
-                PC_NUM_COMP_PYTHNET,
-                PC_STATUS_TRADING,
-            },
-            error::OracleError,
+        crate::c_oracle_header::{
+            PC_MAX_SEND_LATENCY,
+            PC_NUM_COMP_PYTHNET,
+            PC_STATUS_TRADING,
         },
+        bitflags::bitflags,
     };
 
     /// Pythnet-only extended price account format. This extension is
@@ -65,8 +63,9 @@ mod price_pythnet {
         pub message_sent_:      u8,
         /// Configurable max latency in slots between send and receive
         pub max_latency_:       u8,
+        /// Various flags
+        pub flags:              PriceAccountFlags,
         /// Unused placeholder for alignment
-        pub unused_2_:          i8,
         pub unused_3_:          i32,
         /// Corresponding product account
         pub product_account:    Pubkey,
@@ -91,6 +90,18 @@ mod price_pythnet {
         pub price_cumulative:   PriceCumulative,
     }
 
+    bitflags! {
+        #[repr(C)]
+        #[derive(Copy, Clone, Pod, Zeroable)]
+        pub struct PriceAccountFlags: u8 {
+            /// If set, the program doesn't do accumulation, but validator does.
+            const ACCUMULATOR_V2 = 0b1;
+            /// If unset, the program will remove old messages from its message buffer account
+            /// and set this flag.
+            const MESSAGE_BUFFER_CLEARED = 0b10;
+        }
+    }
+
     impl PriceAccountPythnet {
         pub fn as_price_feed_message(&self, key: &Pubkey) -> PriceFeedMessage {
             let (price, conf, publish_time) = if self.agg_.status_ == PC_STATUS_TRADING {
@@ -111,7 +122,7 @@ mod price_pythnet {
             }
         }
         /// This function gets triggered when there's a succesful aggregation and updates the cumulative sums
-        pub fn update_price_cumulative(&mut self) -> Result<(), OracleError> {
+        pub fn update_price_cumulative(&mut self) {
             if self.agg_.status_ == PC_STATUS_TRADING {
                 self.price_cumulative.update(
                     self.agg_.price_,
@@ -119,9 +130,6 @@ mod price_pythnet {
                     self.agg_.pub_slot_.saturating_sub(self.prev_slot_),
                     self.max_latency_,
                 ); // pub_slot should always be >= prev_slot, but we protect ourselves against underflow just in case
-                Ok(())
-            } else {
-                Err(OracleError::NeedsSuccesfulAggregation)
             }
         }
 

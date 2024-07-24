@@ -2,6 +2,7 @@ use {
     crate::{
         accounts::{
             PriceAccount,
+            PriceAccountFlags,
             PriceComponent,
             PriceInfo,
             PythOracleSerialize,
@@ -131,6 +132,7 @@ pub fn upd_price(
 
     let publisher_index: usize;
     let latest_aggregate_price: PriceInfo;
+    let flags: PriceAccountFlags;
 
     // The price_data borrow happens in a scope because it must be
     // dropped before we borrow again as raw data pointer for the C
@@ -159,39 +161,43 @@ pub fn upd_price(
                     && cmd_args.publishing_slot <= clock.slot),
             ProgramError::InvalidArgument,
         )?;
+
+        flags = price_data.flags;
     }
 
-    // Try to update the aggregate
-    #[allow(unused_variables)]
-    if clock.slot > latest_aggregate_price.pub_slot_ {
-        let updated = unsafe {
-            // NOTE: c_upd_aggregate must use a raw pointer to price
-            // data. Solana's `<account>.borrow_*` methods require exclusive
-            // access, i.e. no other borrow can exist for the account.
-            c_upd_aggregate(
-                price_account.try_borrow_mut_data()?.as_mut_ptr(),
-                clock.slot,
-                clock.unix_timestamp,
-            )
-        };
+    if !flags.contains(PriceAccountFlags::ACCUMULATOR_V2) {
+        // Try to update the aggregate
+        #[allow(unused_variables)]
+        if clock.slot > latest_aggregate_price.pub_slot_ {
+            let updated = unsafe {
+                // NOTE: c_upd_aggregate must use a raw pointer to price
+                // data. Solana's `<account>.borrow_*` methods require exclusive
+                // access, i.e. no other borrow can exist for the account.
+                c_upd_aggregate(
+                    price_account.try_borrow_mut_data()?.as_mut_ptr(),
+                    clock.slot,
+                    clock.unix_timestamp,
+                )
+            };
 
-        // If the aggregate was successfully updated, calculate the difference and update TWAP.
-        if updated {
-            let agg_diff = (clock.slot as i64)
-                - load_checked::<PriceAccount>(price_account, cmd_args.header.version)?.prev_slot_
-                    as i64;
-            // Encapsulate TWAP update logic in a function to minimize unsafe block scope.
-            unsafe {
-                c_upd_twap(price_account.try_borrow_mut_data()?.as_mut_ptr(), agg_diff);
+            // If the aggregate was successfully updated, calculate the difference and update TWAP.
+            if updated {
+                let agg_diff = (clock.slot as i64)
+                    - load_checked::<PriceAccount>(price_account, cmd_args.header.version)?
+                        .prev_slot_ as i64;
+                // Encapsulate TWAP update logic in a function to minimize unsafe block scope.
+                unsafe {
+                    c_upd_twap(price_account.try_borrow_mut_data()?.as_mut_ptr(), agg_diff);
+                }
+                let mut price_data =
+                    load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
+                // We want to send a message every time the aggregate price updates. However, during the migration,
+                // not every publisher will necessarily provide the accumulator accounts. The message_sent_ flag
+                // ensures that after every aggregate update, the next publisher who provides the accumulator accounts
+                // will send the message.
+                price_data.message_sent_ = 0;
+                price_data.update_price_cumulative();
             }
-            let mut price_data =
-                load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
-            // We want to send a message every time the aggregate price updates. However, during the migration,
-            // not every publisher will necessarily provide the accumulator accounts. The message_sent_ flag
-            // ensures that after every aggregate update, the next publisher who provides the accumulator accounts
-            // will send the message.
-            price_data.message_sent_ = 0;
-            price_data.update_price_cumulative()?;
         }
     }
 
@@ -199,64 +205,77 @@ pub fn upd_price(
     let mut price_data = load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
 
     // Feature-gated accumulator-specific code, used only on pythnet/pythtest
-    {
+    let need_message_buffer_update = if flags.contains(PriceAccountFlags::ACCUMULATOR_V2) {
+        // We need to clear old messages.
+        !flags.contains(PriceAccountFlags::MESSAGE_BUFFER_CLEARED)
+    } else {
+        // V1
+        price_data.message_sent_ == 0
+    };
+
+    if need_message_buffer_update {
         if let Some(accumulator_accounts) = maybe_accumulator_accounts {
-            if price_data.message_sent_ == 0 {
-                // Check that the oracle PDA is correctly configured for the program we are calling.
-                let oracle_auth_seeds: &[&[u8]] = &[
-                    UPD_PRICE_WRITE_SEED.as_bytes(),
-                    &accumulator_accounts.program_id.key.to_bytes(),
-                ];
-                let (expected_oracle_auth_pda, bump) =
-                    Pubkey::find_program_address(oracle_auth_seeds, program_id);
-                pyth_assert(
-                    expected_oracle_auth_pda == *accumulator_accounts.oracle_auth_pda.key,
-                    OracleError::InvalidPda.into(),
-                )?;
+            // Check that the oracle PDA is correctly configured for the program we are calling.
+            let oracle_auth_seeds: &[&[u8]] = &[
+                UPD_PRICE_WRITE_SEED.as_bytes(),
+                &accumulator_accounts.program_id.key.to_bytes(),
+            ];
+            let (expected_oracle_auth_pda, bump) =
+                Pubkey::find_program_address(oracle_auth_seeds, program_id);
+            pyth_assert(
+                expected_oracle_auth_pda == *accumulator_accounts.oracle_auth_pda.key,
+                OracleError::InvalidPda.into(),
+            )?;
 
-                let account_metas = vec![
-                    AccountMeta {
-                        pubkey:      *accumulator_accounts.whitelist.key,
-                        is_signer:   false,
-                        is_writable: false,
-                    },
-                    AccountMeta {
-                        pubkey:      *accumulator_accounts.oracle_auth_pda.key,
-                        is_signer:   true,
-                        is_writable: false,
-                    },
-                    AccountMeta {
-                        pubkey:      *accumulator_accounts.message_buffer_data.key,
-                        is_signer:   false,
-                        is_writable: true,
-                    },
-                ];
+            let account_metas = vec![
+                AccountMeta {
+                    pubkey:      *accumulator_accounts.whitelist.key,
+                    is_signer:   false,
+                    is_writable: false,
+                },
+                AccountMeta {
+                    pubkey:      *accumulator_accounts.oracle_auth_pda.key,
+                    is_signer:   true,
+                    is_writable: false,
+                },
+                AccountMeta {
+                    pubkey:      *accumulator_accounts.message_buffer_data.key,
+                    is_signer:   false,
+                    is_writable: true,
+                },
+            ];
 
-                let message = vec![
+            let message = if flags.contains(PriceAccountFlags::ACCUMULATOR_V2) {
+                vec![]
+            } else {
+                vec![
                     price_data
                         .as_price_feed_message(price_account.key)
                         .to_bytes(),
                     price_data.as_twap_message(price_account.key).to_bytes(),
-                ];
+                ]
+            };
 
-                // Append a TWAP message if available
+            // anchor discriminator for "global:put_all"
+            let discriminator: [u8; 8] = [212, 225, 193, 91, 151, 238, 20, 93];
+            let create_inputs_ix = Instruction::new_with_borsh(
+                *accumulator_accounts.program_id.key,
+                &(discriminator, price_account.key.to_bytes(), message),
+                account_metas,
+            );
 
-                // anchor discriminator for "global:put_all"
-                let discriminator: [u8; 8] = [212, 225, 193, 91, 151, 238, 20, 93];
-                let create_inputs_ix = Instruction::new_with_borsh(
-                    *accumulator_accounts.program_id.key,
-                    &(discriminator, price_account.key.to_bytes(), message),
-                    account_metas,
-                );
+            let auth_seeds_with_bump: &[&[u8]] = &[
+                UPD_PRICE_WRITE_SEED.as_bytes(),
+                &accumulator_accounts.program_id.key.to_bytes(),
+                &[bump],
+            ];
 
-                let auth_seeds_with_bump: &[&[u8]] = &[
-                    UPD_PRICE_WRITE_SEED.as_bytes(),
-                    &accumulator_accounts.program_id.key.to_bytes(),
-                    &[bump],
-                ];
-
-                invoke_signed(&create_inputs_ix, accounts, &[auth_seeds_with_bump])?;
-                price_data.message_sent_ = 1;
+            invoke_signed(&create_inputs_ix, accounts, &[auth_seeds_with_bump])?;
+            price_data.message_sent_ = 1;
+            if flags.contains(PriceAccountFlags::ACCUMULATOR_V2) {
+                price_data
+                    .flags
+                    .insert(PriceAccountFlags::MESSAGE_BUFFER_CLEARED);
             }
         }
     }
@@ -287,7 +306,7 @@ pub fn upd_price(
 /// to get the result faster if the list is sorted. If the list is not sorted, it falls back to
 /// a linear search.
 #[inline(always)]
-fn find_publisher_index(comps: &[PriceComponent], key: &Pubkey) -> Option<usize> {
+pub fn find_publisher_index(comps: &[PriceComponent], key: &Pubkey) -> Option<usize> {
     // Verify that publisher is authorized by initially binary searching
     // for the publisher's component in the price account. The binary
     // search might not work if the publisher list is not sorted; therefore
