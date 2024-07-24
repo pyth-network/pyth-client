@@ -149,8 +149,8 @@ fn checked_load_price_account(price_account_info: &[u8]) -> Option<&PriceAccount
     ))
 }
 
-pub fn compute_publisher_stake_caps(
-    account_datas: Vec<&[u8]>,
+pub fn compute_publisher_stake_caps<'a>(
+    account_datas: impl IntoIterator<Item = &'a [u8]>,
     timestamp: i64,
     m: u64,
     z: u64,
