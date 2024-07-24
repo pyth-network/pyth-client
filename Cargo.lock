@@ -2533,7 +2533,7 @@ dependencies = [
 
 [[package]]
 name = "pyth-oracle"
-version = "2.26.0"
+version = "2.32.0"
 dependencies = [
  "bincode",
  "bindgen",
