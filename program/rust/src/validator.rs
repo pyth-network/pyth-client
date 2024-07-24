@@ -50,7 +50,7 @@ fn check_price_account_header(price_account_info: &[u8]) -> Result<(), ProgramEr
 }
 
 // Attempts to validate and access the contents of an account as a PriceAccount.
-fn validate_price_account(
+pub fn validate_price_account(
     price_account_info: &mut [u8],
 ) -> Result<&mut PriceAccount, AggregationError> {
     check_price_account_header(price_account_info)
@@ -123,9 +123,8 @@ pub fn aggregate_price(
     slot: u64,
     timestamp: i64,
     price_account_pubkey: &Pubkey,
-    price_account_data: &mut [u8],
+    price_account: &mut PriceAccount,
 ) -> Result<[Vec<u8>; 2], AggregationError> {
-    let price_account = validate_price_account(price_account_data)?;
     if price_account.agg_.pub_slot_ == slot {
         // Avoid v2 aggregation if v1 aggregation has happened in the same slot
         // (this should normally happen only in the slot that contains the v1->v2 transition).

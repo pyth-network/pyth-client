@@ -47,6 +47,7 @@ pub use {
     upd_price::{
         c_upd_aggregate,
         c_upd_twap,
+        find_publisher_index,
         upd_price,
         upd_price_no_fail_on_error,
     },

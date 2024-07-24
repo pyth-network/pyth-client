@@ -45,8 +45,13 @@ pub use accounts::{
     PythAccount,
     PythOracleSerialize,
 };
-use {
+#[cfg(feature = "library")]
+pub use {
     crate::error::OracleError,
+    processor::find_publisher_index,
+    utils::get_status_for_conf_price_ratio,
+};
+use {
     processor::process_instruction,
     solana_program::entrypoint,
 };
