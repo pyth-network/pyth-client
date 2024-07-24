@@ -348,7 +348,7 @@ impl PythOracleSerialize for PublisherStakeCapsMessage {
         let mut result = vec![DISCRIMINATOR];
         result.extend_from_slice(&self.publish_time.to_be_bytes());
         result.extend_from_slice(
-            &TryInto::<u16>::try_into(self.caps.as_ref().len())
+            &u16::try_from(self.caps.as_ref().len())
                 .unwrap()
                 .to_be_bytes(),
         );
