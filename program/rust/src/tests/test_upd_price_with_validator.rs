@@ -4,6 +4,7 @@ use {
             PriceAccount,
             PriceAccountFlags,
             PythAccount,
+            PythOracleSerialize,
         },
         c_oracle_header::{
             PC_STATUS_IGNORED,
@@ -25,6 +26,10 @@ use {
             AccountSetup,
         },
         validator,
+    },
+    pythnet_sdk::messages::{
+        PriceFeedMessage,
+        TwapMessage,
     },
     solana_program::{
         program_error::ProgramError,
@@ -120,12 +125,66 @@ fn test_upd_price_with_validator() {
     }
 
     // We aggregate the price at the end of each slot now.
-    validator::aggregate_price(1, 101, price_account.key, *price_account.data.borrow_mut())
-        .unwrap();
-    update_clock_slot(&mut clock_account, 2);
+    let messages1 =
+        validator::aggregate_price(1, 101, price_account.key, *price_account.data.borrow_mut())
+            .unwrap();
+    let expected_messages1 = [
+        PriceFeedMessage {
+            feed_id:           price_account.key.to_bytes(),
+            price:             42,
+            conf:              2,
+            exponent:          0,
+            publish_time:      101,
+            prev_publish_time: 0,
+            ema_price:         42,
+            ema_conf:          2,
+        }
+        .to_bytes(),
+        TwapMessage {
+            feed_id:           price_account.key.to_bytes(),
+            cumulative_price:  42,
+            cumulative_conf:   2,
+            num_down_slots:    0,
+            exponent:          0,
+            publish_time:      101,
+            prev_publish_time: 0,
+            publish_slot:      1,
+        }
+        .to_bytes(),
+    ];
+    assert_eq!(messages1, expected_messages1);
 
-    validator::aggregate_price(2, 102, price_account.key, *price_account.data.borrow_mut())
-        .unwrap();
+    update_clock_slot(&mut clock_account, 2);
+    let messages2 =
+        validator::aggregate_price(2, 102, price_account.key, *price_account.data.borrow_mut())
+            .unwrap();
+
+    let expected_messages2 = [
+        PriceFeedMessage {
+            feed_id:           price_account.key.to_bytes(),
+            price:             42,
+            conf:              2,
+            exponent:          0,
+            publish_time:      102,
+            prev_publish_time: 101,
+            ema_price:         41,
+            ema_conf:          2,
+        }
+        .to_bytes(),
+        TwapMessage {
+            feed_id:           price_account.key.to_bytes(),
+            cumulative_price:  84,
+            cumulative_conf:   4,
+            num_down_slots:    0,
+            exponent:          0,
+            publish_time:      102,
+            prev_publish_time: 101,
+            publish_slot:      2,
+        }
+        .to_bytes(),
+    ];
+    assert_eq!(messages2, expected_messages2);
+
     update_clock_slot(&mut clock_account, 3);
     // add next price in new slot triggering snapshot and aggregate calc
     populate_instruction(&mut instruction_data, 81, 2, 2);

@@ -256,8 +256,6 @@ pub fn upd_price(
                 ]
             };
 
-            // Append a TWAP message if available
-
             // anchor discriminator for "global:put_all"
             let discriminator: [u8; 8] = [212, 225, 193, 91, 151, 238, 20, 93];
             let create_inputs_ix = Instruction::new_with_borsh(
