@@ -163,7 +163,7 @@ pub fn compute_publisher_stake_caps<'a>(
     m: u64,
     z: u64,
 ) -> Vec<u8> {
-    let mut publisher_caps: BTreeMap<Pubkey, u64> = BTreeMap::new();
+    let mut publisher_caps: BTreeMap<Pubkey, u64> = BTreeMap::new(); // BTreeMap to ensure it will be sorted by publisher
     for account in account_datas {
         if let Some(price_account) = checked_load_price_account(account) {
             let cap: u64 = m
