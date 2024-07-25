@@ -186,7 +186,6 @@ fn test_upd_price_with_validator() {
     assert_eq!(messages2, expected_messages2);
 
     update_clock_slot(&mut clock_account, 3);
-    // add next price in new slot triggering snapshot and aggregate calc
     populate_instruction(&mut instruction_data, 81, 2, 2);
     assert!(process_instruction(
         &program_id,
