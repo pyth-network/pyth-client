@@ -149,6 +149,13 @@ fn checked_load_price_account(price_account_info: &[u8]) -> Option<&PriceAccount
     ))
 }
 
+/// Computes the stake caps for each publisher based on the oracle program accounts provided
+/// - `account_datas` - the account datas of the oracle program accounts
+/// - `timestamp` - the timestamp to include in the message
+/// - `m` - m is the cap per symbol, it gets split among all publishers of the symbol
+/// - `z` - when a symbol has less than `z` publishers, each publisher gets a cap of `m/z` (instead of `m/number_of_publishers`). This is to prevent a single publisher from getting a large cap when there are few publishers.
+///
+/// The stake cap for a publisher is computed as the sum of `m/min(z, number_of_publishers)` for all the symbols the publisher is publishing.
 pub fn compute_publisher_stake_caps<'a>(
     account_datas: impl IntoIterator<Item = &'a [u8]>,
     timestamp: i64,
