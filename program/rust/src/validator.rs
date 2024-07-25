@@ -142,6 +142,7 @@ pub fn aggregate_price(
     ])
 }
 
+/// Load a price account as read-only, returning `None` if it isn't a valid price account.
 fn checked_load_price_account(price_account_info: &[u8]) -> Option<&PriceAccount> {
     check_price_account_header(price_account_info).ok()?;
     Some(bytemuck::from_bytes::<PriceAccount>(
