@@ -17,7 +17,10 @@ use {
         TwapMessage,
     },
     solana_program::pubkey::Pubkey,
-    std::mem::size_of,
+    std::{
+        mem::size_of,
+        u16,
+    },
 };
 
 /// Pythnet-specific PriceAccount implementation
@@ -349,7 +352,7 @@ impl PythOracleSerialize for PublisherStakeCapsMessage {
         result.extend_from_slice(&self.publish_time.to_be_bytes());
         result.extend_from_slice(
             &u16::try_from(self.caps.as_ref().len())
-                .unwrap()
+                .unwrap_or(u16::MAX)
                 .to_be_bytes(),
         );
 
