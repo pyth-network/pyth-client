@@ -1,4 +1,4 @@
-// #![deny(warnings)]
+#![deny(warnings)]
 // Allow non upper case globals from C
 #![allow(non_upper_case_globals)]
 
