@@ -170,10 +170,12 @@ pub fn compute_publisher_stake_caps<'a>(
                 .checked_div(max(u64::from(price_account.num_), z))
                 .unwrap_or(0);
             for i in 0..(price_account.num_ as usize) {
-                publisher_caps
-                    .entry(price_account.comp_[i].pub_)
-                    .and_modify(|e: &mut u64| *e = e.saturating_add(cap))
-                    .or_insert(cap);
+                if let Some(pub_) = price_account.comp_.get(i).map(|comp| &comp.pub_) {
+                    publisher_caps
+                        .entry(*pub_)
+                        .and_modify(|e: &mut u64| *e = e.saturating_add(cap))
+                        .or_insert(cap);
+                }
             }
         }
     }
