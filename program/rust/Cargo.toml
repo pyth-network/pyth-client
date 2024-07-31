@@ -17,7 +17,7 @@ num-traits = "0.2"
 byteorder = "1.4.3"
 serde = { version = "1.0", features = ["derive"], optional = true }
 strum = { version = "0.24.1", features = ["derive"], optional = true }
-pythnet-sdk = { git = "https://github.com/pyth-network/pyth-crosschain", branch="feat/publisher-caps"}
+pythnet-sdk = "2.2.0"
 solana-sdk = { version = "=1.14.17", optional = true }
 bitflags = { version = "2.6.0", features = ["bytemuck"] }
 
@@ -31,7 +31,7 @@ rand = "0.8.5"
 quickcheck_macros = "1"
 bincode = "1.3.3"
 serde = { version = "1.0", features = ["derive"] }
-pythnet-sdk = { git = "https://github.com/pyth-network/pyth-crosschain", branch="feat/publisher-caps", features = ["quickcheck"]}
+pythnet-sdk = { version = "2.2.0" , features = ["quickcheck"]}
 serde_json = "1.0"
 test-generator = "0.3.1"
 csv = "1.1"
