@@ -13,10 +13,14 @@ use {
     },
     pythnet_sdk::messages::{
         PriceFeedMessage,
+        PublisherStakeCapsMessage,
         TwapMessage,
     },
     solana_program::pubkey::Pubkey,
-    std::mem::size_of,
+    std::{
+        mem::size_of,
+        u16,
+    },
 };
 
 /// Pythnet-specific PriceAccount implementation
@@ -111,7 +115,7 @@ mod price_pythnet {
             };
 
             PriceFeedMessage {
-                id: key.to_bytes(),
+                feed_id: key.to_bytes(),
                 price,
                 conf,
                 exponent: self.exponent,
@@ -141,7 +145,7 @@ mod price_pythnet {
             };
 
             TwapMessage {
-                id: key.to_bytes(),
+                feed_id: key.to_bytes(),
                 cumulative_price: self.price_cumulative.price,
                 cumulative_conf: self.price_cumulative.conf,
                 num_down_slots: self.price_cumulative.num_down_slots,
@@ -270,7 +274,7 @@ impl PythOracleSerialize for PriceFeedMessage {
         bytes[i..i + 1].clone_from_slice(&[DISCRIMINATOR]);
         i += 1;
 
-        bytes[i..i + 32].clone_from_slice(&self.id[..]);
+        bytes[i..i + 32].clone_from_slice(&self.feed_id[..]);
         i += 32;
 
         bytes[i..i + 8].clone_from_slice(&self.price.to_be_bytes());
@@ -313,7 +317,7 @@ impl PythOracleSerialize for TwapMessage {
         bytes[i..i + 1].clone_from_slice(&[DISCRIMINATOR]);
         i += 1;
 
-        bytes[i..i + 32].clone_from_slice(&self.id[..]);
+        bytes[i..i + 32].clone_from_slice(&self.feed_id[..]);
         i += 32;
 
         bytes[i..i + 16].clone_from_slice(&self.cumulative_price.to_be_bytes());
@@ -338,5 +342,25 @@ impl PythOracleSerialize for TwapMessage {
         i += 8;
 
         bytes.to_vec()
+    }
+}
+
+impl PythOracleSerialize for PublisherStakeCapsMessage {
+    fn to_bytes(self) -> Vec<u8> {
+        const DISCRIMINATOR: u8 = 2;
+        let mut result = vec![DISCRIMINATOR];
+        result.extend_from_slice(&self.publish_time.to_be_bytes());
+        result.extend_from_slice(
+            &u16::try_from(self.caps.as_ref().len())
+                .unwrap_or(u16::MAX)
+                .to_be_bytes(),
+        );
+
+        for cap in self.caps {
+            result.extend_from_slice(&cap.publisher);
+            result.extend_from_slice(&cap.cap.to_be_bytes());
+        }
+
+        result
     }
 }

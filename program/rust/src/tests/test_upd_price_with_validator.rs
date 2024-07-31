@@ -130,7 +130,7 @@ fn test_upd_price_with_validator() {
             .unwrap();
     let expected_messages1 = [
         PriceFeedMessage {
-            id:                price_account.key.to_bytes(),
+            feed_id:           price_account.key.to_bytes(),
             price:             42,
             conf:              2,
             exponent:          0,
@@ -141,7 +141,7 @@ fn test_upd_price_with_validator() {
         }
         .to_bytes(),
         TwapMessage {
-            id:                price_account.key.to_bytes(),
+            feed_id:           price_account.key.to_bytes(),
             cumulative_price:  42,
             cumulative_conf:   2,
             num_down_slots:    0,
@@ -161,7 +161,7 @@ fn test_upd_price_with_validator() {
 
     let expected_messages2 = [
         PriceFeedMessage {
-            id:                price_account.key.to_bytes(),
+            feed_id:           price_account.key.to_bytes(),
             price:             42,
             conf:              2,
             exponent:          0,
@@ -172,7 +172,7 @@ fn test_upd_price_with_validator() {
         }
         .to_bytes(),
         TwapMessage {
-            id:                price_account.key.to_bytes(),
+            feed_id:           price_account.key.to_bytes(),
             cumulative_price:  84,
             cumulative_conf:   4,
             num_down_slots:    0,

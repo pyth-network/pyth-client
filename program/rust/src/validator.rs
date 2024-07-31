@@ -15,33 +15,46 @@ use {
         },
         utils::pyth_assert,
     },
-    solana_sdk::pubkey::Pubkey,
-    std::mem::size_of,
+    pythnet_sdk::messages::{
+        PublisherStakeCap,
+        PublisherStakeCapsMessage,
+    },
+    solana_sdk::{
+        program_error::ProgramError,
+        pubkey::Pubkey,
+    },
+    std::{
+        cmp::max,
+        collections::BTreeMap,
+        mem::size_of,
+    },
 };
+
+// Checks that the account is a PriceAccount from the length and header.
+fn check_price_account_header(price_account_info: &[u8]) -> Result<(), ProgramError> {
+    pyth_assert(
+        price_account_info.len() >= PriceAccount::MINIMUM_SIZE,
+        OracleError::AccountTooSmall.into(),
+    )?;
+
+    let account_header =
+        bytemuck::from_bytes::<AccountHeader>(&price_account_info[0..size_of::<AccountHeader>()]);
+
+    pyth_assert(
+        account_header.magic_number == PC_MAGIC
+            && account_header.account_type == PriceAccount::ACCOUNT_TYPE,
+        OracleError::InvalidAccountHeader.into(),
+    )?;
+
+    Ok(())
+}
 
 // Attempts to validate and access the contents of an account as a PriceAccount.
 fn validate_price_account(
     price_account_info: &mut [u8],
 ) -> Result<&mut PriceAccount, AggregationError> {
-    // TODO: don't return error on non-price account?
-    pyth_assert(
-        price_account_info.len() >= PriceAccount::MINIMUM_SIZE,
-        OracleError::AccountTooSmall.into(),
-    )
-    .map_err(|_| AggregationError::NotPriceFeedAccount)?;
-
-    {
-        let account_header = bytemuck::from_bytes::<AccountHeader>(
-            &price_account_info[0..size_of::<AccountHeader>()],
-        );
-
-        pyth_assert(
-            account_header.magic_number == PC_MAGIC
-                && account_header.account_type == PriceAccount::ACCOUNT_TYPE,
-            OracleError::InvalidAccountHeader.into(),
-        )
+    check_price_account_header(price_account_info)
         .map_err(|_| AggregationError::NotPriceFeedAccount)?;
-    }
 
     let data = bytemuck::from_bytes_mut::<PriceAccount>(
         &mut price_account_info[0..size_of::<PriceAccount>()],
@@ -127,4 +140,56 @@ pub fn aggregate_price(
             .as_twap_message(price_account_pubkey)
             .to_bytes(),
     ])
+}
+
+/// Load a price account as read-only, returning `None` if it isn't a valid price account.
+fn checked_load_price_account(price_account_info: &[u8]) -> Option<&PriceAccount> {
+    check_price_account_header(price_account_info).ok()?;
+    Some(bytemuck::from_bytes::<PriceAccount>(
+        &price_account_info[0..size_of::<PriceAccount>()],
+    ))
+}
+
+/// Computes the stake caps for each publisher based on the oracle program accounts provided
+/// - `account_datas` - the account datas of the oracle program accounts
+/// - `timestamp` - the timestamp to include in the message
+/// - `m` - m is the cap per symbol, it gets split among all publishers of the symbol
+/// - `z` - when a symbol has less than `z` publishers, each publisher gets a cap of `m/z` (instead of `m/number_of_publishers`). This is to prevent a single publisher from getting a large cap when there are few publishers.
+///
+/// The stake cap for a publisher is computed as the sum of `m/min(z, number_of_publishers)` for all the symbols the publisher is publishing.
+pub fn compute_publisher_stake_caps<'a>(
+    account_datas: impl IntoIterator<Item = &'a [u8]>,
+    timestamp: i64,
+    m: u64,
+    z: u64,
+) -> Vec<u8> {
+    let mut publisher_caps: BTreeMap<Pubkey, u64> = BTreeMap::new(); // BTreeMap to ensure it will be sorted by publisher
+    for account in account_datas {
+        if let Some(price_account) = checked_load_price_account(account) {
+            let cap: u64 = m
+                .checked_div(max(u64::from(price_account.num_), z))
+                .unwrap_or(0);
+            for i in 0..(price_account.num_ as usize) {
+                if let Some(pub_) = price_account.comp_.get(i).map(|comp| &comp.pub_) {
+                    publisher_caps
+                        .entry(*pub_)
+                        .and_modify(|e: &mut u64| *e = e.saturating_add(cap))
+                        .or_insert(cap);
+                }
+            }
+        }
+    }
+
+    PublisherStakeCapsMessage {
+        publish_time: timestamp,
+        caps:         publisher_caps
+            .into_iter()
+            .map(|(publisher, cap)| PublisherStakeCap {
+                publisher: publisher.to_bytes(),
+                cap,
+            })
+            .collect::<Vec<PublisherStakeCap>>()
+            .into(),
+    }
+    .to_bytes()
 }
