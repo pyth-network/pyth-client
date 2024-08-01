@@ -69,8 +69,9 @@ mod price_pythnet {
         pub max_latency_:       u8,
         /// Various flags
         pub flags:              PriceAccountFlags,
-        /// Unused placeholder for alignment
-        pub unused_3_:          i32,
+        /// Globally unique price feed index used for publishing.
+        /// Limited to 28 bites.
+        pub feed_index:         i32,
         /// Corresponding product account
         pub product_account:    Pubkey,
         /// Next price account in the list
