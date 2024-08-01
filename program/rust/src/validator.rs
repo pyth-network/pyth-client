@@ -45,33 +45,7 @@ fn check_price_account_header(price_account_info: &[u8]) -> Result<(), ProgramEr
             && account_header.account_type == PriceAccount::ACCOUNT_TYPE,
         OracleError::InvalidAccountHeader.into(),
     )?;
-
     Ok(())
-}
-
-// Attempts to validate and access the contents of an account as a PriceAccount.
-pub fn validate_price_account(
-    price_account_info: &mut [u8],
-) -> Result<&mut PriceAccount, AggregationError> {
-    check_price_account_header(price_account_info)
-        .map_err(|_| AggregationError::NotPriceFeedAccount)?;
-
-    let data = bytemuck::from_bytes_mut::<PriceAccount>(
-        &mut price_account_info[0..size_of::<PriceAccount>()],
-    );
-    if !data.flags.contains(PriceAccountFlags::ACCUMULATOR_V2) {
-        return Err(AggregationError::V1AggregationMode);
-    }
-    if !data
-        .flags
-        .contains(PriceAccountFlags::MESSAGE_BUFFER_CLEARED)
-    {
-        // We make sure that we don't generate v2 messages while v1 messages are still
-        // in the message buffer.
-        return Err(AggregationError::V1AggregationMode);
-    }
-
-    Ok(data)
 }
 
 fn update_aggregate(slot: u64, timestamp: i64, price_account: &mut PriceAccount) {
@@ -125,6 +99,21 @@ pub fn aggregate_price(
     price_account_pubkey: &Pubkey,
     price_account: &mut PriceAccount,
 ) -> Result<[Vec<u8>; 2], AggregationError> {
+    if !price_account
+        .flags
+        .contains(PriceAccountFlags::ACCUMULATOR_V2)
+    {
+        return Err(AggregationError::V1AggregationMode);
+    }
+    if !price_account
+        .flags
+        .contains(PriceAccountFlags::MESSAGE_BUFFER_CLEARED)
+    {
+        // We make sure that we don't generate v2 messages while v1 messages are still
+        // in the message buffer.
+        return Err(AggregationError::V1AggregationMode);
+    }
+
     if price_account.agg_.pub_slot_ == slot {
         // Avoid v2 aggregation if v1 aggregation has happened in the same slot
         // (this should normally happen only in the slot that contains the v1->v2 transition).
@@ -142,10 +131,19 @@ pub fn aggregate_price(
 }
 
 /// Load a price account as read-only, returning `None` if it isn't a valid price account.
-fn checked_load_price_account(price_account_info: &[u8]) -> Option<&PriceAccount> {
+pub fn checked_load_price_account(price_account_info: &[u8]) -> Option<&PriceAccount> {
     check_price_account_header(price_account_info).ok()?;
     Some(bytemuck::from_bytes::<PriceAccount>(
         &price_account_info[0..size_of::<PriceAccount>()],
+    ))
+}
+
+pub fn checked_load_price_account_mut(
+    price_account_info: &mut [u8],
+) -> Result<&mut PriceAccount, ProgramError> {
+    check_price_account_header(price_account_info)?;
+    Ok(bytemuck::from_bytes_mut::<PriceAccount>(
+        &mut price_account_info[0..size_of::<PriceAccount>()],
     ))
 }
 
