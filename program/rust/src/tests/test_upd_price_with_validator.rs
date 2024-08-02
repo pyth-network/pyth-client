@@ -25,7 +25,10 @@ use {
             update_clock_slot,
             AccountSetup,
         },
-        validator,
+        validator::{
+            self,
+            checked_load_price_account_mut,
+        },
     },
     pythnet_sdk::messages::{
         PriceFeedMessage,
@@ -125,9 +128,13 @@ fn test_upd_price_with_validator() {
     }
 
     // We aggregate the price at the end of each slot now.
-    let messages1 =
-        validator::aggregate_price(1, 101, price_account.key, *price_account.data.borrow_mut())
-            .unwrap();
+    let messages1 = validator::aggregate_price(
+        1,
+        101,
+        price_account.key,
+        checked_load_price_account_mut(*price_account.data.borrow_mut()).unwrap(),
+    )
+    .unwrap();
     let expected_messages1 = [
         PriceFeedMessage {
             feed_id:           price_account.key.to_bytes(),
@@ -155,9 +162,13 @@ fn test_upd_price_with_validator() {
     assert_eq!(messages1, expected_messages1);
 
     update_clock_slot(&mut clock_account, 2);
-    let messages2 =
-        validator::aggregate_price(2, 102, price_account.key, *price_account.data.borrow_mut())
-            .unwrap();
+    let messages2 = validator::aggregate_price(
+        2,
+        102,
+        price_account.key,
+        checked_load_price_account_mut(*price_account.data.borrow_mut()).unwrap(),
+    )
+    .unwrap();
 
     let expected_messages2 = [
         PriceFeedMessage {
@@ -214,8 +225,13 @@ fn test_upd_price_with_validator() {
 
     // next price doesn't change but slot does
     populate_instruction(&mut instruction_data, 81, 2, 3);
-    validator::aggregate_price(3, 103, price_account.key, *price_account.data.borrow_mut())
-        .unwrap();
+    validator::aggregate_price(
+        3,
+        103,
+        price_account.key,
+        checked_load_price_account_mut(*price_account.data.borrow_mut()).unwrap(),
+    )
+    .unwrap();
     update_clock_slot(&mut clock_account, 4);
     assert!(process_instruction(
         &program_id,
@@ -242,8 +258,13 @@ fn test_upd_price_with_validator() {
 
     // next price doesn't change and neither does aggregate but slot does
     populate_instruction(&mut instruction_data, 81, 2, 4);
-    validator::aggregate_price(4, 104, price_account.key, *price_account.data.borrow_mut())
-        .unwrap();
+    validator::aggregate_price(
+        4,
+        104,
+        price_account.key,
+        checked_load_price_account_mut(*price_account.data.borrow_mut()).unwrap(),
+    )
+    .unwrap();
     update_clock_slot(&mut clock_account, 5);
 
     assert!(process_instruction(
@@ -299,8 +320,13 @@ fn test_upd_price_with_validator() {
     }
 
     populate_instruction(&mut instruction_data, 50, 20, 5);
-    validator::aggregate_price(5, 105, price_account.key, *price_account.data.borrow_mut())
-        .unwrap();
+    validator::aggregate_price(
+        5,
+        105,
+        price_account.key,
+        checked_load_price_account_mut(*price_account.data.borrow_mut()).unwrap(),
+    )
+    .unwrap();
     update_clock_slot(&mut clock_account, 6);
 
     // Publishing a wide CI results in a status of unknown.
@@ -337,8 +363,13 @@ fn test_upd_price_with_validator() {
     // Crank one more time and aggregate should be unknown
     populate_instruction(&mut instruction_data, 50, 20, 6);
 
-    validator::aggregate_price(6, 106, price_account.key, *price_account.data.borrow_mut())
-        .unwrap();
+    validator::aggregate_price(
+        6,
+        106,
+        price_account.key,
+        checked_load_price_account_mut(*price_account.data.borrow_mut()).unwrap(),
+    )
+    .unwrap();
     update_clock_slot(&mut clock_account, 7);
 
 
@@ -367,8 +398,13 @@ fn test_upd_price_with_validator() {
 
     // Negative prices are accepted
     populate_instruction(&mut instruction_data, -100, 1, 7);
-    validator::aggregate_price(7, 107, price_account.key, *price_account.data.borrow_mut())
-        .unwrap();
+    validator::aggregate_price(
+        7,
+        107,
+        price_account.key,
+        checked_load_price_account_mut(*price_account.data.borrow_mut()).unwrap(),
+    )
+    .unwrap();
     update_clock_slot(&mut clock_account, 8);
 
 
@@ -397,8 +433,13 @@ fn test_upd_price_with_validator() {
 
     // Crank again for aggregate
     populate_instruction(&mut instruction_data, -100, 1, 8);
-    validator::aggregate_price(8, 108, price_account.key, *price_account.data.borrow_mut())
-        .unwrap();
+    validator::aggregate_price(
+        8,
+        108,
+        price_account.key,
+        checked_load_price_account_mut(*price_account.data.borrow_mut()).unwrap(),
+    )
+    .unwrap();
     update_clock_slot(&mut clock_account, 9);
 
 

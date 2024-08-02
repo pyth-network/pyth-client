@@ -11,8 +11,15 @@ use {
         Pod,
         Zeroable,
     },
-    solana_program::pubkey::Pubkey,
-    std::mem::size_of,
+    solana_program::{
+        account_info::AccountInfo,
+        program_error::ProgramError,
+        pubkey::Pubkey,
+    },
+    std::{
+        cell::RefMut,
+        mem::size_of,
+    },
 };
 
 /// This account stores the pubkeys that can execute administrative instructions in the Pyth
@@ -40,6 +47,9 @@ pub struct PermissionAccount {
 }
 
 impl PermissionAccount {
+    pub const MIN_SIZE_WITH_LAST_FEED_INDEX: usize =
+        size_of::<PermissionAccount>() + size_of::<u32>();
+
     pub fn is_authorized(&self, key: &Pubkey, command: OracleCommand) -> bool {
         #[allow(clippy::match_like_matches_macro)]
         match (*key, command) {
@@ -50,9 +60,25 @@ impl PermissionAccount {
             _ => false,
         }
     }
+
+    pub fn load_last_feed_index_mut<'a>(
+        account: &'a AccountInfo,
+    ) -> Result<RefMut<'a, u32>, ProgramError> {
+        let start = size_of::<PermissionAccount>();
+        let end = start + size_of::<u32>();
+        assert_eq!(Self::MIN_SIZE_WITH_LAST_FEED_INDEX, end);
+        if account.data_len() < end {
+            return Err(ProgramError::AccountDataTooSmall);
+        }
+        Ok(RefMut::map(account.try_borrow_mut_data()?, |data| {
+            bytemuck::from_bytes_mut(&mut data[start..end])
+        }))
+    }
 }
 
 impl PythAccount for PermissionAccount {
     const ACCOUNT_TYPE: u32 = PC_ACCTYPE_PERMISSIONS;
+    // TODO: change?
+    // TODO: add feed_index when creating account
     const INITIAL_SIZE: u32 = size_of::<PermissionAccount>() as u32;
 }

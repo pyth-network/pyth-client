@@ -21,6 +21,7 @@ mod del_product;
 mod del_publisher;
 mod init_mapping;
 mod init_price;
+mod init_price_feed_index;
 mod set_max_latency;
 mod set_min_pub;
 mod upd_permissions;
@@ -32,6 +33,7 @@ pub use add_publisher::{
     DISABLE_ACCUMULATOR_V2,
     ENABLE_ACCUMULATOR_V2,
 };
+use init_price_feed_index::init_price_feed_index;
 pub use {
     add_price::add_price,
     add_product::add_product,
@@ -85,5 +87,6 @@ pub fn process_instruction(
         DelProduct => del_product(program_id, accounts, instruction_data),
         UpdPermissions => upd_permissions(program_id, accounts, instruction_data),
         SetMaxLatency => set_max_latency(program_id, accounts, instruction_data),
+        InitPriceFeedIndex => init_price_feed_index(program_id, accounts, instruction_data),
     }
 }

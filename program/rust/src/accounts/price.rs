@@ -71,7 +71,7 @@ mod price_pythnet {
         pub flags:              PriceAccountFlags,
         /// Globally unique price feed index used for publishing.
         /// Limited to 28 bites.
-        pub feed_index:         i32,
+        pub feed_index:         u32,
         /// Corresponding product account
         pub product_account:    Pubkey,
         /// Next price account in the list
