@@ -1,9 +1,6 @@
 use {
     crate::{
-        accounts::{
-            PermissionAccount,
-            PythAccount,
-        },
+        accounts::PermissionAccount,
         deserialize::load,
         error::OracleError,
         instruction::{
@@ -69,7 +66,7 @@ async fn test_upd_permissions() {
 
     assert_eq!(
         permission_account.data.len(),
-        PermissionAccount::MINIMUM_SIZE
+        PermissionAccount::MIN_SIZE_WITH_LAST_FEED_INDEX
     );
     assert_eq!(
         Rent::default().minimum_balance(permission_account.data.len()),

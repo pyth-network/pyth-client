@@ -105,6 +105,11 @@ pub trait PythAccount: Pod {
     /// have. `INITIAL_SIZE` <= `minimum_size()`
     const MINIMUM_SIZE: usize = size_of::<Self>();
 
+    /// Size of the account data on creation. Usually this is the same as `MINIMUM_SIZE` but it's
+    /// different for `PermissionAccount` because we've added new fields to it. In this case
+    /// we cannot increase `MINIMUM_SIZE` because that would break reading the account.
+    const NEW_ACCOUNT_SPACE: usize = Self::MINIMUM_SIZE;
+
     /// Given an `AccountInfo`, verify it is sufficiently large and has the correct discriminator.
     fn initialize<'a>(
         account: &'a AccountInfo,
@@ -139,7 +144,7 @@ pub trait PythAccount: Pod {
         seeds: &[&[u8]],
         version: u32,
     ) -> Result<(), ProgramError> {
-        let target_rent = get_rent()?.minimum_balance(Self::MINIMUM_SIZE);
+        let target_rent = get_rent()?.minimum_balance(Self::NEW_ACCOUNT_SPACE);
 
         if account.data_len() == 0 {
             create(
@@ -147,7 +152,7 @@ pub trait PythAccount: Pod {
                 account,
                 system_program,
                 program_id,
-                Self::MINIMUM_SIZE,
+                Self::NEW_ACCOUNT_SPACE,
                 target_rent,
                 seeds,
             )?;

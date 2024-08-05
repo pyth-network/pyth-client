@@ -62,6 +62,9 @@ fn test_add_price() {
     let mut permissions_setup = AccountSetup::new_permission(&program_id);
     let permissions_account = permissions_setup.as_account_info();
 
+    let mut system_program = AccountSetup::new_system_program();
+    let system_program_account = system_program.as_account_info();
+
     {
         let mut permissions_account_data =
             PermissionAccount::initialize(&permissions_account, PC_VERSION).unwrap();
@@ -82,17 +85,18 @@ fn test_add_price() {
     )
     .is_ok());
 
-    assert!(process_instruction(
+    process_instruction(
         &program_id,
         &[
             funding_account.clone(),
             product_account.clone(),
             price_account.clone(),
             permissions_account.clone(),
+            system_program_account.clone(),
         ],
-        instruction_data_add_price
+        instruction_data_add_price,
     )
-    .is_ok());
+    .unwrap();
 
     {
         let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
@@ -105,17 +109,18 @@ fn test_add_price() {
         assert!(product_data.first_price_account == *price_account.key);
     }
 
-    assert!(process_instruction(
+    process_instruction(
         &program_id,
         &[
             funding_account.clone(),
             product_account.clone(),
             price_account_2.clone(),
             permissions_account.clone(),
+            system_program_account.clone(),
         ],
-        instruction_data_add_price
+        instruction_data_add_price,
     )
-    .is_ok());
+    .unwrap();
 
     {
         let price_data_2 = load_checked::<PriceAccount>(&price_account_2, PC_VERSION).unwrap();
@@ -137,6 +142,7 @@ fn test_add_price() {
                 product_account.clone(),
                 price_account.clone(),
                 permissions_account.clone(),
+                system_program_account.clone(),
                 permissions_account.clone(),
             ],
             instruction_data_add_price
@@ -153,6 +159,7 @@ fn test_add_price() {
                 product_account.clone(),
                 price_account.clone(),
                 permissions_account.clone(),
+                system_program_account.clone(),
             ],
             instruction_data_add_price
         ),
@@ -177,6 +184,7 @@ fn test_add_price() {
                 product_account.clone(),
                 price_account.clone(),
                 permissions_account.clone(),
+                system_program_account.clone(),
             ],
             instruction_data_add_price
         ),
@@ -202,6 +210,7 @@ fn test_add_price() {
                 product_account.clone(),
                 price_account.clone(),
                 permissions_account.clone(),
+                system_program_account.clone(),
             ],
             instruction_data_add_price
         ),

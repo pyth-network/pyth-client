@@ -54,6 +54,8 @@ pub enum OracleError {
     NeedsSuccesfulAggregation      = 620,
     #[error("MaxLastFeedIndexReached")]
     MaxLastFeedIndexReached        = 621,
+    #[error("FeedIndexAlreadyInitialized")]
+    FeedIndexAlreadyInitialized    = 622,
 }
 
 impl From<OracleError> for ProgramError {

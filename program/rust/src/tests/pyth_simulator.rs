@@ -338,6 +338,7 @@ impl PythSimulator {
                 AccountMeta::new(product_keypair.pubkey(), true),
                 AccountMeta::new(price_keypair.pubkey(), true),
                 AccountMeta::new(self.get_permissions_pubkey(), false),
+                AccountMeta::new(system_program::id(), false),
             ],
         );
 

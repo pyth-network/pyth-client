@@ -78,7 +78,6 @@ impl PermissionAccount {
 
 impl PythAccount for PermissionAccount {
     const ACCOUNT_TYPE: u32 = PC_ACCTYPE_PERMISSIONS;
-    // TODO: change?
-    // TODO: add feed_index when creating account
-    const INITIAL_SIZE: u32 = size_of::<PermissionAccount>() as u32;
+    const INITIAL_SIZE: u32 = Self::MIN_SIZE_WITH_LAST_FEED_INDEX as u32;
+    const NEW_ACCOUNT_SPACE: usize = Self::MIN_SIZE_WITH_LAST_FEED_INDEX;
 }

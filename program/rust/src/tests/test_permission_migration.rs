@@ -67,6 +67,10 @@ fn test_permission_migration() {
     let mut price_account = price_setup.as_account_info();
     PriceAccount::initialize(&price_account, PC_VERSION).unwrap();
 
+    let mut system_program = AccountSetup::new_system_program();
+    let system_program_account = system_program.as_account_info();
+
+
     product_account.is_signer = false;
     mapping_account.is_signer = false;
     price_account.is_signer = false;
@@ -150,7 +154,8 @@ fn test_permission_migration() {
                 attacker_account.clone(),
                 product_account.clone(),
                 price_account.clone(),
-                permissions_account.clone()
+                permissions_account.clone(),
+                system_program_account.clone(),
             ],
             bytes_of::<AddPriceArgs>(&AddPriceArgs {
                 header:     AddPrice.into(),

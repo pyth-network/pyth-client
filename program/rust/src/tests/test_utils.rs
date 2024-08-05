@@ -87,8 +87,8 @@ impl AccountSetup {
     pub fn new_permission(owner: &Pubkey) -> Self {
         let (key, _bump) = Pubkey::find_program_address(&[PERMISSIONS_SEED.as_bytes()], owner);
         let owner = *owner;
-        let balance = Rent::minimum_balance(&Rent::default(), PermissionAccount::MINIMUM_SIZE);
-        let size = PermissionAccount::MINIMUM_SIZE;
+        let balance = Rent::minimum_balance(&Rent::default(), PermissionAccount::NEW_ACCOUNT_SPACE);
+        let size = PermissionAccount::NEW_ACCOUNT_SPACE;
         let data = [0; UPPER_BOUND_OF_ALL_ACCOUNT_SIZES];
         AccountSetup {
             key,
@@ -110,6 +110,20 @@ impl AccountSetup {
             owner,
             balance,
             size,
+            data,
+        }
+    }
+
+    pub fn new_system_program() -> Self {
+        let key = system_program::id();
+        let owner = system_program::id(); //?
+        let balance = Rent::minimum_balance(&Rent::default(), 0);
+        let data = [0u8; UPPER_BOUND_OF_ALL_ACCOUNT_SIZES];
+        AccountSetup {
+            key,
+            owner,
+            balance,
+            size: 0,
             data,
         }
     }
