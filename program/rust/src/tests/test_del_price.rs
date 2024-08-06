@@ -36,7 +36,6 @@ async fn test_del_price() {
         .unwrap();
     assert!(product1_data.first_price_account == Pubkey::default());
 
-
     // price2_1 is the 2nd item in the linked list since price2_2 got added after t.
     assert!(sim.del_price(&product2, &price2_1).await.is_err());
     // Can delete the accounts in the opposite order though

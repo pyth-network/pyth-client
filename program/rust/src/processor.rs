@@ -17,9 +17,7 @@ use {
     },
     solana_program::{
         entrypoint::ProgramResult,
-        program::invoke,
         pubkey::Pubkey,
-        system_instruction,
         sysvar::slot_history::AccountInfo,
     },
 };
@@ -109,30 +107,15 @@ pub fn process_instruction(
     }
 }
 
-fn reserve_new_price_feed_index<'a>(
-    funding_account: &AccountInfo<'a>,
-    permissions_account: &AccountInfo<'a>,
-    system_program: &AccountInfo<'a>,
-) -> Result<u32, ProgramError> {
+fn reserve_new_price_feed_index(permissions_account: &AccountInfo) -> Result<u32, ProgramError> {
     if permissions_account.data_len() < PermissionAccount::MIN_SIZE_WITH_LAST_FEED_INDEX {
         let new_size = PermissionAccount::MIN_SIZE_WITH_LAST_FEED_INDEX;
         let rent = Rent::get()?;
         let new_minimum_balance = rent.minimum_balance(new_size);
-        let lamports_diff = new_minimum_balance.saturating_sub(permissions_account.lamports());
-        if lamports_diff > 0 {
-            invoke(
-                &system_instruction::transfer(
-                    funding_account.key,
-                    permissions_account.key,
-                    lamports_diff,
-                ),
-                &[
-                    funding_account.clone(),
-                    permissions_account.clone(),
-                    system_program.clone(),
-                ],
-            )?;
-        }
+        pyth_assert(
+            permissions_account.lamports() >= new_minimum_balance,
+            ProgramError::AccountNotRentExempt,
+        )?;
 
         permissions_account.realloc(new_size, true)?;
         let mut header = load_account_as_mut::<AccountHeader>(permissions_account)?;

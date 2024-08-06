@@ -68,7 +68,6 @@ pub fn del_product(
         cmd_args,
     )?;
 
-
     {
         let mut mapping_data = load_checked::<MappingAccount>(mapping_account, cmd_args.version)?;
         let product_data = load_checked::<ProductAccount>(product_account, cmd_args.version)?;

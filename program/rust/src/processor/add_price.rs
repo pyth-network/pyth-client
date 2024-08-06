@@ -37,7 +37,6 @@ use {
 // account[1] product account        [writable]
 // account[2] new price account      [writable]
 // account[3] permissions account    [writable]
-// account[4] system program account []
 pub fn add_price(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
@@ -51,12 +50,10 @@ pub fn add_price(
         ProgramError::InvalidArgument,
     )?;
 
-
-    let (funding_account, product_account, price_account, permissions_account, system_program) =
-        match accounts {
-            [x, y, z, p, q] => Ok((x, y, z, p, q)),
-            _ => Err(OracleError::InvalidNumberOfAccounts),
-        }?;
+    let (funding_account, product_account, price_account, permissions_account) = match accounts {
+        [x, y, z, p] => Ok((x, y, z, p)),
+        _ => Err(OracleError::InvalidNumberOfAccounts),
+    }?;
 
     check_valid_funding_account(funding_account)?;
     check_permissioned_funding_account(
@@ -74,10 +71,6 @@ pub fn add_price(
         &cmd_args.header,
     )?;
     check_valid_writable_account(program_id, permissions_account)?;
-    pyth_assert(
-        solana_program::system_program::check_id(system_program.key),
-        OracleError::InvalidSystemAccount.into(),
-    )?;
 
     let mut product_data =
         load_checked::<ProductAccount>(product_account, cmd_args.header.version)?;
@@ -89,8 +82,7 @@ pub fn add_price(
     price_data.product_account = *product_account.key;
     price_data.next_price_account = product_data.first_price_account;
     price_data.min_pub_ = PRICE_ACCOUNT_DEFAULT_MIN_PUB;
-    price_data.feed_index =
-        reserve_new_price_feed_index(funding_account, permissions_account, system_program)?;
+    price_data.feed_index = reserve_new_price_feed_index(permissions_account)?;
     product_data.first_price_account = *price_account.key;
 
     Ok(())

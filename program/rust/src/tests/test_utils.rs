@@ -114,20 +114,6 @@ impl AccountSetup {
         }
     }
 
-    pub fn new_system_program() -> Self {
-        let key = system_program::id();
-        let owner = system_program::id(); //?
-        let balance = Rent::minimum_balance(&Rent::default(), 0);
-        let data = [0u8; UPPER_BOUND_OF_ALL_ACCOUNT_SIZES];
-        AccountSetup {
-            key,
-            owner,
-            balance,
-            size: 0,
-            data,
-        }
-    }
-
     pub fn as_account_info(&mut self) -> AccountInfo {
         AccountInfo::new(
             &self.key,

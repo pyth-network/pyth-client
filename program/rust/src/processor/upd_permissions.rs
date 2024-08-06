@@ -61,7 +61,6 @@ pub fn upd_permissions(
         OracleError::InvalidSystemAccount.into(),
     )?;
 
-
     // Create PermissionAccount if it doesn't exist
     PermissionAccount::initialize_pda(
         permissions_account,

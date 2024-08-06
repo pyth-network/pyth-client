@@ -38,7 +38,6 @@ use {
     std::mem::size_of,
 };
 
-
 #[test]
 fn test_add_product() {
     let mut instruction_data = [0u8; PC_PROD_ACC_SIZE as usize];
@@ -200,7 +199,6 @@ fn test_add_product() {
     let mapping_data = load_checked::<MappingAccount>(&mapping_account, PC_VERSION).unwrap();
     assert_eq!(mapping_data.number_of_products, PC_MAP_TABLE_SIZE);
 }
-
 
 // Create an add_product instruction that sets the product metadata to strings
 pub fn populate_instruction(instruction_data: &mut [u8], strings: &[&str]) -> usize {

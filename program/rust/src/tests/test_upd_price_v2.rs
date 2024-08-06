@@ -511,7 +511,6 @@ fn test_upd_works_with_unordered_publisher_set() -> Result<(), Box<dyn std::erro
         &instruction_data,
     )?;
 
-
     let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
 
     // The result will be the following only if all the

@@ -36,7 +36,6 @@ async fn test_full_publisher_set() -> Result<(), Box<dyn std::error::Error>> {
         .await;
     let price = price_accounts["LTC"];
 
-
     let n_pubs = pub_keypairs.len();
 
     // Divide publishers into two even parts (assuming the max PC_NUM_COMP size is even)

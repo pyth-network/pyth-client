@@ -28,6 +28,5 @@ mod test_upd_price_with_validator;
 mod test_upd_product;
 mod test_utils;
 
-
 mod test_twap;
 mod test_upd_price_v2;

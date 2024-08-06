@@ -88,7 +88,6 @@ async fn test_upd_permissions() {
     master_authority = Pubkey::new_unique();
     security_authority = Pubkey::new_unique();
 
-
     // Should fail because payer is not the authority
     assert_eq!(
         sim.upd_permissions(

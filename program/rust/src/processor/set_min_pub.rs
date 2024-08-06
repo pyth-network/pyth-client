@@ -51,7 +51,6 @@ pub fn set_min_pub(
         &cmd.header,
     )?;
 
-
     let mut price_account_data = load_checked::<PriceAccount>(price_account, cmd.header.version)?;
     price_account_data.min_pub_ = cmd.minimum_publishers;
 

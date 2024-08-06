@@ -28,7 +28,6 @@ use {
 // account[0] funding account        [signer writable]
 // account[1] price account          [writable]
 // account[2] permissions account    [writable]
-// account[3] system program account []
 pub fn init_price_feed_index(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
@@ -41,8 +40,8 @@ pub fn init_price_feed_index(
         ProgramError::InvalidArgument,
     )?;
 
-    let (funding_account, price_account, permissions_account, system_program) = match accounts {
-        [x, y, p, z] => Ok((x, y, p, z)),
+    let (funding_account, price_account, permissions_account) = match accounts {
+        [x, y, p] => Ok((x, y, p)),
         _ => Err(OracleError::InvalidNumberOfAccounts),
     }?;
 
@@ -55,18 +54,13 @@ pub fn init_price_feed_index(
         cmd,
     )?;
     check_valid_writable_account(program_id, permissions_account)?;
-    pyth_assert(
-        solana_program::system_program::check_id(system_program.key),
-        OracleError::InvalidSystemAccount.into(),
-    )?;
 
     let mut price_account_data = load_checked::<PriceAccount>(price_account, cmd.version)?;
     pyth_assert(
         price_account_data.feed_index == 0,
         OracleError::FeedIndexAlreadyInitialized.into(),
     )?;
-    price_account_data.feed_index =
-        reserve_new_price_feed_index(funding_account, permissions_account, system_program)?;
+    price_account_data.feed_index = reserve_new_price_feed_index(permissions_account)?;
 
     Ok(())
 }
