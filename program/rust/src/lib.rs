@@ -1,4 +1,3 @@
-#![deny(warnings)]
 // Allow non upper case globals from C
 #![allow(non_upper_case_globals)]
 
@@ -29,6 +28,7 @@ mod log;
 // While we have `pyth-sdk-rs` which exposes a more friendly interface, this is still useful when a
 // downstream user wants to confirm for example that they can compile against the binary interface
 // of this program for their specific solana version.
+pub use crate::error::OracleError;
 #[cfg(feature = "strum")]
 pub use accounts::MessageType;
 #[cfg(feature = "library")]
@@ -45,8 +45,12 @@ pub use accounts::{
     PythAccount,
     PythOracleSerialize,
 };
+#[cfg(feature = "library")]
+pub use {
+    processor::find_publisher_index,
+    utils::get_status_for_conf_price_ratio,
+};
 use {
-    crate::error::OracleError,
     processor::process_instruction,
     solana_program::entrypoint,
 };

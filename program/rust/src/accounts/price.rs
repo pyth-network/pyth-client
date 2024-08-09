@@ -69,8 +69,9 @@ mod price_pythnet {
         pub max_latency_:       u8,
         /// Various flags
         pub flags:              PriceAccountFlags,
-        /// Unused placeholder for alignment
-        pub unused_3_:          i32,
+        /// Globally unique price feed index used for publishing.
+        /// Limited to 28 bites so that it can be packed together with trading status in a single u32.
+        pub feed_index:         u32,
         /// Corresponding product account
         pub product_account:    Pubkey,
         /// Next price account in the list
@@ -93,6 +94,10 @@ mod price_pythnet {
         /// Cumulative sums of aggregative price and confidence used to compute arithmetic moving averages
         pub price_cumulative:   PriceCumulative,
     }
+
+    // Feed index is limited to 28 bites so that it can be packed
+    // together with trading status in a single u32.
+    pub const MAX_FEED_INDEX: u32 = (1 << 28) - 1;
 
     bitflags! {
         #[repr(C)]

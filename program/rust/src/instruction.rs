@@ -103,6 +103,12 @@ pub enum OracleCommand {
     // account[0] funding account       [signer writable]
     // account[1] price account         [signer writable]
     SetMaxLatency         = 18,
+    /// Init price feed index
+    // account[0] funding account        [signer writable]
+    // account[1] price account          [writable]
+    // account[2] permissions account    [writable]
+    // account[3] system program account []
+    InitPriceFeedIndex    = 19,
 }
 
 #[repr(C)]
