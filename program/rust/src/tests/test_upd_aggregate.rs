@@ -67,6 +67,7 @@ fn test_upd_aggregate() {
         corp_act_status_: 0,
     };
 
+
     let mut instruction_data = [0u8; size_of::<UpdPriceArgs>()];
     populate_instruction(&mut instruction_data, 42, 2, 1);
 

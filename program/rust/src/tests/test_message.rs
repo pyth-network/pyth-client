@@ -44,6 +44,7 @@ fn test_twap_message_roundtrip(input: TwapMessage) -> bool {
     }
 }
 
+
 fn prop_publisher_caps_message_roundtrip(input: PublisherStakeCapsMessage) -> bool {
     let reconstructed = from_slice::<BigEndian, Message>(&input.clone().to_bytes()).unwrap();
 

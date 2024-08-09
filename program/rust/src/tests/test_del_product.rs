@@ -11,6 +11,7 @@ use {
     },
 };
 
+
 #[tokio::test]
 async fn test_del_product() {
     let mut sim = PythSimulator::new().await;
@@ -54,6 +55,7 @@ async fn test_del_product() {
         ]
     ));
     assert!(sim.get_account(product5.pubkey()).await.is_some());
+
 
     assert!(sim.del_product(&mapping_keypair, &product4).await.is_ok());
     let mapping_data = sim

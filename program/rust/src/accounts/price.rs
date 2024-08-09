@@ -70,7 +70,7 @@ mod price_pythnet {
         /// Various flags
         pub flags:              PriceAccountFlags,
         /// Globally unique price feed index used for publishing.
-        /// Limited to 28 bites.
+        /// Limited to 28 bites so that it can be packed together with trading status in a single u32.
         pub feed_index:         u32,
         /// Corresponding product account
         pub product_account:    Pubkey,
@@ -94,6 +94,10 @@ mod price_pythnet {
         /// Cumulative sums of aggregative price and confidence used to compute arithmetic moving averages
         pub price_cumulative:   PriceCumulative,
     }
+
+    // Feed index is limited to 28 bites so that it can be packed
+    // together with trading status in a single u32.
+    pub const MAX_FEED_INDEX: u32 = (1 << 28) - 1;
 
     bitflags! {
         #[repr(C)]

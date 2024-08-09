@@ -47,6 +47,7 @@ pub fn upd_product(
         hdr,
     )?;
 
+
     {
         // Validate that product_account contains the appropriate account header
         let mut _product_data = load_checked::<ProductAccount>(product_account, hdr.version)?;

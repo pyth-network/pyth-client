@@ -3,6 +3,8 @@ use {
         accounts::{
             AccountHeader,
             PermissionAccount,
+            PythAccount,
+            MAX_FEED_INDEX,
         },
         deserialize::load_account_as_mut,
         error::OracleError,
@@ -108,8 +110,8 @@ pub fn process_instruction(
 }
 
 fn reserve_new_price_feed_index(permissions_account: &AccountInfo) -> Result<u32, ProgramError> {
-    if permissions_account.data_len() < PermissionAccount::MIN_SIZE_WITH_LAST_FEED_INDEX {
-        let new_size = PermissionAccount::MIN_SIZE_WITH_LAST_FEED_INDEX;
+    if permissions_account.data_len() < PermissionAccount::NEW_ACCOUNT_SPACE {
+        let new_size = PermissionAccount::NEW_ACCOUNT_SPACE;
         let rent = Rent::get()?;
         let new_minimum_balance = rent.minimum_balance(new_size);
         pyth_assert(
@@ -124,7 +126,7 @@ fn reserve_new_price_feed_index(permissions_account: &AccountInfo) -> Result<u32
     let mut last_feed_index = PermissionAccount::load_last_feed_index_mut(permissions_account)?;
     *last_feed_index += 1;
     pyth_assert(
-        *last_feed_index < (1 << 28),
+        *last_feed_index <= MAX_FEED_INDEX,
         OracleError::MaxLastFeedIndexReached.into(),
     )?;
     Ok(*last_feed_index)

@@ -45,6 +45,7 @@ fn check_price_account_header(price_account_info: &[u8]) -> Result<(), ProgramEr
             && account_header.account_type == PriceAccount::ACCOUNT_TYPE,
         OracleError::InvalidAccountHeader.into(),
     )?;
+
     Ok(())
 }
 

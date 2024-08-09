@@ -18,6 +18,7 @@ use {
     test_generator::test_resources,
 };
 
+
 #[test_resources("program/rust/test_data/ema/*.csv")]
 fn test_ema(input_path_raw: &str) {
     let (inputs, expected_outputs) = read_test_data(input_path_raw);
@@ -109,6 +110,7 @@ fn run_ema_test(inputs: &[InputRecord], expected_outputs: &[OutputRecord]) {
     }
 }
 
+
 // TODO: put these functions somewhere more accessible
 pub fn upd_aggregate(
     price_account: &mut PriceAccount,
@@ -127,6 +129,7 @@ pub fn upd_aggregate(
 pub fn upd_twap(price_account: &mut PriceAccount, nslots: i64) {
     unsafe { c_upd_twap((price_account as *mut PriceAccount) as *mut u8, nslots) }
 }
+
 
 #[derive(Serialize, Deserialize, Debug)]
 struct InputRecord {

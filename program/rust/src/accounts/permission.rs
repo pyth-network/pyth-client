@@ -47,9 +47,6 @@ pub struct PermissionAccount {
 }
 
 impl PermissionAccount {
-    pub const MIN_SIZE_WITH_LAST_FEED_INDEX: usize =
-        size_of::<PermissionAccount>() + size_of::<u32>();
-
     pub fn is_authorized(&self, key: &Pubkey, command: OracleCommand) -> bool {
         #[allow(clippy::match_like_matches_macro)]
         match (*key, command) {
@@ -66,7 +63,7 @@ impl PermissionAccount {
     ) -> Result<RefMut<'a, u32>, ProgramError> {
         let start = size_of::<PermissionAccount>();
         let end = start + size_of::<u32>();
-        assert_eq!(Self::MIN_SIZE_WITH_LAST_FEED_INDEX, end);
+        assert_eq!(Self::NEW_ACCOUNT_SPACE, end);
         if account.data_len() < end {
             return Err(ProgramError::AccountDataTooSmall);
         }
@@ -78,6 +75,6 @@ impl PermissionAccount {
 
 impl PythAccount for PermissionAccount {
     const ACCOUNT_TYPE: u32 = PC_ACCTYPE_PERMISSIONS;
-    const INITIAL_SIZE: u32 = Self::MIN_SIZE_WITH_LAST_FEED_INDEX as u32;
-    const NEW_ACCOUNT_SPACE: usize = Self::MIN_SIZE_WITH_LAST_FEED_INDEX;
+    const NEW_ACCOUNT_SPACE: usize = size_of::<PermissionAccount>() + size_of::<u32>();
+    const INITIAL_SIZE: u32 = Self::NEW_ACCOUNT_SPACE as u32;
 }

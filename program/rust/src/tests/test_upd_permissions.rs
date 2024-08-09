@@ -1,6 +1,9 @@
 use {
     crate::{
-        accounts::PermissionAccount,
+        accounts::{
+            PermissionAccount,
+            PythAccount,
+        },
         deserialize::load,
         error::OracleError,
         instruction::{
@@ -66,7 +69,7 @@ async fn test_upd_permissions() {
 
     assert_eq!(
         permission_account.data.len(),
-        PermissionAccount::MIN_SIZE_WITH_LAST_FEED_INDEX
+        PermissionAccount::NEW_ACCOUNT_SPACE
     );
     assert_eq!(
         Rent::default().minimum_balance(permission_account.data.len()),
@@ -87,6 +90,7 @@ async fn test_upd_permissions() {
     data_curation_authority = Pubkey::new_unique();
     master_authority = Pubkey::new_unique();
     security_authority = Pubkey::new_unique();
+
 
     // Should fail because payer is not the authority
     assert_eq!(

@@ -65,6 +65,7 @@ pub fn add_product(
         hdr,
     )?;
 
+
     let mut mapping_data = load_checked::<MappingAccount>(tail_mapping_account, hdr.version)?;
     // The mapping account must have free space to add the product account
     pyth_assert(

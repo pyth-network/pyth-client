@@ -55,6 +55,7 @@ pub fn init_price(
         &cmd_args.header,
     )?;
 
+
     let mut price_data = load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
     pyth_assert(
         price_data.price_type == cmd_args.price_type,

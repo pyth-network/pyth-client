@@ -59,6 +59,7 @@ pub use {
         PriceEma,
         PriceInfo,
         PythOracleSerialize,
+        MAX_FEED_INDEX,
     },
     product::{
         update_product_metadata,

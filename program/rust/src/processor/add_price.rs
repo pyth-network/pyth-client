@@ -50,6 +50,7 @@ pub fn add_price(
         ProgramError::InvalidArgument,
     )?;
 
+
     let (funding_account, product_account, price_account, permissions_account) = match accounts {
         [x, y, z, p] => Ok((x, y, z, p)),
         _ => Err(OracleError::InvalidNumberOfAccounts),
@@ -75,7 +76,6 @@ pub fn add_price(
     let mut product_data =
         load_checked::<ProductAccount>(product_account, cmd_args.header.version)?;
 
-    // TODO: where is it created???
     let mut price_data = PriceAccount::initialize(price_account, cmd_args.header.version)?;
     price_data.exponent = cmd_args.exponent;
     price_data.price_type = cmd_args.price_type;

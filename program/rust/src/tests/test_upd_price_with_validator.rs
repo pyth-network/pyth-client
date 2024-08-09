@@ -86,6 +86,7 @@ fn test_upd_price_with_validator() {
     )
     .is_ok());
 
+
     {
         let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
         assert_eq!(price_data.comp_[0].latest_.price_, 42);
@@ -336,6 +337,7 @@ fn test_upd_price_with_validator() {
         assert_eq!(price_data.comp_[0].latest_.status_, PC_STATUS_TRADING);
     }
 
+
     assert!(process_instruction(
         &program_id,
         &[
@@ -405,6 +407,7 @@ fn test_upd_price_with_validator() {
     .unwrap();
     update_clock_slot(&mut clock_account, 8);
 
+
     assert!(process_instruction(
         &program_id,
         &[
@@ -438,6 +441,7 @@ fn test_upd_price_with_validator() {
     )
     .unwrap();
     update_clock_slot(&mut clock_account, 9);
+
 
     assert!(process_instruction(
         &program_id,
