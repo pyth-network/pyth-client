@@ -79,8 +79,8 @@ async fn test_full_publisher_set() -> Result<(), Box<dyn std::error::Error>> {
             .await
             .unwrap();
 
-        assert_eq!(price_data.agg_.price_, 110);
-        assert_eq!(price_data.agg_.conf_, 20);
+        assert_eq!(price_data.agg_.price_, 0);
+        assert_eq!(price_data.agg_.conf_, 0);
     }
 
     Ok(())

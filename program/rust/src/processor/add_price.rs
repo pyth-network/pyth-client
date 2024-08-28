@@ -3,6 +3,7 @@ use {
     crate::{
         accounts::{
             PriceAccount,
+            PriceAccountFlags,
             ProductAccount,
             PythAccount,
         },
@@ -83,6 +84,10 @@ pub fn add_price(
     price_data.next_price_account = product_data.first_price_account;
     price_data.min_pub_ = PRICE_ACCOUNT_DEFAULT_MIN_PUB;
     price_data.feed_index = reserve_new_price_feed_index(permissions_account)?;
+    price_data
+        .flags
+        .insert(PriceAccountFlags::ACCUMULATOR_V2 | PriceAccountFlags::MESSAGE_BUFFER_CLEARED);
+
     product_data.first_price_account = *price_account.key;
 
     Ok(())
