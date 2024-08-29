@@ -69,7 +69,7 @@ async fn test_upd_permissions() {
 
     assert_eq!(
         permission_account.data.len(),
-        PermissionAccount::MINIMUM_SIZE
+        PermissionAccount::NEW_ACCOUNT_SPACE
     );
     assert_eq!(
         Rent::default().minimum_balance(permission_account.data.len()),

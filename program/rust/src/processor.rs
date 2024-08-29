@@ -1,9 +1,20 @@
 use {
     crate::{
+        accounts::{
+            AccountHeader,
+            PermissionAccount,
+            PythAccount,
+            MAX_FEED_INDEX,
+        },
+        deserialize::load_account_as_mut,
         error::OracleError,
         instruction::{
             load_command_header_checked,
             OracleCommand,
+        },
+        utils::{
+            pyth_assert,
+            try_convert,
         },
     },
     solana_program::{
@@ -21,6 +32,7 @@ mod del_product;
 mod del_publisher;
 mod init_mapping;
 mod init_price;
+mod init_price_feed_index;
 mod set_max_latency;
 mod set_min_pub;
 mod upd_permissions;
@@ -47,10 +59,19 @@ pub use {
     upd_price::{
         c_upd_aggregate,
         c_upd_twap,
+        find_publisher_index,
         upd_price,
         upd_price_no_fail_on_error,
     },
     upd_product::upd_product,
+};
+use {
+    init_price_feed_index::init_price_feed_index,
+    solana_program::{
+        program_error::ProgramError,
+        rent::Rent,
+        sysvar::Sysvar,
+    },
 };
 
 /// Dispatch to the right instruction in the oracle.
@@ -84,5 +105,29 @@ pub fn process_instruction(
         DelProduct => del_product(program_id, accounts, instruction_data),
         UpdPermissions => upd_permissions(program_id, accounts, instruction_data),
         SetMaxLatency => set_max_latency(program_id, accounts, instruction_data),
+        InitPriceFeedIndex => init_price_feed_index(program_id, accounts, instruction_data),
     }
+}
+
+fn reserve_new_price_feed_index(permissions_account: &AccountInfo) -> Result<u32, ProgramError> {
+    if permissions_account.data_len() < PermissionAccount::NEW_ACCOUNT_SPACE {
+        let new_size = PermissionAccount::NEW_ACCOUNT_SPACE;
+        let rent = Rent::get()?;
+        let new_minimum_balance = rent.minimum_balance(new_size);
+        pyth_assert(
+            permissions_account.lamports() >= new_minimum_balance,
+            ProgramError::AccountNotRentExempt,
+        )?;
+
+        permissions_account.realloc(new_size, true)?;
+        let mut header = load_account_as_mut::<AccountHeader>(permissions_account)?;
+        header.size = try_convert(new_size)?;
+    }
+    let mut last_feed_index = PermissionAccount::load_last_feed_index_mut(permissions_account)?;
+    *last_feed_index += 1;
+    pyth_assert(
+        *last_feed_index <= MAX_FEED_INDEX,
+        OracleError::MaxLastFeedIndexReached.into(),
+    )?;
+    Ok(*last_feed_index)
 }

@@ -39,9 +39,10 @@ pub enum OracleCommand {
     // account[1] product account       [signer writable]
     UpdProduct            = 3,
     /// Add new price account to a product account
-    // account[0] funding account       [signer writable]
-    // account[1] product account       [signer writable]
-    // account[2] new price account     [signer writable]
+    // account[0] funding account        [signer writable]
+    // account[1] product account        [writable]
+    // account[2] new price account      [writable]
+    // account[3] permissions account    [writable]
     AddPrice              = 4,
     /// Add publisher to symbol account
     // account[0] funding account       [signer writable]
@@ -103,6 +104,11 @@ pub enum OracleCommand {
     // account[0] funding account       [signer writable]
     // account[1] price account         [signer writable]
     SetMaxLatency         = 18,
+    /// Init price feed index
+    // account[0] funding account        [signer writable]
+    // account[1] price account          [writable]
+    // account[2] permissions account    [writable]
+    InitPriceFeedIndex    = 19,
 }
 
 #[repr(C)]

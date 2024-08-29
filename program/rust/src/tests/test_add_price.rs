@@ -82,7 +82,7 @@ fn test_add_price() {
     )
     .is_ok());
 
-    assert!(process_instruction(
+    process_instruction(
         &program_id,
         &[
             funding_account.clone(),
@@ -90,9 +90,9 @@ fn test_add_price() {
             price_account.clone(),
             permissions_account.clone(),
         ],
-        instruction_data_add_price
+        instruction_data_add_price,
     )
-    .is_ok());
+    .unwrap();
 
     {
         let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
@@ -102,10 +102,11 @@ fn test_add_price() {
         assert_eq!(price_data.min_pub_, PRICE_ACCOUNT_DEFAULT_MIN_PUB);
         assert!(price_data.product_account == *product_account.key);
         assert!(price_data.next_price_account == Pubkey::default());
+        assert_eq!(price_data.feed_index, 1);
         assert!(product_data.first_price_account == *price_account.key);
     }
 
-    assert!(process_instruction(
+    process_instruction(
         &program_id,
         &[
             funding_account.clone(),
@@ -113,9 +114,9 @@ fn test_add_price() {
             price_account_2.clone(),
             permissions_account.clone(),
         ],
-        instruction_data_add_price
+        instruction_data_add_price,
     )
-    .is_ok());
+    .unwrap();
 
     {
         let price_data_2 = load_checked::<PriceAccount>(&price_account_2, PC_VERSION).unwrap();
@@ -125,8 +126,61 @@ fn test_add_price() {
         assert_eq!(price_data_2.min_pub_, PRICE_ACCOUNT_DEFAULT_MIN_PUB);
         assert!(price_data_2.product_account == *product_account.key);
         assert!(price_data_2.next_price_account == *price_account.key);
+        assert_eq!(price_data_2.feed_index, 2);
         assert!(product_data.first_price_account == *price_account_2.key);
     }
+
+    // Emulate pre-existing price accounts without a feed index.
+    {
+        let mut price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        price_data.feed_index = 0;
+        let mut price_data_2 = load_checked::<PriceAccount>(&price_account_2, PC_VERSION).unwrap();
+        price_data_2.feed_index = 0;
+    }
+    let hdr_init_price_feed_index = CommandHeader::from(OracleCommand::InitPriceFeedIndex);
+    let instruction_data_init_price_feed_index = bytes_of(&hdr_init_price_feed_index);
+    process_instruction(
+        &program_id,
+        &[
+            funding_account.clone(),
+            price_account.clone(),
+            permissions_account.clone(),
+        ],
+        instruction_data_init_price_feed_index,
+    )
+    .unwrap();
+    {
+        let price_data = load_checked::<PriceAccount>(&price_account, PC_VERSION).unwrap();
+        assert_eq!(price_data.feed_index, 3);
+    }
+    process_instruction(
+        &program_id,
+        &[
+            funding_account.clone(),
+            price_account_2.clone(),
+            permissions_account.clone(),
+        ],
+        instruction_data_init_price_feed_index,
+    )
+    .unwrap();
+    {
+        let price_data_2 = load_checked::<PriceAccount>(&price_account_2, PC_VERSION).unwrap();
+        assert_eq!(price_data_2.feed_index, 4);
+    }
+
+    // Feed index is already set.
+    assert_eq!(
+        process_instruction(
+            &program_id,
+            &[
+                funding_account.clone(),
+                price_account_2.clone(),
+                permissions_account.clone(),
+            ],
+            instruction_data_init_price_feed_index,
+        ),
+        Err(OracleError::FeedIndexAlreadyInitialized.into())
+    );
 
     // Wrong number of accounts
     assert_eq!(

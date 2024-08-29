@@ -150,7 +150,7 @@ fn test_permission_migration() {
                 attacker_account.clone(),
                 product_account.clone(),
                 price_account.clone(),
-                permissions_account.clone()
+                permissions_account.clone(),
             ],
             bytes_of::<AddPriceArgs>(&AddPriceArgs {
                 header:     AddPrice.into(),
