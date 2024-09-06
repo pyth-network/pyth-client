@@ -24,6 +24,7 @@ use {
     },
 };
 
+mod add_mapping;
 mod add_price;
 mod add_product;
 mod add_publisher;
@@ -45,6 +46,7 @@ pub use add_publisher::{
     ENABLE_ACCUMULATOR_V2,
 };
 pub use {
+    add_mapping::add_mapping,
     add_price::add_price,
     add_product::add_product,
     add_publisher::add_publisher,
@@ -84,7 +86,7 @@ pub fn process_instruction(
 
     match load_command_header_checked(instruction_data)? {
         InitMapping => init_mapping(program_id, accounts, instruction_data),
-        AddMapping => Err(OracleError::UnrecognizedInstruction.into()),
+        AddMapping => add_mapping(program_id, accounts, instruction_data),
         AddProduct => add_product(program_id, accounts, instruction_data),
         UpdProduct => upd_product(program_id, accounts, instruction_data),
         AddPrice => add_price(program_id, accounts, instruction_data),
