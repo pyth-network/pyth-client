@@ -34,7 +34,7 @@ use {
     solana_sdk::transaction::TransactionError,
 };
 
-const UPPER_BOUND_OF_ALL_ACCOUNT_SIZES: usize = 20536;
+const UPPER_BOUND_OF_ALL_ACCOUNT_SIZES: usize = 160056;
 
 /// The goal of this struct is to easily instantiate fresh solana accounts
 /// for the Pyth program to use in tests.
@@ -50,7 +50,7 @@ pub struct AccountSetup {
     owner:   Pubkey,
     balance: u64,
     size:    usize,
-    data:    [u8; UPPER_BOUND_OF_ALL_ACCOUNT_SIZES],
+    data:    Vec<u8>,
 }
 
 impl AccountSetup {
@@ -59,7 +59,7 @@ impl AccountSetup {
         let owner = *owner;
         let balance = Rent::minimum_balance(&Rent::default(), T::MINIMUM_SIZE);
         let size = T::MINIMUM_SIZE;
-        let data = [0; UPPER_BOUND_OF_ALL_ACCOUNT_SIZES];
+        let data = vec![0; UPPER_BOUND_OF_ALL_ACCOUNT_SIZES];
         AccountSetup {
             key,
             owner,
@@ -74,7 +74,7 @@ impl AccountSetup {
         let owner = system_program::id();
         let balance = LAMPORTS_PER_SOL;
         let size = 0;
-        let data = [0; UPPER_BOUND_OF_ALL_ACCOUNT_SIZES];
+        let data = vec![0; UPPER_BOUND_OF_ALL_ACCOUNT_SIZES];
         AccountSetup {
             key,
             owner,
@@ -89,7 +89,7 @@ impl AccountSetup {
         let owner = *owner;
         let balance = Rent::minimum_balance(&Rent::default(), PermissionAccount::NEW_ACCOUNT_SPACE);
         let size = PermissionAccount::NEW_ACCOUNT_SPACE;
-        let data = [0; UPPER_BOUND_OF_ALL_ACCOUNT_SIZES];
+        let data = vec![0; UPPER_BOUND_OF_ALL_ACCOUNT_SIZES];
         AccountSetup {
             key,
             owner,
@@ -104,7 +104,7 @@ impl AccountSetup {
         let owner = sysvar::id();
         let balance = Rent::minimum_balance(&Rent::default(), clock::Clock::size_of());
         let size = clock::Clock::size_of();
-        let data = [0u8; UPPER_BOUND_OF_ALL_ACCOUNT_SIZES];
+        let data = vec![0u8; UPPER_BOUND_OF_ALL_ACCOUNT_SIZES];
         AccountSetup {
             key,
             owner,
