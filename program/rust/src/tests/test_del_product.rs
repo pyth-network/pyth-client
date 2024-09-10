@@ -1,6 +1,7 @@
 use {
     crate::{
         accounts::MappingAccount,
+        deserialize::load,
         tests::pyth_simulator::PythSimulator,
     },
     solana_program::pubkey::Pubkey,
@@ -41,32 +42,31 @@ async fn test_del_product() {
 
     assert!(sim.get_account(product2.pubkey()).await.is_none());
 
-    let mapping_data = sim
-        .get_account_data_as::<MappingAccount>(mapping_keypair.pubkey())
-        .await
-        .unwrap();
-    assert!(mapping_product_list_equals(
-        &mapping_data,
-        vec![
-            product1.pubkey(),
-            product5.pubkey(),
-            product3.pubkey(),
-            product4.pubkey()
-        ]
-    ));
+    {
+        let mapping_account = sim.get_account(mapping_keypair.pubkey()).await.unwrap();
+        let mapping_data = load::<MappingAccount>(&mapping_account.data).unwrap();
+        assert!(mapping_product_list_equals(
+            mapping_data,
+            vec![
+                product1.pubkey(),
+                product5.pubkey(),
+                product3.pubkey(),
+                product4.pubkey()
+            ]
+        ));
+    }
     assert!(sim.get_account(product5.pubkey()).await.is_some());
 
 
     assert!(sim.del_product(&mapping_keypair, &product4).await.is_ok());
-    let mapping_data = sim
-        .get_account_data_as::<MappingAccount>(mapping_keypair.pubkey())
-        .await
-        .unwrap();
-
-    assert!(mapping_product_list_equals(
-        &mapping_data,
-        vec![product1.pubkey(), product5.pubkey(), product3.pubkey()]
-    ));
+    {
+        let mapping_account = sim.get_account(mapping_keypair.pubkey()).await.unwrap();
+        let mapping_data = load::<MappingAccount>(&mapping_account.data).unwrap();
+        assert!(mapping_product_list_equals(
+            mapping_data,
+            vec![product1.pubkey(), product5.pubkey(), product3.pubkey()]
+        ));
+    }
 }
 
 /// Returns true if the list of products in `mapping_data` contains the keys in `expected` (in the

@@ -56,6 +56,8 @@ pub enum OracleError {
     MaxLastFeedIndexReached        = 621,
     #[error("FeedIndexAlreadyInitialized")]
     FeedIndexAlreadyInitialized    = 622,
+    #[error("NoNeedToResize")]
+    NoNeedToResize                 = 623,
 }
 
 impl From<OracleError> for ProgramError {
