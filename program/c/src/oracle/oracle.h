@@ -248,7 +248,7 @@ static_assert( sizeof( pc_price_t ) == PC_EXPECTED_PRICE_T_SIZE_PYTHNET, "" );
 
 
 // This constant needs to be an upper bound of the price account size, it is used within pythd for ztsd.
-// It is set tighly to the current price account + 96 component prices + 48 bytes for cumulative sums
+// It is set tightly to the current price account + 96 component prices + 48 bytes for cumulative sums
 const uint64_t ZSTD_UPPER_BOUND = 3312 + 96 * sizeof( pc_price_comp_t) + 48;
 
 
