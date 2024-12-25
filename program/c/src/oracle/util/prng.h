@@ -307,7 +307,7 @@ static inline double prng_double_o ( prng_t * prng ) { return prng_uint64_to_dou
 
    Rejection method based.  Specifically, the number of prng slots
    consumed is typically 1 but theoretically might be higher
-   occassionally (64-bit wide types consume prng slots twice as fast).
+   occasionally (64-bit wide types consume prng slots twice as fast).
 
    Deterministic prng slot consumption possible with a slightly more
    approximate implementation (bound the number of iterations such that
