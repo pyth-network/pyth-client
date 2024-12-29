@@ -20,7 +20,7 @@
 
 /*
 This file demonstrates how to use publish price updates to the Pyth Network using
-the pythd websocket API described at https://docs.pyth.network/publish-data/pyth-client-websocket-api.
+the pythd websocket API described at https://docs.pyth.network/express-relay/websocket-api-reference.
 
 High-level flow:
 - Call get_product_list_and_subscribe to fetch the product metadata, enabling us to associate the price account public 
