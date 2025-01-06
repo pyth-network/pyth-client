@@ -44,6 +44,11 @@ pub use add_publisher::{
     DISABLE_ACCUMULATOR_V2,
     ENABLE_ACCUMULATOR_V2,
 };
+use solana_program::{
+    program_error::ProgramError,
+    rent::Rent,
+    sysvar::Sysvar,
+};
 pub use {
     add_price::add_price,
     add_product::add_product,
@@ -65,11 +70,6 @@ pub use {
         upd_price_no_fail_on_error,
     },
     upd_product::upd_product,
-};
-use solana_program::{
-    program_error::ProgramError,
-    rent::Rent,
-    sysvar::Sysvar,
 };
 
 
@@ -105,7 +105,9 @@ pub fn process_instruction(
         UpdPermissions => upd_permissions(program_id, accounts, instruction_data),
         SetMaxLatency => set_max_latency(program_id, accounts, instruction_data),
         InitPriceFeedIndex => {
-            solana_program::msg!("Oracle init price feed index instruction has been removed. Bailing out!");
+            solana_program::msg!(
+                "Oracle init price feed index instruction has been removed. Bailing out!"
+            );
             Err(OracleError::UnrecognizedInstruction.into())
         }
         ResizeMapping => resize_mapping(program_id, accounts, instruction_data),
