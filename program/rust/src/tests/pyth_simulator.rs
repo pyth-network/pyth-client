@@ -492,12 +492,12 @@ impl PythSimulator {
         let instruction = Instruction::new_with_bytes(
             self.program_id,
             bytes_of(&cmd),
-            vec![AccountMeta::new(mapping_keypair.pubkey(), true)],
+            vec![AccountMeta::new(mapping_keypair.pubkey(), false)],
         );
 
         self.process_ixs(
             &[instruction],
-            &vec![mapping_keypair],
+            &vec![],
             &copy_keypair(&self.genesis_keypair),
         )
         .await
