@@ -478,6 +478,31 @@ impl PythSimulator {
             .map(|_| permissions_pubkey)
     }
 
+    pub async fn truncate_account(&mut self, key: Pubkey, size: usize) {
+        let mut account = self.get_account(key).await.unwrap();
+        account.data.truncate(size);
+        self.context.set_account(&key, &account.into());
+    }
+
+    pub async fn resize_mapping(
+        &mut self,
+        mapping_keypair: &Keypair,
+    ) -> Result<(), BanksClientError> {
+        let cmd: CommandHeader = OracleCommand::ResizeMapping.into();
+        let instruction = Instruction::new_with_bytes(
+            self.program_id,
+            bytes_of(&cmd),
+            vec![AccountMeta::new(mapping_keypair.pubkey(), false)],
+        );
+
+        self.process_ixs(
+            &[instruction],
+            &vec![],
+            &copy_keypair(&self.genesis_keypair),
+        )
+        .await
+    }
+
     /// Get the account at `key`. Returns `None` if no such account exists.
     pub async fn get_account(&mut self, key: Pubkey) -> Option<Account> {
         self.context.banks_client.get_account(key).await.unwrap()

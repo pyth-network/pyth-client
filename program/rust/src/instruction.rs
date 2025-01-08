@@ -109,6 +109,8 @@ pub enum OracleCommand {
     // account[1] price account          [writable]
     // account[2] permissions account    [writable]
     InitPriceFeedIndex    = 19,
+    // account[0] mapping account [writable]
+    ResizeMapping         = 20,
 }
 
 #[repr(C)]
