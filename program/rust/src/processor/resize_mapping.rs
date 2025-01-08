@@ -32,7 +32,7 @@ use {
 };
 
 /// Resize mapping account.
-// account[1] mapping account [writable]
+// account[0] mapping account [writable]
 pub fn resize_mapping(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
