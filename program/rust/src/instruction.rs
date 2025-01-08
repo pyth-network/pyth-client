@@ -103,6 +103,9 @@ pub enum OracleCommand {
     // account[0] funding account       [signer writable]
     // account[1] price account         [signer writable]
     SetMaxLatency         = 18,
+
+    // account[0] mapping account [writable]
+    ResizeMapping         = 20,
 }
 
 #[repr(C)]

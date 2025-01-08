@@ -86,7 +86,7 @@ fn test_sizes() {
     assert_eq!(size_of::<UpdPriceArgs>(), 40);
     assert_eq!(size_of::<Pubkey>(), 32);
     assert_eq!(size_of::<AccountHeader>(), 16);
-    assert_eq!(size_of::<MappingAccount>(), 20536);
+    assert_eq!(size_of::<MappingAccount>(), 160056);
     assert_eq!(size_of::<ProductAccount>(), 48);
     assert_eq!(size_of::<PriceComponent>(), 96);
     assert_eq!(size_of::<PriceEma>(), 24);
