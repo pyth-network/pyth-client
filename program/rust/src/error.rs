@@ -52,6 +52,8 @@ pub enum OracleError {
     PermissionViolation            = 619,
     #[error("NeedsSuccesfulAggregation")]
     NeedsSuccesfulAggregation      = 620,
+    #[error("NoNeedToResize")]
+    NoNeedToResize                 = 623,
 }
 
 impl From<OracleError> for ProgramError {

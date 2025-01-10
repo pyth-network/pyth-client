@@ -20,7 +20,7 @@ extern "C" {
 // various size constants
 #define PC_PUBKEY_SIZE       32
 #define PC_PUBKEY_SIZE_64   (PC_PUBKEY_SIZE/sizeof(uint64_t))
-#define PC_MAP_TABLE_SIZE   640
+#define PC_MAP_TABLE_SIZE   5000
 
   // Total price component slots available
 #define PC_NUM_COMP_PYTHNET     128
@@ -117,7 +117,7 @@ typedef struct pc_map_table
   pc_pub_key_t    prod_[PC_MAP_TABLE_SIZE]; // product accounts
 } pc_map_table_t;
 
-static_assert( sizeof( pc_map_table_t ) == 20536, "" );
+static_assert( sizeof( pc_map_table_t ) == 160056, "" );
 
 // variable length string
 typedef struct pc_str
