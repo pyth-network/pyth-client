@@ -12,7 +12,7 @@ namespace pc
 
     pub_stats();
 
-    // number of prices submited
+    // number of prices submitted
     uint64_t get_num_sent() const;
 
     // number of observed aggregate slot updates
