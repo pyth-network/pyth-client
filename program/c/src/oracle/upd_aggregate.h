@@ -206,10 +206,10 @@ static inline bool upd_aggregate( pc_price_t *ptr, uint64_t slot, int64_t timest
     // if the confidences end up at zero, we abort
     // this is paranoia as it is currently not possible when nprcs>2 and
     // positive confidences given the current pricing model
-    if( agg_conf <= (int64_t)0 ) {
-      ptr->agg_.status_ = PC_STATUS_UNKNOWN;
-      return false;
-    }
+    // if( agg_conf <= (int64_t)0 ) {
+    //   ptr->agg_.status_ = PC_STATUS_UNKNOWN;
+    //   return false;
+    // }
   }
 
   // update status and publish slot of last trading status price
