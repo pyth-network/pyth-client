@@ -165,26 +165,26 @@ static inline bool upd_aggregate( pc_price_t *ptr, uint64_t slot, int64_t timest
       int64_t price     = iptr->agg_.price_;
       int64_t conf      = ( int64_t )( iptr->agg_.conf_ );
       int64_t max_latency = ptr->max_latency_ ? ptr->max_latency_ : PC_MAX_SEND_LATENCY;
-      // if ( iptr->agg_.status_ == PC_STATUS_TRADING &&
-      //      // No overflow for INT64_MIN+conf or INT64_MAX-conf as 0 < conf < INT64_MAX
-      //      // These checks ensure that price - conf and price + conf do not overflow.
-      //      (int64_t)0 < conf && (INT64_MIN + conf) <= price && price <= (INT64_MAX-conf) &&
-      //      // slot_diff is implicitly >= 0 due to the check in Rust code ensuring publishing_slot is always less than or equal to the current slot.
-      //      slot_diff <= max_latency ) {
+      if ( iptr->agg_.status_ == PC_STATUS_TRADING &&
+           // No overflow for INT64_MIN+conf or INT64_MAX-conf as 0 < conf < INT64_MAX
+           // These checks ensure that price - conf and price + conf do not overflow.
+           (int64_t)0 < conf && (INT64_MIN + conf) <= price && price <= (INT64_MAX-conf) &&
+           // slot_diff is implicitly >= 0 due to the check in Rust code ensuring publishing_slot is always less than or equal to the current slot.
+           slot_diff <= max_latency ) {
         numv += 1;
         prcs[ nprcs++ ] = price - conf;
         prcs[ nprcs++ ] = price;
         prcs[ nprcs++ ] = price + conf;
-      // }
+      }
     }
 
     // too few valid quotes
     ptr->num_qt_ = numv;
     ptr->agg_.corp_act_status_ = numv;
-    // if ( numv == 0 || numv < ptr->min_pub_ ) {
-    //   ptr->agg_.status_ = PC_STATUS_UNKNOWN;
-    //   return false;
-    // }
+    if ( numv == 0 || numv < ptr->min_pub_ ) {
+      ptr->agg_.status_ = PC_STATUS_UNKNOWN;
+      return false;
+    }
 
     // evaluate the model to get the p25/p50/p75 prices
     // note: numv>0 and nprcs = 3*numv at this point
