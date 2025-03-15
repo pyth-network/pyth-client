@@ -29,10 +29,10 @@ use {
 /// Updates permissions for the pyth oracle program
 /// This function can create and update the permissions accounts, which stores
 /// several public keys that can execute administrative instructions in the pyth program
-// key[0] upgrade authority         [signer writable]
-// key[1] programdata account       []
-// key[2] permissions account       [writable]
-// key[3] system program            []
+// account[0] upgrade authority     [signer writable]
+// account[1] programdata account   []
+// account[2] permissions account   [writable]
+// account[3] system program        []
 pub fn upd_permissions(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
