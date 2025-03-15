@@ -36,6 +36,7 @@ use {
 // account[0] funding account       [signer writable]
 // account[1] mapping account       [signer writable]
 // account[2] new product account   [signer writable]
+// account[3] permissions account   []
 pub fn add_product(
     program_id: &Pubkey,
     accounts: &[AccountInfo],

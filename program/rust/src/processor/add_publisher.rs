@@ -44,6 +44,7 @@ pub const DISABLE_ACCUMULATOR_V2: [u8; 32] = [
 /// Add publisher to symbol account
 // account[0] funding account       [signer writable]
 // account[1] price account         [signer writable]
+// account[2] permissions account   []
 pub fn add_publisher(
     program_id: &Pubkey,
     accounts: &[AccountInfo],

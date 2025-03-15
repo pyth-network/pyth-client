@@ -30,6 +30,7 @@ use {
 // account[0] funding account       [signer writable]
 // account[1] product account       [signer writable]
 // account[2] price account         [signer writable]
+// account[3] permissions account   []
 /// Warning: This function is dangerous and will break any programs that depend on the deleted
 /// price account!
 pub fn del_price(

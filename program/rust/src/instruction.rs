@@ -23,6 +23,7 @@ pub enum OracleCommand {
     /// Initialize first mapping list account
     // account[0] funding account       [signer writable]
     // account[1] mapping account       [signer writable]
+    // account[2] permissions account   []
     InitMapping           = 0,
     /// deprecated
     AddMapping            = 1,
@@ -30,10 +31,12 @@ pub enum OracleCommand {
     // account[0] funding account       [signer writable]
     // account[1] mapping account       [signer writable]
     // account[2] new product account   [signer writable]
+    // account[3] permissions account   []
     AddProduct            = 2,
     /// Update product account
     // account[0] funding account       [signer writable]
     // account[1] product account       [signer writable]
+    // account[2] permissions account   []
     UpdProduct            = 3,
     /// Add new price account to a product account
     // account[0] funding account       [signer writable]
@@ -44,10 +47,12 @@ pub enum OracleCommand {
     /// Add publisher to symbol account
     // account[0] funding account       [signer writable]
     // account[1] price account         [signer writable]
+    // account[2] permissions account   []
     AddPublisher          = 5,
     /// Delete publisher from symbol account
     // account[0] funding account       [signer writable]
     // account[1] price account         [signer writable]
+    // account[2] permissions account   []
     DelPublisher          = 6,
     /// Publish component price
     // account[0] funding account       [signer writable]
@@ -62,6 +67,7 @@ pub enum OracleCommand {
     /// (Re)initialize price account
     // account[0] funding account       [signer writable]
     // account[1] new price account     [signer writable]
+    // account[2] permissions account   []
     InitPrice             = 9,
     /// deprecated
     InitTest              = 10,
@@ -70,6 +76,7 @@ pub enum OracleCommand {
     /// Set min publishers
     // account[0] funding account       [signer writable]
     // account[1] price account         [signer writable]
+    // account[2] permissions account   []
     SetMinPub             = 12,
     /// Publish component price, never returning an error even if the update failed
     // account[0] funding account       [signer writable]
@@ -82,11 +89,13 @@ pub enum OracleCommand {
     // account[0] funding account       [signer writable]
     // account[1] product account       [signer writable]
     // account[2] price account         [signer writable]
+    // account[3] permissions account   []
     DelPrice              = 15,
     /// Deletes a product account
     // account[0] funding account       [signer writable]
     // account[1] mapping account       [signer writable]
     // account[2] product account       [signer writable]
+    // account[3] permissions account   []
     DelProduct            = 16,
     /// Update authorities
     // account[0] upgrade authority     [signer writable]
@@ -97,6 +106,7 @@ pub enum OracleCommand {
     /// Set max latency
     // account[0] funding account       [signer writable]
     // account[1] price account         [signer writable]
+    // account[2] permissions account   []
     SetMaxLatency         = 18,
     /// Init price feed index
     // account[0] funding account       [signer writable]

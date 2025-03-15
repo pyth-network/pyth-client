@@ -32,6 +32,7 @@ use {
 /// Delete publisher from symbol account
 // account[0] funding account       [signer writable]
 // account[1] price account         [signer writable]
+// account[2] permissions account   []
 pub fn del_publisher(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
