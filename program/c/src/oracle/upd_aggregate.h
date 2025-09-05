@@ -155,6 +155,8 @@ static inline bool upd_aggregate( pc_price_t *ptr, uint64_t slot, int64_t timest
     uint32_t numv  = 0;
     uint32_t nprcs = (uint32_t)0;
     int64_t  prcs[ PC_NUM_COMP * 3 ]; // ~0.75KiB for current PC_NUM_COMP (FIXME: DOUBLE CHECK THIS FITS INTO STACK FRAME LIMIT)
+    bool allow_zero_ci = (ptr->flags & 0x4) != 0;
+
     for ( uint32_t i = 0; i != ptr->num_; ++i ) {
       pc_price_comp_t *iptr = &ptr->comp_[i];
       // copy contributing price to aggregate snapshot
@@ -165,9 +167,10 @@ static inline bool upd_aggregate( pc_price_t *ptr, uint64_t slot, int64_t timest
       int64_t conf      = ( int64_t )( iptr->agg_.conf_ );
       int64_t max_latency = ptr->max_latency_ ? ptr->max_latency_ : PC_MAX_SEND_LATENCY;
       if ( iptr->agg_.status_ == PC_STATUS_TRADING &&
-           // No overflow for INT64_MIN+conf or INT64_MAX-conf as 0 < conf < INT64_MAX
-           // These checks ensure that price - conf and price + conf do not overflow.
-           (int64_t)0 < conf && (INT64_MIN + conf) <= price && price <= (INT64_MAX-conf) &&
+           // Only accept confidence of zero if the flag is set
+           (allow_zero_ci || conf > 0) &&
+           // these checks ensure that price - conf and price + conf do not overflow.
+           (INT64_MIN + conf) <= price && price <= (INT64_MAX-conf) &&
            // slot_diff is implicitly >= 0 due to the check in Rust code ensuring publishing_slot is always less than or equal to the current slot.
            slot_diff <= max_latency ) {
         numv += 1;
@@ -201,10 +204,9 @@ static inline bool upd_aggregate( pc_price_t *ptr, uint64_t slot, int64_t timest
     // use the larger of the left and right confidences
     agg_conf = agg_conf_right > agg_conf_left ? agg_conf_right : agg_conf_left;
 
-    // if the confidences end up at zero, we abort
-    // this is paranoia as it is currently not possible when nprcs>2 and
-    // positive confidences given the current pricing model
-    if( agg_conf <= (int64_t)0 ) {
+    // when zero CI is not allowed, the confidence should not be zero.
+    // and this check is not necessary, but we do it anyway to be safe.
+    if( (!allow_zero_ci) && agg_conf <= (int64_t)0 ) {
       ptr->agg_.status_ = PC_STATUS_UNKNOWN;
       return false;
     }

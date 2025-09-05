@@ -108,6 +108,8 @@ mod price_pythnet {
             /// If unset, the program will remove old messages from its message buffer account
             /// and set this flag.
             const MESSAGE_BUFFER_CLEARED = 0b10;
+            /// If set, the program allows publishing of zero confidence interval updates.
+            const ALLOW_ZERO_CI = 0b100;
         }
     }
 

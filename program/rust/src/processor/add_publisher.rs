@@ -40,6 +40,12 @@ pub const ENABLE_ACCUMULATOR_V2: [u8; 32] = [
 pub const DISABLE_ACCUMULATOR_V2: [u8; 32] = [
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
 ];
+pub const ALLOW_ZERO_CI: [u8; 32] = [
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3,
+];
+pub const FORBID_ZERO_CI: [u8; 32] = [
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4,
+];
 
 /// Add publisher to symbol account
 // account[0] funding account       [signer writable]
@@ -73,17 +79,22 @@ pub fn add_publisher(
 
     let mut price_data = load_checked::<PriceAccount>(price_account, cmd_args.header.version)?;
 
+    // Hack: we use add_publisher instruction to configure the price feeds for some operations.
+    // This is mostly because we are constrained on contract size and can't add separate
+    // instructions for these operations.
     if cmd_args.publisher == Pubkey::from(ENABLE_ACCUMULATOR_V2) {
-        // Hack: we use add_publisher instruction to configure the `ACCUMULATOR_V2` flag. Using a new
-        // instruction would be cleaner but it would require more work in the tooling.
-        // These special cases can be removed along with the v1 aggregation code once the transition
-        // is complete.
         price_data.flags.insert(PriceAccountFlags::ACCUMULATOR_V2);
         return Ok(());
     } else if cmd_args.publisher == Pubkey::from(DISABLE_ACCUMULATOR_V2) {
         price_data
             .flags
             .remove(PriceAccountFlags::ACCUMULATOR_V2 | PriceAccountFlags::MESSAGE_BUFFER_CLEARED);
+        return Ok(());
+    } else if cmd_args.publisher == Pubkey::from(ALLOW_ZERO_CI) {
+        price_data.flags.insert(PriceAccountFlags::ALLOW_ZERO_CI);
+        return Ok(());
+    } else if cmd_args.publisher == Pubkey::from(FORBID_ZERO_CI) {
+        price_data.flags.remove(PriceAccountFlags::ALLOW_ZERO_CI);
         return Ok(());
     }
 

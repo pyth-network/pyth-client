@@ -193,8 +193,9 @@ typedef struct pc_price
   uint8_t         min_pub_;           // min publishers for valid price
   int8_t          message_sent_;      // flag to indicate if the current aggregate price has been sent as a message to the message buffer, 0 if not sent, 1 if sent
   uint8_t         max_latency_;       // configurable max latency in slots between send and receive
-  int8_t          drv3_;              // space for future derived values
-  int32_t         drv4_;              // space for future derived values
+  uint8_t         flags;              // Various bit flags. See PriceAccountFlags rust struct for more details.
+                                      // 0: ACCUMULATOR_V2, 1: MESSAGE_BUFFER_CLEARED 2: ALLOW_ZERO_CI
+  uint32_t        feed_index;         // Globally unique feed index for this price feed
   pc_pub_key_t    prod_;              // product id/ref-account
   pc_pub_key_t    next_;              // next price account in list
   uint64_t        prev_slot_;         // valid slot of previous aggregate with TRADING status

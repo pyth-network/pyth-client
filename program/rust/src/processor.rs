@@ -41,8 +41,10 @@ mod upd_product;
 
 #[cfg(test)]
 pub use add_publisher::{
+    ALLOW_ZERO_CI,
     DISABLE_ACCUMULATOR_V2,
     ENABLE_ACCUMULATOR_V2,
+    FORBID_ZERO_CI,
 };
 use solana_program::{
     program_error::ProgramError,
