@@ -72,6 +72,15 @@ jobs:
           asset_name: pyth_oracle_pythnet.so
           tag: ${{ github.ref }}
 
+      - name : Publish Pythnet No Default Accumulator v2 binary
+        if : env.IS_ORACLE_RELEASE == 'true'
+        uses: svenstaro/upload-release-action@133984371c30d34e38222a64855679a414cb7575
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ./pyth_oracle_pythnet_no_accumulator.so
+          asset_name: pyth_oracle_pythnet_no_default_accumulator_v2.so
+          tag: ${{ github.ref }}
+
   pinning:
     runs-on: ubuntu-latest
     steps:

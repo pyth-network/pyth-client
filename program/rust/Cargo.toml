@@ -45,6 +45,7 @@ time = "=0.3.7"
 check = [] # Skips make build in build.rs, use with cargo-clippy and cargo-check
 debug = []
 library = ["solana-sdk"]
+no-default-accumulator-v2 = []
 
 [lib]
 crate-type = ["cdylib", "lib"]
