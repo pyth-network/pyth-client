@@ -61,8 +61,9 @@ jobs:
         run : |
             docker create -ti --name container "${DOCKER_IMAGE}" bash
             docker cp container:/home/pyth/pyth-client/target/pyth/pythnet/pyth_oracle_pythnet.so .
+            docker cp container:/home/pyth/pyth-client/target/pyth/pythnet/pyth_oracle_pythnet_no_accumulator_v2.so .
             docker rm -f container
-  
+
       - name : Publish Pythnet binary
         if : env.IS_ORACLE_RELEASE == 'true'
         uses: svenstaro/upload-release-action@133984371c30d34e38222a64855679a414cb7575
@@ -77,8 +78,8 @@ jobs:
         uses: svenstaro/upload-release-action@133984371c30d34e38222a64855679a414cb7575
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ./pyth_oracle_pythnet_no_accumulator.so
-          asset_name: pyth_oracle_pythnet_no_default_accumulator_v2.so
+          file: ./pyth_oracle_pythnet_no_accumulator_v2.so
+          asset_name: pyth_oracle_pythnet_no_accumulator_v2.so
           tag: ${{ github.ref }}
 
   pinning:
