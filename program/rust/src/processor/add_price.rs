@@ -85,7 +85,7 @@ pub fn add_price(
     price_data.min_pub_ = PRICE_ACCOUNT_DEFAULT_MIN_PUB;
     price_data.feed_index = reserve_new_price_feed_index(permissions_account)?;
 
-    if !cfg!(feature = "no-default-accumulator_v2") {
+    if !cfg!(feature = "no-default-accumulator-v2") {
         price_data
             .flags
             .insert(PriceAccountFlags::ACCUMULATOR_V2 | PriceAccountFlags::MESSAGE_BUFFER_CLEARED);

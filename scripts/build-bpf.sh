@@ -28,8 +28,8 @@ mkdir -p target/pyth/pythnet/
 mv target/deploy/pyth_oracle.so target/pyth/pythnet/pyth_oracle_pythnet.so
 
 # Re-run tests affected by features
-cargo-test-bpf -- --features no-default-accumulator-v2
 cargo-build-bpf -- --locked -Z build-std=std,panic_abort -Z build-std-features=panic_immediate_abort --features no-default-accumulator-v2
+cargo test --locked --features no-default-accumulator-v2
 sha256sum ./target/**/*.so
 echo "Checking size of pyth_oracle.so for pythnet with no accumulator"
 ./scripts/check-size.sh 88429
