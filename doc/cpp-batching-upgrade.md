@@ -3,7 +3,7 @@
 As of 2.10.1, `pyth-client` has support for sending batched price updates. This significantly reduces SOL burn, so we strongly advise that you update to this newer version.
 
 ## Websocket API
-If you are using the [websocket JRPC API](websocket_api.md) to send updates to `pythd`, all you need to do is update the version of pythd you are running to [`2.10.1`](https://github.com/pyth-network/pyth-client/releases/tag/mainnet-v2.10.1).
+If you are using the [websocket JRPC API](https://github.com/pyth-network/documentation/blob/main/pages/price-feeds/publish-data/pyth-client-websocket-api.mdx) to send updates to `pythd`, all you need to do is update the version of pythd you are running to [`2.10.1`](https://github.com/pyth-network/pyth-client/releases/tag/mainnet-v2.10.1).
 
 ## C++ Bindings
 If you are linking against the C++ bindings, you will need to make some changes to your code to support sending batched updates.
