@@ -155,7 +155,7 @@ int on_init_mapping( int argc, char **argv )
   if ( args.invalid_ )
     return 1;
 
-  std::cerr << "this might take take up to 30 seconds..." << std::endl;
+  std::cerr << "this might take up to 30 seconds..." << std::endl;
 
   // initialize connection to block-chain
   manager mgr;
@@ -192,7 +192,7 @@ int on_add_product( int argc, char **argv )
   if ( args.invalid_ )
     return 1;
 
-  std::cerr << "this might take take up to 30 seconds..." << std::endl;
+  std::cerr << "this might take up to 30 seconds..." << std::endl;
 
   // initialize connection to block-chain
   manager mgr;
@@ -375,7 +375,7 @@ int on_add_price( int argc, char **argv )
       return 1;
     }
   }
-  std::cerr << "this might take take up to 30 seconds..." << std::endl;
+  std::cerr << "this might take up to 30 seconds..." << std::endl;
 
   // get rent-exemption amount for symbol account
   get_minimum_balance_rent_exemption req_r[1];
