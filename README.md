@@ -9,7 +9,7 @@ It consists of both C and Rust code, but everything can be built and tested usin
 
 ### Build Instructions
 
-First, make sure you have the [solana tool suite](https://docs.solana.com/cli/install-solana-cli-tools#use-solanas-install-tool)
+First, make sure you have the [solana tool suite](https://solana.com/ru/docs/intro/installation#use-solanas-install-tool)
 installed on your machine. (The build depends on some C makefiles that are in the tool suite.)
 Make sure you have installed the same solana version that is being used in [CI](.github/workflows/docker.yaml)
 
@@ -156,7 +156,7 @@ Finally, in docker extension inside VS Code click right and choose "Attach VS Co
 Oracle program upgrades are managed by the Pythian Council multisig. The steps to deploy a new version are:
 
 1. Create a release branch from `main`. This should include the binary for the Pythnet oracle program (`pyth_oracle_pythnet.so`).
-2. [Install Solana CLI](https://docs.solana.com/cli/install-solana-cli-tools#use-solanas-install-tool) if not already installed.
+2. [Install Solana CLI](https://solana.com/ru/docs/intro/installation#use-solanas-install-tool) if not already installed.
 3. Set Solana config for the target network, e.g., devnet: `solana config set --url https://api.devnet.solana.com`.
 4. Execute `solana program write-buffer pyth_oracle_pythnet.so` to obtain the buffer address.
 5. Run `solana program show <ORACLE_PROGRAM_PUBKEY>` to obtain the authority of the current program.

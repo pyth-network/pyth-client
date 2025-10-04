@@ -8,6 +8,6 @@ If you are using the [websocket JRPC API](websocket_api.md) to send updates to `
 ## C++ Bindings
 If you are linking against the C++ bindings, you will need to make some changes to your code to support sending batched updates.
 
-Instead of sending individual price updates in response to `price_sched` callbacks, you will now need to call `pc::price::send` with a vector of `pc::price` objects that you wish to publish, in response to `on_slot_publish` callbacks. These will then be batched into transactions. The [`test_publish.cpp`](../pctest/test_publish.cpp) example has been updated to use this new approach.
+Instead of sending individual price updates in response to `price_sched` callbacks, you will now need to call `pc::price::send` with a vector of `pc::price` objects that you wish to publish, in response to `on_slot_publish` callbacks. These will then be batched into transactions. The [`test_publish.cpp`](../pctest/test_publish_websocket.cpp) example has been updated to use this new approach.
 
 **Important**: this is a breaking change for C++ publishers, so you will need to update your code as described above for `2.10.1` to work.
