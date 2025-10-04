@@ -9,7 +9,7 @@ It consists of both C and Rust code, but everything can be built and tested usin
 
 ### Build Instructions
 
-First, make sure you have the [solana tool suite](https://docs.solana.com/cli/install-solana-cli-tools#use-solanas-install-tool)
+First, make sure you have the [solana tool suite](https://solana.com/ru/docs/intro/installation#use-solanas-install-tool)
 installed on your machine. (The build depends on some C makefiles that are in the tool suite.)
 Make sure you have installed the same solana version that is being used in [CI](.github/workflows/docker.yaml)
 
