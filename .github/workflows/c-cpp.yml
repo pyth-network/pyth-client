@@ -1,0 +1,44 @@
+name: C/C++ CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: configure
+      run: ./configure
+    - name: make
+      run: make
+    - name: make check
+      run: make check
+    - name: make distcheck
+      run: make distcheck
+
+      import "@pythnetwork/pyth-sdk-solidity/IPyth.sol";
+import "@pythnetwork/pyth-sdk-solidity/PythStructs.sol";
+
+contract ExampleContract {
+    IPyth pyth;
+
+    constructor(address pythContract) {
+        pyth = IPyth(pythContract);
+    }
+
+    function getBtcUsdPrice(
+        bytes[] calldata priceUpdateData
+    ) public payable returns (PythStructs.Price memory) {
+        uint fee = pyth.getUpdateFee(priceUpdateData);
+        pyth.updatePriceFeeds{value: fee}(priceUpdateData);
+
+        bytes32 priceID = 0xf9c0172ba10dfa4d19088d94f5bf61d3b54d5bd7483a322a982e1373ee8ea31b;
+        return pyth.getPrice(priceID);
+    }
+}
