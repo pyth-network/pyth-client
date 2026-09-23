@@ -22,6 +22,7 @@ namespace pc
     // directory where to store account keys
     void set_dir( const std::string& dir_name );
     std::string get_dir() const;
+    static std::string get_default_dir();
 
     // file names
     std::string get_publish_key_pair_file() const;

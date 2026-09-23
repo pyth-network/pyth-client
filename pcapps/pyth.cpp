@@ -12,7 +12,11 @@ using namespace pc;
 
 static const std::string DEFAULT_RPC_HOST  = "localhost";
 static const std::string DEFAULT_TX_HOST   = "localhost";
-static const std::string DEFAULT_KEY_STORE = std::string( getenv( "HOME" ) ) + "/.pythd/";
+
+static std::string get_default_key_store()
+{
+  return key_store::get_default_dir();
+}
 
 int usage()
 {
@@ -31,7 +35,7 @@ int usage()
   cerr << "  -r <rpc_host (default " << DEFAULT_RPC_HOST << ")>" << endl;
   cerr << "     Host name or IP address of solana rpc node in the form "
                "host_name[:rpc_port[:ws_port]]\n" << endl;
-  cerr << "  -k <key_store_directory (default " << DEFAULT_KEY_STORE << ")>" << endl;
+  cerr << "  -k <key_store_directory (default " << get_default_key_store() << ")>" << endl;
   cerr << "     Directory name housing publishing, mapping and program"
                " key files\n" << endl;
   cerr << "  -c <commitment_level (default confirmed)>" << endl;
@@ -58,7 +62,7 @@ struct pyth_arguments
   bool         invalid_    = false;
   std::string  rpc_host_   = DEFAULT_RPC_HOST;
   std::string  tx_host_    = DEFAULT_TX_HOST;
-  std::string  key_dir_    = DEFAULT_KEY_STORE;
+  std::string  key_dir_    = get_default_key_store();
   commitment   cmt_        = commitment::e_confirmed;
   bool         do_json_    = false;
   bool         do_tx_      = true;

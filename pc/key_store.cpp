@@ -55,6 +55,12 @@ std::string key_store::get_dir() const
   return dir_;
 }
 
+std::string key_store::get_default_dir()
+{
+  const char *home = ::getenv( "HOME" );
+  return home ? ( std::string( home ) + "/.pythd/" ) : "./.pythd/";
+}
+
 bool key_store::create()
 {
   struct stat fst[1];

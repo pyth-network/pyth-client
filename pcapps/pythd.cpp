@@ -20,8 +20,7 @@ std::string get_tx_host()
 
 std::string get_key_store()
 {
-  std::string dir = getenv("HOME");
-  return dir + "/.pythd/";
+  return key_store::get_default_dir();
 }
 
 int get_port()
@@ -43,7 +42,7 @@ int usage()
             << std::endl;
   std::cerr << "  -i <interval with which to send notify_price_sched notifications, in milliseconds (default 1000) >" << std::endl;
   std::cerr << "  -k <key_store_directory (default " << get_key_store()
-            << ")>]" << std::endl;
+            << ")>" << std::endl;
   std::cerr << "     Directory name housing publishing, mapping and program"
                " key files\n" << std::endl;
   std::cerr << "  -p <listening_port (default " << get_port() << ">"

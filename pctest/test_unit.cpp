@@ -1,4 +1,5 @@
 #include <pc/key_pair.hpp>
+#include <pc/key_store.hpp>
 #include <pc/misc.hpp>
 #include <pc/log.hpp>
 #include <pc/request.hpp>
@@ -178,10 +179,29 @@ void test_request_sub()
   PC_TEST_CHECK( sub1.check( "r1", p1_3 ) );
 }
 
+void test_key_store()
+{
+  char *orig_home = ::getenv( "HOME" );
+  std::string saved_home = orig_home ? orig_home : "";
+
+  ::unsetenv( "HOME" );
+  PC_TEST_CHECK( key_store::get_default_dir() == "./.pythd/" );
+
+  ::setenv( "HOME", "/test/home", 1 );
+  PC_TEST_CHECK( key_store::get_default_dir() == "/test/home/.pythd/" );
+
+  if ( orig_home ) {
+    ::setenv( "HOME", saved_home.c_str(), 1 );
+  } else {
+    ::unsetenv( "HOME" );
+  }
+}
+
 int main(int,char**)
 {
   PC_TEST_START
   test_key();
+  test_key_store();
   test_log();
   test_request_sub();
   PC_TEST_END
